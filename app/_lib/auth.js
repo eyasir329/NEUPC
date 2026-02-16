@@ -1,6 +1,11 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
-import { createGuest, getGuest, getUserRoles, updateGuest } from './data-service';
+import {
+  createGuest,
+  getGuest,
+  getUserRoles,
+  updateGuest,
+} from './data-service';
 
 const authConfig = {
   providers: [
@@ -20,19 +25,23 @@ const authConfig = {
 
         if (!existingGuest) {
           // Create new user in database
+          // Note: For OAuth users, password_hash should be nullable in DB
           await createGuest({
             email: user.email,
             full_name: user.name,
-            avatar_url: user.image,
-            provider: account.provider,
+            avatar: user.image,
+            email_verified: true, // OAuth emails are verified
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
-          console.log('New user created:', user.email);
+          console.log('New OAuth user created:', user.email);
         } else {
           // Update last login time for existing user
-          const updateResult = await updateGuest(user.email, {
+          await updateGuest(user.email, {
             last_login: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
+          console.log('Existing user logged in:', user.email);
         }
 
         return true;
@@ -40,6 +49,7 @@ const authConfig = {
         console.error('Error during sign in:', error);
         // Allow sign-in even if database operation fails
         // This prevents users from being locked out if database is down
+        console.warn('Proceeding with sign-in despite database error');
         return true;
       }
     },
@@ -49,23 +59,8 @@ const authConfig = {
         session.user.id = token.sub;
       }
 
-      // Optionally fetch additional user data from database
-      try {
-        const userData = await getGuest(session.user.email);
-        const userRoles = await getUserRoles(session.user.email);
-        
-        if (userData) {
-          session.user.fullName = userData.full_name;
-          session.user.avatarUrl = userData.avatar_url;
-        }
-        
-        // Set roles (getUserRoles already returns array of role names)
-        session.user.roles = userRoles;
-      } catch (error) {
-        console.error('Error fetching user data for session:', error);
-        // Default to guest role if error occurs
-        session.user.roles = ['guest'];
-      }
+      // Set default role - this will be overridden by page-level calls
+      session.user.role = 'guest';
 
       return session;
     },

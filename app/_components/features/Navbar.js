@@ -8,7 +8,6 @@ import { signOutAction } from '@/app/_lib/actions';
 export default function Navbar({ session }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-
   const toggleDropdown = (dropdown) => {
     setOpenDropdown(openDropdown === dropdown ? null : dropdown);
   };
@@ -106,10 +105,10 @@ export default function Navbar({ session }) {
                 title="Go to Account"
               >
                 <img
-                  src={session.user.image}
+                  src={session.user.image || session.user.avatarUrl}
                   alt={session.user.name || 'User Avatar'}
                   referrerPolicy="no-referrer"
-                  className="h-10 w-10 rounded-full border-2 border-primary-500/50 grayscale transition-all duration-200 hover:border-primary-500 hover:grayscale-0 hover:shadow-lg hover:shadow-primary-500/30 hover:scale-105"
+                  className="border-primary-500/50 hover:border-primary-500 hover:shadow-primary-500/30 h-10 w-10 rounded-full border-2 grayscale transition-all duration-200 hover:scale-105 hover:shadow-lg hover:grayscale-0"
                 />
               </Link>
             </li>
@@ -117,7 +116,7 @@ export default function Navbar({ session }) {
               <form action={signOutAction}>
                 <button
                   type="submit"
-                  className="flex items-center justify-center rounded-lg border-2 border-red-500/50 p-2 text-red-300 transition-all duration-200 hover:border-red-500 hover:bg-red-500/10 hover:scale-105"
+                  className="flex items-center justify-center rounded-lg border-2 border-red-500/50 p-2 text-red-300 transition-all duration-200 hover:scale-105 hover:border-red-500 hover:bg-red-500/10"
                   title="Logout"
                 >
                   <LogOut className="h-5 w-5" />
@@ -223,7 +222,7 @@ export default function Navbar({ session }) {
                 <Link
                   href="/account"
                   onClick={closeMobileMenu}
-                  className="block w-full rounded-lg border-2 border-primary-500/50 bg-primary-500/10 px-5 py-3 text-center text-base font-semibold text-primary-300 transition-all duration-200 hover:border-primary-500 hover:bg-primary-500/20"
+                  className="border-primary-500/50 bg-primary-500/10 text-primary-300 hover:border-primary-500 hover:bg-primary-500/20 block w-full rounded-lg border-2 px-5 py-3 text-center text-base font-semibold transition-all duration-200"
                 >
                   My Account
                 </Link>

@@ -3,7 +3,7 @@
 //   return NextResponse.redirect(new URL("/about", request.url));
 // }
 
-import { auth } from "@/app/_lib/auth";
+import { auth } from '@/app/_lib/auth';
 
 export default auth((req) => {
   // Middleware logic runs here
@@ -11,5 +11,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/account/:path*"],
+  matcher: ['/account/:path*'],
 };

@@ -51,39 +51,45 @@ export async function updateGuest(email, updates) {
 
 // Get user roles by email
 export async function getUserRoles(email) {
-  // First, get the user_id from the email
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
+  try {
+    // First, get the user_id from the email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
-  if (userError) {
-    console.error('Error fetching user for roles:', userError.message);
-    throw new Error('User could not be found for role lookup');
-  }
+    if (userError) {
+      console.warn('Error fetching user for roles:', userError.message);
+      // Return guest role if user fetch fails (user might not be in DB yet)
+      return ['guest'];
+    }
 
-  if (!userData) {
-    // User doesn't exist, return guest role by default
+    if (!userData) {
+      // User doesn't exist, return guest role by default
+      return ['guest'];
+    }
+
+    // Get user roles by joining user_roles with roles table
+    const { data: rolesData, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('roles(name)')
+      .eq('user_id', userData.id);
+
+    if (rolesError) {
+      console.warn('Error fetching user roles:', rolesError.message);
+      // Return guest role if roles fetch fails
+      return ['guest'];
+    }
+
+    // Extract role names from the nested structure
+    const roleNames = rolesData.map((item) => item.roles?.name).filter(Boolean);
+
+    // If no roles found, return guest as default
+    return roleNames.length > 0 ? roleNames : ['guest'];
+  } catch (error) {
+    console.error('Unexpected error in getUserRoles:', error);
+    // Fallback to guest role on any unexpected error
     return ['guest'];
   }
-
-  // Get user roles by joining user_roles with roles table
-  const { data: rolesData, error: rolesError } = await supabase
-    .from('user_roles')
-    .select('roles(name)')
-    .eq('user_id', userData.id);
-
-  if (rolesError) {
-    console.error('Error fetching user roles:', rolesError.message);
-    throw new Error('User roles could not be loaded');
-  }
-
-  // Extract role names from the nested structure
-  const roleNames = rolesData
-    .map((item) => item.roles?.name)
-    .filter(Boolean);
-
-  // If no roles found, return guest as default
-  return roleNames.length > 0 ? roleNames : ['guest'];
 }
