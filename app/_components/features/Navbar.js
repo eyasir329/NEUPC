@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Menu, X, ChevronDown, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import { signOutAction } from '@/app/_lib/actions';
 
 export default function Navbar({ session }) {
+  // console.log('Navbar session:', session); // Debugging line
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const toggleDropdown = (dropdown) => {
@@ -104,12 +105,7 @@ export default function Navbar({ session }) {
                 className="group flex items-center justify-center"
                 title="Go to Account"
               >
-                <img
-                  src={session.user.image || session.user.avatarUrl}
-                  alt={session.user.name || 'User Avatar'}
-                  referrerPolicy="no-referrer"
-                  className="border-primary-500/50 hover:border-primary-500 hover:shadow-primary-500/30 h-10 w-10 rounded-full border-2 grayscale transition-all duration-200 hover:scale-105 hover:shadow-lg hover:grayscale-0"
-                />
+                <UserCircle className="border-primary-500/50 hover:border-primary-500 hover:shadow-primary-500/30 text-primary-300 hover:text-primary-100 h-10 w-10 rounded-full transition-all duration-200 hover:scale-105" />
               </Link>
             </li>
             <li>

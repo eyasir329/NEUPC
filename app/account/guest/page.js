@@ -1,7 +1,7 @@
 import { auth } from '@/app/_lib/auth';
 import { redirect } from 'next/navigation';
-import GuestDashboardClient from './GuestDashboardClient';
-import { getUserRoles } from '@/app/_lib/data-service';
+import GuestDashboardClient from './_components/GuestDashboardClient';
+import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import RoleSync from '../_components/RoleSync';
 
 async function GuestDashboard() {
@@ -15,6 +15,12 @@ async function GuestDashboard() {
   // Check if user has guest role
   const userRoles = await getUserRoles(session.user.email);
   if (!userRoles.includes('guest')) {
+    redirect('/account');
+  }
+
+  // Check if account status is active
+  const userData = await getUserByEmail(session.user.email);
+  if (userData?.account_status !== 'active') {
     redirect('/account');
   }
 

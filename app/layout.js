@@ -3,6 +3,7 @@ import '@/app/_styles/global.css';
 import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google';
 import Header from './_components/layout/Header';
 import Footer from './_components/layout/Footer';
+import TopProgressBar from './_components/ui/TopProgressBar';
 import { auth } from '@/app/_lib/auth';
 
 const spaceGrotesk = Space_Grotesk({
@@ -33,7 +34,7 @@ export const metadata = {
 
 export default async function RootLayout({ children }) {
   const session = await auth();
-  
+
   return (
     <html
       lang="en"
@@ -42,6 +43,7 @@ export default async function RootLayout({ children }) {
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
+        <TopProgressBar />
         <Header />
         <main className="grow">{children}</main>
         <Footer session={session} />

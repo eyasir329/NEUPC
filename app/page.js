@@ -23,7 +23,7 @@ export default function page() {
         quality={80}
         sizes="100vw"
         className="fixed inset-0 -z-10 h-full w-full object-cover object-top"
-        alt="Mountains and forests with two cabins"
+        alt="NextGen Circuitry Background Image"
       />
 
       {/* Multiple Overlay Layers */}

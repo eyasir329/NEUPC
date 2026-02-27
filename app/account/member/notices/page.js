@@ -1,16 +1,28 @@
+import { auth } from '@/app/_lib/auth';
+import { redirect } from 'next/navigation';
+import { getUserRoles, getUserByEmail, getAllNotices } from '@/app/_lib/data-service';
 import RoleSync from '../../_components/RoleSync';
-import ComingSoon from '../../_components/ComingSoon';
+import MemberNoticesClient from './_components/MemberNoticesClient';
 
-export default function Page() {
+export const metadata = { title: 'Notices | Member' };
+
+export default async function MemberNoticesPage() {
+  const session = await auth();
+  if (!session?.user) redirect('/login');
+
+  const userRoles = await getUserRoles(session.user.email);
+  if (!userRoles.includes('member')) redirect('/account');
+
+  const user = await getUserByEmail(session.user.email);
+  if (user?.account_status !== 'active' || user?.is_active === false)
+    redirect('/account');
+
+  const notices = await getAllNotices().catch(() => []);
+
   return (
-    <>
+    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
       <RoleSync role="member" />
-      <ComingSoon
-        title="Notices"
-        description="View important club notices"
-        backHref="/account/member"
-        backLabel="Back to Dashboard"
-      />
-    </>
+      <MemberNoticesClient notices={notices} userId={user.id} />
+    </div>
   );
 }

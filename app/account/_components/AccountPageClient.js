@@ -7,8 +7,8 @@ export default function AccountPageClient({ children }) {
   const { setActiveRole } = useRole();
 
   useEffect(() => {
-    // Set role to 'yayaha' when on account selection page
-    setActiveRole('yayaha');
+    // Reset active role when on the account hub/selection page
+    setActiveRole(null);
   }, [setActiveRole]);
 
   return <>{children}</>;
