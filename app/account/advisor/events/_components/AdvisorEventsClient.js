@@ -1,3 +1,9 @@
+/**
+ * @file Advisor events client — event oversight interface with
+ *   filtering, attendance summaries, and approval controls.
+ * @module AdvisorEventsClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

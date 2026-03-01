@@ -1,12 +1,16 @@
+/**
+ * @file Role synchronization component.
+ * Syncs active role in Context API from server-detected role prop.
+ *
+ * @module RoleSync
+ */
+
 'use client';
 
 import { useEffect } from 'react';
 import { useRole } from './RoleContext';
 
-/**
- * Client component that syncs the active role in Context API
- * based on the role prop passed from server component
- */
+/** @param {{ role: string }} props */
 export default function RoleSync({ role }) {
   const { setActiveRole } = useRole();
 

@@ -1,5 +1,11 @@
+/**
+ * @file Account welcome header with user greeting.
+ * @module AccountHeader
+ */
+
 'use client';
 
+/** @param {{ session: Object }} props */
 export default function AccountHeader({ session }) {
   return (
     <div className="mb-8 text-center">

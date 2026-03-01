@@ -1,3 +1,9 @@
+/**
+ * @file Member contests client — browsable list of programming
+ *   contests with participation tracking and registration controls.
+ * @module MemberContestsClient
+ */
+
 'use client';
 
 import {
@@ -240,7 +246,7 @@ function JoinButton({ contest, isJoined, userId, onDone, compact }) {
 
   const handleJoin = () => {
     start(async () => {
-      const res = await joinContestAction(contest.id, userId);
+      const res = await joinContestAction(contest.id);
       onDone(
         res.error
           ? { type: 'error', text: res.error }
@@ -251,7 +257,7 @@ function JoinButton({ contest, isJoined, userId, onDone, compact }) {
 
   const handleLeave = () => {
     start(async () => {
-      const res = await leaveContestAction(contest.id, userId);
+      const res = await leaveContestAction(contest.id);
       onDone(
         res.error
           ? { type: 'error', text: res.error }

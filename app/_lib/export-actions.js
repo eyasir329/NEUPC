@@ -1,3 +1,8 @@
+/**
+ * @file export actions
+ * @module export-actions
+ */
+
 'use server';
 
 import { supabaseAdmin } from './supabase';

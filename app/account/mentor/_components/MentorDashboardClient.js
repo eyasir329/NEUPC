@@ -1,6 +1,12 @@
+/**
+ * @file Mentor dashboard client — composes header, stats grid,
+ *   mentee progress overview, today’s schedule, recent activity,
+ *   and quick-access links into a unified mentor landing experience.
+ * @module MentorDashboardClient
+ */
+
 'use client';
 
-import RoleSync from '../../_components/RoleSync';
 import MentorHeader from './MentorHeader';
 import MentorStatsGrid from './MentorStatsGrid';
 import TodaysSchedule from './TodaysSchedule';
@@ -122,8 +128,6 @@ export default function MentorDashboardClient({ session }) {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="mentor" />
-
       <MentorHeader mentorName={mentorName} stats={stats} />
       <MentorStatsGrid stats={stats} />
 

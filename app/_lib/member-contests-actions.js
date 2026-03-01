@@ -1,11 +1,21 @@
+/**
+ * @file member contests actions
+ * @module member-contests-actions
+ */
+
 'use server';
 
 import { supabaseAdmin } from './supabase';
 import { revalidatePath } from 'next/cache';
+import { requireActionSession } from './action-guard';
 
 /** Register the current user as a participant in a contest. */
-export async function joinContestAction(contestId, userId) {
-  if (!contestId || !userId) return { error: 'Missing contest or user ID.' };
+export async function joinContestAction(contestId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!contestId) return { error: 'Missing contest ID.' };
 
   // Verify contest exists and is joinable
   const { data: contest, error: cErr } = await supabaseAdmin
@@ -37,14 +47,21 @@ export async function joinContestAction(contestId, userId) {
       registered_at: new Date().toISOString(),
     });
 
-  if (insErr) return { error: insErr.message };
+  if (insErr) {
+    console.error('Contest join error:', insErr);
+    return { error: 'Failed to join contest.' };
+  }
   revalidatePath('/account/member/contests');
   return { success: true };
 }
 
 /** Remove the current user's registration from a contest. */
-export async function leaveContestAction(contestId, userId) {
-  if (!contestId || !userId) return { error: 'Missing contest or user ID.' };
+export async function leaveContestAction(contestId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!contestId) return { error: 'Missing contest ID.' };
 
   const { data: contest } = await supabaseAdmin
     .from('contests')
@@ -61,7 +78,10 @@ export async function leaveContestAction(contestId, userId) {
     .eq('contest_id', contestId)
     .eq('user_id', userId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('Contest leave error:', error);
+    return { error: 'Failed to leave contest.' };
+  }
   revalidatePath('/account/member/contests');
   return { success: true };
 }

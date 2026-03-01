@@ -1,6 +1,12 @@
+/**
+ * @file Executive dashboard shell — composes the header, stats grid,
+ *   pending actions, upcoming events, recent members, latest notices,
+ *   and quick-access cards into the main executive view.
+ * @module ExecutiveDashboardClient
+ */
+
 'use client';
 
-import RoleSync from '../../_components/RoleSync';
 import ExecutiveHeader from './ExecutiveHeader';
 import ExecutiveStatsGrid from './ExecutiveStatsGrid';
 import PendingActions from './PendingActions';
@@ -113,8 +119,6 @@ export default function ExecutiveDashboardClient({ session }) {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="executive" />
-
       <ExecutiveHeader />
       <ExecutiveStatsGrid stats={stats} />
       <PendingActions pendingActions={pendingActions} />

@@ -1,3 +1,9 @@
+/**
+ * @file Achievements — dashboard preview of notable club accomplishments
+ *   and award summaries for advisor oversight.
+ * @module AdvisorAchievements
+ */
+
 'use client';
 
 import Link from 'next/link';

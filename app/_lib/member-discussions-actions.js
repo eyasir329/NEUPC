@@ -1,7 +1,14 @@
+/**
+ * @file member discussions actions
+ * @module member-discussions-actions
+ */
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from './supabase';
+import { requireActionSession } from './action-guard';
+import { sanitizeText, sanitizeRichText } from './validation';
 import {
   createDiscussionThread,
   createDiscussionReply,
@@ -17,40 +24,46 @@ import {
 
 // ─── Thread Actions ──────────────────────────────────────────────────────────
 
-export async function createThreadAction({
-  categoryId,
-  title,
-  content,
-  tags,
-  userId,
-}) {
-  if (!userId || !categoryId || !title?.trim() || !content?.trim()) {
+export async function createThreadAction({ categoryId, title, content, tags }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!categoryId || !title?.trim() || !content?.trim()) {
     return { error: 'All required fields must be provided.' };
   }
+
+  const sanitizedTitle = sanitizeText(title, 200);
+  const sanitizedContent = sanitizeRichText(content, 10000);
+
   const parsedTags = Array.isArray(tags)
-    ? tags.map((t) => t.trim()).filter(Boolean)
+    ? tags.map((t) => sanitizeText(t, 50)).filter(Boolean)
     : (tags || '')
         .split(',')
-        .map((t) => t.trim())
+        .map((t) => sanitizeText(t, 50))
         .filter(Boolean);
 
   try {
     const thread = await createDiscussionThread({
       category_id: categoryId,
-      title: title.trim(),
-      content: content.trim(),
+      title: sanitizedTitle,
+      content: sanitizedContent,
       author_id: userId,
       tags: parsedTags,
     });
     revalidatePath('/account/member/discussions');
     return { success: true, thread };
-  } catch (err) {
-    return { error: err.message || 'Failed to create thread.' };
+  } catch {
+    return { error: 'Failed to create thread.' };
   }
 }
 
-export async function deleteThreadAction({ threadId, userId }) {
-  if (!threadId || !userId) return { error: 'Missing fields.' };
+export async function deleteThreadAction({ threadId }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!threadId) return { error: 'Missing thread ID.' };
   try {
     // Verify ownership before delete
     const thread = await getDiscussionThreadById(threadId);
@@ -58,13 +71,17 @@ export async function deleteThreadAction({ threadId, userId }) {
     await deleteDiscussionThread(threadId);
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to delete thread.' };
+  } catch {
+    return { error: 'Failed to delete thread.' };
   }
 }
 
-export async function markThreadSolvedAction({ threadId, userId, isSolved }) {
-  if (!threadId || !userId) return { error: 'Missing fields.' };
+export async function markThreadSolvedAction({ threadId, isSolved }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!threadId) return { error: 'Missing thread ID.' };
   try {
     const thread = await getDiscussionThreadById(threadId);
     if (thread?.author_id !== userId) return { error: 'Not authorized.' };
@@ -75,67 +92,101 @@ export async function markThreadSolvedAction({ threadId, userId, isSolved }) {
     if (error) throw error;
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to update thread.' };
+  } catch {
+    return { error: 'Failed to update thread.' };
   }
 }
 
 // ─── Reply Actions ───────────────────────────────────────────────────────────
 
-export async function createReplyAction({
-  threadId,
-  authorId,
-  content,
-  parentId,
-}) {
-  if (!threadId || !authorId || !content?.trim()) {
+export async function createReplyAction({ threadId, content, parentId }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const authorId = authResult.user.id;
+
+  if (!threadId || !content?.trim()) {
     return { error: 'Reply content is required.' };
   }
+
+  const sanitizedContent = sanitizeRichText(content, 10000);
+
   try {
     const reply = await createDiscussionReply({
       thread_id: threadId,
       author_id: authorId,
-      content: content.trim(),
+      content: sanitizedContent,
       ...(parentId && { parent_id: parentId }),
     });
     revalidatePath('/account/member/discussions');
     return { success: true, reply };
-  } catch (err) {
-    return { error: err.message || 'Failed to post reply.' };
+  } catch {
+    return { error: 'Failed to post reply.' };
   }
 }
 
-export async function deleteReplyAction({ replyId, userId }) {
-  if (!replyId || !userId) return { error: 'Missing fields.' };
+export async function deleteReplyAction({ replyId }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!replyId) return { error: 'Missing reply ID.' };
   try {
+    // Verify ownership before deleting
+    const { data: reply } = await supabaseAdmin
+      .from('discussion_replies')
+      .select('author_id')
+      .eq('id', replyId)
+      .single();
+
+    if (!reply || reply.author_id !== userId) {
+      return { error: 'Not authorized to delete this reply.' };
+    }
+
     await deleteDiscussionReply(replyId);
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to delete reply.' };
+  } catch {
+    return { error: 'Failed to delete reply.' };
   }
 }
 
 export async function markSolutionAction({ replyId, isSolution }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
   if (!replyId) return { error: 'Missing reply ID.' };
   try {
+    // Only the thread author can mark a solution
+    const { data: reply } = await supabaseAdmin
+      .from('discussion_replies')
+      .select('thread_id')
+      .eq('id', replyId)
+      .single();
+
+    if (!reply) return { error: 'Reply not found.' };
+
+    const thread = await getDiscussionThreadById(reply.thread_id);
+    if (thread?.author_id !== userId) {
+      return { error: 'Only the thread author can mark a solution.' };
+    }
+
     await markReplyAsSolution(replyId, isSolution);
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to mark solution.' };
+  } catch {
+    return { error: 'Failed to mark solution.' };
   }
 }
 
 // ─── Vote Actions ────────────────────────────────────────────────────────────
 
-export async function voteThreadAction({
-  userId,
-  threadId,
-  voteType,
-  currentVote,
-}) {
-  if (!userId || !threadId) return { error: 'Missing fields.' };
+export async function voteThreadAction({ threadId, voteType, currentVote }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!threadId) return { error: 'Missing thread ID.' };
   try {
     if (currentVote === voteType) {
       // Toggle off
@@ -145,18 +196,17 @@ export async function voteThreadAction({
     }
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to vote.' };
+  } catch {
+    return { error: 'Failed to vote.' };
   }
 }
 
-export async function voteReplyAction({
-  userId,
-  replyId,
-  voteType,
-  currentVote,
-}) {
-  if (!userId || !replyId) return { error: 'Missing fields.' };
+export async function voteReplyAction({ replyId, voteType, currentVote }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!replyId) return { error: 'Missing reply ID.' };
   try {
     if (currentVote === voteType) {
       await removeVote(userId, null, replyId);
@@ -165,8 +215,8 @@ export async function voteReplyAction({
     }
     revalidatePath('/account/member/discussions');
     return { success: true };
-  } catch (err) {
-    return { error: err.message || 'Failed to vote.' };
+  } catch {
+    return { error: 'Failed to vote.' };
   }
 }
 
@@ -180,7 +230,7 @@ export async function fetchThreadDetailAction(threadId) {
       getThreadReplies(threadId),
     ]);
     return { thread, replies };
-  } catch (err) {
-    return { error: err.message || 'Failed to fetch thread.' };
+  } catch {
+    return { error: 'Failed to fetch thread.' };
   }
 }

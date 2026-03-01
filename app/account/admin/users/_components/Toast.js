@@ -1,3 +1,11 @@
+/**
+ * @file Toast — dismissible notification banner for success / error
+ *   feedback after admin user actions.
+ * @module AdminToast
+ */
+
+'use client';
+
 import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Toast({ message, type, onClose }) {

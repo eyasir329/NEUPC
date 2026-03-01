@@ -1,3 +1,9 @@
+/**
+ * @file Advisor analytics client — interactive charts and data tables
+ *   covering member growth, event performance, and engagement trends.
+ * @module AdvisorAnalyticsClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

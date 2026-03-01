@@ -1,26 +1,22 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
+/**
+ * @file Member contests hub — lists all programming contests alongside
+ *   the member’s own participation history so they can register, track
+ *   performance, and review past results.
+ * @module MemberContestsPage
+ * @access member
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getUserRoles,
-  getUserByEmail,
   getAllContests,
   getUserContestParticipations,
 } from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
 import MemberContestsClient from './_components/MemberContestsClient';
 
-export const metadata = { title: 'Contests | Member' };
+export const metadata = { title: 'Contests | Member | NEUPC' };
 
 export default async function MemberContestsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('member')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || user?.is_active === false)
-    redirect('/account');
+  const { user } = await requireRole('member');
 
   const [contests, myParticipations] = await Promise.all([
     getAllContests().catch(() => []),
@@ -29,7 +25,6 @@ export default async function MemberContestsPage() {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="member" />
       <MemberContestsClient
         contests={contests}
         myParticipations={myParticipations}

@@ -1,3 +1,9 @@
+/**
+ * @file Advisor committee client — committee management view showing
+ *   current executive members, roles, and term information.
+ * @module AdvisorCommitteeClient
+ */
+
 'use client';
 
 import { useState } from 'react';

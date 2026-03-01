@@ -1,3 +1,8 @@
+/**
+ * @file Wave
+ * @module Wave
+ */
+
 function Wave() {
   return (
     <div className="relative -mt-1">

@@ -1,3 +1,9 @@
+/**
+ * @file Guest profile client — editable profile view for updating
+ *   personal information, avatar, and contact details.
+ * @module GuestProfileClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

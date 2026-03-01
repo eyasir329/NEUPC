@@ -1,6 +1,15 @@
-import { auth } from '@/app/_lib/auth';
+/**
+ * @file Account hub / role-selection page (server component).
+ * Authenticates the user, auto-redirects single-role users to their
+ * dashboard, and renders the role-selection grid for multi-role users.
+ *
+ * @module AccountPage
+ * @requires requireAuth  — redirects unauthenticated visitors to /login
+ * @requires roleDashboards — role → dashboard config mapping
+ */
+
 import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '../_lib/data-service';
+import { requireAuth } from '../_lib/auth-guard';
 import { roleDashboards } from '../_lib/roleDashboardConfig';
 import AccountPageClient from './_components/AccountPageClient';
 import AccountHeader from './_components/AccountHeader';
@@ -9,56 +18,41 @@ import AvailableRoles from './_components/AvailableRoles';
 import AccountStatusMessages from './_components/AccountStatusMessages';
 import UpgradeBanner from './_components/UpgradeBanner';
 
-async function page() {
-  const session = await auth();
-  // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect('/login');
-  }
+export const metadata = { title: 'My Account | NEUPC' };
 
-  const userRoles = await getUserRoles(session.user.email);
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
-  // Fetch user account status and is_active flag
-  const userData = await getUserByEmail(session.user.email);
+/**
+ * Check whether a user with the given role can access their dashboard.
+ * Guests only need `active` account status; other roles also need `is_active`.
+ */
+function canAccessDashboard(role, user) {
+  if (user?.account_status !== 'active') return false;
+  return role === 'guest' || user?.is_active === true;
+}
 
-  // if userRoles.length == 1 then redirect to that dashboard directly (only if account is active)
-  if (userRoles.length === 1 && userData?.account_status === 'active') {
-    const role = userRoles[0];
-    // Guest role: redirect if account_status is active
-    if (role === 'guest') {
-      redirect('/account/guest');
-    }
-    // Other roles: redirect only if account_status is active AND is_active is true
-    if (userData?.is_active === true) {
-      if (role === 'admin') {
-        redirect('/account/admin');
-      } else if (role === 'mentor') {
-        redirect('/account/mentor');
-      } else if (role === 'executive') {
-        redirect('/account/executive');
-      } else if (role === 'advisor') {
-        redirect('/account/advisor');
-      } else if (role === 'member') {
-        redirect('/account/member');
-      }
-    }
-  }
-
-  // Get available dashboards for user's roles
-  // Filter based on account_status and is_active
-  const availableRoles = userRoles
+/**
+ * Build the list of dashboards the user is eligible to enter.
+ * @param {string[]} roles
+ * @param {Object}   user
+ */
+function getAvailableDashboards(roles, user) {
+  return roles
     .map((role) => ({ role, config: roleDashboards[role] }))
-    .filter(({ config }) => config) // Filter out any invalid roles
-    .filter(({ role }) => {
-      // Guest role: only show if account_status is active
-      if (role === 'guest') {
-        return userData?.account_status === 'active';
-      }
-      // All other roles: show only if account_status is active AND is_active is true
-      return (
-        userData?.account_status === 'active' && userData?.is_active === true
-      );
-    });
+    .filter(({ role, config }) => config && canAccessDashboard(role, user));
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
+export default async function AccountPage() {
+  const { session, user, userRoles } = await requireAuth();
+
+  // Single-role users: auto-redirect to their dashboard
+  if (userRoles.length === 1 && canAccessDashboard(userRoles[0], user)) {
+    redirect(`/account/${userRoles[0]}`);
+  }
+
+  const availableRoles = getAvailableDashboards(userRoles, user);
 
   return (
     <AccountPageClient>
@@ -68,17 +62,17 @@ async function page() {
           <UserAvatar session={session.user} />
           <AvailableRoles
             availableRoles={availableRoles}
-            accountStatus={userData?.account_status}
+            accountStatus={user?.account_status}
           />
           <AccountStatusMessages
-            accountStatus={userData?.account_status}
-            statusReason={userData?.status_reason}
-            statusChangedBy={userData?.status_changed_by}
-            suspensionExpiresAt={userData?.suspension_expires_at}
-            userId={userData?.id}
+            accountStatus={user?.account_status}
+            statusReason={user?.status_reason}
+            statusChangedBy={user?.status_changed_by}
+            suspensionExpiresAt={user?.suspension_expires_at}
+            userId={user?.id}
           />
           <UpgradeBanner
-            accountStatus={userData?.account_status}
+            accountStatus={user?.account_status}
             userRoles={userRoles}
           />
         </div>
@@ -86,5 +80,3 @@ async function page() {
     </AccountPageClient>
   );
 }
-
-export default page;

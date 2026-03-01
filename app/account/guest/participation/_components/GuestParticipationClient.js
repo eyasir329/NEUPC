@@ -1,3 +1,9 @@
+/**
+ * @file Guest participation client — detailed view of the guest’s
+ *   event attendance history and participation records.
+ * @module GuestParticipationClient
+ */
+
 'use client';
 
 import { useState } from 'react';

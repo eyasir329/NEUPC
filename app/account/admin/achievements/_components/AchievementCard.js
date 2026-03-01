@@ -1,3 +1,9 @@
+/**
+ * @file Achievement card — displays a single achievement badge with
+ *   icon, name, criteria, earned-count, and edit / delete actions.
+ * @module AdminAchievementCard
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

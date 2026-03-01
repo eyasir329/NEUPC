@@ -1,3 +1,8 @@
+/**
+ * @file user actions
+ * @module user-actions
+ */
+
 'use server';
 
 import { auth } from '@/app/_lib/auth';

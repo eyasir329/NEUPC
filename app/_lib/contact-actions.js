@@ -1,38 +1,18 @@
+/**
+ * @file contact actions
+ * @module contact-actions
+ */
+
 'use server';
 
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, createLogger } from '@/app/_lib/helpers';
+import { headers } from 'next/headers';
+import { rateLimitPublicForm } from '@/app/_lib/rate-limiter';
+import { sanitizeText, isValidEmail } from '@/app/_lib/validation';
 
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.email) redirect('/login');
-  const roles = await getUserRoles(session.user.email);
-  if (!roles.includes('admin')) redirect('/account');
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active') redirect('/account');
-  return user;
-}
-
-async function logActivity(userId, action, entityId, details = {}) {
-  try {
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: userId,
-      action,
-      entity_type: 'contact_submission',
-      entity_id: entityId,
-      details,
-    });
-  } catch {
-    // non-critical
-  }
-}
+const logActivity = createLogger('contact_submission');
 
 function revalidate() {
   revalidatePath('/account/admin/contact-submissions');
@@ -43,13 +23,23 @@ function revalidate() {
 // =============================================================================
 
 export async function submitContactFormAction(formData) {
-  const name = formData.get('name')?.trim();
+  // Rate limit by IP
+  const headersList = await headers();
+  const ip =
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const rl = rateLimitPublicForm(ip);
+  if (rl.limited) {
+    return { error: 'Too many submissions. Please try again later.' };
+  }
+
+  const name = sanitizeText(formData.get('name'), 100);
   const email = formData.get('email')?.trim();
-  const subject = formData.get('subject')?.trim();
-  const message = formData.get('message')?.trim();
+  const subject = sanitizeText(formData.get('subject'), 200);
+  const message = sanitizeText(formData.get('message'), 5000);
 
   if (!name) return { error: 'Name is required.' };
-  if (!email) return { error: 'Email is required.' };
+  if (!email || !isValidEmail(email))
+    return { error: 'A valid email is required.' };
   if (!message || message.length < 10)
     return { error: 'Message must be at least 10 characters.' };
 
@@ -67,7 +57,10 @@ export async function submitContactFormAction(formData) {
     .select()
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('Contact form submission error:', error);
+    return { error: 'Failed to submit your message. Please try again.' };
+  }
   return { success: true, id: data.id };
 }
 

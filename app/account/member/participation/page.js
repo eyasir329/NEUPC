@@ -1,28 +1,24 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
+/**
+ * @file Member participation overview — consolidates event registrations,
+ *   contest results, certificates, and discussion threads authored by
+ *   the member into a single activity timeline.
+ * @module MemberParticipationPage
+ * @access member
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getUserRoles,
-  getUserByEmail,
   getUserEventRegistrations,
   getUserContestParticipations,
   getUserCertificates,
   getAllDiscussionThreads,
 } from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
 import MemberParticipationClient from './_components/MemberParticipationClient';
 
-export const metadata = { title: 'Participation | Member' };
+export const metadata = { title: 'Participation | Member | NEUPC' };
 
 export default async function MemberParticipationPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('member')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || user?.is_active === false)
-    redirect('/account');
+  const { user } = await requireRole('member');
 
   const [registrations, contestParticipations, certificates, allThreads] =
     await Promise.all([
@@ -36,7 +32,6 @@ export default async function MemberParticipationPage() {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="member" />
       <MemberParticipationClient
         registrations={registrations}
         contestParticipations={contestParticipations}

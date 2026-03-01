@@ -1,3 +1,10 @@
+/**
+ * @file Analytics client — renders platform-wide analytics dashboards
+ *   with charts, trend lines, and key performance indicators for the
+ *   admin overview.
+ * @module AdminAnalyticsClient
+ */
+
 'use client';
 
 import {

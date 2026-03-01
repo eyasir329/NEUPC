@@ -1,3 +1,9 @@
+/**
+ * @file Recent members widget — dashboard preview of newly joined
+ *   or recently approved club members.
+ * @module ExecutiveRecentMembers
+ */
+
 'use client';
 
 import Link from 'next/link';

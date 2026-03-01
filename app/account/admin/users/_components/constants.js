@@ -1,3 +1,9 @@
+/**
+ * @file User management constants — status options, role labels, filter
+ *   presets, and colour mappings for admin user components.
+ * @module adminUserConstants
+ */
+
 export const ROLES = [
   'guest',
   'member',

@@ -1,3 +1,9 @@
+/**
+ * @file Advisor reports client — reporting dashboard with aggregated
+ *   statistics, exportable summaries, and trend visualisations.
+ * @module AdvisorReportsClient
+ */
+
 'use client';
 
 import { useState } from 'react';

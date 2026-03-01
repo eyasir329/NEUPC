@@ -1,3 +1,9 @@
+/**
+ * @file Member certificates client — browsable list of earned
+ *   certificates with download and share options.
+ * @module MemberCertificatesClient
+ */
+
 'use client';
 
 import { useState } from 'react';

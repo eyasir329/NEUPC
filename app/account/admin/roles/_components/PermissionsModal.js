@@ -1,3 +1,9 @@
+/**
+ * @file Permissions modal — dialog displaying and managing the
+ *   granular permissions assigned to a specific role.
+ * @module AdminPermissionsModal
+ */
+
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';

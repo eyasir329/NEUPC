@@ -1,37 +1,26 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail, getAllJoinRequests } from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
+/**
+ * @file Admin membership applications page (server component).
+ * Fetches all join requests for admin review and approval.
+ *
+ * @module AdminApplicationsPage
+ * @access admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
+import { getAllJoinRequests } from '@/app/_lib/data-service';
 import ApplicationsClient from './_components/ApplicationsClient';
 
-export const metadata = {
-  title: 'Applications | Admin',
-};
+export const metadata = { title: 'Applications | Admin | NEUPC' };
 
 export default async function AdminApplicationsPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect('/login');
-
-  const userEmail = session.user?.email;
-  if (!userEmail) redirect('/login');
-
-  const userRoles = await getUserRoles(userEmail);
-  if (!Array.isArray(userRoles) || !userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  const userData = await getUserByEmail(userEmail);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
-  const requests = await getAllJoinRequests().catch(() => []);
+  const [{ user }, requests] = await Promise.all([
+    requireRole('admin'),
+    getAllJoinRequests().catch(() => []),
+  ]);
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
-      <ApplicationsClient initialRequests={requests} adminId={userData.id} />
+      <ApplicationsClient initialRequests={requests} adminId={user.id} />
     </div>
   );
 }

@@ -1,3 +1,9 @@
+/**
+ * @file Upcoming events widget — dashboard preview of the next
+ *   scheduled club events with dates and registration counts.
+ * @module ExecutiveUpcomingEvents
+ */
+
 'use client';
 
 import Link from 'next/link';

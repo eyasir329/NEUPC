@@ -1,3 +1,9 @@
+/**
+ * @file Guest settings client — account preferences panel for
+ *   notification settings, theme, and privacy options.
+ * @module GuestSettingsClient
+ */
+
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';

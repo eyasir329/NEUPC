@@ -1,3 +1,11 @@
+/**
+ * @file Action menu — dropdown menu for per-user actions (edit, suspend,
+ *   ban, delete, change role) with contextual option visibility.
+ * @module AdminActionMenu
+ */
+
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, ShieldOff, Ban, Lock, ShieldCheck } from 'lucide-react';
@@ -92,7 +100,7 @@ export default function ActionMenu({ user, onAction }) {
         createPortal(
           <>
             <div
-              className="fixed inset-0 z-[9998]"
+              className="fixed inset-0 z-9998"
               onClick={() => setOpen(false)}
             />
             <div

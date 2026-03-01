@@ -1,3 +1,10 @@
+/**
+ * @file Security client — admin security dashboard for reviewing
+ *   login attempts, active sessions, IP allowlists, and security
+ *   audit logs.
+ * @module AdminSecurityClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

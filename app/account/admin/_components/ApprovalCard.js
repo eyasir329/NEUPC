@@ -1,3 +1,10 @@
+/**
+ * @file Approval card — renders a single pending-approval item with
+ *   approve / reject action handlers, approval type, requester name,
+ *   and submission date.
+ * @module ApprovalCard
+ */
+
 'use client';
 
 import { AlertCircle } from 'lucide-react';

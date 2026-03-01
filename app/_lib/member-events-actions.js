@@ -1,11 +1,21 @@
+/**
+ * @file member events actions
+ * @module member-events-actions
+ */
+
 'use server';
 
 import { supabaseAdmin } from './supabase';
 import { revalidatePath } from 'next/cache';
+import { requireActionSession } from './action-guard';
 
 /** Register the current user for an event. */
-export async function registerForEventAction(eventId, userId) {
-  if (!eventId || !userId) return { error: 'Missing event or user ID.' };
+export async function registerForEventAction(eventId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!eventId) return { error: 'Missing event ID.' };
 
   // Check event exists, is open and has capacity
   const { data: event, error: evErr } = await supabaseAdmin
@@ -44,7 +54,10 @@ export async function registerForEventAction(eventId, userId) {
           registered_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
-      if (reErr) return { error: reErr.message };
+      if (reErr) {
+        console.error('Event re-registration error:', reErr);
+        return { error: 'Failed to re-register for event.' };
+      }
       revalidatePath('/account/member/events');
       return { success: true };
     }
@@ -71,14 +84,21 @@ export async function registerForEventAction(eventId, userId) {
       registered_at: new Date().toISOString(),
     });
 
-  if (insErr) return { error: insErr.message };
+  if (insErr) {
+    console.error('Event registration error:', insErr);
+    return { error: 'Failed to register for event.' };
+  }
   revalidatePath('/account/member/events');
   return { success: true };
 }
 
-/** Cancel a user's registration for an event. */
-export async function cancelEventRegistrationAction(eventId, userId) {
-  if (!eventId || !userId) return { error: 'Missing event or user ID.' };
+/** Cancel the current user's registration for an event. */
+export async function cancelEventRegistrationAction(eventId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!eventId) return { error: 'Missing event ID.' };
 
   const { error } = await supabaseAdmin
     .from('event_registrations')
@@ -86,7 +106,10 @@ export async function cancelEventRegistrationAction(eventId, userId) {
     .eq('event_id', eventId)
     .eq('user_id', userId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('Event cancellation error:', error);
+    return { error: 'Failed to cancel registration.' };
+  }
   revalidatePath('/account/member/events');
   return { success: true };
 }

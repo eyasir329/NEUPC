@@ -1,3 +1,9 @@
+/**
+ * @file Reports client — executive reporting dashboard with aggregated
+ *   statistics across users, events, contests, registrations, and blogs.
+ * @module ExecutiveReportsClient
+ */
+
 'use client';
 
 import {

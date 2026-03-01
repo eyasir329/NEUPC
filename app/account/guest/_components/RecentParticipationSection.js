@@ -1,3 +1,9 @@
+/**
+ * @file Recent participation section — dashboard preview of the
+ *   guest’s latest event attendance and activity history.
+ * @module GuestRecentParticipationSection
+ */
+
 'use client';
 
 import { Calendar, CheckCircle, Award } from 'lucide-react';

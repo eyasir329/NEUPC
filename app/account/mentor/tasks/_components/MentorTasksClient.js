@@ -1,3 +1,9 @@
+/**
+ * @file Mentor tasks client — task management interface for creating,
+ *   assigning, and tracking learning tasks for mentees.
+ * @module MentorTasksClient
+ */
+
 'use client';
 
 import { useState } from 'react';

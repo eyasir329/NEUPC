@@ -1,3 +1,9 @@
+/**
+ * @file Resource card — displays a learning resource’s title, type,
+ *   description, access level, and edit / delete actions.
+ * @module AdminResourceCard
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

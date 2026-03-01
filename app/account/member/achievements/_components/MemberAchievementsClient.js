@@ -1,3 +1,9 @@
+/**
+ * @file Member achievements client — full-page view of earned badges,
+ *   certificates, and progress bars towards unearned achievements.
+ * @module MemberAchievementsClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

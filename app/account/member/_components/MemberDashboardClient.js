@@ -1,6 +1,12 @@
+/**
+ * @file Member dashboard shell — composes the header, stats grid,
+ *   upcoming events, achievements, recent activity, learning progress,
+ *   and quick-access sections into the main member view.
+ * @module MemberDashboardClient
+ */
+
 'use client';
 
-import RoleSync from '../../_components/RoleSync';
 import MemberHeader from './MemberHeader';
 import MemberStatsGrid from './MemberStatsGrid';
 import UpcomingEventsSection from './UpcomingEventsSection';
@@ -97,8 +103,6 @@ export default function MemberDashboardClient({ session }) {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="member" />
-
       <MemberHeader firstName={firstName} userLevel={userLevel} />
       <MemberStatsGrid stats={stats} />
 

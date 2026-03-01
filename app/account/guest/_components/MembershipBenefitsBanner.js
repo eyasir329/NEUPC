@@ -1,3 +1,10 @@
+/**
+ * @file Membership benefits banner — promotional card highlighting
+ *   advantages of club membership with a call-to-action for guests
+ *   to apply.
+ * @module GuestMembershipBenefitsBanner
+ */
+
 'use client';
 
 import Link from 'next/link';

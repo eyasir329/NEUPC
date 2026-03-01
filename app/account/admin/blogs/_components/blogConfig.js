@@ -1,3 +1,9 @@
+/**
+ * @file Blog configuration constants — category options, status labels,
+ *   and colour mappings used across admin blog components.
+ * @module adminBlogConfig
+ */
+
 // ─── Status config ────────────────────────────────────────────────────────────
 
 export const STATUS_CONFIG = {
@@ -108,4 +114,54 @@ export function formatRelativeDate(dateStr) {
   const days = Math.floor(hrs / 24);
   if (days < 30) return `${days}d ago`;
   return formatBlogDate(dateStr);
+}
+
+// ─── Sort options ─────────────────────────────────────────────────────────────
+
+export const SORT_OPTIONS = [
+  { key: 'newest', label: 'Newest First' },
+  { key: 'oldest', label: 'Oldest First' },
+  { key: 'most-viewed', label: 'Most Viewed' },
+  { key: 'most-liked', label: 'Most Liked' },
+  { key: 'most-comments', label: 'Most Commented' },
+  { key: 'title-az', label: 'Title A → Z' },
+];
+
+export function sortPosts(posts, sortKey) {
+  const sorted = [...posts];
+  switch (sortKey) {
+    case 'newest':
+      return sorted.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+    case 'oldest':
+      return sorted.sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      );
+    case 'most-viewed':
+      return sorted.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+    case 'most-liked':
+      return sorted.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
+    case 'most-comments':
+      return sorted.sort(
+        (a, b) => (b.commentCount ?? 0) - (a.commentCount ?? 0)
+      );
+    case 'title-az':
+      return sorted.sort((a, b) =>
+        (a.title ?? '').localeCompare(b.title ?? '')
+      );
+    default:
+      return sorted;
+  }
+}
+
+// ─── Slug helper ──────────────────────────────────────────────────────────────
+
+export function generateSlug(title) {
+  return (title ?? '')
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
 }

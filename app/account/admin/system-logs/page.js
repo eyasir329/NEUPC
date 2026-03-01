@@ -1,37 +1,26 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
+/**
+ * @file Admin system logs page (server component).
+ * Fetches system log data for the audit trail viewer.
+ *
+ * @module AdminSystemLogsPage
+ * @access admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import { getSystemLogsData } from '@/app/_lib/system-logs-service';
-import RoleSync from '../../_components/RoleSync';
 import SystemLogsClient from './_components/SystemLogsClient';
 
-export const metadata = {
-  title: 'System Logs | Admin',
-};
+export const metadata = { title: 'System Logs | Admin | NEUPC' };
 
 export default async function AdminSystemLogsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userEmail = session.user?.email;
-  if (!userEmail) redirect('/login');
-
-  const userRoles = await getUserRoles(userEmail);
-  if (!Array.isArray(userRoles) || !userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  const userData = await getUserByEmail(userEmail);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
-  const logsData = await getSystemLogsData().catch(() => null);
+  const [{ user }, logsData] = await Promise.all([
+    requireRole('admin'),
+    getSystemLogsData().catch(() => null),
+  ]);
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
-      <SystemLogsClient data={logsData} adminId={userData.id} />
+      <SystemLogsClient data={logsData} adminId={user.id} />
     </div>
   );
 }

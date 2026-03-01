@@ -1,3 +1,8 @@
+/**
+ * @file role actions
+ * @module role-actions
+ */
+
 'use server';
 
 import { auth } from '@/app/_lib/auth';

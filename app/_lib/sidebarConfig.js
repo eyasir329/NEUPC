@@ -1,3 +1,8 @@
+/**
+ * @file sidebar Config
+ * @module sidebarConfig
+ */
+
 import {
   Calendar,
   Trophy,
@@ -149,6 +154,14 @@ export function getSidebarNavigation(activeRole, stats, session) {
         label: 'Notices',
         icon: Megaphone,
         href: '/account/member/notices',
+      },
+      {
+        id: 'notifications',
+        label: 'Notifications',
+        icon: Bell,
+        href: '/account/member/notifications',
+        badge: stats.notifications,
+        badgeType: 'alert',
       },
       {
         id: 'participation',

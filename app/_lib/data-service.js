@@ -1,3 +1,8 @@
+/**
+ * @file data service
+ * @module data-service
+ */
+
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 
 // Log activity to activity_logs.
@@ -12,9 +17,7 @@ async function _log(userId, action, entityType, entityId, details = {}) {
         details,
       },
     ]);
-  } catch (_) {
-
-  }
+  } catch (_) {}
 }
 
 // Get user by email.
@@ -135,7 +138,6 @@ export async function getAllUsers() {
   }
 
   try {
-
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
@@ -186,7 +188,6 @@ export async function getAllUsers() {
     };
 
     return users.map((u) => {
-
       const userRoleRows = rolesMap[u.id] ?? [];
       const roleRows = userRoleRows
         .filter((r) => r.roles?.name)
@@ -477,7 +478,6 @@ export async function getUserRoles(email) {
   }
 
   try {
-
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -1807,8 +1807,11 @@ export async function getNoticesAdmin() {
   const stats = {
     total: notices.length,
     pinned: notices.filter((n) => n.is_pinned).length,
-    active: notices.filter((n) => !n.expires_at || new Date(n.expires_at) > now).length,
-    expired: notices.filter((n) => n.expires_at && new Date(n.expires_at) <= now).length,
+    active: notices.filter((n) => !n.expires_at || new Date(n.expires_at) > now)
+      .length,
+    expired: notices.filter(
+      (n) => n.expires_at && new Date(n.expires_at) <= now
+    ).length,
     critical: notices.filter((n) => n.priority === 'critical').length,
     urgent: notices.filter((n) => n.notice_type === 'urgent').length,
   };
@@ -3287,7 +3290,7 @@ export async function getAllSettings() {
 export async function getSettingsByCategory(category) {
   const { data, error } = await supabase
     .from('website_settings')
-    .select('*')
+    .select('key, value')
     .eq('category', category);
   if (error) throw new Error(error.message);
   return data;

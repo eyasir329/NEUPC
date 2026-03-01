@@ -1,3 +1,9 @@
+/**
+ * @file Member discussions client — forum interface for browsing,
+ *   creating, and voting on discussion threads with category filtering.
+ * @module MemberDiscussionsClient
+ */
+
 'use client';
 
 import {
@@ -40,6 +46,7 @@ import {
   fetchThreadDetailAction,
   markThreadSolvedAction,
 } from '@/app/_lib/member-discussions-actions';
+import { getInitials } from '@/app/_lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,14 +64,7 @@ function timeAgo(dateStr) {
   });
 }
 
-function initials(name) {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
+// initials() replaced by getInitials() from shared utils
 
 function avatarColor(str) {
   const colors = [
@@ -93,7 +93,7 @@ function Avatar({ name, size = 'md' }) {
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${sz} ${avatarColor(name)}`}
     >
-      {initials(name)}
+      {getInitials(name)}
     </span>
   );
 }
@@ -127,7 +127,6 @@ function CreateThreadModal({ categories, userId, onClose, onCreated }) {
         title: form.title,
         content: form.content,
         tags: form.tags,
-        userId,
       });
       if (res?.error) {
         setError(res.error);
@@ -393,7 +392,6 @@ function ThreadDetail({ threadId, userId, userVotes, onBack }) {
     const current = localVotes.get(key) ?? null;
     setVoteLoading(key);
     const res = await voteThreadAction({
-      userId,
       threadId,
       voteType,
       currentVote: current,
@@ -414,7 +412,6 @@ function ThreadDetail({ threadId, userId, userVotes, onBack }) {
     const current = localVotes.get(key) ?? null;
     setVoteLoading(key);
     const res = await voteReplyAction({
-      userId,
       replyId,
       voteType,
       currentVote: current,
@@ -437,7 +434,6 @@ function ThreadDetail({ threadId, userId, userVotes, onBack }) {
     setError('');
     const res = await createReplyAction({
       threadId,
-      authorId: userId,
       content: replyContent,
       parentId: replyTo?.id ?? null,
     });
@@ -459,14 +455,14 @@ function ThreadDetail({ threadId, userId, userVotes, onBack }) {
   async function handleDeleteThread() {
     if (!confirm('Delete this thread? This cannot be undone.')) return;
     setDeleting('thread');
-    await deleteThreadAction({ threadId, userId });
+    await deleteThreadAction({ threadId });
     onBack();
   }
 
   async function handleDeleteReply(replyId) {
     if (!confirm('Delete this reply?')) return;
     setDeleting(replyId);
-    await deleteReplyAction({ replyId, userId });
+    await deleteReplyAction({ replyId });
     await refresh();
     setDeleting(null);
   }
@@ -474,7 +470,6 @@ function ThreadDetail({ threadId, userId, userVotes, onBack }) {
   async function handleToggleSolved() {
     await markThreadSolvedAction({
       threadId,
-      userId,
       isSolved: !thread?.is_solved,
     });
     await refresh();

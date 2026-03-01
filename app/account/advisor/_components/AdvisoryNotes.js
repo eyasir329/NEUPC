@@ -1,3 +1,9 @@
+/**
+ * @file Advisory notes — dashboard widget for viewing and managing
+ *   the advisor’s personal notes and recommendations for the club.
+ * @module AdvisorAdvisoryNotes
+ */
+
 'use client';
 
 import { MessageSquare } from 'lucide-react';

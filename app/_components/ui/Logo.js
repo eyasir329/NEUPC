@@ -1,3 +1,8 @@
+/**
+ * @file Logo
+ * @module Logo
+ */
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
@@ -15,6 +20,7 @@ function Logo() {
           <Image
             src="/logo.png"
             fill
+            sizes="(max-width: 640px) 48px, (max-width: 768px) 56px, 64px"
             className="object-contain p-1"
             alt="Netrokona University Programming Club logo"
             priority

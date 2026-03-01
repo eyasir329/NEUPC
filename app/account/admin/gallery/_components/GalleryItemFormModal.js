@@ -1,3 +1,10 @@
+/**
+ * @file Gallery item form modal — create / edit dialog for gallery
+ *   media with fields for URL, caption, category, tags, event link,
+ *   and display order.
+ * @module AdminGalleryItemFormModal
+ */
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';

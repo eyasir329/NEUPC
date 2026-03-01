@@ -1,3 +1,10 @@
+/**
+ * @file Notice management client — admin interface for listing,
+ *   creating, editing, pinning, and archiving club announcements
+ *   with audience targeting and priority controls.
+ * @module AdminNoticeManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

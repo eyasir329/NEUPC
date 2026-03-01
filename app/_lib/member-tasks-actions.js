@@ -1,19 +1,32 @@
+/**
+ * @file member tasks actions
+ * @module member-tasks-actions
+ */
+
 'use server';
 
 import { supabaseAdmin } from './supabase';
 import { revalidatePath } from 'next/cache';
+import { requireActionSession } from './action-guard';
+import { sanitizeText, isValidUrl } from './validation';
 
 /** Submit (or re-submit) a solution for a weekly task. */
-export async function submitTaskAction({
-  taskId,
-  userId,
-  submissionUrl,
-  code,
-  notes,
-}) {
-  if (!taskId || !userId) return { error: 'Missing task or user ID.' };
+export async function submitTaskAction({ taskId, submissionUrl, code, notes }) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const userId = authResult.user.id;
+
+  if (!taskId) return { error: 'Missing task ID.' };
   if (!submissionUrl && !code)
     return { error: 'Provide a submission URL or paste your code.' };
+
+  // Validate submission URL if provided
+  if (submissionUrl && !isValidUrl(submissionUrl)) {
+    return { error: 'Invalid submission URL.' };
+  }
+
+  // Sanitize text inputs
+  const sanitizedNotes = sanitizeText(notes, 2000);
 
   // Check if task exists and determine if submission is late
   const { data: task, error: taskErr } = await supabaseAdmin
@@ -44,7 +57,7 @@ export async function submitTaskAction({
       .update({
         submission_url: submissionUrl || null,
         code: code || null,
-        notes: notes || null,
+        notes: sanitizedNotes || null,
         status: isLate ? 'late' : 'pending',
         submitted_at: new Date().toISOString(),
         reviewed_by: null,
@@ -52,7 +65,10 @@ export async function submitTaskAction({
       })
       .eq('id', existing.id);
 
-    if (updErr) return { error: updErr.message };
+    if (updErr) {
+      console.error('Task submission update error:', updErr);
+      return { error: 'Failed to update submission.' };
+    }
     revalidatePath('/account/member/problem-set');
     return { success: true, updated: true };
   }
@@ -65,12 +81,15 @@ export async function submitTaskAction({
       user_id: userId,
       submission_url: submissionUrl || null,
       code: code || null,
-      notes: notes || null,
+      notes: sanitizedNotes || null,
       status: isLate ? 'late' : 'pending',
       submitted_at: new Date().toISOString(),
     });
 
-  if (insErr) return { error: insErr.message };
+  if (insErr) {
+    console.error('Task submission error:', insErr);
+    return { error: 'Failed to submit task.' };
+  }
   revalidatePath('/account/member/problem-set');
   return { success: true, updated: false };
 }

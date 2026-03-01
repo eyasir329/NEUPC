@@ -1,88 +1,111 @@
+/**
+ * @file Join page client component.
+ * Renders the public account creation page with feature cards and Google OAuth sign-in.
+ *
+ * @module JoinClient
+ */
+
 'use client';
 
-import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
+import dynamic from 'next/dynamic';
+const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+  ssr: false,
+});
+import PageBackground from '../_components/ui/PageBackground';
+import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
+import { cn } from '../_lib/utils';
 
-export default function JoinClient() {
-  const [showScrollTop, setShowScrollTop] = useState(false);
+/* ──────────────────── Constants ──────────────────── */
 
-  // Handle scroll for scroll-to-top button
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+/** @type {{ icon: string, title: string, description: string }[]} */
+const DEFAULT_FEATURES = [
+  {
+    icon: '📅',
+    title: 'Event Registration',
+    description: 'Register for contests, workshops, and hackathons',
+  },
+  {
+    icon: '📩',
+    title: 'Smart Notifications',
+    description: 'Get updates on events, blogs, roadmaps, and more',
+  },
+  {
+    icon: '📊',
+    title: 'Participation History',
+    description: 'Track your events and download certificates',
+  },
+  {
+    icon: '📨',
+    title: 'Membership Application',
+    description: 'Apply to become an official club member',
+  },
+];
 
-  // Handle Google OAuth sign-in
-  const handleGoogleSignIn = () => {
+/* ──────────────────── Component ──────────────────── */
+
+/**
+ * @param {{ features?: { icon: string, title: string, description: string }[] }} props
+ */
+export default function JoinClient({ features: propFeatures = [] }) {
+  const handleGoogleSignIn = () =>
     signIn('google', { callbackUrl: '/account' });
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const publicFeatures = [
-    {
-      icon: '📅',
-      title: 'Event Registration',
-      description: 'Register for contests, workshops, and hackathons',
-    },
-    {
-      icon: '📩',
-      title: 'Smart Notifications',
-      description: 'Get updates on events, blogs, roadmaps, and more',
-    },
-    {
-      icon: '📊',
-      title: 'Participation History',
-      description: 'Track your events and download certificates',
-    },
-    {
-      icon: '📨',
-      title: 'Membership Application',
-      description: 'Apply to become an official club member',
-    },
-  ];
+  const publicFeatures =
+    propFeatures.length > 0 ? propFeatures : DEFAULT_FEATURES;
+  const isLoaded = useDelayedLoad(50);
+  const [featuresRef, featuresVisible] = useScrollReveal({ threshold: 0.1 });
 
   return (
     <main className="relative min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
+      <PageBackground variant="fixed" />
+
       {/* Hero Section */}
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 md:py-28 lg:px-8 lg:py-32">
-        {/* Animated Decorative Elements */}
-        <div className="from-primary-500/10 fixed top-20 right-10 h-72 w-72 animate-pulse rounded-full bg-linear-to-br to-transparent opacity-70 blur-3xl"></div>
-        <div
-          className="from-secondary-500/10 fixed bottom-20 left-10 h-72 w-72 animate-pulse rounded-full bg-linear-to-br to-transparent opacity-70 blur-3xl"
-          style={{ animationDelay: '1s' }}
-        ></div>
-
         <div className="relative container mx-auto">
           <div className="mx-auto max-w-4xl text-center">
             <div
-              style={{ animationDelay: '100ms' }}
-              className="animate-fade-in mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-md sm:mb-8"
+              style={{ transitionDelay: '0ms' }}
+              className={cn(
+                'mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-md transition-all duration-700 sm:mb-8',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : '-translate-y-4 opacity-0'
+              )}
             >
               <span className="text-base">👤</span>
               <span>Public Account</span>
             </div>
             <h1
-              style={{ animationDelay: '200ms' }}
-              className="animate-fade-in from-primary-300 to-secondary-300 mb-6 bg-linear-to-r via-white bg-clip-text text-4xl leading-tight font-extrabold tracking-tight text-transparent sm:mb-8 sm:text-5xl md:text-6xl lg:text-7xl"
+              style={{ transitionDelay: '150ms' }}
+              className={cn(
+                'from-primary-300 to-secondary-300 mb-6 bg-linear-to-r via-white bg-clip-text text-4xl leading-tight font-extrabold tracking-tight text-transparent transition-all duration-700 sm:mb-8 sm:text-5xl md:text-6xl lg:text-7xl',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-4 opacity-0'
+              )}
             >
               Create Your Public Account
             </h1>
             <p
-              style={{ animationDelay: '300ms' }}
-              className="animate-fade-in mx-auto mb-10 max-w-2xl text-base leading-relaxed text-gray-200 sm:mb-12 sm:text-lg md:text-xl"
+              style={{ transitionDelay: '300ms' }}
+              className={cn(
+                'mx-auto mb-10 max-w-2xl text-base leading-relaxed text-gray-200 transition-all duration-700 sm:mb-12 sm:text-lg md:text-xl',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-4 opacity-0'
+              )}
             >
               Stay updated with events, contests, and workshops at Netrokona
               University Programming Club
             </p>
             <div
-              style={{ animationDelay: '400ms' }}
-              className="animate-fade-in flex flex-col justify-center gap-4 sm:gap-5"
+              style={{ transitionDelay: '450ms' }}
+              className={cn(
+                'flex flex-col justify-center gap-4 transition-all duration-700 sm:gap-5',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-4 opacity-0'
+              )}
             >
               <button
                 onClick={handleGoogleSignIn}
@@ -118,14 +141,31 @@ export default function JoinClient() {
       </section>
 
       {/* What is a Public Account Section */}
-      <section className="relative bg-linear-to-b from-gray-900/60 via-gray-900/40 to-gray-900/60 py-16 sm:py-20 md:py-24 lg:py-32">
+      <section
+        ref={featuresRef}
+        className="relative bg-linear-to-b from-gray-900/60 via-gray-900/40 to-gray-900/60 py-16 sm:py-20 md:py-24 lg:py-32"
+      >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center sm:mb-16 md:mb-20">
-              <h2 className="mb-4 text-3xl leading-tight font-extrabold tracking-tight text-white sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
+              <h2
+                className={cn(
+                  'mb-4 text-3xl leading-tight font-extrabold tracking-tight text-white transition-all duration-700 sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl',
+                  featuresVisible
+                    ? 'translate-y-0 opacity-100'
+                    : 'translate-y-6 opacity-0'
+                )}
+              >
                 What is a Public Account?
               </h2>
-              <p className="mx-auto max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg md:text-xl">
+              <p
+                className={cn(
+                  'mx-auto max-w-2xl text-base leading-relaxed text-gray-300 transition-all delay-150 duration-700 sm:text-lg md:text-xl',
+                  featuresVisible
+                    ? 'translate-y-0 opacity-100'
+                    : 'translate-y-4 opacity-0'
+                )}
+              >
                 Get started with limited access and upgrade anytime
               </p>
             </div>
@@ -134,8 +174,17 @@ export default function JoinClient() {
               {publicFeatures.map((feature, index) => (
                 <div
                   key={index}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  className="group animate-fade-in hover:border-primary-500/40 hover:shadow-primary-500/20 relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:bg-white/10 hover:shadow-2xl sm:p-7"
+                  style={{
+                    transitionDelay: featuresVisible
+                      ? `${300 + index * 100}ms`
+                      : '0ms',
+                  }}
+                  className={cn(
+                    'group hover:border-primary-500/40 hover:shadow-primary-500/20 relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:scale-[1.03] hover:bg-white/10 hover:shadow-2xl sm:p-7',
+                    featuresVisible
+                      ? 'translate-y-0 scale-100 opacity-100'
+                      : 'translate-y-6 scale-95 opacity-0'
+                  )}
                 >
                   <div className="from-primary-500/20 to-secondary-500/20 absolute -top-8 -right-8 h-40 w-40 rounded-full bg-linear-to-br opacity-0 blur-3xl transition-all duration-500 group-hover:opacity-100"></div>
                   <div className="relative">
@@ -153,7 +202,15 @@ export default function JoinClient() {
               ))}
             </div>
 
-            <div className="mt-10 rounded-2xl border-2 border-amber-500/30 bg-linear-to-br from-amber-500/10 to-orange-500/10 p-6 shadow-lg backdrop-blur-xl sm:mt-12 sm:p-8 md:mt-16">
+            <div
+              style={{ transitionDelay: featuresVisible ? '700ms' : '0ms' }}
+              className={cn(
+                'mt-10 rounded-2xl border-2 border-amber-500/30 bg-linear-to-br from-amber-500/10 to-orange-500/10 p-6 shadow-lg backdrop-blur-xl transition-all duration-700 sm:mt-12 sm:p-8 md:mt-16',
+                featuresVisible
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-6 opacity-0'
+              )}
+            >
               <div className="flex items-start gap-4 sm:gap-5">
                 <div className="shrink-0 text-3xl sm:text-4xl">ℹ️</div>
                 <div>
@@ -172,28 +229,7 @@ export default function JoinClient() {
         </div>
       </section>
 
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="group animate-fade-in fixed right-4 bottom-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-white/30 hover:bg-white/20 active:scale-95 sm:right-6 sm:bottom-6 sm:h-12 sm:w-12 lg:right-8 lg:bottom-8"
-          aria-label="Scroll to top"
-        >
-          <svg
-            className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-1 sm:h-6 sm:w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 10l7-7m0 0l7 7m-7-7v18"
-            />
-          </svg>
-        </button>
-      )}
+      <ScrollToTop />
     </main>
   );
 }

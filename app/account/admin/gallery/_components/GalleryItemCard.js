@@ -1,3 +1,9 @@
+/**
+ * @file Gallery item card — displays a single media item’s thumbnail,
+ *   caption, category tag, and edit / delete / feature actions.
+ * @module AdminGalleryItemCard
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

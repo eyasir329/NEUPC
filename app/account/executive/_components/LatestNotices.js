@@ -1,3 +1,9 @@
+/**
+ * @file Latest notices widget — dashboard preview of recently
+ *   published club notices with priority indicators.
+ * @module ExecutiveLatestNotices
+ */
+
 'use client';
 
 import Link from 'next/link';

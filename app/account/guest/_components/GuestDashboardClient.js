@@ -1,3 +1,10 @@
+/**
+ * @file Guest dashboard client — composes welcome header, stats grid,
+ *   quick actions, upcoming events, and membership benefits banner into
+ *   a unified guest landing experience.
+ * @module GuestDashboardClient
+ */
+
 'use client';
 
 import GuestWelcomeHeader from './GuestWelcomeHeader';

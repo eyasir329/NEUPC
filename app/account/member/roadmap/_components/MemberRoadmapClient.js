@@ -1,3 +1,9 @@
+/**
+ * @file Member roadmap client — interactive skill-building roadmap
+ *   with topic nodes, progress tracking, and recommended resources.
+ * @module MemberRoadmapClient
+ */
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';

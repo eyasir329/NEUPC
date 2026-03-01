@@ -1,3 +1,10 @@
+/**
+ * @file Admin header banner — gradient card displaying “Admin Control
+ *   Centre” title, full-access badge, system-health indicator, and
+ *   current uptime derived from stats props.
+ * @module AdminHeader
+ */
+
 'use client';
 
 import { Shield, Activity, Server } from 'lucide-react';

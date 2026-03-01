@@ -1,3 +1,9 @@
+/**
+ * @file Reports quick access — navigation tiles linking to advisor
+ *   reporting tools such as analytics, budget, and activity reports.
+ * @module AdvisorReportsQuickAccess
+ */
+
 'use client';
 
 import Link from 'next/link';

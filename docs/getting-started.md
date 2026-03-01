@@ -1,0 +1,159 @@
+# Getting Started
+
+Setup guide for local development and production deployment.
+
+---
+
+## Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Node.js | ≥ 20 | `node -v` to verify |
+| npm | ≥ 10 | bundled with Node 20 |
+| Supabase project | — | [supabase.com](https://supabase.com) — free tier works |
+| Google OAuth 2.0 credentials | — | [console.cloud.google.com](https://console.cloud.google.com) |
+
+---
+
+## 1. Clone & Install
+
+```bash
+git clone https://github.com/eyasir329/neupc.git
+cd neupc
+npm install
+```
+
+---
+
+## 2. Environment Variables
+
+Create `.env.local` at the project root. **Never commit this file.**
+
+```env
+# ─── Google OAuth ───────────────────────────────────────────────────────────
+# console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client ID
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+
+# ─── Auth.js ────────────────────────────────────────────────────────────────
+# Generate: openssl rand -base64 32
+AUTH_SECRET=
+
+# ─── Supabase ───────────────────────────────────────────────────────────────
+# supabase.com → Project → Settings → API
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-public-key          # safe to expose (RLS enforced)
+SUPABASE_SERVICE_KEY=your-service-role-key # server-only — NEVER expose publicly
+
+# ─── Site ───────────────────────────────────────────────────────────────────
+NEXT_PUBLIC_SITE_URL=http://localhost:3000  # no trailing slash
+```
+
+---
+
+## 3. Database Setup
+
+1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql)
+2. Paste the full contents of `docs/database-schema.sql`
+3. Run — this creates all 45+ tables, RLS policies, indexes, and seed data
+4. Verify in **Table Editor** that tables like `users`, `events`, `blog_posts` exist
+
+---
+
+## 4. Google OAuth Setup
+
+In [Google Cloud Console](https://console.cloud.google.com):
+
+1. **Create project** (or select existing)
+2. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+3. Application type: **Web application**
+4. Add **Authorized redirect URIs**:
+
+```
+http://localhost:3000/api/auth/callback/google    ← development
+https://your-domain.com/api/auth/callback/google  ← production
+```
+
+1. Copy **Client ID** → `AUTH_GOOGLE_ID`
+2. Copy **Client Secret** → `AUTH_GOOGLE_SECRET`
+
+---
+
+## 5. Run Locally
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Sign in with Google. The first user has `account_status: pending` — promote it to `admin` directly in Supabase:
+
+```sql
+-- In Supabase SQL Editor
+UPDATE users SET account_status = 'active' WHERE email = 'your@email.com';
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u, roles r
+WHERE u.email = 'your@email.com' AND r.name = 'admin';
+```
+
+---
+
+## 6. Giscus (Blog Comments) — Optional
+
+Required only if you want comments on public blog posts.
+
+1. Enable **GitHub Discussions** on your repo
+2. Install the [Giscus app](https://github.com/apps/giscus) on the repo
+3. Visit [giscus.app](https://giscus.app), fill in repo details, copy the generated config
+4. Update `app/_components/ui/GiscusComments.js` with your `repo`, `repoId`, `categoryId` values
+
+---
+
+## 7. Deploy to Vercel
+
+```bash
+# Install Vercel CLI (optional)
+npm i -g vercel
+vercel
+```
+
+Or import via [vercel.com/new](https://vercel.com/new):
+
+1. Connect the GitHub repo
+2. Add all env vars under **Project → Settings → Environment Variables**
+3. Set **Node.js version** to `20.x`
+4. Add production OAuth redirect URI in Google Cloud Console (see step 4)
+5. Set `NEXT_PUBLIC_SITE_URL` to your production URL
+6. Deploy — auto-deploys on every push to `main`
+
+### Post-deploy checklist
+
+```
+✓ Google sign-in works on production
+✓ /sitemap.xml and /robots.txt return valid responses
+✓ Security headers pass at securityheaders.com
+✓ Supabase Storage images load (check next.config.mjs remotePatterns)
+✓ Giscus comments load on /blogs/[slug]
+```
+
+---
+
+## 8. Scripts Reference
+
+```bash
+npm run dev     # Turbopack dev server
+npm run build   # production build (runs type checks + lint)
+npm run start   # serve production build
+npm run lint    # ESLint — next/core-web-vitals
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Sign-in redirects to `/account` but shows "pending" | Run the SQL above to set `account_status = 'active'` and assign a role |
+| Images from Supabase Storage don't load | Add your Supabase hostname to `remotePatterns` in `next.config.mjs` |
+| `SUPABASE_SERVICE_KEY` undefined in server action | Verify the env var is set — it must not have `NEXT_PUBLIC_` prefix |
+| Giscus comments don't appear | Ensure GitHub Discussions is enabled and `giscus.app` script config is correct |
+| Build fails on `sanitize-html` | Run `npm install` — it is a direct dependency, not devDependency |

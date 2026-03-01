@@ -1,3 +1,8 @@
+/**
+ * @file system logs service
+ * @module system-logs-service
+ */
+
 import { supabaseAdmin } from './supabase';
 
 // ─── Category & Severity Classification ──────────────────────────────────────

@@ -1,33 +1,24 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail, getAllSettings } from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
+/**
+ * @file Admin settings page (server component).
+ * Fetches all system settings and converts them to a key-value map
+ * for the settings management UI.
+ *
+ * @module AdminSettingsPage
+ * @access admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
+import { getAllSettings } from '@/app/_lib/data-service';
 import SettingsClient from './_components/SettingsClient';
 
-export const metadata = {
-  title: 'Settings | Admin',
-};
+export const metadata = { title: 'Settings | Admin | NEUPC' };
 
 export default async function AdminSettingsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
+  const [{ user }, rawSettings] = await Promise.all([
+    requireRole('admin'),
+    getAllSettings().catch(() => []),
+  ]);
 
-  const userEmail = session.user?.email;
-  if (!userEmail) redirect('/login');
-
-  const userRoles = await getUserRoles(userEmail);
-  if (!Array.isArray(userRoles) || !userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  const userData = await getUserByEmail(userEmail);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
-  const rawSettings = await getAllSettings().catch(() => []);
-
-  // Convert array of {key, value} rows into a flat map
   const settingsMap = {};
   for (const row of rawSettings) {
     settingsMap[row.key] = row.value;
@@ -35,8 +26,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
-      <SettingsClient initialSettings={settingsMap} adminId={userData.id} />
+      <SettingsClient initialSettings={settingsMap} adminId={user.id} />
     </div>
   );
 }

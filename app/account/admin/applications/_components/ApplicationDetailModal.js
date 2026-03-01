@@ -1,3 +1,8 @@
+/**
+ * @file Application Detail modal component
+ * @module ApplicationDetailModal
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

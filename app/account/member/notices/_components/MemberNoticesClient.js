@@ -1,3 +1,9 @@
+/**
+ * @file Member notices client — filterable list of club announcements
+ *   and alerts with read / dismiss functionality.
+ * @module MemberNoticesClient
+ */
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';

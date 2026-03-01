@@ -1,6 +1,12 @@
+/**
+ * @file Advisor dashboard client — composes header, stats grid,
+ *   approval centre, club overview, budget summary, and analytics
+ *   into a unified advisor landing experience.
+ * @module AdvisorDashboardClient
+ */
+
 'use client';
 
-import RoleSync from '../../_components/RoleSync';
 import AdvisorHeader from './AdvisorHeader';
 import StatsGrid from './StatsGrid';
 import ApprovalCenter from './ApprovalCenter';
@@ -129,8 +135,6 @@ export default function AdvisorDashboardClient({ session }) {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="advisor" />
-
       <AdvisorHeader />
       <StatsGrid stats={stats} />
       <ApprovalCenter pendingApprovals={pendingApprovals} />

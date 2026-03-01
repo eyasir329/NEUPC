@@ -1,3 +1,10 @@
+/**
+ * @file Guest stats grid — responsive card grid showing key guest
+ *   metrics such as events attended, public resources accessed,
+ *   and membership application status.
+ * @module GuestStatsGrid
+ */
+
 'use client';
 
 import { Calendar, TrendingUp, Trophy, Bell } from 'lucide-react';

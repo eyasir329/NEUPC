@@ -1,34 +1,21 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import {
-  getUserRoles,
-  getUserByEmail,
-  getMemberProfileByUserId,
-} from '@/app/_lib/data-service';
-import RoleSync from '@/app/account/_components/RoleSync';
+/**
+ * @file Mentor profile page — displays the authenticated mentor’s account
+ *   information and linked member profile data for review or editing.
+ * @module MentorProfilePage
+ * @access mentor
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
+import { getMemberProfileByUserId } from '@/app/_lib/data-service';
 import MentorProfileClient from './_components/MentorProfileClient';
 
 export const metadata = { title: 'Profile | Mentor | NEUPC' };
 
 export default async function MentorProfilePage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('mentor')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
-
+  const { user } = await requireRole('mentor');
   const memberProfile = await getMemberProfileByUserId(user.id).catch(
     () => null
   );
 
-  return (
-    <>
-      <RoleSync role="mentor" />
-      <MentorProfileClient user={user} memberProfile={memberProfile} />
-    </>
-  );
+  return <MentorProfileClient user={user} memberProfile={memberProfile} />;
 }

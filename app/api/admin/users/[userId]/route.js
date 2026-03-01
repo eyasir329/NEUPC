@@ -1,3 +1,7 @@
+/**
+ * @file [userId] API route
+ * @module [userId]Route
+ */
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/_lib/auth';
@@ -44,7 +48,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error(`API Error [${new Date().toISOString()}]:`, error);
     return NextResponse.json(
-      { error: 'An internal server error occurred', details: error.message },
+      { error: 'An internal server error occurred' },
       { status: 500 }
     );
   }

@@ -1,3 +1,9 @@
+/**
+ * @file Advisor approvals client — full-page approval management
+ *   interface for reviewing, approving, or rejecting pending items.
+ * @module AdvisorApprovalsClient
+ */
+
 'use client';
 
 import { useState } from 'react';

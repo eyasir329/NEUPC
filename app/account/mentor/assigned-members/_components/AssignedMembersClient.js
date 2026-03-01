@@ -1,3 +1,10 @@
+/**
+ * @file Assigned members client — full-page view of the mentor’s
+ *   assigned mentees with progress tracking, contact info, and
+ *   individual performance summaries.
+ * @module MentorAssignedMembersClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -137,7 +144,7 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
               >
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-lg font-bold text-white">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-lg font-bold text-white">
                       {mentee?.full_name?.charAt(0) || '?'}
                     </div>
                     <div>
@@ -226,7 +233,7 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
               return (
                 <div className="mb-5 rounded-xl bg-white/5 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 font-bold text-white">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-bold text-white">
                       {mentee?.full_name?.charAt(0) || '?'}
                     </div>
                     <div>

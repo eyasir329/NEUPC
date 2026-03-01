@@ -1,33 +1,26 @@
+/**
+ * @file Executive dashboard — landing page for the executive committee.
+ *   Provides an overview of club operations, pending tasks, and quick
+ *   links to management features. Session is passed to the client shell.
+ * Uses dynamic import for the heavy dashboard client to reduce
+ * initial JS bundle size and enable code-splitting.
+ *
+ * @module ExecutiveDashboardPage
+ * @access executive | admin
+ */
+
+import dynamic from 'next/dynamic';
 import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
-import ExecutiveDashboardClient from './_components/ExecutiveDashboardClient';
-import RoleSync from '../_components/RoleSync';
+import AccountLoading from '../_components/AccountLoading';
 
-export default async function ExecutivePage() {
+const ExecutiveDashboardClient = dynamic(
+  () => import('./_components/ExecutiveDashboardClient'),
+  { loading: () => <AccountLoading variant="dashboard" /> }
+);
+
+export const metadata = { title: 'Dashboard | Executive | NEUPC' };
+
+export default async function ExecutiveDashboardPage() {
   const session = await auth();
-
-  // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect('/login');
-  }
-
-  // Check if user is executive
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('executive')) {
-    redirect('/account');
-  }
-
-  // Check account status and is_active
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || user?.is_active === false) {
-    redirect('/account');
-  }
-
-  return (
-    <>
-      <RoleSync role="executive" />
-      <ExecutiveDashboardClient session={session} />
-    </>
-  );
+  return <ExecutiveDashboardClient session={session} />;
 }

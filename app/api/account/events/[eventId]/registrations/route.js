@@ -1,3 +1,8 @@
+/**
+ * @file route
+ * @module route
+ */
+
 import { auth } from '@/app/_lib/auth';
 import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
@@ -29,7 +34,12 @@ export async function GET(req, { params }) {
     .eq('event_id', eventId)
     .order('registered_at', { ascending: false });
 
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Event registrations fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch registrations' },
+      { status: 500 }
+    );
+  }
   return NextResponse.json({ registrations: data || [] });
 }

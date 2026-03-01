@@ -1,9 +1,15 @@
+/**
+ * @file member profile actions
+ * @module member-profile-actions
+ */
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
+import { sanitizeText, isValidUrl } from './validation';
 
 async function requireActiveMember() {
   const session = await auth();
@@ -25,9 +31,14 @@ export async function updateMemberInfoAction(formData) {
   try {
     const user = await requireActiveMember();
 
-    const full_name = formData.get('full_name')?.trim();
-    const phone = formData.get('phone')?.trim() || null;
+    const full_name = sanitizeText(formData.get('full_name'), 100);
+    const phone = sanitizeText(formData.get('phone'), 20) || null;
     const avatar_url = formData.get('avatar_url')?.trim() || null;
+
+    // Validate avatar URL if provided
+    if (avatar_url && !isValidUrl(avatar_url)) {
+      return { error: 'Invalid avatar URL.' };
+    }
 
     const updates = { updated_at: new Date().toISOString() };
     if (full_name) updates.full_name = full_name;
@@ -39,14 +50,18 @@ export async function updateMemberInfoAction(formData) {
       .update(updates)
       .eq('id', user.id);
 
-    if (error) return { error: error.message };
+    if (error) {
+      console.error('Member info update error:', error);
+      return { error: 'Failed to update profile.' };
+    }
 
     revalidatePath('/account/member/profile');
     revalidatePath('/account/member/settings');
     revalidatePath('/account');
     return { success: true };
   } catch (err) {
-    return { error: err.message };
+    console.error('updateMemberInfoAction error:', err);
+    return { error: 'An unexpected error occurred.' };
   }
 }
 
@@ -59,21 +74,34 @@ export async function updateMemberProfileAction(formData) {
     const rawInterests = formData.get('interests') || '';
     const skills = rawSkills
       .split(',')
-      .map((s) => s.trim())
+      .map((s) => sanitizeText(s, 50))
       .filter(Boolean);
     const interests = rawInterests
       .split(',')
-      .map((s) => s.trim())
+      .map((s) => sanitizeText(s, 50))
       .filter(Boolean);
 
+    const linkedinUrl = formData.get('linkedin')?.trim() || null;
+    const githubUrl = formData.get('github')?.trim() || null;
+
+    // Validate URLs if provided
+    if (linkedinUrl && !isValidUrl(linkedinUrl)) {
+      return { error: 'Invalid LinkedIn URL.' };
+    }
+    if (githubUrl && !isValidUrl(githubUrl)) {
+      return { error: 'Invalid GitHub URL.' };
+    }
+
     const updates = {
-      bio: formData.get('bio')?.trim() || null,
-      linkedin: formData.get('linkedin')?.trim() || null,
-      github: formData.get('github')?.trim() || null,
-      codeforces_handle: formData.get('codeforces_handle')?.trim() || null,
-      vjudge_handle: formData.get('vjudge_handle')?.trim() || null,
-      atcoder_handle: formData.get('atcoder_handle')?.trim() || null,
-      leetcode_handle: formData.get('leetcode_handle')?.trim() || null,
+      bio: sanitizeText(formData.get('bio'), 1000) || null,
+      linkedin: linkedinUrl,
+      github: githubUrl,
+      codeforces_handle:
+        sanitizeText(formData.get('codeforces_handle'), 50) || null,
+      vjudge_handle: sanitizeText(formData.get('vjudge_handle'), 50) || null,
+      atcoder_handle: sanitizeText(formData.get('atcoder_handle'), 50) || null,
+      leetcode_handle:
+        sanitizeText(formData.get('leetcode_handle'), 50) || null,
       skills: skills.length > 0 ? skills : null,
       interests: interests.length > 0 ? interests : null,
       updated_at: new Date().toISOString(),
@@ -84,11 +112,15 @@ export async function updateMemberProfileAction(formData) {
       .update(updates)
       .eq('user_id', user.id);
 
-    if (error) return { error: error.message };
+    if (error) {
+      console.error('Member profile update error:', error);
+      return { error: 'Failed to update profile.' };
+    }
 
     revalidatePath('/account/member/profile');
     return { success: true };
   } catch (err) {
-    return { error: err.message };
+    console.error('updateMemberProfileAction error:', err);
+    return { error: 'An unexpected error occurred.' };
   }
 }

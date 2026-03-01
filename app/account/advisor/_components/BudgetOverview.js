@@ -1,3 +1,9 @@
+/**
+ * @file Budget overview — financial summary card showing allocated,
+ *   spent, and remaining club budget with recent transactions.
+ * @module AdvisorBudgetOverview
+ */
+
 'use client';
 
 import Link from 'next/link';

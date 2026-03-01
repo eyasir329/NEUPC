@@ -1,3 +1,9 @@
+/**
+ * @file Member problem set client — weekly task trainer with
+ *   submission tracking, progress bars, and comparative statistics.
+ * @module MemberProblemSetClient
+ */
+
 'use client';
 
 import { useState, useMemo, useTransition, useEffect, useRef } from 'react';
@@ -172,7 +178,6 @@ function SubmitModal({ task, existing, userId, onClose, onDone }) {
     start(async () => {
       const res = await submitTaskAction({
         taskId: task.id,
-        userId,
         submissionUrl: url,
         code,
         notes,

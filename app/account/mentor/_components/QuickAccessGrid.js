@@ -1,3 +1,9 @@
+/**
+ * @file Quick access grid — navigation tiles linking to frequently
+ *   used mentor features such as sessions, tasks, and resources.
+ * @module MentorQuickAccessGrid
+ */
+
 'use client';
 
 import Link from 'next/link';

@@ -1,13 +1,45 @@
+/**
+ * @file Notice configuration constants — notice types, priority levels,
+ *   audience options, and colour mappings for admin notice components.
+ * @module adminNoticeConfig
+ */
+
 // ─── Notice Types ─────────────────────────────────────────────────────────────
 
-export const NOTICE_TYPES = ['general', 'urgent', 'event', 'deadline', 'achievement'];
+export const NOTICE_TYPES = [
+  'general',
+  'urgent',
+  'event',
+  'deadline',
+  'achievement',
+];
 
 export const TYPE_CONFIG = {
-  general:     { label: 'General',     emoji: '📢', badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
-  urgent:      { label: 'Urgent',      emoji: '🚨', badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
-  event:       { label: 'Event',       emoji: '📅', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  deadline:    { label: 'Deadline',    emoji: '⏰', badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
-  achievement: { label: 'Achievement', emoji: '🏆', badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  general: {
+    label: 'General',
+    emoji: '📢',
+    badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+  },
+  urgent: {
+    label: 'Urgent',
+    emoji: '🚨',
+    badge: 'bg-red-500/20 text-red-400 border-red-500/30',
+  },
+  event: {
+    label: 'Event',
+    emoji: '📅',
+    badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  },
+  deadline: {
+    label: 'Deadline',
+    emoji: '⏰',
+    badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  },
+  achievement: {
+    label: 'Achievement',
+    emoji: '🏆',
+    badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  },
 };
 
 export function getTypeConfig(type) {
@@ -19,10 +51,30 @@ export function getTypeConfig(type) {
 export const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
 export const PRIORITY_CONFIG = {
-  low:      { label: 'Low',      emoji: '🟢', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', ring: 'border-slate-700/50' },
-  medium:   { label: 'Medium',   emoji: '🔵', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',       ring: 'border-slate-700/50' },
-  high:     { label: 'High',     emoji: '🟡', badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', ring: 'border-yellow-500/20' },
-  critical: { label: 'Critical', emoji: '🔴', badge: 'bg-red-500/20 text-red-400 border-red-500/30',         ring: 'border-red-500/30' },
+  low: {
+    label: 'Low',
+    emoji: '🟢',
+    badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    ring: 'border-slate-700/50',
+  },
+  medium: {
+    label: 'Medium',
+    emoji: '🔵',
+    badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    ring: 'border-slate-700/50',
+  },
+  high: {
+    label: 'High',
+    emoji: '🟡',
+    badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    ring: 'border-yellow-500/20',
+  },
+  critical: {
+    label: 'Critical',
+    emoji: '🔴',
+    badge: 'bg-red-500/20 text-red-400 border-red-500/30',
+    ring: 'border-red-500/30',
+  },
 };
 
 export function getPriorityConfig(priority) {
@@ -116,9 +168,9 @@ export function isExpiringSoon(expiresAt, daysThreshold = 3) {
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 export const TABS = [
-  { id: 'all',      label: 'All' },
-  { id: 'active',   label: '✅ Active' },
-  { id: 'pinned',   label: '📌 Pinned' },
+  { id: 'all', label: 'All' },
+  { id: 'active', label: '✅ Active' },
+  { id: 'pinned', label: '📌 Pinned' },
   { id: 'critical', label: '🔴 Critical' },
-  { id: 'expired',  label: '⏳ Expired' },
+  { id: 'expired', label: '⏳ Expired' },
 ];

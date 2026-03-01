@@ -1,3 +1,9 @@
+/**
+ * @file Role badge — colour-coded pill displaying a user’s assigned
+ *   role name.
+ * @module AdminRoleBadge
+ */
+
 import { ROLE_COLORS, ROLES } from './constants';
 
 export default function RoleBadge({ role, roles }) {

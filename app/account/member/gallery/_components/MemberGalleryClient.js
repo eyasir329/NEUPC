@@ -1,3 +1,9 @@
+/**
+ * @file Member gallery client — photo and media gallery browser
+ *   with category filtering and lightbox view.
+ * @module MemberGalleryClient
+ */
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';

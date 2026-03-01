@@ -1,3 +1,8 @@
+/**
+ * @file security service
+ * @module security-service
+ */
+
 import { supabaseAdmin } from './supabase';
 
 /**

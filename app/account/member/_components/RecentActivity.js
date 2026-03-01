@@ -1,3 +1,9 @@
+/**
+ * @file Recent activity feed — dashboard widget listing the member’s
+ *   latest actions (event registrations, submissions, forum posts).
+ * @module MemberRecentActivity
+ */
+
 'use client';
 
 import { Calendar, CheckCircle, Award, MessageSquare } from 'lucide-react';

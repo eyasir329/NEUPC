@@ -1,3 +1,9 @@
+/**
+ * @file Guest welcome header — gradient card greeting the guest by
+ *   name with a membership application CTA and account status.
+ * @module GuestWelcomeHeader
+ */
+
 'use client';
 
 import Link from 'next/link';

@@ -1,3 +1,8 @@
+/**
+ * @file settings actions
+ * @module settings-actions
+ */
+
 'use server';
 
 import { supabaseAdmin } from './supabase';
@@ -16,21 +21,22 @@ async function requireAdmin() {
 
 /**
  * Save a batch of settings for a given category.
- * `entries` is an array of { key, value, description? }
+ * `entries` is an array of { key, value, description?, category? }
+ * If a field has its own `category`, it overrides the section-level category.
  */
 export async function saveSettingsAction(formData) {
   try {
     const user = await requireAdmin();
-    const category = formData.get('category');
+    const defaultCategory = formData.get('category');
     const entriesRaw = formData.get('entries');
-    if (!category || !entriesRaw) return { error: 'Invalid request' };
+    if (!defaultCategory || !entriesRaw) return { error: 'Invalid request' };
 
     const entries = JSON.parse(entriesRaw);
 
-    const rows = entries.map(({ key, value, description }) => ({
+    const rows = entries.map(({ key, value, description, category }) => ({
       key,
       value, // jsonb accepts any JS value
-      category,
+      category: category || defaultCategory,
       description: description || null,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
@@ -43,6 +49,7 @@ export async function saveSettingsAction(formData) {
     if (error) return { error: error.message };
 
     revalidatePath('/account/admin/settings');
+    revalidatePath('/');
     return { success: true };
   } catch (err) {
     return { error: err.message || 'Failed to save settings' };
@@ -50,23 +57,36 @@ export async function saveSettingsAction(formData) {
 }
 
 /**
- * Reset all settings in a category to their defaults
+ * Reset all settings in a category (or multiple categories) to their defaults
  * by deleting all matching rows (they'll fall back to code defaults).
  */
 export async function resetCategoryAction(formData) {
   try {
     await requireAdmin();
     const category = formData.get('category');
-    if (!category) return { error: 'Invalid request' };
+    const categoriesRaw = formData.get('categories');
+    if (!category && !categoriesRaw) return { error: 'Invalid request' };
 
-    const { error } = await supabaseAdmin
-      .from('website_settings')
-      .delete()
-      .eq('category', category);
-
-    if (error) return { error: error.message };
+    if (categoriesRaw) {
+      // Multi-category reset (for website section that spans multiple categories)
+      const categories = JSON.parse(categoriesRaw);
+      for (const cat of categories) {
+        const { error } = await supabaseAdmin
+          .from('website_settings')
+          .delete()
+          .eq('category', cat);
+        if (error) return { error: error.message };
+      }
+    } else {
+      const { error } = await supabaseAdmin
+        .from('website_settings')
+        .delete()
+        .eq('category', category);
+      if (error) return { error: error.message };
+    }
 
     revalidatePath('/account/admin/settings');
+    revalidatePath('/');
     return { success: true };
   } catch (err) {
     return { error: err.message || 'Failed to reset settings' };

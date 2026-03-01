@@ -1,3 +1,9 @@
+/**
+ * @file Guest events client — browsable list of public club events
+ *   with filtering, search, and registration actions for guests.
+ * @module GuestEventsClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

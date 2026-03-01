@@ -1,3 +1,8 @@
+/**
+ * @file Giscus Comments
+ * @module GiscusComments
+ */
+
 'use client';
 
 import { useEffect, useRef } from 'react';

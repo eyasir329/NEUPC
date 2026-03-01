@@ -1,5 +1,9 @@
+/**
+ * @file route
+ * @module route
+ */
+
 import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
 import { getUserRoles } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { NextResponse } from 'next/server';
@@ -25,7 +29,11 @@ export async function GET(request, { params }) {
     .order('created_at', { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Blog comments fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch comments' },
+      { status: 500 }
+    );
   }
 
   const approved = (data ?? []).filter((c) => c.is_approved).length;

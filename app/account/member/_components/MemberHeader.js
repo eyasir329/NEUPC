@@ -1,3 +1,9 @@
+/**
+ * @file Member header banner — personalised greeting card with the
+ *   member’s name, avatar, and current activity streak.
+ * @module MemberHeader
+ */
+
 'use client';
 
 import { Zap } from 'lucide-react';

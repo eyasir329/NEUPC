@@ -1,18 +1,39 @@
+/**
+ * @file Status reason API route — secured with session auth.
+ * @module StatusReasonRoute
+ */
+
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@/app/_lib/auth';
+import { getUserByEmail } from '@/app/_lib/data-service';
+import { NextResponse } from 'next/server';
+import { sanitizeText } from '@/app/_lib/validation';
 
 export async function GET(request) {
   try {
+    // Auth check — user can only fetch their own status reason
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getUserByEmail(session.user.email);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Users can only view their own status reason
+    if (userId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    // Fetch user's status reason from the database
+
     const { data, error } = await supabaseAdmin
       .from('users')
       .select('status_reason')
@@ -20,131 +41,98 @@ export async function GET(request) {
       .maybeSingle();
 
     if (error) {
-      console.error('❌ Database error:', error.message);
-      return new Response(JSON.stringify({ error: 'Failed to fetch reason' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      console.error('Database error in GET /api/account/status-reason');
+      return NextResponse.json(
+        { error: 'Failed to fetch reason' },
+        { status: 500 }
+      );
     }
 
-    return new Response(
-      JSON.stringify({
-        reason: data?.status_reason || null,
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return NextResponse.json({ reason: data?.status_reason || null });
   } catch (error) {
-    console.error('❌ Error in GET /api/account/status-reason:', error.message);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Error in GET /api/account/status-reason:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(request) {
   try {
-    const { userId, reason } = await request.json();
+    // Auth check — only admins can update status reasons
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { getUserRoles } = await import('@/app/_lib/data-service');
+    const userRoles = await getUserRoles(session.user.email);
+
+    if (!userRoles.includes('admin')) {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const userId = body.userId;
+    const reason = sanitizeText(body.reason, 1000);
 
     if (!userId || !reason) {
-      return new Response(
-        JSON.stringify({ error: 'User ID and reason are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      return NextResponse.json(
+        { error: 'User ID and reason are required' },
+        { status: 400 }
       );
     }
 
-    // Test if supabaseAdmin is working
-    const { data: testData, error: testError } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .limit(1)
-      .maybeSingle();
-    if (testError?.message?.includes('JWT')) {
-      console.error(
-        '❌ CRITICAL: Invalid service role key. Update SUPABASE_SERVICE_KEY in .env.local'
-      );
-      return new Response(
-        JSON.stringify({
-          error: 'Server configuration error: Invalid service key',
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // First check if user exists
-    const { data: userExists, error: checkError } = await supabaseAdmin
+    // Verify target user exists
+    const { data: userExists } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('id', userId)
       .maybeSingle();
 
-    if (checkError) {
-      console.error('❌ Error checking user:', checkError.message);
-      return new Response(
-        JSON.stringify({ error: `Error checking user: ${checkError.message}` }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
     if (!userExists) {
-      console.error('❌ User not found in database:', userId);
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Update user's status reason in the database
+    const adminUser = await getUserByEmail(session.user.email);
+
     const { data, error } = await supabaseAdmin
       .from('users')
       .update({
         status_reason: reason,
-        status_changed_by: userId,
+        status_changed_by: adminUser?.id || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
       .select('status_reason');
 
     if (error) {
-      console.error('❌ Database error:', error.message);
-      return new Response(
-        JSON.stringify({ error: `Database error: ${error.message}` }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      console.error('Database error in PUT /api/account/status-reason');
+      return NextResponse.json(
+        { error: 'Failed to update reason' },
+        { status: 500 }
       );
     }
-
-    if (!data || data.length === 0) {
-      return new Response(
-        JSON.stringify({
-          reason: reason,
-          message: 'Reason updated successfully',
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const updatedReason = Array.isArray(data)
-      ? data[0]?.status_reason
-      : data?.status_reason;
 
     revalidatePath('/account');
     revalidatePath('/account/admin/users');
 
-    return new Response(
-      JSON.stringify({
-        reason: updatedReason || reason,
-        message: 'Reason updated successfully',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return NextResponse.json({
+      reason: data?.[0]?.status_reason || reason,
+      message: 'Reason updated successfully',
+    });
   } catch (error) {
-    console.error('❌ Error in PUT /api/account/status-reason:', error.message);
-    return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    console.error('Error in PUT /api/account/status-reason:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

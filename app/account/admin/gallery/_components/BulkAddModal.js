@@ -1,3 +1,9 @@
+/**
+ * @file Bulk add modal — dialog for batch-importing multiple gallery
+ *   items at once with shared category and event association.
+ * @module AdminBulkAddModal
+ */
+
 'use client';
 
 import { useState } from 'react';

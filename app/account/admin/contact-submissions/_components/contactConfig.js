@@ -1,3 +1,9 @@
+/**
+ * @file Contact configuration constants — submission status labels,
+ *   category options, and colour mappings for admin contact components.
+ * @module adminContactConfig
+ */
+
 import { Clock, Eye, MessageSquare, Archive, CheckCircle2 } from 'lucide-react';
 
 // Status config matching DB: new | read | replied | archived

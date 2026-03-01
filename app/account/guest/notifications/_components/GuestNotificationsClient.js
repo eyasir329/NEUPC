@@ -1,3 +1,9 @@
+/**
+ * @file Guest notifications client — full notification centre with
+ *   filtering, read/unread management, and bulk actions.
+ * @module GuestNotificationsClient
+ */
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';

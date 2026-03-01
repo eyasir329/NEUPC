@@ -1,3 +1,9 @@
+/**
+ * @file Quick access cards — navigation tiles linking to frequently
+ *   used executive management features.
+ * @module ExecutiveQuickAccessCards
+ */
+
 'use client';
 
 import Link from 'next/link';

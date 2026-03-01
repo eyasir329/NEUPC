@@ -1,3 +1,9 @@
+/**
+ * @file Advisor header — gradient card displaying the advisor’s name,
+ *   title, and advisory period with quick-action links.
+ * @module AdvisorHeader
+ */
+
 'use client';
 
 import { Shield } from 'lucide-react';

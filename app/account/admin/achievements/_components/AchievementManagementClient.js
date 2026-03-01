@@ -1,3 +1,9 @@
+/**
+ * @file Achievement management client — admin interface for listing,
+ *   creating, editing, and awarding achievements and badges to members.
+ * @module AdminAchievementManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

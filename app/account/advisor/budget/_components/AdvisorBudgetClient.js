@@ -1,3 +1,9 @@
+/**
+ * @file Advisor budget client — detailed budget management interface
+ *   with allocation tracking, expense history, and financial reports.
+ * @module AdvisorBudgetClient
+ */
+
 'use client';
 
 import { useState } from 'react';

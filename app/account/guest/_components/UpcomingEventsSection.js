@@ -1,3 +1,9 @@
+/**
+ * @file Upcoming events section — dashboard preview of next scheduled
+ *   club events open to guest participation.
+ * @module GuestUpcomingEventsSection
+ */
+
 'use client';
 
 import Link from 'next/link';

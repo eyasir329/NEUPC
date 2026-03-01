@@ -1,3 +1,9 @@
+/**
+ * @file Member resources client — browsable library of learning
+ *   materials, guides, and shared documents with category filters.
+ * @module MemberResourcesClient
+ */
+
 'use client';
 
 import {

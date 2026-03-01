@@ -1,3 +1,11 @@
+/**
+ * @file Confirm modal — reusable confirmation dialog for destructive
+ *   user actions (delete, suspend, ban) with customisable message.
+ * @module AdminConfirmModal
+ */
+
+'use client';
+
 import { X, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function ConfirmModal({

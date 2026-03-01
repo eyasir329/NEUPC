@@ -1,3 +1,9 @@
+/**
+ * @file Achievements section — dashboard widget highlighting the
+ *   member’s recently earned badges and progress towards new ones.
+ * @module MemberAchievementsSection
+ */
+
 'use client';
 
 import Link from 'next/link';

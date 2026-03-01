@@ -1,3 +1,10 @@
+/**
+ * @file Membership application client — multi-step form for guests
+ *   to submit club membership requests with personal and academic
+ *   information.
+ * @module GuestMembershipApplicationClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -417,7 +424,7 @@ export default function MembershipApplicationClient({
         {/* Progress bar */}
         <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500"
+            className="h-full rounded-full bg-linear-to-r from-blue-500 to-blue-400 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -425,7 +432,7 @@ export default function MembershipApplicationClient({
 
       {/* Card */}
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm">
-        <div className="h-px w-full bg-gradient-to-r from-blue-500/40 to-transparent" />
+        <div className="h-px w-full bg-linear-to-r from-blue-500/40 to-transparent" />
 
         <form onSubmit={handleSubmit} className="p-6 sm:p-8">
           {/* ── Step 1: Basic Info ── */}

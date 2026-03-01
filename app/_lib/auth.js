@@ -1,3 +1,8 @@
+/**
+ * @file auth
+ * @module auth
+ */
+
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { NextResponse } from 'next/server';
@@ -67,6 +72,10 @@ const authConfig = {
         return true;
       } catch (error) {
         console.error('Error during sign in:', error);
+        // Allow sign-in even if DB operations fail to prevent lockout,
+        // but the user may not have full account data until next login.
+        // This is intentional: blocking login on transient DB errors
+        // would lock all users out during maintenance.
         return true;
       }
     },

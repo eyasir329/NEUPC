@@ -1,3 +1,9 @@
+/**
+ * @file User management client — admin interface for listing, filtering,
+ *   searching, and performing bulk actions on all platform users.
+ * @module AdminUserManagementClient
+ */
+
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';

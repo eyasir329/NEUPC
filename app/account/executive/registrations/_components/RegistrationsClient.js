@@ -1,3 +1,10 @@
+/**
+ * @file Registrations client — executive interface for viewing event
+ *   registration lists, managing participant data, and tracking
+ *   attendance.
+ * @module ExecutiveRegistrationsClient
+ */
+
 'use client';
 
 import { useState, useTransition, useCallback } from 'react';

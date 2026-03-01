@@ -1,33 +1,26 @@
+/**
+ * @file Member dashboard — personalised landing page showing the
+ *   member’s recent activity, upcoming events, contest progress, and
+ *   quick links to key member features.
+ * Uses dynamic import for the heavy dashboard client to reduce
+ * initial JS bundle size and enable code-splitting.
+ *
+ * @module MemberDashboardPage
+ * @access member
+ */
+
+import dynamic from 'next/dynamic';
 import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
-import MemberDashboardClient from './_components/MemberDashboardClient';
-import RoleSync from '../_components/RoleSync';
+import AccountLoading from '../_components/AccountLoading';
 
-export default async function MemberPage() {
+const MemberDashboardClient = dynamic(
+  () => import('./_components/MemberDashboardClient'),
+  { loading: () => <AccountLoading variant="dashboard" /> }
+);
+
+export const metadata = { title: 'Dashboard | Member | NEUPC' };
+
+export default async function MemberDashboardPage() {
   const session = await auth();
-
-  // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect('/login');
-  }
-
-  // Check if user is member
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('member')) {
-    redirect('/account');
-  }
-
-  // Check account status and is_active
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || user?.is_active === false) {
-    redirect('/account');
-  }
-
-  return (
-    <>
-      <RoleSync role="member" />
-      <MemberDashboardClient session={session} />
-    </>
-  );
+  return <MemberDashboardClient session={session} />;
 }

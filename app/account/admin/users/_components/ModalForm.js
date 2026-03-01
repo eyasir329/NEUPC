@@ -1,3 +1,9 @@
+/**
+ * @file Modal form — generic form-in-dialog wrapper used for creating
+ *   and editing user records with dynamic field configuration.
+ * @module AdminModalForm
+ */
+
 import { ChevronDown } from 'lucide-react';
 import { ROLES } from './constants';
 

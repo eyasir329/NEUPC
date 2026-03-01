@@ -1,3 +1,10 @@
+/**
+ * @file Member settings client — account preferences and
+ *   configuration controls (notification toggles, display options,
+ *   privacy settings).
+ * @module MemberSettingsClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

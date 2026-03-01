@@ -1,3 +1,9 @@
+/**
+ * @file Submission detail modal — read-only overlay showing the full
+ *   content of a contact submission with reply / status-change actions.
+ * @module AdminSubmissionDetailModal
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

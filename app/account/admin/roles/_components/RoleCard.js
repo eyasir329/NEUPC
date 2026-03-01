@@ -1,3 +1,9 @@
+/**
+ * @file Role card — displays a role’s name, description, member count,
+ *   and permission summary with edit / assign actions.
+ * @module AdminRoleCard
+ */
+
 'use client';
 
 import {

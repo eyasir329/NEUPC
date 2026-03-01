@@ -1,23 +1,19 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
+/**
+ * @file Executive reports dashboard — aggregates user, event, contest,
+ *   registration, and blog statistics from the database into a unified
+ *   overview with recent-event highlights for the executive committee.
+ * @module ExecutiveReportsPage
+ * @access executive | admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import RoleSync from '@/app/account/_components/RoleSync';
 import ReportsClient from './_components/ReportsClient';
 
 export const metadata = { title: 'Reports | Executive | NEUPC' };
 
 export default async function ReportsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('executive') && !userRoles.includes('admin'))
-    redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
+  await requireRole(['executive', 'admin']);
 
   const [usersRes, eventsRes, contestsRes, registrationsRes, blogsRes] =
     await Promise.all([
@@ -64,10 +60,5 @@ export default async function ReportsPage() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 10);
 
-  return (
-    <>
-      <RoleSync role="executive" />
-      <ReportsClient stats={stats} recentEvents={recentEvents} />
-    </>
-  );
+  return <ReportsClient stats={stats} recentEvents={recentEvents} />;
 }

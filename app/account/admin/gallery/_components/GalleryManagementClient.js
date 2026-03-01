@@ -1,3 +1,10 @@
+/**
+ * @file Gallery management client — admin interface for uploading,
+ *   categorising, tagging, reordering, and featuring gallery items
+ *   with bulk-add support.
+ * @module AdminGalleryManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

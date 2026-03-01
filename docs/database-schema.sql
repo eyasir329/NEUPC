@@ -109,6 +109,50 @@ CREATE TABLE public.certificates (
   CONSTRAINT certificates_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES public.achievements(id),
   CONSTRAINT certificates_issued_by_fkey FOREIGN KEY (issued_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.chat_conversations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type text NOT NULL DEFAULT 'direct'::text CHECK (type = ANY (ARRAY['direct'::text, 'support'::text])),
+  status text NOT NULL DEFAULT 'open'::text CHECK (status = ANY (ARRAY['open'::text, 'closed'::text, 'archived'::text])),
+  subject text,
+  created_by uuid NOT NULL,
+  assigned_to uuid,
+  last_message_at timestamp with time zone,
+  message_count integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_conversations_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_conversations_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT chat_conversations_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id)
+);
+CREATE TABLE public.chat_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  content text NOT NULL,
+  message_type text NOT NULL DEFAULT 'text'::text CHECK (message_type = ANY (ARRAY['text'::text, 'system'::text, 'image'::text, 'file'::text])),
+  metadata jsonb,
+  is_edited boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  edited_at timestamp with time zone,
+  deleted_at timestamp with time zone,
+  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_messages_conversation_fkey FOREIGN KEY (conversation_id) REFERENCES public.chat_conversations(id),
+  CONSTRAINT chat_messages_sender_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.chat_participants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  last_read_at timestamp with time zone,
+  last_read_message_id uuid,
+  is_muted boolean NOT NULL DEFAULT false,
+  is_archived boolean NOT NULL DEFAULT false,
+  joined_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_participants_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_participants_conversation_fkey FOREIGN KEY (conversation_id) REFERENCES public.chat_conversations(id),
+  CONSTRAINT chat_participants_user_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT chat_participants_last_read_message_fkey FOREIGN KEY (last_read_message_id) REFERENCES public.chat_messages(id)
+);
 CREATE TABLE public.committee_members (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -319,7 +363,7 @@ CREATE TABLE public.gallery_items (
 );
 CREATE TABLE public.join_requests (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
+  full_name text NOT NULL,
   email text NOT NULL,
   student_id text NOT NULL,
   batch text NOT NULL,

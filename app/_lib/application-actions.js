@@ -1,38 +1,15 @@
+/**
+ * @file application actions
+ * @module application-actions
+ */
+
 'use server';
 
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, createLogger } from '@/app/_lib/helpers';
 
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.email) redirect('/login');
-  const roles = await getUserRoles(session.user.email);
-  if (!roles.includes('admin')) redirect('/account');
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active') redirect('/account');
-  return user;
-}
-
-async function logActivity(userId, action, entityId, details = {}) {
-  try {
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: userId,
-      action,
-      entity_type: 'join_request',
-      entity_id: entityId,
-      details,
-    });
-  } catch {
-    // non-critical
-  }
-}
+const logActivity = createLogger('join_request');
 
 function revalidate() {
   revalidatePath('/account/admin/applications');

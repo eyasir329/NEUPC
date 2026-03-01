@@ -1,33 +1,26 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
-import AdminDashboardClient from './_components/AdminDashboardClient';
-import RoleSync from '../_components/RoleSync';
+/**
+ * @file Admin dashboard page (server component).
+ * Fetches session and renders the admin overview dashboard.
+ * Uses dynamic import for the heavy dashboard client to reduce
+ * initial JS bundle size and enable code-splitting.
+ *
+ * @module AdminDashboardPage
+ * @access admin
+ */
 
-export default async function AdminDashboard() {
+import dynamic from 'next/dynamic';
+import { auth } from '@/app/_lib/auth';
+import AccountLoading from '../_components/AccountLoading';
+
+const AdminDashboardClient = dynamic(
+  () => import('./_components/AdminDashboardClient'),
+  { loading: () => <AccountLoading variant="dashboard" /> }
+);
+
+export const metadata = { title: 'Dashboard | Admin | NEUPC' };
+
+export default async function AdminDashboardPage() {
   const session = await auth();
 
-  // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect('/login');
-  }
-
-  // Check if user is admin
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  // Only available if user_status = active and is_active = true
-  const userData = await getUserByEmail(session.user.email);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
-  return (
-    <>
-      <RoleSync role="admin" />
-      <AdminDashboardClient session={session} />
-    </>
-  );
+  return <AdminDashboardClient session={session} />;
 }

@@ -1,3 +1,10 @@
+/**
+ * @file Mentor sessions client — session management interface for
+ *   scheduling, conducting, and reviewing one-on-one mentoring
+ *   sessions with notes and feedback.
+ * @module MentorSessionsClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -324,7 +331,7 @@ export default function MentorSessionsClient({ mentorships = [], mentorId }) {
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-gray-400">
                     <span className="flex items-center gap-1.5">
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-center text-xs leading-6 font-bold text-white">
+                      <div className="h-6 w-6 rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-center text-xs leading-6 font-bold text-white">
                         {s.menteeName.charAt(0)}
                       </div>
                       {s.menteeName}

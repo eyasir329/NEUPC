@@ -1,3 +1,10 @@
+/**
+ * @file Stats grid — responsive card grid showing key platform metrics
+ *   (total users, active members, mentors, upcoming events, pending
+ *   approvals, system health) with configurable icons and colours.
+ * @module StatsGrid
+ */
+
 'use client';
 
 import {

@@ -1,3 +1,10 @@
+/**
+ * @file Resource configuration constants — resource types, access
+ *   levels, category options, and colour mappings for admin resource
+ *   components.
+ * @module adminResourceConfig
+ */
+
 // =============================================================================
 // resourceConfig.js — Shared colour / label config for Resource Management
 // =============================================================================

@@ -1,3 +1,10 @@
+/**
+ * @file Certificate generator client — executive tool for issuing
+ *   certificates to event participants and contest winners with
+ *   template selection and batch generation.
+ * @module ExecutiveGenerateCertificatesClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

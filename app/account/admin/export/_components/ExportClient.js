@@ -1,3 +1,9 @@
+/**
+ * @file Export client — admin data-export tool for generating CSV / JSON
+ *   downloads of users, events, blogs, and other platform data.
+ * @module AdminExportClient
+ */
+
 'use client';
 
 import { useState, useCallback } from 'react';

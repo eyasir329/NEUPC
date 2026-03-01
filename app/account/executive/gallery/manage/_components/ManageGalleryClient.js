@@ -1,3 +1,9 @@
+/**
+ * @file Gallery management client — executive interface for uploading,
+ *   categorising, and managing photo / video media with event tagging.
+ * @module ExecutiveManageGalleryClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -449,7 +455,7 @@ export default function ManageGalleryClient({ initialItems, events }) {
               </div>
 
               {item.category && (
-                <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                <div className="absolute right-0 bottom-0 left-0 bg-linear-to-t from-black/80 to-transparent p-1.5">
                   <p className="truncate text-xs text-gray-300">
                     {item.category}
                   </p>

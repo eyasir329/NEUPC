@@ -1,3 +1,9 @@
+/**
+ * @file Avatar — user profile image with initials-based fallback
+ *   for the admin users table.
+ * @module AdminAvatar
+ */
+
 export default function Avatar({ user }) {
   if (user.avatar && user.avatar.startsWith('http')) {
     return (

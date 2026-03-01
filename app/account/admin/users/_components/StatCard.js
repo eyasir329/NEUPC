@@ -1,3 +1,9 @@
+/**
+ * @file Stat card — single metric card with icon, label, value,
+ *   and optional trend indicator for the users dashboard.
+ * @module AdminStatCard
+ */
+
 export default function StatCard({ icon: Icon, label, value, color }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/4 p-4 backdrop-blur-sm transition-colors hover:bg-white/5">

@@ -1,3 +1,9 @@
+/**
+ * @file Role configuration constants — default permissions, colour
+ *   schemes, and icon mappings for the admin roles module.
+ * @module adminRoleConfig
+ */
+
 // Role display configuration
 export const ROLE_CONFIG = {
   guest: {

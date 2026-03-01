@@ -1,3 +1,11 @@
+/**
+ * @file Guest pending approvals — section listing guest users awaiting
+ *   account activation with approve / reject controls.
+ * @module AdminGuestPendingApprovals
+ */
+
+'use client';
+
 import {
   AlertCircle,
   ThumbsUp,
@@ -254,13 +262,13 @@ function PaginationBar({
       <button
         onClick={onPrev}
         disabled={currentPage === 1 || isPending}
-        className="order-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none"
+        className="order-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50 sm:order-0"
       >
         <ChevronLeft className="h-4 w-4" />
         <span className="hidden sm:inline">Previous</span>
       </button>
 
-      <div className="order-3 flex flex-wrap items-center justify-center gap-2 sm:order-none">
+      <div className="order-3 flex flex-wrap items-center justify-center gap-2 sm:order-0">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
           <button
             key={page}
@@ -277,14 +285,14 @@ function PaginationBar({
         ))}
       </div>
 
-      <div className="order-2 flex items-center justify-center text-xs text-gray-400 sm:order-none">
+      <div className="order-2 flex items-center justify-center text-xs text-gray-400 sm:order-0">
         Page {currentPage} of {totalPages}
       </div>
 
       <button
         onClick={onNext}
         disabled={currentPage === totalPages || isPending}
-        className="order-1 mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none sm:mt-0"
+        className="order-1 mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50 sm:order-0 sm:mt-0"
       >
         <span className="hidden sm:inline">Next</span>
         <ChevronRight className="h-4 w-4" />

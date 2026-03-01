@@ -1,15 +1,28 @@
+/**
+ * @file Login page (server component).
+ * Redirects authenticated users; renders Google OAuth sign-in for guests.
+ *
+ * @module LoginPage
+ */
+
 import { auth } from '@/app/_lib/auth';
 import { redirect } from 'next/navigation';
-import SignInButton from '@/app/_components/features/SignInButton';
+import SignInButton from '@/app/_components/ui/SignInButton';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Code2 } from 'lucide-react';
 import bg_img from '@/public/bg.webp';
+import ScrollToTop from '@/app/_components/ui/ScrollToTop';
+import JoinButton from '@/app/_components/ui/JoinButton';
+import { buildMetadata } from '@/app/_lib/seo';
 
-export const metadata = {
-  title: 'Login - NEUPC',
-  description: 'Sign in to access your NEUPC account',
-};
+export const metadata = buildMetadata({
+  title: 'Login',
+  description:
+    'Sign in to access your NEUPC account — manage your profile, register for events, and track your competitive programming progress.',
+  pathname: '/login',
+  keywords: ['login', 'sign in', 'account access'],
+});
 
 async function LoginPage() {
   const session = await auth();
@@ -44,8 +57,8 @@ async function LoginPage() {
       ></div>
 
       {/* Animated Background Orbs */}
-      <div className="from-primary-500/30 to-secondary-500/30 fixed -top-40 -right-40 -z-10 h-96 w-96 animate-pulse rounded-full bg-linear-to-br opacity-70 blur-3xl sm:h-125 sm:w-125"></div>
-      <div className="from-secondary-500/30 to-primary-500/30 animation-delay-2000 fixed -bottom-40 -left-40 -z-10 h-96 w-96 animate-pulse rounded-full bg-linear-to-br opacity-70 blur-3xl sm:h-125 sm:w-125"></div>
+      <div className="from-primary-500/30 to-secondary-500/30 fixed -top-40 -right-40 -z-10 h-96 w-96 rounded-full bg-linear-to-br opacity-70 blur-3xl sm:h-125 sm:w-125"></div>
+      <div className="from-secondary-500/30 to-primary-500/30 fixed -bottom-40 -left-40 -z-10 h-96 w-96 rounded-full bg-linear-to-br opacity-70 blur-3xl sm:h-125 sm:w-125"></div>
 
       {/* Login Container */}
       <div className="relative w-full max-w-md">
@@ -154,12 +167,11 @@ async function LoginPage() {
         <div className="mt-6 space-y-4 text-center sm:mt-8">
           <p className="text-sm text-gray-300 sm:text-base">
             New to NEUPC?{' '}
-            <Link
+            <JoinButton
               href="/join"
+              label="Create an account"
               className="text-primary-400 hover:text-primary-300 font-bold transition-colors hover:underline"
-            >
-              Create an account
-            </Link>
+            />
           </p>
           <Link
             href="/"
@@ -182,6 +194,7 @@ async function LoginPage() {
           </Link>
         </div>
       </div>
+      <ScrollToTop />
     </main>
   );
 }

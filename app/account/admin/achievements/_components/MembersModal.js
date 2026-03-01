@@ -1,3 +1,9 @@
+/**
+ * @file Members modal — overlay for selecting members to award a
+ *   specific achievement or viewing who has already earned it.
+ * @module AdminMembersModal
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

@@ -1,3 +1,9 @@
+/**
+ * @file Edit description modal — dialog for updating a role’s
+ *   display description text.
+ * @module AdminEditDescriptionModal
+ */
+
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';

@@ -1,3 +1,9 @@
+/**
+ * @file Club overview — high-level snapshot of club health including
+ *   member count, active events, and committee composition.
+ * @module AdvisorClubOverview
+ */
+
 'use client';
 
 import Link from 'next/link';

@@ -1,35 +1,26 @@
+/**
+ * @file Guest dashboard — entry point for guest users showing a welcome
+ *   overview, membership application status, upcoming public events, and
+ *   quick links to available guest features.
+ * Uses dynamic import for the heavy dashboard client to reduce
+ * initial JS bundle size and enable code-splitting.
+ *
+ * @module GuestDashboardPage
+ * @access guest
+ */
+
+import dynamic from 'next/dynamic';
 import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import GuestDashboardClient from './_components/GuestDashboardClient';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
-import RoleSync from '../_components/RoleSync';
+import AccountLoading from '../_components/AccountLoading';
 
-async function GuestDashboard() {
+const GuestDashboardClient = dynamic(
+  () => import('./_components/GuestDashboardClient'),
+  { loading: () => <AccountLoading variant="dashboard" /> }
+);
+
+export const metadata = { title: 'Dashboard | Guest | NEUPC' };
+
+export default async function GuestDashboardPage() {
   const session = await auth();
-
-  // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect('/login');
-  }
-
-  // Check if user has guest role
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('guest')) {
-    redirect('/account');
-  }
-
-  // Check if account status is active
-  const userData = await getUserByEmail(session.user.email);
-  if (userData?.account_status !== 'active') {
-    redirect('/account');
-  }
-
-  return (
-    <>
-      <RoleSync role="guest" />
-      <GuestDashboardClient session={session} />
-    </>
-  );
+  return <GuestDashboardClient session={session} />;
 }
-
-export default GuestDashboard;

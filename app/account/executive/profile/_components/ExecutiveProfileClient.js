@@ -1,3 +1,9 @@
+/**
+ * @file Executive profile client — editable profile view showing
+ *   personal info, member profile data, and current committee position.
+ * @module ExecutiveProfileClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -36,7 +42,7 @@ function Avatar({ name, size = 'lg' }) {
   const cls = size === 'lg' ? 'h-24 w-24 text-3xl' : 'h-14 w-14 text-xl';
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colors[idx]} to-transparent font-bold text-white ${cls}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-linear-to-br ${colors[idx]} to-transparent font-bold text-white ${cls}`}
     >
       {initials}
     </div>

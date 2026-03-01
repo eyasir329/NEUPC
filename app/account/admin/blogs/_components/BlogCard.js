@@ -1,3 +1,9 @@
+/**
+ * @file Blog card — displays a single post’s thumbnail, title, author,
+ *   status badge, view / like counts, and edit / delete actions.
+ * @module AdminBlogCard
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -12,6 +18,7 @@ import {
   Loader2,
   Clock,
   User,
+  ExternalLink,
 } from 'lucide-react';
 import {
   getStatusConfig,
@@ -26,7 +33,13 @@ import {
   deleteBlogAction,
 } from '@/app/_lib/blog-actions';
 
-export default function BlogCard({ post, onEdit, onViewComments }) {
+export default function BlogCard({
+  post,
+  onEdit,
+  onViewComments,
+  onPostChange,
+  onPostDelete,
+}) {
   const [isPending, startTransition] = useTransition();
   const [featuredPending, setFeaturedPending] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -49,8 +62,17 @@ export default function BlogCard({ post, onEdit, onViewComments }) {
       const fd = new FormData();
       fd.set('id', post.id);
       fd.set('status', newStatus);
-      await updateBlogStatusAction(fd);
-      showFlash('status');
+      const result = await updateBlogStatusAction(fd);
+      if (!result?.error) {
+        onPostChange?.(post.id, {
+          status: newStatus,
+          published_at:
+            newStatus === 'published' && !post.published_at
+              ? new Date().toISOString()
+              : post.published_at,
+        });
+        showFlash('status');
+      }
     });
   }
 
@@ -59,17 +81,23 @@ export default function BlogCard({ post, onEdit, onViewComments }) {
     const fd = new FormData();
     fd.set('id', post.id);
     fd.set('featured', String(!post.is_featured));
-    await toggleBlogFeaturedAction(fd);
+    const result = await toggleBlogFeaturedAction(fd);
     setFeaturedPending(false);
-    showFlash('featured');
+    if (!result?.error) {
+      onPostChange?.(post.id, { is_featured: !post.is_featured });
+      showFlash('featured');
+    }
   }
 
   async function handleDelete() {
     setDeletePending(true);
     const fd = new FormData();
     fd.set('id', post.id);
-    await deleteBlogAction(fd);
+    const result = await deleteBlogAction(fd);
     setDeletePending(false);
+    if (!result?.error) {
+      onPostDelete?.(post.id);
+    }
   }
 
   const author = post.users;
@@ -234,6 +262,7 @@ export default function BlogCard({ post, onEdit, onViewComments }) {
           <button
             onClick={() => setStatusOpen((o) => !o)}
             disabled={isPending}
+            aria-label={`Change status — currently ${sc.label}`}
             className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-gray-400 transition-colors hover:bg-white/6 hover:text-white"
           >
             {isPending ? (
@@ -277,9 +306,23 @@ export default function BlogCard({ post, onEdit, onViewComments }) {
         {/* Divider */}
         <span className="h-4 w-px bg-white/8" />
 
+        {/* View live (published only) */}
+        {post.status === 'published' && (
+          <a
+            href={`/blogs/${post.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/6 hover:text-emerald-400"
+            title="View live post"
+          >
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+
         {/* Edit */}
         <button
           onClick={() => onEdit(post)}
+          aria-label="Edit post"
           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/6 hover:text-blue-400"
         >
           <Edit3 className="h-3 w-3" />
@@ -310,6 +353,7 @@ export default function BlogCard({ post, onEdit, onViewComments }) {
         ) : (
           <button
             onClick={() => setDeleteConfirm(true)}
+            aria-label="Delete post"
             className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-500 transition-colors hover:bg-red-500/8 hover:text-red-400"
           >
             <Trash2 className="h-3 w-3" />

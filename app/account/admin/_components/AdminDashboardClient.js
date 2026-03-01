@@ -1,6 +1,12 @@
+/**
+ * @file Admin dashboard shell — composes the header, stats grid, system
+ *   metrics, pending approvals, recent activity, quick actions, system
+ *   notifications, and management links into the main admin view.
+ * @module AdminDashboardClient
+ */
+
 'use client';
 
-import RoleSync from '../../_components/RoleSync';
 import AdminHeader from './AdminHeader';
 import StatsGrid from './StatsGrid';
 import SystemMetrics from './SystemMetrics';
@@ -117,8 +123,6 @@ export default function AdminDashboardClient({ session }) {
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
-
       <AdminHeader stats={stats} />
       <StatsGrid stats={stats} />
       <SystemMetrics systemStats={systemStats} />

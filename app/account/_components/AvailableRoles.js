@@ -1,3 +1,10 @@
+/**
+ * @file Available role dashboards grid.
+ * Renders RoleCard for each role the user has access to.
+ *
+ * @module AvailableRoles
+ */
+
 'use client';
 
 import RoleCard from './RoleCard';

@@ -1,3 +1,10 @@
+/**
+ * @file Event management client — executive interface for creating,
+ *   editing, featuring, and archiving club events with registration
+ *   tracking.
+ * @module ExecutiveManageEventsClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

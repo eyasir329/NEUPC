@@ -1,48 +1,39 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
+/**
+ * @file Member problem set trainer — lists weekly programming tasks,
+ *   tracks the member’s submissions and progress, and shows comparative
+ *   statistics from their member profile.
+ * @module MemberProblemSetPage
+ * @access member
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getUserRoles,
-  getUserByEmail,
   getAllWeeklyTasks,
   getUserTaskSubmissions,
   getMemberProgress,
   getMemberProfileByUserId,
   getMemberStatistics,
 } from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
 import MemberProblemSetClient from './_components/MemberProblemSetClient';
 
-export const metadata = { title: 'Problem Set | Member' };
+export const metadata = { title: 'Problem Set | Member | NEUPC' };
 
 export default async function MemberProblemSetPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
+  const { user } = await requireRole('member');
 
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('member')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || user?.is_active === false)
-    redirect('/account');
-
-  const [tasks, mySubmissions, progress] = await Promise.all([
+  const [tasks, mySubmissions, progress, profile] = await Promise.all([
     getAllWeeklyTasks().catch(() => []),
     getUserTaskSubmissions(user.id).catch(() => []),
     getMemberProgress(user.id).catch(() => []),
+    getMemberProfileByUserId(user.id).catch(() => null),
   ]);
 
-  // Member stats requires the member_profiles row ID
-  let memberStats = null;
-  try {
-    const profile = await getMemberProfileByUserId(user.id);
-    if (profile?.id) {
-      memberStats = await getMemberStatistics(profile.id).catch(() => null);
-    }
-  } catch {}
+  const memberStats = profile?.id
+    ? await getMemberStatistics(profile.id).catch(() => null)
+    : null;
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="member" />
       <MemberProblemSetClient
         tasks={tasks}
         mySubmissions={mySubmissions}

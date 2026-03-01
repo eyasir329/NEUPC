@@ -1,3 +1,10 @@
+/**
+ * @file Member profile client — editable profile form displaying
+ *   personal info, student details, competitive handles, and linked
+ *   social accounts.
+ * @module MemberProfileClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

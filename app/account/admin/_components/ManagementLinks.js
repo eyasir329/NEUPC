@@ -1,3 +1,10 @@
+/**
+ * @file Management links grid — navigation tiles linking to secondary
+ *   admin sub-pages (system logs, security, data export, contact
+ *   submissions, and settings).
+ * @module ManagementLinks
+ */
+
 'use client';
 
 import Link from 'next/link';

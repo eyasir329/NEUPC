@@ -1,3 +1,9 @@
+/**
+ * @file Contact submissions client — admin interface for reviewing,
+ *   filtering, and responding to user-submitted contact messages.
+ * @module AdminContactSubmissionsClient
+ */
+
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';

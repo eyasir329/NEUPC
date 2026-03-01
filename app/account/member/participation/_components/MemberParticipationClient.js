@@ -1,3 +1,10 @@
+/**
+ * @file Member participation client — unified overview of event
+ *   registrations, contest history, certificates, and discussion
+ *   contributions.
+ * @module MemberParticipationClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

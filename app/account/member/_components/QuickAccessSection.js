@@ -1,3 +1,9 @@
+/**
+ * @file Quick access section — grid of shortcut tiles linking to
+ *   frequently used member features (contests, discussions, resources).
+ * @module MemberQuickAccessSection
+ */
+
 'use client';
 
 import Link from 'next/link';

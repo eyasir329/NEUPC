@@ -1,3 +1,8 @@
+/**
+ * @file actions
+ * @module actions
+ */
+
 'use server';
 
 import { auth, signIn, signOut } from './auth';

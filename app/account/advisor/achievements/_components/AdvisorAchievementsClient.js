@@ -1,3 +1,9 @@
+/**
+ * @file Advisor achievements client — comprehensive view of club
+ *   achievements with filtering, categorisation, and detail modals.
+ * @module AdvisorAchievementsClient
+ */
+
 'use client';
 
 import { useState } from 'react';

@@ -1,3 +1,9 @@
+/**
+ * @file Members client — executive interface for reviewing pending
+ *   join requests and managing current member profiles.
+ * @module ExecutiveMembersClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -37,7 +43,7 @@ function Avatar({ name, size = 'sm' }) {
   const sz = size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm';
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colors[idx]} to-transparent font-semibold text-white ${sz}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-linear-to-br ${colors[idx]} to-transparent font-semibold text-white ${sz}`}
     >
       {initials}
     </div>

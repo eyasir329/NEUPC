@@ -1,3 +1,10 @@
+/**
+ * @file Account hub page client wrapper.
+ * Resets active role context when user visits the account selection page.
+ *
+ * @module AccountPageClient
+ */
+
 'use client';
 
 import { useEffect } from 'react';

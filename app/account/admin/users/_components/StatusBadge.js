@@ -1,3 +1,9 @@
+/**
+ * @file Status badge — colour-coded pill displaying a user’s account
+ *   status (active, pending, suspended, banned).
+ * @module AdminStatusBadge
+ */
+
 import { STATUS_CONFIG } from './constants';
 
 export default function StatusBadge({ status }) {

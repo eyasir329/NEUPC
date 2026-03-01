@@ -1,18 +1,22 @@
+/**
+ * @file User avatar with image fallback.
+ * Shows user profile image or initials-based fallback.
+ *
+ * @module UserAvatar
+ */
+
 'use client';
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { getInitials } from '@/app/_lib/utils';
 
+/** @param {{ session: Object }} props */
 export default function UserAvatar({ session }) {
   const [imgError, setImgError] = useState(false);
 
   const name = session?.name || session?.email || '?';
-  const initials = name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(name);
 
   const showImage = session?.image && !imgError;
 
@@ -30,7 +34,7 @@ export default function UserAvatar({ session }) {
             priority
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-full border-4 border-white/20 bg-gradient-to-br from-gray-700 to-gray-800 shadow-xl">
+          <div className="flex h-full w-full items-center justify-center rounded-full border-4 border-white/20 bg-linear-to-br from-gray-700 to-gray-800 shadow-xl">
             <span className="text-2xl font-bold text-white/80 sm:text-3xl">
               {initials}
             </span>

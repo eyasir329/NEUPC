@@ -1,3 +1,8 @@
+/**
+ * @file advisor actions
+ * @module advisor-actions
+ */
+
 'use server';
 
 import { auth } from '@/app/_lib/auth';

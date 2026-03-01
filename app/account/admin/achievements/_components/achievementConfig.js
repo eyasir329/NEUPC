@@ -1,3 +1,9 @@
+/**
+ * @file Achievement configuration constants — badge types, tier labels,
+ *   icon mappings, and colour schemes for the admin achievements module.
+ * @module adminAchievementConfig
+ */
+
 // ─── Category Configuration ───────────────────────────────────────────────────
 
 export const ACHIEVEMENT_CATEGORIES = [

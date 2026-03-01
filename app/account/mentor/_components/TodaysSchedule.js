@@ -1,3 +1,9 @@
+/**
+ * @file Today’s schedule — dashboard widget showing the mentor’s
+ *   upcoming sessions and tasks for the current day.
+ * @module MentorTodaysSchedule
+ */
+
 'use client';
 
 import Link from 'next/link';

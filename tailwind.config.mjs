@@ -1,10 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 const config = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
   theme: {
     extend: {
       colors: {
@@ -69,18 +64,47 @@ const config = {
           '100%': { opacity: '1' },
         },
         'zoom-in': {
-          '0%': { transform: 'scale(0.8)' },
-          '100%': { transform: 'scale(1)' },
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(24px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'slide-down': {
+          '0%': { transform: 'translateY(-24px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'slide-left': {
+          '0%': { transform: 'translateX(24px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'slide-right': {
+          '0%': { transform: 'translateX(-24px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'scale-in': {
+          '0%': { transform: 'scale(0.9)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-8px)' },
         },
       },
 
       animation: {
-        'fade-in': 'fade-in 0.2s ease-out',
-        'zoom-in': 'zoom-in 0.2s ease-out',
+        'fade-in': 'fade-in 0.5s ease-out both',
+        'zoom-in': 'zoom-in 0.5s ease-out both',
+        'slide-up': 'slide-up 0.6s ease-out both',
+        'slide-down': 'slide-down 0.6s ease-out both',
+        'slide-left': 'slide-left 0.6s ease-out both',
+        'slide-right': 'slide-right 0.6s ease-out both',
+        'scale-in': 'scale-in 0.5s ease-out both',
+        float: 'float 3s ease-in-out infinite',
       },
     },
   },
-  plugins: [],
 };
 
 export default config;

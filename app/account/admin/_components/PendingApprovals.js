@@ -1,3 +1,9 @@
+/**
+ * @file Pending approvals list — renders a scrollable list of approval
+ *   cards with a “View All” link to the dedicated approvals page.
+ * @module PendingApprovals
+ */
+
 'use client';
 
 import Link from 'next/link';

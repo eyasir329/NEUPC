@@ -1,3 +1,9 @@
+/**
+ * @file Filter bar — search and dropdown filters for narrowing the
+ *   user list by role, status, or text query.
+ * @module AdminFilterBar
+ */
+
 import { Search, ChevronDown } from 'lucide-react';
 
 const selectOptionStyles = `

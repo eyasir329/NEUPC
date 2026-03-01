@@ -1,3 +1,8 @@
+/**
+ * @file Edit User client component
+ * @module EditUserClient
+ */
+
 'use client';
 
 import { useState } from 'react';

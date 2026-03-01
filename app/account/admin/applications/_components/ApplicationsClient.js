@@ -1,3 +1,8 @@
+/**
+ * @file Applications client component
+ * @module ApplicationsClient
+ */
+
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';

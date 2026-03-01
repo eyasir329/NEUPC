@@ -1,3 +1,10 @@
+/**
+ * @file Advisor club overview client — comprehensive club status
+ *   dashboard with membership statistics, activity timeline, and
+ *   organisational health indicators.
+ * @module AdvisorClubOverviewClient
+ */
+
 'use client';
 
 import Link from 'next/link';

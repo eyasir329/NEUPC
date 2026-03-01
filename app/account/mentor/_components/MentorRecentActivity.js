@@ -1,3 +1,9 @@
+/**
+ * @file Mentor recent activity — chronological feed of the mentor’s
+ *   latest interactions including sessions, task reviews, and notes.
+ * @module MentorRecentActivity
+ */
+
 'use client';
 
 import { CheckCircle, UserPlus, BookOpen, Star } from 'lucide-react';

@@ -1,3 +1,10 @@
+/**
+ * @file System logs client — admin interface for browsing, filtering,
+ *   and searching platform audit and error logs with timestamp and
+ *   severity indicators.
+ * @module AdminSystemLogsClient
+ */
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';

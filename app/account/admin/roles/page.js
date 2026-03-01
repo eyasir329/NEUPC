@@ -1,44 +1,24 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import {
-  getUserRoles,
-  getUserByEmail,
-  getRolesWithStats,
-  getUsersBasic,
-} from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
+/**
+ * @file Admin role management page (server component).
+ * Fetches roles, permissions, and users for the RBAC management UI.
+ *
+ * @module AdminRolesPage
+ * @access admin
+ */
+
+import { getRolesWithStats, getUsersBasic } from '@/app/_lib/data-service';
 import RoleManagementClient from './_components/RoleManagementClient';
 
-export const metadata = {
-  title: 'Role Management | Admin',
-};
+export const metadata = { title: 'Roles | Admin | NEUPC' };
 
 export default async function AdminRolesPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect('/login');
-
-  const userEmail = session.user?.email;
-  if (!userEmail) redirect('/login');
-
-  const userRoles = await getUserRoles(userEmail);
-  if (!Array.isArray(userRoles) || !userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  const userData = await getUserByEmail(userEmail);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
   const [{ roles, allPermissions }, users] = await Promise.all([
-    getRolesWithStats(),
-    getUsersBasic(),
+    getRolesWithStats().catch(() => ({ roles: [], allPermissions: [] })),
+    getUsersBasic().catch(() => []),
   ]);
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
       <RoleManagementClient
         initialRoles={roles}
         allPermissions={allPermissions}

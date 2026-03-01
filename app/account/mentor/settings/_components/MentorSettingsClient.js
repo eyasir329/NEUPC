@@ -1,3 +1,9 @@
+/**
+ * @file Mentor settings client — account preferences panel for
+ *   notification settings, availability, and mentoring configuration.
+ * @module MentorSettingsClient
+ */
+
 'use client';
 
 import { useState } from 'react';

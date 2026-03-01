@@ -1,3 +1,9 @@
+/**
+ * @file Mentor profile client — editable profile view for updating
+ *   personal information, expertise areas, and mentoring preferences.
+ * @module MentorProfileClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -94,7 +100,7 @@ export default function MentorProfileClient({ user, memberProfile }) {
       {/* Avatar & Name Card */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
         <div className="flex flex-col items-center gap-4 sm:flex-row">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-3xl font-bold text-white">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-3xl font-bold text-white">
             {user?.avatar_url ? (
               <img
                 src={user.avatar_url}

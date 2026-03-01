@@ -1,3 +1,10 @@
+/**
+ * @file Resource management client — admin interface for listing,
+ *   creating, editing, and organising shared learning materials
+ *   and documents.
+ * @module AdminResourceManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

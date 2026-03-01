@@ -1,3 +1,10 @@
+/**
+ * @file Role dashboard selection card.
+ * Clickable card that switches active role and navigates to role dashboard.
+ *
+ * @module RoleCard
+ */
+
 'use client';
 
 import { useRouter } from 'next/navigation';

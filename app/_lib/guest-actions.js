@@ -1,9 +1,15 @@
+/**
+ * @file guest actions
+ * @module guest-actions
+ */
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
+import { sanitizeText, isValidUrl } from './validation';
 
 async function requireActiveGuest() {
   const session = await auth();
@@ -24,9 +30,14 @@ export async function updateGuestInfoAction(formData) {
   try {
     const user = await requireActiveGuest();
 
-    const full_name = formData.get('full_name')?.trim();
-    const phone = formData.get('phone')?.trim() || null;
+    const full_name = sanitizeText(formData.get('full_name'), 100);
+    const phone = sanitizeText(formData.get('phone'), 20) || null;
     const avatar_url = formData.get('avatar_url')?.trim() || null;
+
+    // Validate avatar URL if provided
+    if (avatar_url && !isValidUrl(avatar_url)) {
+      return { error: 'Invalid avatar URL.' };
+    }
 
     const updates = { updated_at: new Date().toISOString() };
     if (full_name) updates.full_name = full_name;
@@ -38,13 +49,17 @@ export async function updateGuestInfoAction(formData) {
       .update(updates)
       .eq('id', user.id);
 
-    if (error) return { error: error.message };
+    if (error) {
+      console.error('Guest info update error:', error);
+      return { error: 'Failed to update profile.' };
+    }
 
     revalidatePath('/account/guest/profile');
     revalidatePath('/account/guest/settings');
     revalidatePath('/account');
     return { success: true };
   } catch (err) {
-    return { error: err.message };
+    console.error('updateGuestInfoAction error:', err);
+    return { error: 'An unexpected error occurred.' };
   }
 }

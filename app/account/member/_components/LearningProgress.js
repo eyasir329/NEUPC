@@ -1,3 +1,9 @@
+/**
+ * @file Learning progress tracker — dashboard widget showing the
+ *   member’s roadmap and problem-set completion percentages.
+ * @module MemberLearningProgress
+ */
+
 'use client';
 
 import Link from 'next/link';

@@ -1,23 +1,19 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
+/**
+ * @file Executive event management — fetches all events with registration
+ *   counts, venue details, and scheduling info so executives can create,
+ *   edit, feature, or archive club events.
+ * @module ExecutiveManageEventsPage
+ * @access executive | admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import RoleSync from '@/app/account/_components/RoleSync';
 import ManageEventsClient from './_components/ManageEventsClient';
 
 export const metadata = { title: 'Event Management | Executive | NEUPC' };
 
 export default async function ManageEventsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('executive') && !userRoles.includes('admin'))
-    redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
+  const { user } = await requireRole(['executive', 'admin']);
 
   const { data: events } = await supabaseAdmin
     .from('events')
@@ -36,10 +32,5 @@ export default async function ManageEventsPage() {
     event_registrations: undefined,
   }));
 
-  return (
-    <>
-      <RoleSync role="executive" />
-      <ManageEventsClient initialEvents={serialized} userId={user.id} />
-    </>
-  );
+  return <ManageEventsClient initialEvents={serialized} userId={user.id} />;
 }

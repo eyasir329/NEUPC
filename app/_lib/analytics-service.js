@@ -1,3 +1,8 @@
+/**
+ * @file analytics service
+ * @module analytics-service
+ */
+
 import { supabaseAdmin } from './supabase';
 
 /**

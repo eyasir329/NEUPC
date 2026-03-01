@@ -1,3 +1,9 @@
+/**
+ * @file Recent events — dashboard preview of the latest club events
+ *   with attendance figures and status indicators.
+ * @module AdvisorRecentEvents
+ */
+
 'use client';
 
 import Link from 'next/link';

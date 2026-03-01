@@ -1,3 +1,9 @@
+/**
+ * @file Mentor resources client — curated resource library with
+ *   sharing controls and mentee assignment capabilities.
+ * @module MentorResourcesClient
+ */
+
 'use client';
 
 import { useState } from 'react';

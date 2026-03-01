@@ -1,3 +1,10 @@
+/**
+ * @file Resource form modal — create / edit dialog for learning
+ *   resources with fields for title, URL, type, category, description,
+ *   and access level.
+ * @module AdminResourceFormModal
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

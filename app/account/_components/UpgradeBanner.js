@@ -1,3 +1,10 @@
+/**
+ * @file Upgrade banner for guest-only users.
+ * Prompts guests to apply for membership.
+ *
+ * @module UpgradeBanner
+ */
+
 'use client';
 
 import Link from 'next/link';

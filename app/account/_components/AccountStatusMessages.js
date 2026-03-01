@@ -1,3 +1,11 @@
+/**
+ * @file Account status message components.
+ * Renders contextual status banners (pending, rejected, suspended, banned, locked)
+ * with interactive message forms and countdown timers.
+ *
+ * @module AccountStatusMessages
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +25,7 @@ import {
 } from 'lucide-react';
 
 // ── Suspension countdown timer ────────────────────────────────────────────────
+/** @param {{ expiresAt: string }} props */
 function SuspensionTimer({ expiresAt }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
@@ -107,6 +116,14 @@ function SuspensionTimer({ expiresAt }) {
 }
 
 // ── Shared message form ──────────────────────────────────────────────────────
+
+/** @type {{ label: string, done: boolean }[]} */
+const REVIEW_STEPS = [
+  { label: 'Submitted', done: true },
+  { label: 'Under Review', done: true },
+  { label: 'Decision', done: false },
+];
+
 function MessageForm({
   onSubmit,
   isSubmitting,
@@ -298,8 +315,8 @@ export default function AccountStatusMessages({
   if (accountStatus === 'pending') {
     return (
       <div className="mt-6">
-        <div className="overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent shadow-lg shadow-amber-500/5">
-          <div className="h-0.5 w-full bg-gradient-to-r from-amber-500/60 via-orange-400/60 to-transparent" />
+        <div className="overflow-hidden rounded-2xl border border-amber-500/20 bg-linear-to-b from-amber-500/5 to-transparent shadow-lg shadow-amber-500/5">
+          <div className="h-0.5 w-full bg-linear-to-r from-amber-500/60 via-orange-400/60 to-transparent" />
 
           <div className="p-6 sm:p-8">
             {/* Header */}
@@ -332,11 +349,7 @@ export default function AccountStatusMessages({
 
             {/* Progress steps */}
             <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
-              {[
-                { label: 'Submitted', done: true },
-                { label: 'Under Review', done: true },
-                { label: 'Decision', done: false },
-              ].map((step, i) => (
+              {REVIEW_STEPS.map((step, i) => (
                 <div
                   key={i}
                   className="flex flex-col items-center gap-1.5 text-center"
@@ -393,8 +406,8 @@ export default function AccountStatusMessages({
   if (accountStatus === 'rejected') {
     return (
       <div className="mt-6">
-        <div className="overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-500/5 to-transparent shadow-lg shadow-red-500/5">
-          <div className="h-0.5 w-full bg-gradient-to-r from-red-500/60 via-rose-400/60 to-transparent" />
+        <div className="overflow-hidden rounded-2xl border border-red-500/20 bg-linear-to-b from-red-500/5 to-transparent shadow-lg shadow-red-500/5">
+          <div className="h-0.5 w-full bg-linear-to-r from-red-500/60 via-rose-400/60 to-transparent" />
 
           <div className="p-6 sm:p-8">
             {/* Header */}
@@ -520,10 +533,10 @@ export default function AccountStatusMessages({
     return (
       <div className="mt-6">
         <div
-          className={`overflow-hidden rounded-2xl border ${palette.border} bg-gradient-to-b from-white/[0.03] to-transparent shadow-lg`}
+          className={`overflow-hidden rounded-2xl border ${palette.border} bg-linear-to-b from-white/3 to-transparent shadow-lg`}
         >
           <div
-            className={`h-0.5 w-full bg-gradient-to-r ${palette.bar} to-transparent`}
+            className={`h-0.5 w-full bg-linear-to-r ${palette.bar} to-transparent`}
           />
 
           <div className="p-6 sm:p-8">

@@ -1,3 +1,9 @@
+/**
+ * @file Quick actions grid — navigation tiles linking to frequently
+ *   used guest features such as events, profile, and applications.
+ * @module GuestQuickActionsGrid
+ */
+
 'use client';
 
 import Link from 'next/link';

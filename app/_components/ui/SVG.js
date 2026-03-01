@@ -1,3 +1,8 @@
+/**
+ * @file S V G
+ * @module SVG
+ */
+
 function SVG() {
   return (
     <svg

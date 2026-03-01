@@ -1,3 +1,9 @@
+/**
+ * @file Public features explore — discovery panel showcasing publicly
+ *   accessible club content like blogs, events, and achievements.
+ * @module GuestPublicFeaturesExplore
+ */
+
 'use client';
 
 import Link from 'next/link';

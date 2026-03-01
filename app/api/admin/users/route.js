@@ -1,3 +1,8 @@
+/**
+ * @file route
+ * @module route
+ */
+
 import { auth } from '@/app/_lib/auth';
 import {
   getUserRoles,

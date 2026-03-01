@@ -1,3 +1,9 @@
+/**
+ * @file Stats grid — responsive card grid showing key advisor-level
+ *   metrics such as pending approvals, active members, and events.
+ * @module AdvisorStatsGrid
+ */
+
 'use client';
 
 import {

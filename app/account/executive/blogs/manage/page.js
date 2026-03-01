@@ -1,23 +1,19 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
+/**
+ * @file Executive blog management — lists all blog posts with author info,
+ *   engagement metrics, and publishing status so executives can create,
+ *   edit, feature, or remove posts.
+ * @module ExecutiveManageBlogsPage
+ * @access executive | admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import RoleSync from '@/app/account/_components/RoleSync';
 import ManageBlogsClient from './_components/ManageBlogsClient';
 
 export const metadata = { title: 'Blog Management | Executive | NEUPC' };
 
 export default async function ManageBlogsPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('executive') && !userRoles.includes('admin'))
-    redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
+  const { user } = await requireRole(['executive', 'admin']);
 
   const { data: blogs } = await supabaseAdmin
     .from('blog_posts')
@@ -30,10 +26,5 @@ export default async function ManageBlogsPage() {
     .order('created_at', { ascending: false })
     .limit(100);
 
-  return (
-    <>
-      <RoleSync role="executive" />
-      <ManageBlogsClient initialBlogs={blogs || []} userId={user.id} />
-    </>
-  );
+  return <ManageBlogsClient initialBlogs={blogs || []} userId={user.id} />;
 }

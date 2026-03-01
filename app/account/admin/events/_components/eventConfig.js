@@ -1,3 +1,9 @@
+/**
+ * @file Event configuration constants — category options, status labels,
+ *   venue types, and colour mappings used across admin event components.
+ * @module adminEventConfig
+ */
+
 // =============================================================================
 // eventConfig.js — Shared colour / label config for Event Management
 // =============================================================================

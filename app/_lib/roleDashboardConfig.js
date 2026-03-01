@@ -1,3 +1,8 @@
+/**
+ * @file role Dashboard Config
+ * @module roleDashboardConfig
+ */
+
 export const roleDashboards = {
   guest: {
     title: 'Public Account',

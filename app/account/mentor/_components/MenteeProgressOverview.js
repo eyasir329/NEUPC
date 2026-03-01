@@ -1,3 +1,9 @@
+/**
+ * @file Mentee progress overview — dashboard summary of assigned
+ *   mentees’ learning progress, task completion rates, and skill growth.
+ * @module MentorMenteeProgressOverview
+ */
+
 'use client';
 
 import Link from 'next/link';

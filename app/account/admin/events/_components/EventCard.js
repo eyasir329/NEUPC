@@ -1,3 +1,9 @@
+/**
+ * @file Event card — displays a single event’s cover image, title, status
+ *   badge, dates, and registration count with edit / delete actions.
+ * @module AdminEventCard
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

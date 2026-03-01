@@ -1,3 +1,9 @@
+/**
+ * @file Executive header banner — gradient card with the committee
+ *   member’s name, position title, and quick summary stats.
+ * @module ExecutiveHeader
+ */
+
 'use client';
 
 import { Crown } from 'lucide-react';

@@ -1,3 +1,9 @@
+/**
+ * @file Mentor header — gradient card displaying the mentor’s name,
+ *   expertise area, and quick-action buttons for session management.
+ * @module MentorHeader
+ */
+
 'use client';
 
 import { Star, Sparkles } from 'lucide-react';

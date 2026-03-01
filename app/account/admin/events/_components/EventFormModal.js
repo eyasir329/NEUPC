@@ -1,3 +1,10 @@
+/**
+ * @file Event form modal — create / edit dialog for club events with
+ *   fields for title, description, category, venue, dates, cover image,
+ *   registration settings, and featured toggle.
+ * @module AdminEventFormModal
+ */
+
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';

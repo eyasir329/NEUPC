@@ -1,3 +1,9 @@
+/**
+ * @file Assign role modal — dialog for assigning a specific role to
+ *   one or more users with search and bulk-selection support.
+ * @module AdminAssignRoleModal
+ */
+
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';

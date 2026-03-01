@@ -1,3 +1,9 @@
+/**
+ * @file Advisor profile client — editable profile view for updating
+ *   personal information, academic credentials, and advisory details.
+ * @module AdvisorProfileClient
+ */
+
 'use client';
 
 import { User, Mail, Phone, Shield, Calendar, LogOut } from 'lucide-react';

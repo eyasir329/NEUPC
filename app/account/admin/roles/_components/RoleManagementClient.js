@@ -1,3 +1,10 @@
+/**
+ * @file Role management client — admin interface for viewing, editing,
+ *   and assigning user roles with permission-level controls and
+ *   member-count statistics.
+ * @module AdminRoleManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

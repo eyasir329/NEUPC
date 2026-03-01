@@ -1,3 +1,9 @@
+/**
+ * @file Notices client — executive interface for creating and managing
+ *   club announcements with audience targeting and priority levels.
+ * @module ExecutiveNoticesClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

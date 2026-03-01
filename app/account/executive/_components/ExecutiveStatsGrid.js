@@ -1,3 +1,9 @@
+/**
+ * @file Executive stats grid — responsive card grid showing key
+ *   management metrics (members, events, notices, pending tasks).
+ * @module ExecutiveStatsGrid
+ */
+
 'use client';
 
 import {

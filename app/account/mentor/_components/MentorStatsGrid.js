@@ -1,3 +1,10 @@
+/**
+ * @file Mentor stats grid — responsive card grid showing key
+ *   mentoring metrics such as active mentees, sessions held,
+ *   and pending tasks.
+ * @module MentorStatsGrid
+ */
+
 'use client';
 
 import Link from 'next/link';

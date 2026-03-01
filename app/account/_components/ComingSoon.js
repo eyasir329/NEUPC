@@ -1,7 +1,14 @@
+/**
+ * @file Coming soon placeholder page.
+ * Displays a placeholder for features under development.
+ *
+ * @module ComingSoon
+ */
+
 'use client';
 
-import { Rocket, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Rocket, ArrowLeft } from 'lucide-react';
 
 export default function ComingSoon({
   title,

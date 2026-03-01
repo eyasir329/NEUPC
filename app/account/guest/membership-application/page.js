@@ -1,39 +1,31 @@
-import { redirect } from 'next/navigation';
-import { auth } from '@/app/_lib/auth';
-import {
-  getUserByEmail,
-  getUserRoles,
-  getJoinRequestByEmail,
-} from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
+/**
+ * @file Guest membership application — allows guests to submit a request
+ *   to become a full club member and displays the status of any existing
+ *   application (pending / approved / rejected).
+ * @module GuestMembershipApplicationPage
+ * @access guest
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
+import { getJoinRequestByEmail } from '@/app/_lib/data-service';
 import MembershipApplicationClient from './MembershipApplicationClient';
 
-export const metadata = {
-  title: 'Apply for Membership | NEUPC',
-};
+export const metadata = { title: 'Apply for Membership | Guest | NEUPC' };
 
-export default async function Page() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
+export default async function GuestMembershipApplicationPage() {
+  const { session, user } = await requireRole('guest', {
+    checkIsActive: false,
+  });
 
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('guest')) redirect('/account');
-
-  const [userData, joinRequests] = await Promise.all([
-    getUserByEmail(session.user.email),
-    getJoinRequestByEmail(session.user.email).catch(() => []),
-  ]);
-
-  // Most recent application (sorted desc by created_at)
+  const joinRequests = await getJoinRequestByEmail(session.user.email).catch(
+    () => []
+  );
   const latestApplication = joinRequests?.[0] ?? null;
 
   return (
-    <>
-      <RoleSync role="guest" />
-      <MembershipApplicationClient
-        userData={userData}
-        latestApplication={latestApplication}
-      />
-    </>
+    <MembershipApplicationClient
+      userData={user}
+      latestApplication={latestApplication}
+    />
   );
 }

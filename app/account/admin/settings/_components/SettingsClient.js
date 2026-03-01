@@ -1,3 +1,10 @@
+/**
+ * @file Settings client — admin website-settings editor with grouped
+ *   form fields for site identity, social links, feature toggles,
+ *   and platform configuration (key-value persistence).
+ * @module AdminSettingsClient
+ */
+
 'use client';
 
 import { useState, useTransition, useCallback } from 'react';
@@ -25,6 +32,7 @@ import {
   Github,
   Linkedin,
   Link,
+  Layout,
 } from 'lucide-react';
 import {
   saveSettingsAction,
@@ -480,6 +488,269 @@ const SECTIONS = [
       },
     ],
   },
+  {
+    id: 'website',
+    label: 'Website',
+    icon: Layout,
+    group: 'content',
+    description: 'Manage all public-facing website content',
+    // Categories this section spans (for multi-category reset)
+    categories: ['hero', 'about', 'social', 'contact', 'footer', 'content'],
+    fields: [
+      { type: 'divider', label: 'Hero Section' },
+      {
+        key: 'hero_title',
+        label: 'Club Name',
+        type: 'text',
+        placeholder: 'Programming Club',
+        default: 'Programming Club',
+        category: 'hero',
+      },
+      {
+        key: 'hero_subtitle',
+        label: 'Subtitle',
+        type: 'text',
+        placeholder: '(NEUPC)',
+        default: '(NEUPC)',
+        category: 'hero',
+      },
+      {
+        key: 'hero_department',
+        label: 'Department',
+        type: 'text',
+        placeholder: 'Department of Computer Science and Engineering',
+        default: 'Department of Computer Science and Engineering',
+        category: 'hero',
+      },
+      {
+        key: 'hero_university',
+        label: 'University',
+        type: 'text',
+        placeholder: 'Netrokona University, Netrokona, Bangladesh',
+        default: 'Netrokona University, Netrokona, Bangladesh',
+        category: 'hero',
+      },
+      { type: 'divider', label: 'About Section' },
+      {
+        key: 'about_title',
+        label: 'About Heading',
+        type: 'text',
+        placeholder: 'Who We Are',
+        default: 'Who We Are',
+        category: 'about',
+      },
+      {
+        key: 'about_description_1',
+        label: 'Description (Paragraph 1)',
+        type: 'textarea',
+        placeholder: 'First paragraph about the club…',
+        default: '',
+        category: 'about',
+      },
+      {
+        key: 'about_description_2',
+        label: 'Description (Paragraph 2)',
+        type: 'textarea',
+        placeholder: 'Second paragraph about the club…',
+        default: '',
+        category: 'about',
+      },
+      {
+        key: 'about_mission',
+        label: 'Mission Points',
+        type: 'json',
+        desc: 'JSON array of mission statement strings',
+        default: [],
+        category: 'about',
+      },
+      {
+        key: 'about_vision',
+        label: 'Vision Points',
+        type: 'json',
+        desc: 'JSON array of vision statement strings',
+        default: [],
+        category: 'about',
+      },
+      {
+        key: 'about_what_we_do',
+        label: 'What We Do',
+        type: 'json',
+        desc: 'JSON array of {icon, title, description} objects',
+        default: [],
+        category: 'about',
+      },
+      {
+        key: 'about_stats',
+        label: 'Club Statistics',
+        type: 'json',
+        desc: 'JSON array of {value, label, icon} objects',
+        default: [],
+        category: 'about',
+      },
+      { type: 'divider', label: 'Social Media Links' },
+      {
+        key: 'social_facebook',
+        label: 'Facebook',
+        type: 'url',
+        placeholder: 'https://facebook.com/…',
+        default: '',
+        category: 'social',
+        icon: Facebook,
+      },
+      {
+        key: 'social_github',
+        label: 'GitHub',
+        type: 'url',
+        placeholder: 'https://github.com/…',
+        default: '',
+        category: 'social',
+        icon: Github,
+      },
+      {
+        key: 'social_linkedin',
+        label: 'LinkedIn',
+        type: 'url',
+        placeholder: 'https://linkedin.com/…',
+        default: '',
+        category: 'social',
+        icon: Linkedin,
+      },
+      {
+        key: 'social_youtube',
+        label: 'YouTube',
+        type: 'url',
+        placeholder: 'https://youtube.com/…',
+        default: '',
+        category: 'social',
+      },
+      {
+        key: 'social_twitter',
+        label: 'Twitter / X',
+        type: 'url',
+        placeholder: 'https://twitter.com/…',
+        default: '',
+        category: 'social',
+        icon: Twitter,
+      },
+      { type: 'divider', label: 'Contact Information' },
+      {
+        key: 'contact_email',
+        label: 'Contact Email',
+        type: 'email',
+        placeholder: 'contact@university.edu',
+        default: '',
+        category: 'contact',
+      },
+      {
+        key: 'contact_phone',
+        label: 'Contact Phone',
+        type: 'text',
+        placeholder: '+880 1XXX-XXXXXX',
+        default: '',
+        category: 'contact',
+      },
+      {
+        key: 'contact_address',
+        label: 'Address',
+        type: 'text',
+        placeholder: 'Department of CSE, University…',
+        default: '',
+        category: 'contact',
+      },
+      {
+        key: 'contact_office_hours',
+        label: 'Office Hours',
+        type: 'text',
+        placeholder: 'Sunday - Thursday, 10:00 AM - 4:00 PM',
+        default: '',
+        category: 'contact',
+      },
+      {
+        key: 'contact_subjects',
+        label: 'Contact Form Subjects',
+        type: 'json',
+        desc: 'JSON array of subject option strings',
+        default: [],
+        category: 'contact',
+      },
+      { type: 'divider', label: 'Footer' },
+      {
+        key: 'footer_description',
+        label: 'Footer Description',
+        type: 'textarea',
+        placeholder: 'Short description shown in footer…',
+        default: '',
+        category: 'footer',
+      },
+      { type: 'divider', label: 'FAQs' },
+      {
+        key: 'faqs',
+        label: 'FAQ Items',
+        type: 'json',
+        desc: 'JSON array of {question, answer} objects',
+        default: [],
+        category: 'content',
+      },
+      { type: 'divider', label: 'Join Page' },
+      {
+        key: 'join_benefits',
+        label: 'Membership Benefits',
+        type: 'json',
+        desc: 'JSON array of {icon, title, description} objects',
+        default: [],
+        category: 'content',
+      },
+      {
+        key: 'join_features',
+        label: 'Public Account Features',
+        type: 'json',
+        desc: 'JSON array of {icon, title, description} objects',
+        default: [],
+        category: 'content',
+      },
+      { type: 'divider', label: 'Developers Page' },
+      {
+        key: 'developers_core',
+        label: 'Core Developers',
+        type: 'json',
+        desc: 'JSON array of {name, role, bio, stack, github, linkedin, portfolio, photo}',
+        default: [],
+        category: 'content',
+      },
+      {
+        key: 'developers_contributors',
+        label: 'Contributors',
+        type: 'json',
+        desc: 'JSON array of {name, role, contribution, github}',
+        default: [],
+        category: 'content',
+      },
+      {
+        key: 'tech_stack',
+        label: 'Technology Stack',
+        type: 'json',
+        desc: 'JSON array of {category, items: [{name, description, icon}]}',
+        default: [],
+        category: 'content',
+      },
+      {
+        key: 'developers_timeline',
+        label: 'Development Timeline',
+        type: 'json',
+        desc: 'JSON array of {year, title, description, status}',
+        default: [],
+        category: 'content',
+      },
+      {
+        key: 'github_stats',
+        label: 'GitHub Statistics',
+        type: 'json',
+        desc: 'JSON object: {commits, contributors, stars, forks}',
+        default: {},
+        category: 'content',
+      },
+    ],
+  },
 ];
 
 // ─── Toggle Switch ────────────────────────────────────────────────────────────
@@ -608,6 +879,51 @@ function SettingField({ field, value, onChange, disabled }) {
     );
   }
 
+  if (field.type === 'json') {
+    const strValue =
+      typeof value === 'string'
+        ? value
+        : value !== undefined && value !== null
+          ? JSON.stringify(value, null, 2)
+          : JSON.stringify(field.default ?? [], null, 2);
+    let isValid = true;
+    try {
+      JSON.parse(strValue);
+    } catch {
+      isValid = false;
+    }
+    return (
+      <div className="col-span-full flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-gray-400">
+          {field.label}
+        </label>
+        {field.desc && (
+          <p className="-mt-0.5 text-[11px] text-gray-600">{field.desc}</p>
+        )}
+        <textarea
+          value={strValue}
+          onChange={(e) => {
+            const raw = e.target.value;
+            try {
+              const parsed = JSON.parse(raw);
+              onChange(parsed);
+            } catch {
+              // Keep the raw string while user is typing
+              onChange(raw);
+            }
+          }}
+          disabled={disabled}
+          rows={6}
+          placeholder={field.placeholder || '[]'}
+          className={`${inputBase} resize-y font-mono text-xs ${!isValid ? 'border-red-500/50' : ''}`}
+        />
+        {!isValid && (
+          <p className="text-[11px] text-red-400">Invalid JSON format</p>
+        )}
+      </div>
+    );
+  }
+
   const FieldIcon = field.icon;
   return (
     <div className="flex flex-col gap-1.5">
@@ -670,9 +986,31 @@ function SectionPanel({ section, initialSettings, adminId }) {
 
   async function handleSave() {
     startSave(async () => {
+      // Validate JSON fields before saving
+      for (const f of section.fields) {
+        if (f.type === 'json' && typeof values[f.key] === 'string') {
+          try {
+            JSON.parse(values[f.key]);
+          } catch {
+            flash(
+              'error',
+              `Invalid JSON in "${f.label}". Fix the format and save again.`
+            );
+            return;
+          }
+        }
+      }
+
       const entries = section.fields
         .filter((f) => f.type !== 'divider')
-        .map((f) => ({ key: f.key, value: values[f.key] }));
+        .map((f) => ({
+          key: f.key,
+          value:
+            typeof values[f.key] === 'string' && f.type === 'json'
+              ? JSON.parse(values[f.key])
+              : values[f.key],
+          ...(f.category ? { category: f.category } : {}),
+        }));
 
       const fd = new FormData();
       fd.set('category', section.id);
@@ -689,6 +1027,10 @@ function SectionPanel({ section, initialSettings, adminId }) {
   async function handleReset() {
     startReset(async () => {
       const fd = new FormData();
+      // If the section spans multiple categories, pass them all
+      if (section.categories) {
+        fd.set('categories', JSON.stringify(section.categories));
+      }
       fd.set('category', section.id);
       const result = await resetCategoryAction(fd);
       setConfirmReset(false);
@@ -845,25 +1187,35 @@ export default function SettingsClient({ initialSettings, adminId }) {
 
           {/* Vertical on desktop */}
           <nav className="hidden lg:flex lg:flex-col lg:gap-0.5">
-            {SECTIONS.map((s) => {
+            {SECTIONS.map((s, i) => {
               const Icon = s.icon;
               const active = activeSection === s.id;
+              const prevGroup = i > 0 ? SECTIONS[i - 1].group : undefined;
+              const showGroupLabel = s.group && s.group !== prevGroup;
               return (
-                <button
-                  key={s.id}
-                  onClick={() => setActiveSection(s.id)}
-                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                    active
-                      ? 'bg-white/10 text-white shadow-sm'
-                      : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                  }`}
-                >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${active ? 'text-blue-400' : 'text-gray-600 group-hover:text-gray-400'}`}
-                  />
-                  <span className="flex-1 text-left">{s.label}</span>
-                  {active && <ChevronRight className="h-3 w-3 text-gray-500" />}
-                </button>
+                <div key={s.id}>
+                  {showGroupLabel && (
+                    <p className="mt-4 mb-1 px-3 text-[10px] font-semibold tracking-widest text-gray-600 uppercase">
+                      Website Content
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setActiveSection(s.id)}
+                    className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-white/10 text-white shadow-sm'
+                        : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon
+                      className={`h-4 w-4 shrink-0 ${active ? 'text-blue-400' : 'text-gray-600 group-hover:text-gray-400'}`}
+                    />
+                    <span className="flex-1 text-left">{s.label}</span>
+                    {active && (
+                      <ChevronRight className="h-3 w-3 text-gray-500" />
+                    )}
+                  </button>
+                </div>
               );
             })}
           </nav>

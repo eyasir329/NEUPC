@@ -1,3 +1,9 @@
+/**
+ * @file Gallery configuration constants — media categories, type labels,
+ *   and filter options used across admin gallery components.
+ * @module adminGalleryConfig
+ */
+
 // ─── Type Configuration ───────────────────────────────────────────────────────
 
 export const TYPE_CONFIG = {

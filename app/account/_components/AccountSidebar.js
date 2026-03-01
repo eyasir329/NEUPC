@@ -1,18 +1,68 @@
+/**
+ * @file Account sidebar with role switcher and navigation.
+ * Responsive sidebar with mobile overlay, role-aware navigation, and logout.
+ *
+ * @module AccountSidebar
+ */
+
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronRight,
-  Home,
-  Settings,
+  ChevronDown,
   Menu,
   X,
   LogOut,
   User,
   Sparkles,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { signOutAction } from '@/app/_lib/actions';
+
+const ROLE_COLORS = {
+  guest: {
+    bg: 'bg-blue-500/20',
+    border: 'border-blue-500/30',
+    text: 'text-blue-300',
+  },
+  member: {
+    bg: 'bg-purple-500/20',
+    border: 'border-purple-500/30',
+    text: 'text-purple-300',
+  },
+  executive: {
+    bg: 'bg-amber-500/20',
+    border: 'border-amber-500/30',
+    text: 'text-amber-300',
+  },
+  admin: {
+    bg: 'bg-red-500/20',
+    border: 'border-red-500/30',
+    text: 'text-red-300',
+  },
+  mentor: {
+    bg: 'bg-green-500/20',
+    border: 'border-green-500/30',
+    text: 'text-green-300',
+  },
+  advisor: {
+    bg: 'bg-teal-500/20',
+    border: 'border-teal-500/30',
+    text: 'text-teal-300',
+  },
+};
+
+const ROLE_LABELS = {
+  guest: 'Guest',
+  member: 'Member',
+  executive: 'Executive',
+  admin: 'Admin',
+  mentor: 'Mentor',
+  advisor: 'Advisor',
+};
 
 export default function AccountSidebar({
   sidebarOpen,
@@ -24,8 +74,18 @@ export default function AccountSidebar({
   userRoles,
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
 
   if (hideSidebar) return null;
+
+  const roleColor = ROLE_COLORS[activeRole] || ROLE_COLORS.guest;
+  const hasMultipleRoles = userRoles && userRoles.length > 1;
+
+  const handleRoleSwitch = (role) => {
+    setRoleSwitcherOpen(false);
+    router.push(`/account/${role}`);
+  };
 
   return (
     <>
@@ -33,7 +93,7 @@ export default function AccountSidebar({
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className={`fixed top-4 z-50 rounded-xl border border-white/20 bg-gray-900/90 p-3 text-white shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-white/30 hover:bg-gray-800 lg:hidden ${
-          sidebarOpen ? 'left-[19rem]' : 'left-4'
+          sidebarOpen ? 'left-76' : 'left-4'
         }`}
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
@@ -79,12 +139,67 @@ export default function AccountSidebar({
                 </p>
               </div>
             </div>
-            {/* Role Badge */}
+
+            {/* Role Switcher */}
             {activeRole && (
-              <div className="mt-3">
-                <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
-                  {activeRole.charAt(0).toUpperCase() + activeRole.slice(1)}
-                </span>
+              <div className="relative mt-3">
+                {hasMultipleRoles ? (
+                  <>
+                    <button
+                      onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+                      className={`flex w-full items-center justify-between rounded-lg border ${roleColor.border} ${roleColor.bg} px-3 py-2 transition-all duration-200 hover:brightness-110`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ArrowLeftRight
+                          className={`h-3.5 w-3.5 ${roleColor.text}`}
+                        />
+                        <span
+                          className={`text-xs font-semibold ${roleColor.text}`}
+                        >
+                          {ROLE_LABELS[activeRole] || activeRole}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 ${roleColor.text} transition-transform duration-200 ${
+                          roleSwitcherOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {/* Dropdown */}
+                    {roleSwitcherOpen && (
+                      <div className="absolute right-0 left-0 z-10 mt-1 overflow-hidden rounded-lg border border-white/10 bg-gray-800/95 shadow-xl backdrop-blur-xl">
+                        {userRoles
+                          .filter((role) => role !== activeRole)
+                          .map((role) => {
+                            const rc = ROLE_COLORS[role] || ROLE_COLORS.guest;
+                            return (
+                              <button
+                                key={role}
+                                onClick={() => handleRoleSwitch(role)}
+                                className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-white/5"
+                              >
+                                <div
+                                  className={`h-2 w-2 rounded-full ${rc.bg.replace('/20', '')}`}
+                                />
+                                <span
+                                  className={`text-xs font-semibold ${rc.text}`}
+                                >
+                                  {ROLE_LABELS[role] || role}
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span
+                    className={`inline-flex items-center rounded-full border ${roleColor.border} ${roleColor.bg} px-3 py-1 text-xs font-semibold ${roleColor.text}`}
+                  >
+                    {ROLE_LABELS[activeRole] || activeRole}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -169,18 +284,6 @@ export default function AccountSidebar({
 
           {/* Sidebar Footer */}
           <div className="space-y-3 border-t border-white/10 p-4">
-            {/* Switch Role Button - Only visible if user has multiple roles */}
-            {userRoles && userRoles.length > 1 && (
-              <Link
-                href="/account"
-                className="group flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 shadow-lg transition-all duration-300 hover:border-blue-500/50 hover:bg-blue-500/20 hover:shadow-blue-500/20"
-              >
-                <User className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                <span>Switch Role</span>
-                <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </Link>
-            )}
-
             {/* Logout Button */}
             <form action={signOutAction}>
               <button

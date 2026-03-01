@@ -1,3 +1,10 @@
+/**
+ * @file Achievement form modal — create / edit dialog for club
+ *   achievements with fields for name, description, icon, criteria,
+ *   tier, and point value.
+ * @module AdminAchievementFormModal
+ */
+
 'use client';
 
 import { useState, useRef } from 'react';

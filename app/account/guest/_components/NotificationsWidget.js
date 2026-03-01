@@ -1,3 +1,9 @@
+/**
+ * @file Notifications widget — compact dashboard preview of recent
+ *   guest notifications with unread count and mark-as-read actions.
+ * @module GuestNotificationsWidget
+ */
+
 'use client';
 
 import { Bell, Clock } from 'lucide-react';

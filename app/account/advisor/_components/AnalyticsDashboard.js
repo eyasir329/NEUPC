@@ -1,3 +1,9 @@
+/**
+ * @file Analytics dashboard — compact overview of club performance
+ *   metrics, growth trends, and engagement statistics for advisors.
+ * @module AdvisorAnalyticsDashboard
+ */
+
 'use client';
 
 import Link from 'next/link';

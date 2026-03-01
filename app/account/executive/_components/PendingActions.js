@@ -1,3 +1,9 @@
+/**
+ * @file Pending actions widget — dashboard panel listing items
+ *   awaiting executive review (applications, content, approvals).
+ * @module ExecutivePendingActions
+ */
+
 'use client';
 
 import { UserCheck, UserPlus, FileText, Calendar } from 'lucide-react';

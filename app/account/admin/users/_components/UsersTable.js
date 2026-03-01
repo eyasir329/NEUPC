@@ -1,3 +1,10 @@
+/**
+ * @file Users table — sortable, paginated data table listing all
+ *   platform users with avatar, name, email, roles, status, and
+ *   row-level action menus.
+ * @module AdminUsersTable
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -78,7 +85,7 @@ export default function UsersTable({ filtered, users, onAction }) {
         <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/8 bg-white/[0.02] text-left">
+              <tr className="border-b border-white/8 bg-white/2 text-left">
                 {HEADERS.map((h) => (
                   <th
                     key={h.label}
@@ -100,7 +107,7 @@ export default function UsersTable({ filtered, users, onAction }) {
                 paginated.map((user) => (
                   <tr
                     key={user.id}
-                    className="transition-colors hover:bg-white/[0.03]"
+                    className="transition-colors hover:bg-white/3"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">

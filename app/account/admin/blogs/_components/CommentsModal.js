@@ -1,3 +1,9 @@
+/**
+ * @file Comments modal — overlay displaying all comments for a specific
+ *   blog post with moderation actions (approve / delete).
+ * @module AdminCommentsModal
+ */
+
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
@@ -12,6 +18,8 @@ import {
   Loader2,
   Search,
   RefreshCw,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { formatBlogDate } from './blogConfig';
 import {
@@ -26,6 +34,8 @@ export default function CommentsModal({ post, onClose }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all | approved | pending
   const [isPending, startTransition] = useTransition();
+  const [selected, setSelected] = useState(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
 
   async function fetchComments() {
     setLoading(true);
@@ -66,7 +76,61 @@ export default function CommentsModal({ post, onClose }) {
       fd.set('id', id);
       await deleteCommentAction(fd);
       setComments((prev) => prev.filter((c) => c.id !== id));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     });
+  }
+
+  function toggleSelect(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filtered.map((c) => c.id)));
+    }
+  }
+
+  async function handleBulkApprove() {
+    setBulkPending(true);
+    const ids = [...selected];
+    for (const id of ids) {
+      const comment = comments.find((c) => c.id === id);
+      if (comment && !comment.is_approved) {
+        const fd = new FormData();
+        fd.set('id', id);
+        fd.set('approved', 'true');
+        await toggleCommentApprovalAction(fd);
+      }
+    }
+    setComments((prev) =>
+      prev.map((c) => (selected.has(c.id) ? { ...c, is_approved: true } : c))
+    );
+    setSelected(new Set());
+    setBulkPending(false);
+  }
+
+  async function handleBulkDelete() {
+    setBulkPending(true);
+    const ids = [...selected];
+    for (const id of ids) {
+      const fd = new FormData();
+      fd.set('id', id);
+      await deleteCommentAction(fd);
+    }
+    setComments((prev) => prev.filter((c) => !selected.has(c.id)));
+    setSelected(new Set());
+    setBulkPending(false);
   }
 
   const filtered = comments.filter((c) => {
@@ -159,6 +223,49 @@ export default function CommentsModal({ post, onClose }) {
           </div>
         </div>
 
+        {/* Bulk actions bar */}
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 border-b border-white/8 bg-blue-500/5 px-5 py-2.5">
+            <button
+              onClick={toggleSelectAll}
+              className="text-[11px] text-blue-400 transition-colors hover:text-blue-300"
+            >
+              {selected.size === filtered.length
+                ? 'Deselect all'
+                : 'Select all'}
+            </button>
+            <span className="text-[11px] text-gray-500">
+              {selected.size} selected
+            </span>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={handleBulkApprove}
+                disabled={bulkPending}
+                className="flex items-center gap-1 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-[11px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
+              >
+                {bulkPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3" />
+                )}
+                Approve
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkPending}
+                className="flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+              >
+                {bulkPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Comment list */}
         <div className="max-h-[50vh] divide-y divide-white/5 overflow-y-auto">
           {loading ? (
@@ -178,8 +285,26 @@ export default function CommentsModal({ post, onClose }) {
             filtered.map((comment) => (
               <div
                 key={comment.id}
-                className={`flex gap-3 px-5 py-4 transition-colors ${!comment.is_approved ? 'bg-amber-500/3' : ''}`}
+                className={`flex gap-3 px-5 py-4 transition-colors ${
+                  selected.has(comment.id)
+                    ? 'bg-blue-500/5'
+                    : !comment.is_approved
+                      ? 'bg-amber-500/3'
+                      : ''
+                }`}
               >
+                {/* Selection checkbox */}
+                <button
+                  onClick={() => toggleSelect(comment.id)}
+                  className="mt-1 shrink-0 text-gray-600 transition-colors hover:text-white"
+                >
+                  {selected.has(comment.id) ? (
+                    <CheckSquare className="h-4 w-4 text-blue-400" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                </button>
+
                 {/* Avatar */}
                 {comment.users?.avatar_url ? (
                   <img

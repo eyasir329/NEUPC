@@ -1,40 +1,24 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import {
-  getUserRoles,
-  getUserByEmail,
-  getResourcesAdmin,
-} from '@/app/_lib/data-service';
-import RoleSync from '../../_components/RoleSync';
+/**
+ * @file Admin resource management page (server component).
+ * Fetches learning resources with stats for the management UI.
+ *
+ * @module AdminResourcesPage
+ * @access admin
+ */
+
+import { getResourcesAdmin } from '@/app/_lib/data-service';
 import ResourceManagementClient from './_components/ResourceManagementClient';
 
-export const metadata = {
-  title: 'Resource Management | Admin',
-};
+export const metadata = { title: 'Resources | Admin | NEUPC' };
 
 export default async function AdminResourcesPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect('/login');
-
-  const userEmail = session.user?.email;
-  if (!userEmail) redirect('/login');
-
-  const userRoles = await getUserRoles(userEmail);
-  if (!Array.isArray(userRoles) || !userRoles.includes('admin')) {
-    redirect('/account');
-  }
-
-  const userData = await getUserByEmail(userEmail);
-  if (userData?.account_status !== 'active' || !userData?.is_active) {
-    redirect('/account');
-  }
-
-  const { resources, stats } = await getResourcesAdmin();
+  const { resources, stats } = await getResourcesAdmin().catch(() => ({
+    resources: [],
+    stats: {},
+  }));
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <RoleSync role="admin" />
       <ResourceManagementClient initialResources={resources} stats={stats} />
     </div>
   );

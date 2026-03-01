@@ -1,27 +1,22 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import {
-  getUserRoles,
-  getUserByEmail,
-  getActiveNotices,
-} from '@/app/_lib/data-service';
-import RoleSync from '@/app/account/_components/RoleSync';
+/**
+ * @file Mentor notices page — displays active notices filtered for the
+ *   mentor audience (notices targeting “all” or “mentor” users).
+ * @module MentorNoticesPage
+ * @access mentor
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
+import { getActiveNotices } from '@/app/_lib/data-service';
 import MentorNoticesClient from './_components/MentorNoticesClient';
 
 export const metadata = { title: 'Notices | Mentor | NEUPC' };
 
 export default async function MentorNoticesPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
+  const [{ user }, allNotices] = await Promise.all([
+    requireRole('mentor'),
+    getActiveNotices().catch(() => []),
+  ]);
 
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('mentor')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
-
-  const allNotices = await getActiveNotices().catch(() => []);
   const notices = allNotices.filter(
     (n) =>
       !n.target_audience ||
@@ -29,10 +24,5 @@ export default async function MentorNoticesPage() {
       n.target_audience.includes('mentor')
   );
 
-  return (
-    <>
-      <RoleSync role="mentor" />
-      <MentorNoticesClient notices={notices} mentorId={user.id} />
-    </>
-  );
+  return <MentorNoticesClient notices={notices} mentorId={user.id} />;
 }

@@ -1,3 +1,8 @@
+/**
+ * @file application configuration
+ * @module applicationConfig
+ */
+
 import { Clock, CheckCircle2, XCircle } from 'lucide-react';
 
 // Status config matching DB enum: pending | approved | rejected

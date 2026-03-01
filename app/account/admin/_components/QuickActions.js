@@ -1,3 +1,10 @@
+/**
+ * @file Quick actions panel — icon-labelled shortcut buttons linking
+ *   to frequently used admin pages (users, roles, events, analytics,
+ *   blogs, settings).
+ * @module QuickActions
+ */
+
 'use client';
 
 import Link from 'next/link';

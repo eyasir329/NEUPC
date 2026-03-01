@@ -1,3 +1,9 @@
+/**
+ * @file Member events client — browsable list of published events
+ *   with registration controls and attendance tracking.
+ * @module MemberEventsClient
+ */
+
 'use client';
 
 import {
@@ -235,7 +241,7 @@ function RSVPButton({ event, regStatus, userId, onDone, compact }) {
 
   const handleRegister = () => {
     startTransition(async () => {
-      const res = await registerForEventAction(event.id, userId);
+      const res = await registerForEventAction(event.id);
       onDone(
         res.error
           ? { type: 'error', text: res.error }
@@ -246,7 +252,7 @@ function RSVPButton({ event, regStatus, userId, onDone, compact }) {
 
   const handleCancel = () => {
     startTransition(async () => {
-      const res = await cancelEventRegistrationAction(event.id, userId);
+      const res = await cancelEventRegistrationAction(event.id);
       onDone(
         res.error
           ? { type: 'error', text: res.error }

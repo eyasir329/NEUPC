@@ -1,23 +1,19 @@
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
+/**
+ * @file Executive certificate generator — fetches completed events,
+ *   contests, existing certificates, and active users so executives can
+ *   generate and issue certificates for participants and winners.
+ * @module ExecutiveGenerateCertificatesPage
+ * @access executive | admin
+ */
+
+import { requireRole } from '@/app/_lib/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import RoleSync from '@/app/account/_components/RoleSync';
 import GenerateCertificatesClient from './_components/GenerateCertificatesClient';
 
 export const metadata = { title: 'Generate Certificates | Executive | NEUPC' };
 
 export default async function GenerateCertificatesPage() {
-  const session = await auth();
-  if (!session?.user) redirect('/login');
-
-  const userRoles = await getUserRoles(session.user.email);
-  if (!userRoles.includes('executive') && !userRoles.includes('admin'))
-    redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
-    redirect('/account');
+  const { user } = await requireRole(['executive', 'admin']);
 
   const [eventsRes, contestsRes, certsRes, usersRes] = await Promise.all([
     supabaseAdmin
@@ -34,10 +30,8 @@ export default async function GenerateCertificatesPage() {
     supabaseAdmin
       .from('certificates')
       .select(
-        `
-        id, certificate_number, title, certificate_type, issue_date, created_at,
-        recipient:users!certificates_recipient_id_fkey(id, full_name, email)
-      `
+        `id, certificate_number, title, certificate_type, issue_date, created_at,
+        recipient:users!certificates_recipient_id_fkey(id, full_name, email)`
       )
       .order('created_at', { ascending: false })
       .limit(100),
@@ -50,15 +44,12 @@ export default async function GenerateCertificatesPage() {
   ]);
 
   return (
-    <>
-      <RoleSync role="executive" />
-      <GenerateCertificatesClient
-        events={eventsRes.data || []}
-        contests={contestsRes.data || []}
-        certificates={certsRes.data || []}
-        users={usersRes.data || []}
-        userId={user.id}
-      />
-    </>
+    <GenerateCertificatesClient
+      events={eventsRes.data || []}
+      contests={contestsRes.data || []}
+      certificates={certsRes.data || []}
+      users={usersRes.data || []}
+      userId={user.id}
+    />
   );
 }

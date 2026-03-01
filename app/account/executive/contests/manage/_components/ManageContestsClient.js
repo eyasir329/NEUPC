@@ -1,3 +1,9 @@
+/**
+ * @file Contest management client — executive interface for creating,
+ *   editing, and tracking programming contests with participant data.
+ * @module ExecutiveManageContestsClient
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';

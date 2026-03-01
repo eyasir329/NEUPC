@@ -1,3 +1,9 @@
+/**
+ * @file Approval badge — colour-coded status pill showing a user’s
+ *   approval state (approved, pending, rejected).
+ * @module AdminApprovalBadge
+ */
+
 'use client';
 
 import { Check, X, Clock } from 'lucide-react';

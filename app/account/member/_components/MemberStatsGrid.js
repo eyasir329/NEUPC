@@ -1,3 +1,9 @@
+/**
+ * @file Member stats grid — responsive card grid showing personal
+ *   metrics (contests, events attended, achievements earned, etc.).
+ * @module MemberStatsGrid
+ */
+
 'use client';
 
 import Link from 'next/link';

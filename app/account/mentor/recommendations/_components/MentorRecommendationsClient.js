@@ -1,3 +1,9 @@
+/**
+ * @file Mentor recommendations client — interface for creating and
+ *   managing learning resource recommendations for assigned mentees.
+ * @module MentorRecommendationsClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -132,7 +138,7 @@ export default function MentorRecommendationsClient({
                   onClick={() => setExpanded(isExpanded ? null : m.id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 font-bold text-white">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-bold text-white">
                       {mentee?.full_name?.charAt(0) || '?'}
                     </div>
                     <div>

@@ -1,3 +1,9 @@
+/**
+ * @file Mentor notices client — read-only view of club notices
+ *   filtered for mentor relevance with search and category filters.
+ * @module MentorNoticesClient
+ */
+
 'use client';
 
 import { useState } from 'react';

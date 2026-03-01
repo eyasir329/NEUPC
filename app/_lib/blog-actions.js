@@ -1,53 +1,135 @@
+/**
+ * @file blog actions
+ * @module blog-actions
+ */
+
 'use server';
 
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
-import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, createLogger, generateSlug } from '@/app/_lib/helpers';
+import sanitizeHtml from 'sanitize-html';
+
+const logActivity = createLogger('blog');
 
 // =============================================================================
-// HELPERS
+// CONTENT + MEDIA
 // =============================================================================
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+const BLOG_ASSETS_BUCKET = 'blog-assets';
+const ALLOWED_BLOG_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+const MAX_BLOG_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-  const roles = await getUserRoles(session.user.email);
-  if (!roles.includes('admin')) redirect('/account');
-
-  const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active') redirect('/account');
-  return user;
+function sanitizeBlogHtml(html) {
+  return sanitizeHtml(html || '', {
+    allowedTags: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'u',
+      's',
+      'blockquote',
+      'pre',
+      'code',
+      'ul',
+      'ol',
+      'li',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'a',
+      'img',
+      'hr',
+      'mark',
+      'span',
+    ],
+    allowedAttributes: {
+      a: ['href', 'target', 'rel'],
+      img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'class'],
+      h2: ['id'],
+      h3: ['id'],
+      code: ['class'],
+      span: ['style'],
+      p: ['style'],
+      mark: ['data-color'],
+      pre: ['class'],
+    },
+    allowedStyles: {
+      '*': {
+        'text-align': [/^(left|center|right|justify)$/],
+        color: [/^#[0-9a-fA-F]{3,8}$/, /^rgb\(/, /^rgba\(/],
+      },
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: {
+      img: ['http', 'https'],
+    },
+    disallowedTagsMode: 'discard',
+    transformTags: {
+      a: (tagName, attribs) => {
+        const href = (attribs.href || '').trim();
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            href,
+            target: '_blank',
+            rel: 'noopener noreferrer nofollow',
+          },
+        };
+      },
+    },
+  });
 }
 
-async function logActivity(userId, action, entityId, details = {}) {
-  try {
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: userId,
-      action,
-      entity_type: 'blog',
-      entity_id: entityId,
-      details,
-    });
-  } catch {
-    // non-critical
+export async function uploadBlogImageAction(formData) {
+  const admin = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
   }
-}
+  if (file.size > MAX_BLOG_IMAGE_SIZE) {
+    return { error: 'Image too large. Maximum size is 5 MB.' };
+  }
+  if (!ALLOWED_BLOG_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported.' };
+  }
 
-function generateSlug(title) {
-  return (
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim()
-      .slice(0, 60) +
-    '-' +
-    Date.now().toString(36)
-  );
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const storagePath = `${admin.id}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(BLOG_ASSETS_BUCKET)
+    .upload(storagePath, Buffer.from(arrayBuffer), {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error('Blog image upload error:', uploadError);
+    return { error: 'Failed to upload image. Please try again.' };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from(BLOG_ASSETS_BUCKET).getPublicUrl(storagePath);
+
+  await logActivity(admin.id, 'blog_image_uploaded', storagePath, {
+    filename: file.name,
+    path: storagePath,
+  });
+
+  return { success: true, url: publicUrl };
 }
 
 // =============================================================================
@@ -60,8 +142,10 @@ export async function createBlogAction(formData) {
   const title = formData.get('title')?.trim();
   if (!title) return { error: 'Title is required.' };
 
-  const content = formData.get('content')?.trim();
-  if (!content) return { error: 'Content is required.' };
+  const rawContent = formData.get('content')?.trim();
+  if (!rawContent) return { error: 'Content is required.' };
+  const content = sanitizeBlogHtml(rawContent);
+  if (!content.trim()) return { error: 'Content is required.' };
 
   const rawTags = formData.get('tags') || '';
   const tags = rawTags
@@ -116,8 +200,10 @@ export async function updateBlogAction(formData) {
   const title = formData.get('title')?.trim();
   if (!title) return { error: 'Title is required.' };
 
-  const content = formData.get('content')?.trim();
-  if (!content) return { error: 'Content is required.' };
+  const rawContent = formData.get('content')?.trim();
+  if (!rawContent) return { error: 'Content is required.' };
+  const content = sanitizeBlogHtml(rawContent);
+  if (!content.trim()) return { error: 'Content is required.' };
 
   const rawTags = formData.get('tags') || '';
   const tags = rawTags

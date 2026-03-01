@@ -1,6 +1,20 @@
+/**
+ * @file Blog form modal — create / edit dialog for blog posts with
+ *   fields for title, slug, excerpt, body, category, tags, thumbnail,
+ *   and publish settings.
+ * @module AdminBlogFormModal
+ */
+
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import {
+  useState,
+  useMemo,
+  useTransition,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   X,
   Loader2,
@@ -12,14 +26,24 @@ import {
   Star,
   Clock,
   BookOpen,
+  Upload,
+  Link2,
+  RefreshCw,
+  Hash,
 } from 'lucide-react';
 import {
   CATEGORIES,
   STATUSES,
   getStatusConfig,
   getCategoryConfig,
+  generateSlug,
 } from './blogConfig';
-import { createBlogAction, updateBlogAction } from '@/app/_lib/blog-actions';
+import {
+  createBlogAction,
+  updateBlogAction,
+  uploadBlogImageAction,
+} from '@/app/_lib/blog-actions';
+import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 
 // ─── Segmented select ─────────────────────────────────────────────────────────
 
@@ -73,13 +97,18 @@ export default function BlogFormModal({
   mode = 'create',
   post = null,
   onClose,
+  onSaved,
 }) {
   const isEdit = mode === 'edit' && post;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [title, setTitle] = useState(isEdit ? (post.title ?? '') : '');
+  const [slug, setSlug] = useState(isEdit ? (post.slug ?? '') : '');
+  const [slugManual, setSlugManual] = useState(!!isEdit);
   const [excerpt, setExcerpt] = useState(isEdit ? (post.excerpt ?? '') : '');
   const [content, setContent] = useState(isEdit ? (post.content ?? '') : '');
   const [thumbnail, setThumbnail] = useState(
@@ -96,14 +125,70 @@ export default function BlogFormModal({
   const [readTime, setReadTime] = useState(
     isEdit ? (post.read_time ?? '') : ''
   );
+  const [readTimeManual, setReadTimeManual] = useState(false);
 
-  // Auto-estimate read time from content
+  // Auto-generate slug from title (unless manually overridden)
   useEffect(() => {
-    if (!readTime && content) {
-      const words = content.trim().split(/\s+/).length;
+    if (!slugManual && title) {
+      setSlug(generateSlug(title));
+    }
+  }, [title, slugManual]);
+
+  // Keyboard shortcut: Ctrl+S / Cmd+S to save
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        const form = document.getElementById('blog-form');
+        if (form) form.requestSubmit();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Handle thumbnail file upload
+  const handleThumbnailUpload = useCallback(async (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.set('image', file);
+      const result = await uploadBlogImageAction(fd);
+      if (result?.url) {
+        setThumbnail(result.url);
+      } else if (result?.error) {
+        setError(result.error);
+      }
+    } catch {
+      setError('Image upload failed.');
+    } finally {
+      setUploadingImage(false);
+    }
+  }, []);
+
+  // Word count from content
+  const wordCount = useMemo(() => {
+    if (!content) return 0;
+    const text = content
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text ? text.split(' ').length : 0;
+  }, [content]);
+
+  // Auto-estimate read time from content (unless manually overridden)
+  useEffect(() => {
+    if (readTimeManual) return;
+    if (content) {
+      const text = content
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const words = text ? text.split(' ').length : 0;
       setReadTime(String(Math.max(1, Math.round(words / 200))));
     }
-  }, [content]);
+  }, [content, readTimeManual]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -121,6 +206,7 @@ export default function BlogFormModal({
       const fd = new FormData();
       if (isEdit) fd.set('id', post.id);
       fd.set('title', title);
+      fd.set('slug', slug);
       fd.set('excerpt', excerpt);
       fd.set('content', content);
       fd.set('thumbnail', thumbnail);
@@ -137,6 +223,7 @@ export default function BlogFormModal({
         setError(result.error);
       } else {
         setSuccess(true);
+        onSaved?.();
         setTimeout(() => onClose(), 1200);
       }
     });
@@ -188,13 +275,12 @@ export default function BlogFormModal({
                 maxLength={400}
               />
             </Field>
-            <Field label="Content (Markdown) *">
-              <textarea
+            <Field label="Content *">
+              <RichTextEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your blog content here (Markdown supported)…"
-                rows={10}
-                className="input-field resize-y font-mono text-xs"
+                onChange={setContent}
+                placeholder="Write your blog content here…"
+                uploadImageAction={uploadBlogImageAction}
               />
             </Field>
           </Section>
@@ -243,14 +329,38 @@ export default function BlogFormModal({
 
           {/* ── Section 3: Media & Misc ──────────────────────────────────────────── */}
           <Section label="Media & Details" icon={Image}>
-            <Field label="Thumbnail URL">
+            <Field label="Thumbnail">
               <div className="flex gap-2">
                 <input
                   value={thumbnail}
                   onChange={(e) => setThumbnail(e.target.value)}
-                  placeholder="https://…"
+                  placeholder="Paste URL or upload an image…"
                   className="input-field flex-1"
                 />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleThumbnailUpload(file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-50"
+                >
+                  {uploadingImage ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Upload className="h-3 w-3" />
+                  )}
+                  Upload
+                </button>
                 {thumbnail && (
                   <img
                     src={thumbnail}
@@ -278,7 +388,10 @@ export default function BlogFormModal({
                   min={1}
                   max={120}
                   value={readTime}
-                  onChange={(e) => setReadTime(e.target.value)}
+                  onChange={(e) => {
+                    setReadTime(e.target.value);
+                    setReadTimeManual(true);
+                  }}
                   placeholder="auto"
                   className="input-field"
                 />
@@ -299,7 +412,7 @@ export default function BlogFormModal({
                 {isEdit ? 'Updated!' : 'Created!'}
               </div>
             ) : (
-              <span />
+              <span className="text-[10px] text-gray-600">Ctrl+S to save</span>
             )}
             <div className="flex gap-2">
               <button
@@ -363,10 +476,17 @@ function Section({ label, icon: Icon, children }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-gray-400">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-medium text-gray-400">
+          {label}
+        </label>
+        {hint && (
+          <span className="text-[10px] text-gray-600 tabular-nums">{hint}</span>
+        )}
+      </div>
       {children}
     </div>
   );

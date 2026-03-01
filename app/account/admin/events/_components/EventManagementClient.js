@@ -1,3 +1,10 @@
+/**
+ * @file Event management client — full-featured admin interface for
+ *   listing, filtering, creating, editing, archiving, and featuring
+ *   club events with stats and registration data.
+ * @module AdminEventManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';

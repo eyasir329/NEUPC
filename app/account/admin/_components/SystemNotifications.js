@@ -1,3 +1,10 @@
+/**
+ * @file System notifications widget — displays scheduled-maintenance
+ *   warnings, certificate renewals, and other system-level notices
+ *   with contextual alert icons.
+ * @module SystemNotifications
+ */
+
 'use client';
 
 import { Bell, AlertCircle, CheckCircle } from 'lucide-react';

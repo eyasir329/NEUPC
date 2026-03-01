@@ -1,3 +1,9 @@
+/**
+ * @file Approval centre — dashboard panel listing pending approvals
+ *   for events, budgets, and other items requiring advisor sign-off.
+ * @module AdvisorApprovalCenter
+ */
+
 'use client';
 
 import Link from 'next/link';

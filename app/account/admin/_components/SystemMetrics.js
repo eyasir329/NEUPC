@@ -1,3 +1,9 @@
+/**
+ * @file System metrics panel — four-column grid of performance cards
+ *   (uptime, response time, etc.) with trend-direction indicators.
+ * @module SystemMetrics
+ */
+
 'use client';
 
 import { TrendingUp } from 'lucide-react';

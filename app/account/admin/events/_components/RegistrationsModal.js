@@ -1,3 +1,9 @@
+/**
+ * @file Registrations modal — overlay listing all participant
+ *   registrations for a specific event with attendance status.
+ * @module AdminRegistrationsModal
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

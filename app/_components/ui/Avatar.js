@@ -1,3 +1,8 @@
+/**
+ * @file Avatar
+ * @module Avatar
+ */
+
 import Link from 'next/link';
 import { auth } from '@/app/_lib/auth';
 

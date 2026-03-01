@@ -1,3 +1,10 @@
+/**
+ * @file Recent activity timeline — chronological list of admin-relevant
+ *   system events (user checks, completions, security alerts, database
+ *   operations) with dynamically resolved icons.
+ * @module RecentActivity
+ */
+
 'use client';
 
 import {

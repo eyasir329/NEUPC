@@ -1,6 +1,13 @@
+/**
+ * @file Blog management client — executive interface for creating,
+ *   editing, publishing, and featuring blog posts with engagement
+ *   metrics.
+ * @module ExecutiveManageBlogsClient
+ */
+
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import {
   PenTool,
   Plus,
@@ -16,7 +23,9 @@ import {
   execCreateBlogAction,
   execUpdateBlogAction,
   execDeleteBlogAction,
+  execUploadBlogImageAction,
 } from '@/app/_lib/executive-actions';
+import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 
 const STATUS_CONFIG = {
   draft: {
@@ -47,6 +56,24 @@ function BlogModal({ blog, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const isEdit = !!blog?.id;
+  const [content, setContent] = useState(blog?.content || '');
+  const [autoReadTime, setAutoReadTime] = useState('');
+
+  useEffect(() => {
+    setContent(blog?.content || '');
+  }, [blog?.id]);
+
+  // Auto-estimate read time from content
+  useEffect(() => {
+    if (content) {
+      const text = content
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const words = text ? text.split(' ').length : 0;
+      setAutoReadTime(String(Math.max(1, Math.round(words / 200))));
+    }
+  }, [content]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -147,9 +174,9 @@ function BlogModal({ blog, onClose, onSuccess }) {
               <input
                 name="read_time"
                 type="number"
-                defaultValue={blog?.read_time || ''}
+                defaultValue={blog?.read_time || autoReadTime || ''}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none"
-                placeholder="5"
+                placeholder={autoReadTime || '5'}
                 min={1}
               />
             </div>
@@ -167,15 +194,14 @@ function BlogModal({ blog, onClose, onSuccess }) {
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm text-gray-400">
-                Content (Markdown) *
+                Content *
               </label>
-              <textarea
-                name="content"
-                defaultValue={blog?.content || ''}
-                rows={8}
-                required
-                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-sm text-white placeholder-gray-500 focus:outline-none"
-                placeholder="Write in Markdown..."
+              <input type="hidden" name="content" value={content} readOnly />
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Write your blog content here…"
+                uploadImageAction={execUploadBlogImageAction}
               />
             </div>
             <div className="sm:col-span-2">
@@ -393,7 +419,7 @@ export default function ManageBlogsClient({ initialBlogs }) {
                               fill="currentColor"
                             />
                           )}
-                          <p className="max-w-[200px] truncate text-sm font-medium text-white">
+                          <p className="max-w-50 truncate text-sm font-medium text-white">
                             {b.title}
                           </p>
                         </div>
