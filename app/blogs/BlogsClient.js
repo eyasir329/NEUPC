@@ -18,7 +18,13 @@ import FilterPanel from '../_components/ui/FilterPanel';
 import FeaturedSpotlight from '../_components/ui/FeaturedSpotlight';
 import InlinePagination from '../_components/ui/InlinePagination';
 import SafeImg from '../_components/ui/SafeImg';
-import { fadeUp, staggerContainer, cardHover, buttonTap, viewportConfig } from '../_components/motion/motion';
+import {
+  fadeUp,
+  staggerContainer,
+  cardHover,
+  buttonTap,
+  viewportConfig,
+} from '../_components/motion/motion';
 import { cn, driveImageUrl } from '../_lib/utils';
 import { getCategoryConfig, getCategoryLabel } from '../_lib/blog-config';
 import { getColorClasses } from '../_lib/category-colors';
@@ -88,77 +94,77 @@ function GridCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div variants={fadeUp} whileHover={cardHover} whileTap={buttonTap}>
-    <Link
-      href={`/blogs/${blog.slug || blog.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-colors duration-300 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
-    >
-      {/* Thumbnail */}
-      <div className="relative h-44 overflow-hidden bg-white/5">
-        {blog.thumbnail ? (
-          <SafeImg
-            src={driveImageUrl(blog.thumbnail)}
-            alt={blog.title || ''}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            fallback="/placeholder-blog.svg"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl opacity-20">
-            📝
-          </div>
-        )}
-        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
-        {blog.featured && (
-          <span className="absolute top-3 right-3 rounded-full bg-amber-500/80 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
-            ✨ Featured
-          </span>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="flex flex-1 flex-col gap-2.5 p-5">
-        {blog.category && (
-          <span
-            className={cn(
-              'flex w-fit items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase',
-              catColor.badge
-            )}
-          >
-            <span>{getCategoryConfig(blog.category).emoji}</span>
-            {getCategoryLabel(blog.category)}
-          </span>
-        )}
-        <h3 className="line-clamp-2 text-sm leading-snug font-bold text-white transition-colors group-hover:text-primary-300">
-          {blog.title}
-        </h3>
-        {blog.excerpt && (
-          <p className="line-clamp-2 text-xs leading-relaxed text-gray-500">
-            {blog.excerpt}
-          </p>
-        )}
-        {blog.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {blog.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] text-gray-500"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="mt-auto flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-gray-600">
-          <span className="flex items-center gap-1.5 truncate">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
-              {blog.author.charAt(0)}
+    <motion.div variants={fadeUp} whileHover={cardHover}>
+      <Link
+        href={`/blogs/${blog.slug || blog.id}`}
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-colors duration-300 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
+      >
+        {/* Thumbnail */}
+        <div className="relative h-44 overflow-hidden bg-white/5">
+          {blog.thumbnail ? (
+            <SafeImg
+              src={driveImageUrl(blog.thumbnail)}
+              alt={blog.title || ''}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fallback="/placeholder-blog.svg"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-4xl opacity-20">
+              📝
             </div>
-            <span className="truncate">{blog.author}</span>
-          </span>
-          <span className="shrink-0">{blog.readTime}</span>
+          )}
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+          {blog.featured && (
+            <span className="absolute top-3 right-3 rounded-full bg-amber-500/80 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+              ✨ Featured
+            </span>
+          )}
         </div>
-      </div>
-    </Link>
+
+        {/* Body */}
+        <div className="flex flex-1 flex-col gap-2.5 p-5">
+          {blog.category && (
+            <span
+              className={cn(
+                'flex w-fit items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase',
+                catColor.badge
+              )}
+            >
+              <span>{getCategoryConfig(blog.category).emoji}</span>
+              {getCategoryLabel(blog.category)}
+            </span>
+          )}
+          <h3 className="group-hover:text-primary-300 line-clamp-2 text-sm leading-snug font-bold text-white transition-colors">
+            {blog.title}
+          </h3>
+          {blog.excerpt && (
+            <p className="line-clamp-2 text-xs leading-relaxed text-gray-500">
+              {blog.excerpt}
+            </p>
+          )}
+          {blog.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {blog.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] text-gray-500"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-auto flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-gray-600">
+            <span className="flex items-center gap-1.5 truncate">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                {blog.author.charAt(0)}
+              </div>
+              <span className="truncate">{blog.author}</span>
+            </span>
+            <span className="shrink-0">{blog.readTime}</span>
+          </div>
+        </div>
+      </Link>
     </motion.div>
   );
 }
@@ -169,101 +175,104 @@ function ListCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div variants={fadeUp} whileHover={{ y: -2, transition: { duration: 0.2 } }}>
-    <Link
-      href={`/blogs/${blog.slug || blog.id}`}
-      className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-colors duration-300 hover:border-white/15 hover:bg-white/5 sm:flex-row"
+    <motion.div
+      variants={fadeUp}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
     >
-      {/* Thumbnail */}
-      {blog.thumbnail && (
-        <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-auto sm:w-52">
-          <SafeImg
-            src={driveImageUrl(blog.thumbnail)}
-            alt={blog.title || ''}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            fallback="/placeholder-blog.svg"
-          />
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {blog.category && (
-            <span
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
-                catColor.badge
-              )}
-            >
-              <span>{getCategoryConfig(blog.category).emoji}</span>
-              {getCategoryLabel(blog.category)}
-            </span>
-          )}
-          {blog.featured && (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
-              ✨ Featured
-            </span>
-          )}
-        </div>
-
-        <div>
-          <h3 className="line-clamp-2 text-base leading-snug font-bold text-white transition-colors group-hover:text-primary-300">
-            {blog.title}
-          </h3>
-          {blog.excerpt && (
-            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-500">
-              {blog.excerpt}
-            </p>
-          )}
-        </div>
-
-        {blog.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {blog.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-gray-500"
-              >
-                #{tag}
-              </span>
-            ))}
+      <Link
+        href={`/blogs/${blog.slug || blog.id}`}
+        className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-colors duration-300 hover:border-white/15 hover:bg-white/5 sm:flex-row"
+      >
+        {/* Thumbnail */}
+        {blog.thumbnail && (
+          <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-auto sm:w-52">
+            <SafeImg
+              src={driveImageUrl(blog.thumbnail)}
+              alt={blog.title || ''}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fallback="/placeholder-blog.svg"
+            />
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[12px] text-gray-600">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white">
-              {blog.author.charAt(0)}
-            </div>
-            <span>{blog.author}</span>
-            {blog.date && <span className="text-gray-700">·</span>}
-            {blog.date && <span>{blog.date}</span>}
+        {/* Content */}
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {blog.category && (
+              <span
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                  catColor.badge
+                )}
+              >
+                <span>{getCategoryConfig(blog.category).emoji}</span>
+                {getCategoryLabel(blog.category)}
+              </span>
+            )}
+            {blog.featured && (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
+                ✨ Featured
+              </span>
+            )}
           </div>
-          <div className="flex shrink-0 items-center gap-3">
-            {blog.views > 0 && <span>👁 {blog.views.toLocaleString()}</span>}
-            <span>⏱ {blog.readTime}</span>
+
+          <div>
+            <h3 className="group-hover:text-primary-300 line-clamp-2 text-base leading-snug font-bold text-white transition-colors">
+              {blog.title}
+            </h3>
+            {blog.excerpt && (
+              <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-500">
+                {blog.excerpt}
+              </p>
+            )}
+          </div>
+
+          {blog.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {blog.tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-gray-500"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-[12px] text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white">
+                {blog.author.charAt(0)}
+              </div>
+              <span>{blog.author}</span>
+              {blog.date && <span className="text-gray-700">·</span>}
+              {blog.date && <span>{blog.date}</span>}
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              {blog.views > 0 && <span>👁 {blog.views.toLocaleString()}</span>}
+              <span>⏱ {blog.readTime}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Arrow */}
-      <div className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl border border-white/8 bg-white/5 text-gray-600 opacity-0 transition-all group-hover:text-white group-hover:opacity-100">
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
-      </div>
-    </Link>
+        {/* Arrow */}
+        <div className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl border border-white/8 bg-white/5 text-gray-600 opacity-0 transition-all group-hover:text-white group-hover:opacity-100">
+          <svg
+            className="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </div>
+      </Link>
     </motion.div>
   );
 }
@@ -492,12 +501,9 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                 viewport={viewportConfig}
                 className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
               >
-              {pageBlogs.map((blog) => (
-                <GridCard
-                  key={blog.id}
-                  blog={blog}
-                />
-              ))}
+                {pageBlogs.map((blog) => (
+                  <GridCard key={blog.id} blog={blog} />
+                ))}
               </motion.div>
             ) : (
               <motion.div
@@ -508,10 +514,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                 className="space-y-4"
               >
                 {pageBlogs.map((blog) => (
-                  <ListCard
-                    key={blog.id}
-                    blog={blog}
-                  />
+                  <ListCard key={blog.id} blog={blog} />
                 ))}
               </motion.div>
             )}

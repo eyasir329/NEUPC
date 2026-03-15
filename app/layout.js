@@ -157,7 +157,7 @@ export default async function RootLayout({ children }) {
           isLoggedIn={!!session}
         >
           <Header />
-          <main className="grow overflow-x-clip">
+          <main className="w-full flex-grow">
             <PageTransition>{children}</PageTransition>
           </main>
           <Footer
