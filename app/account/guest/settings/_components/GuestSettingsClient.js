@@ -388,7 +388,7 @@ export default function GuestSettingsClient({ user }) {
               </p>
             </div>
           </div>
-
+        </div>
       </div>
 
       {/* ── Danger Zone ── */}
