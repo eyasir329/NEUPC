@@ -758,7 +758,11 @@ export default function CodePlayground({
       );
     };
     const onMouseMove = (e) => handleMove(e.clientY);
-    const onTouchMove = (e) => handleMove(e.touches[0].clientY);
+    const onTouchMove = (e) => {
+      if (!dragState.current.active) return;
+      e.preventDefault();
+      handleMove(e.touches[0].clientY);
+    };
     const onEnd = () => {
       if (!dragState.current.active) return;
       dragState.current.active = false;
@@ -792,7 +796,11 @@ export default function CodePlayground({
       setIoWidth(Math.round(newW));
     };
     const onMouseMove = (e) => handleMove(e.clientX);
-    const onTouchMove = (e) => handleMove(e.touches[0].clientX);
+    const onTouchMove = (e) => {
+      if (!hDragState.current.active) return;
+      e.preventDefault();
+      handleMove(e.touches[0].clientX);
+    };
     const onEnd = () => {
       if (!hDragState.current.active) return;
       hDragState.current.active = false;
@@ -827,6 +835,7 @@ export default function CodePlayground({
     };
     const onMouseMove = (e) => handleMove(e.clientY);
     const onTouchMove = (e) => {
+      if (!vMobileDragState.current.active) return;
       e.preventDefault();
       handleMove(e.touches[0].clientY);
     };

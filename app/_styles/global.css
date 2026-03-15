@@ -768,7 +768,7 @@
   line-height: 1.85;
   color: #adbac7;
   word-break: break-word;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* ─── Headings — markdown-preview style with hash prefixes ─ */
