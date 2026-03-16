@@ -656,7 +656,7 @@ function RoadmapDetail({ roadmap, userId, onBack }) {
           </h2>
           <div className="rounded-2xl border border-white/8 bg-white/3 p-6 backdrop-blur-sm sm:p-8">
             <div
-              className="blog-content prose prose-invert max-w-none prose-headings:text-white prose-h2:text-xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-3 prose-h3:text-lg prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-p:text-gray-300 prose-p:leading-relaxed prose-a:text-blue-400 prose-a:underline hover:prose-a:text-blue-300 prose-strong:text-white prose-li:text-gray-300 prose-li:marker:text-gray-600 prose-ul:space-y-1.5 prose-ol:space-y-1.5 prose-code:text-blue-300 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-pre:p-4 prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-400 prose-hr:border-white/10 prose-table:border-collapse prose-table:w-full prose-tr:border-b prose-tr:border-white/10 prose-th:text-left prose-th:font-semibold prose-th:text-white prose-th:py-2 prose-th:px-3 prose-th:bg-white/5 prose-td:text-gray-300 prose-td:py-2 prose-td:px-3"
+              className="blog-content prose prose-invert prose-headings:text-white prose-h2:text-xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-3 prose-h3:text-lg prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-p:text-gray-300 prose-p:leading-relaxed prose-a:text-blue-400 prose-a:underline hover:prose-a:text-blue-300 prose-strong:text-white prose-li:text-gray-300 prose-li:marker:text-gray-600 prose-ul:space-y-1.5 prose-ol:space-y-1.5 prose-code:text-blue-300 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-pre:p-4 prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-400 prose-hr:border-white/10 prose-table:border-collapse prose-table:w-full prose-tr:border-b prose-tr:border-white/10 prose-th:text-left prose-th:font-semibold prose-th:text-white prose-th:py-2 prose-th:px-3 prose-th:bg-white/5 prose-td:text-gray-300 prose-td:py-2 prose-td:px-3 max-w-none"
               dangerouslySetInnerHTML={{
                 __html:
                   typeof roadmap.content === 'string'
@@ -701,17 +701,6 @@ export default function MemberRoadmapClient({ roadmaps, userId }) {
   const [catFilter, setCatFilter] = useState('all');
   const [diffFilter, setDiffFilter] = useState('all');
 
-  // If a roadmap is open, show detail
-  if (selected) {
-    return (
-      <RoadmapDetail
-        roadmap={selected}
-        userId={userId}
-        onBack={() => setSelected(null)}
-      />
-    );
-  }
-
   // Derived category list
   const categories = useMemo(() => {
     const seen = new Map();
@@ -737,6 +726,17 @@ export default function MemberRoadmapClient({ roadmaps, userId }) {
 
   const featured = roadmaps.filter((r) => r.is_featured);
   const totalTopics = roadmaps.length; // Count of roadmaps
+
+  // If a roadmap is open, show detail
+  if (selected) {
+    return (
+      <RoadmapDetail
+        roadmap={selected}
+        userId={userId}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

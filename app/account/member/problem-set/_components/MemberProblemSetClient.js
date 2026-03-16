@@ -163,9 +163,39 @@ function Flash({ msg, onClose }) {
   );
 }
 
+// ─── Tabs button (declared outside render for lint) ─────────────────────────
+
+function TabBtn({ id, label, count, accent, activeTab, onSelect }) {
+  return (
+    <button
+      onClick={() => onSelect(id)}
+      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
+        activeTab === id
+          ? 'bg-white/12 text-white shadow-sm'
+          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
+      }`}
+    >
+      {label}
+      {count !== undefined && (
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
+            accent
+              ? 'bg-green-500/20 text-green-400'
+              : activeTab === id
+                ? 'bg-white/15 text-white'
+                : 'bg-white/6 text-gray-600'
+          }`}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 // ─── Submit Modal ─────────────────────────────────────────────────────────────
 
-function SubmitModal({ task, existing, userId, onClose, onDone }) {
+function SubmitModal({ task, existing, onClose, onDone }) {
   useScrollLock();
   const [pending, start] = useTransition();
   const [url, setUrl] = useState(existing?.submission_url ?? '');
@@ -532,34 +562,6 @@ export default function MemberProblemSetClient({
     setModalExisting(existing);
   }
 
-  function TabBtn({ id, label, count, accent }) {
-    return (
-      <button
-        onClick={() => setActiveTab(id)}
-        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-          activeTab === id
-            ? 'bg-white/12 text-white shadow-sm'
-            : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-        }`}
-      >
-        {label}
-        {count !== undefined && (
-          <span
-            className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-              accent
-                ? 'bg-green-500/20 text-green-400'
-                : activeTab === id
-                  ? 'bg-white/15 text-white'
-                  : 'bg-white/6 text-gray-600'
-            }`}
-          >
-            {count}
-          </span>
-        )}
-      </button>
-    );
-  }
-
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -742,19 +744,34 @@ export default function MemberProblemSetClient({
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
-        <TabBtn id="tasks" label="All Tasks" count={filteredTasks.length} />
+        <TabBtn
+          id="tasks"
+          label="All Tasks"
+          count={filteredTasks.length}
+          activeTab={activeTab}
+          onSelect={setActiveTab}
+        />
         <TabBtn
           id="active"
           label="Active"
           count={activeTasks.length}
           accent={activeTasks.length > 0}
+          activeTab={activeTab}
+          onSelect={setActiveTab}
         />
         <TabBtn
           id="history"
           label="My Submissions"
           count={mySubmissions.length}
+          activeTab={activeTab}
+          onSelect={setActiveTab}
         />
-        <TabBtn id="progress" label="Progress" />
+        <TabBtn
+          id="progress"
+          label="Progress"
+          activeTab={activeTab}
+          onSelect={setActiveTab}
+        />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1082,7 +1099,6 @@ export default function MemberProblemSetClient({
         <SubmitModal
           task={modalTask}
           existing={modalExisting}
-          userId={userId}
           onClose={() => {
             setModalTask(null);
             setModalExisting(null);

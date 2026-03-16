@@ -20,6 +20,7 @@ import {
   FacebookIcon,
   LinkedInIcon,
   GitHubIcon,
+  TwitterIcon,
   YouTubeIcon,
 } from '../_components/ui/SocialIcons';
 import { submitContactFormAction } from '@/app/_lib/contact-actions';
@@ -57,9 +58,27 @@ const DEFAULT_CONTACT_INFO = {
 };
 
 const DEFAULT_KEY_CONTACTS = [
-  { id: 1, role: 'President', name: 'TBD', email: 'president@neupc.com', linkedin: '#' },
-  { id: 2, role: 'General Secretary', name: 'TBD', email: 'gs@neupc.com', linkedin: '#' },
-  { id: 3, role: 'Faculty Advisor', name: 'TBD', email: 'advisor@nu.edu.bd', linkedin: '#' },
+  {
+    id: 1,
+    role: 'President',
+    name: 'TBD',
+    email: 'president@neupc.com',
+    linkedin: '#',
+  },
+  {
+    id: 2,
+    role: 'General Secretary',
+    name: 'TBD',
+    email: 'gs@neupc.com',
+    linkedin: '#',
+  },
+  {
+    id: 3,
+    role: 'Faculty Advisor',
+    name: 'TBD',
+    email: 'advisor@nu.edu.bd',
+    linkedin: '#',
+  },
 ];
 
 const DEFAULT_FAQS = [
@@ -95,12 +114,19 @@ const DEFAULT_FAQS = [
   },
 ];
 
-const DEFAULT_SOCIAL_NAMES = ['Facebook', 'LinkedIn', 'GitHub', 'YouTube'];
+const DEFAULT_SOCIAL_NAMES = [
+  'Facebook',
+  'LinkedIn',
+  'GitHub',
+  'Twitter',
+  'YouTube',
+];
 
 const SOCIAL_ICON_COMPONENTS = {
   facebook: <FacebookIcon className="h-5 w-5" />,
   linkedin: <LinkedInIcon className="h-5 w-5" />,
   github: <GitHubIcon className="h-5 w-5" />,
+  twitter: <TwitterIcon className="h-5 w-5" />,
   youtube: <YouTubeIcon className="h-5 w-5" />,
 };
 
@@ -115,8 +141,18 @@ const CONTACT_INFO_CARDS = [
     isLink: true,
     linkPrefix: 'mailto:',
     icon: (
-      <svg className="text-primary-300 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      <svg
+        className="text-primary-300 h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+        />
       </svg>
     ),
   },
@@ -131,8 +167,18 @@ const CONTACT_INFO_CARDS = [
     linkPrefix: 'tel:',
     formatLink: (v) => v.replace(/\s/g, ''),
     icon: (
-      <svg className="text-secondary-300 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+      <svg
+        className="text-secondary-300 h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+        />
       </svg>
     ),
   },
@@ -144,9 +190,24 @@ const CONTACT_INFO_CARDS = [
     textColor: 'text-purple-300',
     isLink: false,
     icon: (
-      <svg className="h-5 w-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg
+        className="h-5 w-5 text-purple-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+        />
       </svg>
     ),
   },
@@ -158,20 +219,46 @@ const CONTACT_INFO_CARDS = [
     textColor: 'text-pink-300',
     isLink: false,
     icon: (
-      <svg className="h-5 w-5 text-pink-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <svg
+        className="h-5 w-5 text-pink-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
       </svg>
     ),
   },
 ];
 
-const INITIAL_FORM = { name: '', email: '', phone: '', subject: '', message: '' };
+const INITIAL_FORM = {
+  name: '',
+  email: '',
+  phone: '',
+  subject: '',
+  message: '',
+};
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function FormField({ label, name, type = 'text', required, value, error, onChange, placeholder, children }) {
+function FormField({
+  label,
+  name,
+  type = 'text',
+  required,
+  value,
+  error,
+  onChange,
+  placeholder,
+  children,
+}) {
   const inputClasses = cn(
     'w-full rounded-lg border bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 backdrop-blur-sm transition-all focus:ring-2 focus:outline-none sm:text-base',
     error
@@ -181,7 +268,10 @@ function FormField({ label, name, type = 'text', required, value, error, onChang
 
   return (
     <div>
-      <label htmlFor={name} className="mb-1.5 block text-sm font-medium text-gray-300">
+      <label
+        htmlFor={name}
+        className="mb-1.5 block text-sm font-medium text-gray-300"
+      >
         {label}{' '}
         {required ? (
           <span className="text-red-400">*</span>
@@ -207,24 +297,29 @@ function FormField({ label, name, type = 'text', required, value, error, onChang
 
 function FaqItem({ faq, isActive, onToggle }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors hover:border-primary-500/30 hover:bg-white/8">
+    <div className="hover:border-primary-500/30 overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors hover:bg-white/8">
       <button
         onClick={onToggle}
         className="flex w-full items-start justify-between gap-3 p-4 text-left sm:p-5"
       >
-        <span className="text-sm font-semibold leading-snug text-white sm:text-base">
+        <span className="text-sm leading-snug font-semibold text-white sm:text-base">
           {faq.question}
         </span>
         <svg
           className={cn(
-            'mt-0.5 h-4 w-4 shrink-0 text-primary-400 transition-transform duration-300',
+            'text-primary-400 mt-0.5 h-4 w-4 shrink-0 transition-transform duration-300',
             isActive && 'rotate-180'
           )}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
       <div
@@ -269,7 +364,8 @@ export default function ContactClient({
     contactInfo.officeHours = propContactInfo.office_hours;
   }
 
-  const keyContacts = propKeyContacts.length > 0 ? propKeyContacts : DEFAULT_KEY_CONTACTS;
+  const keyContacts =
+    propKeyContacts.length > 0 ? propKeyContacts : DEFAULT_KEY_CONTACTS;
 
   const socialLinks = (() => {
     const entries = Object.entries(propSocialLinks)
@@ -278,7 +374,9 @@ export default function ContactClient({
         id: idx + 1,
         name: name.charAt(0).toUpperCase() + name.slice(1),
         url,
-        icon: SOCIAL_ICON_COMPONENTS[name.toLowerCase()] || SOCIAL_ICON_COMPONENTS.github,
+        icon:
+          SOCIAL_ICON_COMPONENTS[name.toLowerCase()] ||
+          SOCIAL_ICON_COMPONENTS.github,
       }));
     if (entries.length > 0) return entries;
     return DEFAULT_SOCIAL_NAMES.map((name, idx) => ({
@@ -299,10 +397,12 @@ export default function ContactClient({
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = 'Email is invalid';
     if (!formData.subject) newErrors.subject = 'Please select a subject';
     if (!formData.message.trim()) newErrors.message = 'Message is required';
-    else if (formData.message.trim().length < 10) newErrors.message = 'Message must be at least 10 characters';
+    else if (formData.message.trim().length < 10)
+      newErrors.message = 'Message must be at least 10 characters';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -355,7 +455,6 @@ export default function ContactClient({
       <section className="px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
-
             {/* ── Contact Form ── */}
             <motion.div
               variants={fadeUp}
@@ -373,14 +472,27 @@ export default function ContactClient({
                 <div className="mb-5 overflow-hidden rounded-xl border border-green-500/30 bg-green-500/10 p-4">
                   <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-500/20">
-                      <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="h-5 w-5 text-green-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-green-300">Message Sent Successfully!</h3>
+                      <h3 className="text-sm font-semibold text-green-300">
+                        Message Sent Successfully!
+                      </h3>
                       <p className="mt-0.5 text-xs text-green-200">
-                        Thank you for contacting us. We will get back to you within 24-48 hours.
+                        Thank you for contacting us. We will get back to you
+                        within 24-48 hours.
                       </p>
                     </div>
                   </div>
@@ -391,8 +503,18 @@ export default function ContactClient({
               {errors.submit && (
                 <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
                   <div className="flex items-center gap-3">
-                    <svg className="h-5 w-5 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <svg
+                      className="h-5 w-5 shrink-0 text-red-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
                     </svg>
                     <p className="text-sm text-red-300">{errors.submit}</p>
                   </div>
@@ -450,12 +572,16 @@ export default function ContactClient({
                         'w-full rounded-lg border bg-white/5 px-4 py-3 text-sm text-white backdrop-blur-sm transition-all focus:ring-2 focus:outline-none sm:text-base',
                         errors.subject
                           ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50'
-                          : 'border-white/10 focus:border-primary-500 focus:ring-primary-500/50'
+                          : 'focus:border-primary-500 focus:ring-primary-500/50 border-white/10'
                       )}
                     >
-                      <option value="" className="bg-gray-900">Select a subject</option>
+                      <option value="" className="bg-gray-900">
+                        Select a subject
+                      </option>
                       {SUBJECT_OPTIONS.map((s) => (
-                        <option key={s} value={s} className="bg-gray-900">{s}</option>
+                        <option key={s} value={s} className="bg-gray-900">
+                          {s}
+                        </option>
                       ))}
                     </select>
                   </FormField>
@@ -480,7 +606,7 @@ export default function ContactClient({
                       'w-full resize-none rounded-lg border bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 backdrop-blur-sm transition-all focus:ring-2 focus:outline-none sm:text-base',
                       errors.message
                         ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50'
-                        : 'border-white/10 focus:border-primary-500 focus:ring-primary-500/50'
+                        : 'focus:border-primary-500 focus:ring-primary-500/50 border-white/10'
                     )}
                     placeholder="Tell us what's on your mind..."
                   />
@@ -488,9 +614,13 @@ export default function ContactClient({
                     {errors.message ? (
                       <p className="text-xs text-red-400">{errors.message}</p>
                     ) : (
-                      <p className="text-xs text-gray-600">Minimum 10 characters</p>
+                      <p className="text-xs text-gray-600">
+                        Minimum 10 characters
+                      </p>
                     )}
-                    <p className="text-xs text-gray-600">{formData.message.length}/500</p>
+                    <p className="text-xs text-gray-600">
+                      {formData.message.length}/500
+                    </p>
                   </div>
                 </FormField>
 
@@ -505,8 +635,18 @@ export default function ContactClient({
                   className="rounded-full"
                   iconRight={
                     !isSubmitting ? (
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        />
                       </svg>
                     ) : undefined
                   }
@@ -518,7 +658,6 @@ export default function ContactClient({
 
             {/* ── Right Column: Info + Key Contacts + Social ── */}
             <div className="space-y-5">
-
               {/* Official Contact Info */}
               <motion.div
                 variants={fadeUp}
@@ -548,19 +687,23 @@ export default function ContactClient({
                           {card.icon}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-gray-500">{card.label}</p>
+                          <p className="text-xs font-medium text-gray-500">
+                            {card.label}
+                          </p>
                           {card.isLink ? (
                             <a
                               href={href}
                               className={cn(
-                                'mt-0.5 block break-all text-sm font-medium transition-colors',
+                                'mt-0.5 block text-sm font-medium break-all transition-colors',
                                 card.linkClass
                               )}
                             >
                               {value}
                             </a>
                           ) : (
-                            <p className="mt-0.5 text-sm leading-snug text-gray-300">{value}</p>
+                            <p className="mt-0.5 text-sm leading-snug text-gray-300">
+                              {value}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -577,7 +720,9 @@ export default function ContactClient({
                 viewport={viewportConfig}
                 className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6"
               >
-                <h3 className="mb-4 text-lg font-bold text-white">Key Contacts</h3>
+                <h3 className="mb-4 text-lg font-bold text-white">
+                  Key Contacts
+                </h3>
                 <motion.div
                   className="space-y-3"
                   variants={staggerContainer(0.08)}
@@ -596,7 +741,9 @@ export default function ContactClient({
                         <p className="text-primary-400 text-[10px] font-semibold tracking-wide uppercase">
                           {contact.role}
                         </p>
-                        <p className="mt-0.5 text-sm font-semibold text-white">{contact.name}</p>
+                        <p className="mt-0.5 text-sm font-semibold text-white">
+                          {contact.name}
+                        </p>
                         <a
                           href={`mailto:${contact.email}`}
                           className="text-primary-300 hover:text-primary-200 mt-0.5 block truncate text-xs transition-colors"
@@ -625,7 +772,9 @@ export default function ContactClient({
                 viewport={viewportConfig}
                 className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6"
               >
-                <h3 className="mb-1.5 text-lg font-bold text-white">Follow Us</h3>
+                <h3 className="mb-1.5 text-lg font-bold text-white">
+                  Follow Us
+                </h3>
                 <p className="mb-4 text-xs text-gray-500">
                   Stay connected with our latest updates and activities
                 </p>
@@ -641,8 +790,12 @@ export default function ContactClient({
                       whileTap={{ scale: 0.97 }}
                       title={social.name}
                     >
-                      <span className="shrink-0 text-gray-400">{social.icon}</span>
-                      <span className="truncate text-xs font-medium text-gray-300">{social.name}</span>
+                      <span className="shrink-0 text-gray-400">
+                        {social.icon}
+                      </span>
+                      <span className="truncate text-xs font-medium text-gray-300">
+                        {social.name}
+                      </span>
                     </motion.a>
                   ))}
                 </div>
@@ -665,7 +818,9 @@ export default function ContactClient({
             <h2 className="mb-2 text-2xl font-extrabold text-white sm:text-3xl">
               Frequently Asked Questions
             </h2>
-            <p className="text-sm text-gray-500">Quick answers to common questions</p>
+            <p className="text-sm text-gray-500">
+              Quick answers to common questions
+            </p>
           </motion.div>
 
           <motion.div
@@ -680,7 +835,9 @@ export default function ContactClient({
                 <FaqItem
                   faq={faq}
                   isActive={activeFaq === faq.id}
-                  onToggle={() => setActiveFaq(activeFaq === faq.id ? null : faq.id)}
+                  onToggle={() =>
+                    setActiveFaq(activeFaq === faq.id ? null : faq.id)
+                  }
                 />
               </motion.div>
             ))}

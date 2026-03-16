@@ -2,7 +2,7 @@
 
 PostgreSQL via Supabase. 45+ tables with Row Level Security (RLS) enforced at the database level.
 
-Run `docs/database-schema.sql` in the Supabase SQL Editor to initialise the full schema.
+Run `docs/database/schema.sql` in the Supabase SQL Editor to initialise the full schema.
 
 ---
 

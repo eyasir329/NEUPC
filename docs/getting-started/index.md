@@ -30,19 +30,32 @@ npm install
 Create `.env.local` at the project root. **Never commit this file.**
 
 ```env
+# ─── Auth.js ────────────────────────────────────────────────────────────────
+NEXTAUTH_URL=http://localhost:3000/
+NEXTAUTH_SECRET=
+
 # ─── Google OAuth ───────────────────────────────────────────────────────────
-# console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client ID
 AUTH_GOOGLE_ID=
 AUTH_GOOGLE_SECRET=
 
-# ─── Auth.js ────────────────────────────────────────────────────────────────
-# Generate: openssl rand -base64 32
-AUTH_SECRET=
+# ─── Google Drive ───────────────────────────────────────────────────────────
+GDRIVE_CLIENT_ID=
+GDRIVE_CLIENT_SECRET=
+GDRIVE_REFRESH_TOKEN=
+GDRIVE_FOLDER_ID=
+
+# ─── Gmail OAuth ────────────────────────────────────────────────────────────
+GMAIL_USER=
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+
+# ─── Gemini API ─────────────────────────────────────────────────────────────
+GEMINI_API_KEY=
 
 # ─── Supabase ───────────────────────────────────────────────────────────────
-# supabase.com → Project → Settings → API
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-public-key          # safe to expose (RLS enforced)
+SUPABASE_KEY=your-anon-public-key          # safe to expose
 SUPABASE_SERVICE_KEY=your-service-role-key # server-only — NEVER expose publicly
 
 # ─── Site ───────────────────────────────────────────────────────────────────
@@ -54,7 +67,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000  # no trailing slash
 ## 3. Database Setup
 
 1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql)
-2. Paste the full contents of `docs/database-schema.sql`
+2. Paste the full contents of `docs/database/schema.sql`
 3. Run — this creates all 45+ tables, RLS policies, indexes, and seed data
 4. Verify in **Table Editor** that tables like `users`, `events`, `blog_posts` exist
 

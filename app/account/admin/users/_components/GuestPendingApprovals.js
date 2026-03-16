@@ -61,6 +61,11 @@ export default function GuestPendingApprovals({
   const hasPending = pendingUsers && pendingUsers.length > 0;
   const hasAppeals = appealUsers && appealUsers.length > 0;
 
+  // Reset to page 1 when itemsPerPage changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
   if (!hasPending && !hasAppeals) return null;
 
   const totalPages = hasPending
@@ -70,11 +75,6 @@ export default function GuestPendingApprovals({
   const endIdx = startIdx + itemsPerPage;
   const currentUsers = hasPending ? pendingUsers.slice(startIdx, endIdx) : [];
   const hasPagination = hasPending && pendingUsers.length > itemsPerPage;
-
-  // Reset to page 1 when itemsPerPage changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [itemsPerPage]);
 
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () =>

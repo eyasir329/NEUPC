@@ -447,31 +447,18 @@ export default function SecurityClient({ data }) {
   const [logSearch, setLogSearch] = useState('');
   const [logActionFilter, setLogActionFilter] = useState('all');
 
-  if (!data) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-center">
-        <AlertCircle className="mb-4 h-12 w-12 text-yellow-600" />
-        <h2 className="text-lg font-semibold text-white">
-          Security data unavailable
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Check your database connection and try again.
-        </p>
-      </div>
-    );
-  }
-
+  const safeData = data ?? {};
   const {
-    overview,
-    activeSessions,
-    threats,
-    auditLogs,
-    roleChangeLogs,
-    loginLogs,
-    recentRoleAssignments,
-    logsByAction,
+    overview = {},
+    activeSessions = [],
+    threats = [],
+    auditLogs = [],
+    roleChangeLogs = [],
+    loginLogs = [],
+    recentRoleAssignments = [],
+    logsByAction = {},
     generatedAt,
-  } = data;
+  } = safeData;
 
   // Unique action types for filter dropdown
   const actionTypes = useMemo(() => {
@@ -500,6 +487,20 @@ export default function SecurityClient({ data }) {
       return matchAction && matchSearch;
     });
   }, [auditLogs, logSearch, logActionFilter]);
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertCircle className="mb-4 h-12 w-12 text-yellow-600" />
+        <h2 className="text-lg font-semibold text-white">
+          Security data unavailable
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Check your database connection and try again.
+        </p>
+      </div>
+    );
+  }
 
   const hasThreats = threats.length > 0;
   const systemStatus =

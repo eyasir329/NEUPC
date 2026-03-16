@@ -39,25 +39,36 @@ cp .env.example .env.local   # fill in your values
 npm run dev                  # http://localhost:3000
 ```
 
-→ See **[docs/getting-started.md](docs/getting-started.md)** for environment variables, database schema setup, and OAuth configuration.
+→ See **[docs/getting-started/index.md](docs/getting-started/index.md)** for environment variables, database schema setup, and OAuth configuration.
 
 ---
 
 ## Documentation
 
+→ Full index: **[docs/README.md](docs/README.md)**
+
 | Doc | What it covers |
 |---|---|
-| [getting-started.md](docs/getting-started.md) | Env vars, database init, Google OAuth, running locally, deploying |
-| [architecture.md](docs/architecture.md) | Folder structure, RSC-first pattern, dual Supabase clients, caching strategy |
-| [authentication.md](docs/authentication.md) | Google OAuth flow, JWT session shape, new-user lifecycle, route guards |
-| [roles-and-pages.md](docs/roles-and-pages.md) | All six roles with every protected page path and description |
-| [features.md](docs/features.md) | Every feature module — Blog, Events, Chat, Mentorship, Discussions, etc. |
-| [server-actions.md](docs/server-actions.md) | All 30+ action files with their exported server functions |
-| [data-service.md](docs/data-service.md) | All 262 `data-service.js` functions grouped by domain |
-| [database.md](docs/database.md) | Schema overview, table catalogue, RLS policy rationale |
-| [security.md](docs/security.md) | 4-layer guard model, rate limiter, input sanitisation, HTTP headers |
-| [design-system.md](docs/design-system.md) | Color tokens, typography, animations, global CSS utilities |
-| [database-schema.sql](docs/database-schema.sql) | Raw SQL — paste into Supabase SQL Editor to initialise the schema |
+| [Getting started](docs/getting-started/index.md) | Setup, database init, Google OAuth, running locally |
+| [Environment variables](docs/getting-started/environment-variables.md) | Full env var reference with setup instructions |
+| [Architecture](docs/architecture/index.md) | Folder structure, core patterns, data flow |
+| [Project structure](docs/architecture/project-structure.md) | Detailed file tree walkthrough |
+| [Component library](docs/architecture/components.md) | All 80+ React components by category |
+| [API routes](docs/architecture/api-routes.md) | All 19 REST API endpoints documented |
+| [Server actions](docs/architecture/server-actions.md) | All 30+ action files with exported functions |
+| [Data service](docs/architecture/data-service.md) | All 262 `data-service.js` functions |
+| [Authentication](docs/auth/authentication.md) | Google OAuth flow, JWT sessions, route guards |
+| [Roles & pages](docs/product/roles-and-pages.md) | All six roles with every protected page path |
+| [Features](docs/product/features.md) | Every feature module — Blog, Events, Chat, etc. |
+| [Database](docs/database/index.md) | 45+ tables, RLS policies, entity relationships |
+| [Security](docs/security/index.md) | 4-layer guard model, rate limiter, CSP headers |
+| [Design system](docs/frontend/design-system.md) | Color tokens, typography, animations |
+| [Deployment](docs/deployment/index.md) | Vercel deploy, CI/CD, monitoring, scaling |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
+| [Contributing](docs/CONTRIBUTING.md) | Branching, commits, code style, PR process |
+| [Adding features](docs/guides/adding-new-feature.md) | Step-by-step guide for new features |
+| [Engineering doc](docs/overview/engineering-documentation.md) | Full end-to-end engineering overview |
+| [Schema SQL](docs/database/schema.sql) | Raw SQL for Supabase schema setup |
 
 ---
 

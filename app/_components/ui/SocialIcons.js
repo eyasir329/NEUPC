@@ -68,6 +68,18 @@ export function YouTubeIcon({ className = 'h-5 w-5' }) {
 }
 
 /**
+ * Twitter/X SVG icon.
+ * @param {{ className?: string }} props
+ */
+export function TwitterIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18.901 1.153h3.68l-8.036 9.186L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.596-9.825L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.291 19.49h2.039L6.486 3.24H4.299L17.61 20.643z" />
+    </svg>
+  );
+}
+
+/**
  * Globe/website SVG icon.
  * @param {{ className?: string }} props
  */
@@ -97,6 +109,7 @@ export const SOCIAL_ICON_MAP = {
   github: GitHubIcon,
   linkedin: LinkedInIcon,
   facebook: FacebookIcon,
+  twitter: TwitterIcon,
   youtube: YouTubeIcon,
   website: GlobeIcon,
 };

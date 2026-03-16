@@ -510,6 +510,28 @@ function LogList({ logs }) {
 export default function SystemLogsClient({ data }) {
   const [activeTab, setActiveTab] = useState('overview');
 
+  const safeData = data ?? {};
+  const {
+    overview = {},
+    allLogs = [],
+    categoryBreakdown = {},
+    topModules = [],
+    topActions = [],
+    dailyActivity = [],
+    generatedAt,
+  } = safeData;
+
+  // Per-category logs
+  const logsByCategory = useMemo(
+    () => ({
+      user_activity: allLogs.filter((l) => l.category === 'user_activity'),
+      content: allLogs.filter((l) => l.category === 'content'),
+      security: allLogs.filter((l) => l.category === 'security'),
+      system: allLogs.filter((l) => l.category === 'system'),
+    }),
+    [allLogs]
+  );
+
   if (!data) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center">
@@ -523,27 +545,6 @@ export default function SystemLogsClient({ data }) {
       </div>
     );
   }
-
-  const {
-    overview,
-    allLogs,
-    categoryBreakdown,
-    topModules,
-    topActions,
-    dailyActivity,
-    generatedAt,
-  } = data;
-
-  // Per-category logs
-  const logsByCategory = useMemo(
-    () => ({
-      user_activity: allLogs.filter((l) => l.category === 'user_activity'),
-      content: allLogs.filter((l) => l.category === 'content'),
-      security: allLogs.filter((l) => l.category === 'security'),
-      system: allLogs.filter((l) => l.category === 'system'),
-    }),
-    [allLogs]
-  );
 
   const maxDailyCount = Math.max(...dailyActivity.map((d) => d.count), 1);
   const maxModuleCount = topModules.length > 0 ? topModules[0][1] : 1;
