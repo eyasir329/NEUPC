@@ -6,14 +6,13 @@ Detailed walkthrough of the NEUPC codebase file organization.
 
 ## Root Directory
 
-```
+```text
 neupc/
 ├── app/                    # Next.js App Router — all pages, components, and server logic
 ├── docs/                   # Developer documentation (this folder)
 ├── public/                 # Static assets (images, icons, SVGs)
 ├── scripts/                # Utility scripts
 │
-├── proxy.js                # NextAuth middleware — protects /account/* routes
 ├── next.config.mjs         # Next.js config — security headers, image domains
 ├── tailwind.config.mjs     # Tailwind CSS v4 theme — colors, fonts, animations
 ├── postcss.config.mjs      # PostCSS config — uses @tailwindcss/postcss
@@ -33,17 +32,17 @@ The heart of the application. Uses Next.js **App Router** conventions.
 
 ### Root Files
 
-| File | Purpose |
-|---|---|
-| `layout.js` | Root layout — global CSS, fonts, providers (toast, role context, page transition), header/footer |
-| `page.js` | Homepage — server component that fetches and renders all homepage sections |
-| `error.js` | Global error boundary |
-| `loading.js` | Global loading skeleton |
-| `not-found.js` | Custom 404 page |
-| `icon.png` | Favicon |
-| `robots.js` | Dynamic `robots.txt` generator |
-| `sitemap.js` | Dynamic `sitemap.xml` generator |
-| `opengraph-image.js` | Edge-rendered Open Graph image |
+| File                 | Purpose                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `layout.js`          | Root layout — global CSS, fonts, providers (toast, role context, page transition), header/footer |
+| `page.js`            | Homepage — server component that fetches and renders all homepage sections                       |
+| `error.js`           | Global error boundary                                                                            |
+| `loading.js`         | Global loading skeleton                                                                          |
+| `not-found.js`       | Custom 404 page                                                                                  |
+| `icon.png`           | Favicon                                                                                          |
+| `robots.js`          | Dynamic `robots.txt` generator                                                                   |
+| `sitemap.js`         | Dynamic `sitemap.xml` generator                                                                  |
+| `opengraph-image.js` | Edge-rendered Open Graph image                                                                   |
 
 ---
 
@@ -55,38 +54,38 @@ Directories prefixed with `_` are excluded from routing by Next.js convention.
 
 The brain of the application. Contains **58 files** covering:
 
-| Category | Key Files | Description |
-|---|---|---|
-| **Auth** | `auth.js`, `auth.config.js`, `auth-guard.js` | NextAuth config, session callbacks, `requireRole()`/`requireAuth()` |
-| **Data** | `data-service.js` | Central data layer — 262 exported functions, ~3,700 lines |
-| **Actions** | `*-actions.js` (30+ files) | All server actions (`"use server"`) for mutations |
-| **Public Data** | `public-actions.js` | Cached SSR fetchers for public pages (`unstable_cache`) |
-| **Database** | `supabase.js` | Supabase client initialization (anon + service role) |
-| **Validation** | `validation.js`, `schemas.js` | Input sanitization, Zod schemas |
-| **Security** | `rate-limiter.js`, `security-service.js`, `action-guard.js`, `api-guard.js` | Rate limiting, security logging, permission wrappers |
-| **Email** | `email-service.js` | Gmail API email dispatch |
-| **Media** | `gdrive.js`, `gcs.js`, `image-gen.js` | Google Drive integration, image generation |
-| **Config** | `sidebarConfig.js`, `roleDashboardConfig.js` | Per-role UI configuration |
-| **Utils** | `helpers.js`, `utils.js`, `hooks.js`, `seo.js` | Utilities, custom hooks, SEO helpers |
-| **Logging** | `analytics-service.js`, `system-logs-service.js` | Analytics and system log services |
+| Category        | Key Files                                                                   | Description                                                         |
+| --------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Auth**        | `auth.js`, `auth.config.js`, `auth-guard.js`                                | NextAuth config, session callbacks, `requireRole()`/`requireAuth()` |
+| **Data**        | `data-service.js`                                                           | Central data layer — 292 exported functions                         |
+| **Actions**     | `*-actions.js` (30+ files)                                                  | All server actions (`"use server"`) for mutations                   |
+| **Public Data** | `public-actions.js`                                                         | Cached SSR fetchers for public pages (`unstable_cache`)             |
+| **Database**    | `supabase.js`                                                               | Supabase client initialization (anon + service role)                |
+| **Validation**  | `validation.js`, `schemas.js`                                               | Input sanitization, Zod schemas                                     |
+| **Security**    | `rate-limiter.js`, `security-service.js`, `action-guard.js`, `api-guard.js` | Rate limiting, security logging, permission wrappers                |
+| **Email**       | `email-service.js`                                                          | Gmail API email dispatch                                            |
+| **Media**       | `gdrive.js`, `gcs.js`, `image-gen.js`                                       | Google Drive integration, image generation                          |
+| **Config**      | `sidebarConfig.js`, `roleDashboardConfig.js`                                | Per-role UI configuration                                           |
+| **Utils**       | `helpers.js`, `utils.js`, `hooks.js`, `seo.js`                              | Utilities, custom hooks, SEO helpers                                |
+| **Logging**     | `analytics-service.js`, `system-logs-service.js`                            | Analytics and system log services                                   |
 
 #### `app/_components/` — Shared Components
 
-| Directory | Count | Description |
-|---|---|---|
-| `ui/` | 37 files | Reusable UI components (Button, Modal, Avatar, etc.) |
-| `sections/` | 11 files | Homepage sections (Hero, Events, Blogs, etc.) |
-| `motion/` | 7 files | Framer Motion animation wrappers |
-| `chat/` | 10 files | Real-time chat system components |
+| Directory   | Count    | Description                                          |
+| ----------- | -------- | ---------------------------------------------------- |
+| `ui/`       | 37 files | Reusable UI components (Button, Modal, Avatar, etc.) |
+| `sections/` | 11 files | Homepage sections (Hero, Events, Blogs, etc.)        |
+| `motion/`   | 7 files  | Framer Motion animation wrappers                     |
+| `chat/`     | 10 files | Real-time chat system components                     |
 
 See [components.md](components.md) for the full catalog.
 
 #### `app/_styles/` — Global Styles
 
-| File | Description |
-|---|---|
+| File         | Description                                                  |
+| ------------ | ------------------------------------------------------------ |
 | `global.css` | CSS variables, component classes, scrollbar, prose overrides |
-| `color.json` | Color palette configuration |
+| `color.json` | Color palette configuration                                  |
 
 ---
 
@@ -94,7 +93,7 @@ See [components.md](components.md) for the full catalog.
 
 Each folder under `app/` creates a route. All public pages are **server components** that fetch data and render a corresponding client component.
 
-```
+```text
 app/
 ├── about/              → /about              Club mission and vision
 ├── achievements/       → /achievements       Achievement records and timeline
@@ -119,9 +118,9 @@ app/
 
 ### Authenticated Area — `app/account/`
 
-All routes under `/account/` are **protected** by middleware (`proxy.js`) and server-side guards (`requireRole()`).
+All routes under `/account/` are **protected** by server-side guards (`requireRole()`) in each layout and page.
 
-```
+```text
 app/account/
 ├── _components/            # Dashboard-specific shared components (16 files)
 ├── layout.js               # Account layout — sidebar, header, chat FAB
@@ -148,7 +147,7 @@ app/account/
 │   ├── notices/            # Club announcements
 │   ├── notifications/      # Notifications
 │   ├── participation/      # Full history
-│   ├── problem-set/        # CP problem list
+ │   ├── bootcamps/          # CP problem list
 │   ├── profile/            # Full profile
 │   ├── resources/          # Learning resources
 │   ├── roadmap/            # Roadmaps
@@ -204,7 +203,7 @@ app/account/
 
 ### API Routes — `app/api/`
 
-```
+```text
 app/api/
 ├── auth/[...nextauth]/     # NextAuth handler (Google OAuth)
 ├── account/
@@ -231,7 +230,7 @@ See [api-routes.md](api-routes.md) for full API documentation.
 
 ## Documentation — `docs/`
 
-```
+```text
 docs/
 ├── README.md                    # Documentation index
 ├── CONTRIBUTING.md              # Contribution guide
@@ -243,7 +242,7 @@ docs/
 │   ├── project-structure.md     # This file
 │   ├── components.md            # Component catalog
 │   ├── api-routes.md            # API routes reference
-│   ├── data-service.md          # 262 data-service functions
+│   ├── data-service.md          # 292 data-service functions
 │   └── server-actions.md        # 30+ server action files
 ├── auth/
 │   └── authentication.md        # OAuth flow, session, guards
