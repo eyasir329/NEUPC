@@ -1,6 +1,117 @@
 @config '../../tailwind.config.mjs';
 @import 'tailwindcss';
 
+/* ── Design System Utilities ──────────────────────────────────────────────── */
+
+.kinetic-headline {
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+
+.glass-panel {
+  background: rgba(12, 14, 22, 0.55);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(182, 243, 107, 0.08);
+}
+
+.soft-glow-lime {
+  box-shadow: 0 0 80px -20px rgba(182, 243, 107, 0.35);
+}
+
+.soft-glow-violet {
+  box-shadow: 0 0 80px -20px rgba(124, 92, 255, 0.35);
+}
+
+.holographic-card {
+  background: linear-gradient(
+    135deg,
+    rgba(182, 243, 107, 0.035) 0%,
+    rgba(124, 92, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(238, 241, 250, 0.05);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.holographic-card:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(182, 243, 107, 0.1) 0%,
+    rgba(124, 92, 255, 0.1) 100%
+  );
+  border-color: rgba(182, 243, 107, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 0 60px -20px rgba(182, 243, 107, 0.25);
+}
+
+.text-stroke-lime {
+  -webkit-text-stroke: 1.5px #b6f36b;
+}
+
+.neon-text {
+  color: #b6f36b;
+  text-shadow: 0 0 18px rgba(182, 243, 107, 0.45);
+}
+
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(182, 243, 107, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(182, 243, 107, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.pulse-dot {
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Placeholder pattern backgrounds */
+.ph {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(238, 241, 250, 0.05) 0 1px,
+      transparent 1px 10px
+    ),
+    #0f1220;
+  color: #6b7089;
+  border: 1px solid rgba(238, 241, 250, 0.06);
+}
+
+.ph-lime {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(182, 243, 107, 0.18) 0 1px,
+      transparent 1px 10px
+    ),
+    #0f1220;
+  color: #b6f36b;
+  border: 1px solid rgba(182, 243, 107, 0.25);
+  box-shadow: inset 0 0 80px rgba(182, 243, 107, 0.08);
+}
+
+.ph-violet {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(124, 92, 255, 0.2) 0 1px,
+      transparent 1px 10px
+    ),
+    #0e1020;
+  color: #7c5cff;
+  border: 1px solid rgba(124, 92, 255, 0.28);
+}
+
 @layer base {
   :root {
     --foreground-rgb: 15, 23, 42; /* slate-900 */
@@ -26,17 +137,26 @@
 
   body {
     color: rgb(var(--foreground-rgb));
-    background: rgb(var(--background-rgb));
+    background:
+      radial-gradient(
+        900px 600px at 10% -5%,
+        rgba(124, 92, 255, 0.18),
+        transparent 60%
+      ),
+      radial-gradient(
+        700px 500px at 90% 10%,
+        rgba(182, 243, 107, 0.1),
+        transparent 60%
+      ),
+      radial-gradient(circle at 50% 100%, #0a0c14 0%, #05060b 100%);
     font-family: var(--font-inter), 'Inter', sans-serif;
-    text-size-adjust: 100%;
-    -webkit-text-size-adjust: 100%;
     @apply antialiased;
   }
 
   /* Refined selection color */
   ::selection {
-    background: rgba(8, 131, 149, 0.3);
-    color: white;
+    background: rgba(182, 243, 107, 0.3);
+    color: #000;
   }
 
   h1,
@@ -149,7 +269,7 @@
 
 @layer utilities {
   .text-balance {
-    text-wrap: balance;
+    overflow-wrap: anywhere;
   }
 
   .gradient-primary {
@@ -163,7 +283,6 @@
   /* Hide scrollbar but keep scrolling functionality */
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -172,8 +291,6 @@
 
   /* Thin themed scrollbar for dark UI */
   .scrollbar-themed {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
 
   .scrollbar-themed::-webkit-scrollbar {
@@ -232,7 +349,6 @@
 ====================== */
 
 .scrollbar-none {
-  scrollbar-width: none;
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
@@ -240,7 +356,6 @@
 
 /* Thin scrollbar for toolbar */
 .scrollbar-thin {
-  scrollbar-width: thin;
 }
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
@@ -575,8 +690,8 @@
   li
   > label
   input[type='checkbox'] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   width: 1rem;
   height: 1rem;
   border: 1.5px solid rgba(255, 255, 255, 0.25);
@@ -1164,8 +1279,8 @@
   overflow-x: auto;
   border: none;
   letter-spacing: 0;
-  tab-size: 2;
   -moz-tab-size: 2;
+  tab-size: 2;
   counter-reset: line-num;
   word-break: normal;
   overflow-wrap: normal;
@@ -1301,11 +1416,9 @@
 
 /* ── Code runner textarea — editor-style ────────────────── */
 .code-runner-textarea {
-  tab-size: 2;
   -moz-tab-size: 2;
+  tab-size: 2;
   caret-color: #58a6ff;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
   letter-spacing: 0;
   word-spacing: 0;
 }
@@ -1824,8 +1937,8 @@
 }
 
 .blog-content ul[data-type='taskList'] li > label input[type='checkbox'] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   width: 1rem;
   height: 1rem;
   border: 1.5px solid rgba(255, 255, 255, 0.2);

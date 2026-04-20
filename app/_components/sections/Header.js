@@ -10,8 +10,8 @@ import Logo from '../ui/Logo';
 /** Site header — logo and navigation bar. */
 function Header() {
   return (
-    <header className="border-primary-900 border-b px-4 py-4 sm:px-6 sm:py-5 md:px-8">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <header className="fixed top-0 w-full z-50 bg-site-bg/70 backdrop-blur-2xl border-b border-white/5 px-8 py-5">
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between">
         <Logo />
         <Suspense fallback={<div className="h-10 w-48" />}>
           <Navigation />

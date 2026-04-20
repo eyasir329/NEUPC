@@ -30,10 +30,11 @@ const NAV_CONFIG = {
   dropdowns: [
     {
       id: 'archives',
-      label: 'Archives',
+      label: 'Library',
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
+        { href: '/resources', label: 'Resources' },
       ],
     },
     {
@@ -74,16 +75,15 @@ function isDropdownActive(pathname, dropdown) {
 function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
   const ref = useRef(null);
   const dropdownIsActive = isDropdownActive(pathname, dropdown);
+  const isArchives = dropdown.id === 'archives';
 
   return (
-    <li ref={ref} className="group relative">
+    <li ref={ref} className="group relative py-2">
       <button
         onClick={onToggle}
         className={cn(
-          'flex items-center gap-1 text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:text-base',
-          dropdownIsActive
-            ? 'text-secondary-400'
-            : 'text-primary-100 hover:text-secondary-400'
+          'flex items-center gap-1.5 font-heading text-[11px] font-bold uppercase tracking-widest transition-colors duration-200',
+          dropdownIsActive ? 'text-neon-lime' : 'text-zinc-500 hover:text-white'
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -91,32 +91,34 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
         {dropdown.label}
         <ChevronDown
           className={cn(
-            'h-4 w-4 transition-transform duration-200',
+            'h-3.5 w-3.5 transition-transform duration-200',
             isOpen ? 'rotate-180' : 'group-hover:rotate-180'
           )}
         />
       </button>
       <ul
         className={cn(
-          'bg-background-dark border-primary-700 shadow-glow absolute top-full left-0 mt-2 min-w-50 rounded-xl border transition-all duration-300',
+          'absolute top-full left-0 mt-2 min-w-50 rounded-xl border p-3 space-y-1 shadow-2xl backdrop-blur-xl transition-all duration-200 bg-surface z-50',
+          isArchives ? 'border-neon-lime/20' : 'border-neon-violet/20',
           isOpen
             ? 'visible translate-y-0 opacity-100'
             : 'invisible translate-y-2 opacity-0 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100'
         )}
         role="menu"
       >
-        {dropdown.items.map((item, index) => (
+        {dropdown.items.map((item) => (
           <li key={item.href} role="none">
             <Link
               href={item.href}
               role="menuitem"
               className={cn(
-                'block px-5 py-3 text-sm transition-colors duration-200',
+                'block px-3 py-1.5 font-mono text-[11px] transition-colors duration-200',
                 isNavActive(pathname, item.href)
-                  ? 'bg-primary-800/50 text-secondary-400'
-                  : 'text-primary-100 hover:bg-primary-800 hover:text-secondary-400',
-                index === 0 && 'rounded-t-xl',
-                index === dropdown.items.length - 1 && 'rounded-b-xl'
+                  ? isArchives ? 'text-neon-lime' : 'text-neon-violet'
+                  : cn(
+                      'text-zinc-400',
+                      isArchives ? 'hover:text-neon-lime' : 'hover:text-neon-violet'
+                    )
               )}
             >
               {item.label}
@@ -257,16 +259,16 @@ export default function Navbar({ session }) {
   return (
     <nav ref={navRef} className="relative z-50">
       {/* ── Desktop Navigation ────────────────────────────────── */}
-      <ul className="hidden items-center gap-4 lg:flex xl:gap-6 2xl:gap-8">
+      <ul className="hidden items-center gap-8 lg:flex xl:gap-12">
         {NAV_CONFIG.links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
               className={cn(
-                'text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:text-base',
+                'font-heading text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors duration-200',
                 isNavActive(pathname, link.href)
-                  ? 'text-secondary-400'
-                  : 'text-primary-100 hover:text-secondary-400'
+                  ? 'text-neon-lime'
+                  : 'text-zinc-500 hover:text-white'
               )}
             >
               {link.label}
@@ -311,12 +313,7 @@ export default function Navbar({ session }) {
           <li>
             <Link
               href={NAV_CONFIG.cta.href}
-              className={cn(
-                'shrink-0 rounded-lg px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-all duration-200 xl:px-5 xl:py-2 xl:text-base',
-                NAV_CONFIG.cta.style === 'primary'
-                  ? 'bg-primary-500 hover:bg-primary-600 shadow-soft hover:shadow-glow text-white'
-                  : 'border-primary-500/50 text-primary-300 hover:border-primary-500 hover:bg-primary-500/10 border-2'
-              )}
+              className="bg-neon-lime text-black px-7 py-2.5 rounded-full font-heading text-[11px] tracking-widest font-bold uppercase hover:bg-white transition-all shadow-lg whitespace-nowrap"
             >
               {NAV_CONFIG.cta.label}
             </Link>
