@@ -70,10 +70,10 @@ export default function ScrollToTop() {
   return (
     <button
       onClick={handleClick}
-      className="from-primary-500 to-secondary-500 fixed right-4 bottom-4 z-50 flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl bg-linear-to-r text-white shadow-[0_8px_24px_rgba(8,131,149,0.4)] transition-all duration-300 hover:scale-110 hover:shadow-[0_12px_32px_rgba(8,131,149,0.6)] sm:right-6 sm:bottom-6 sm:h-12 sm:w-12 sm:rounded-2xl"
+      className="fixed right-6 bottom-6 z-50 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-neon-lime/30 bg-[#05060b]/80 text-neon-lime shadow-[0_0_24px_rgba(182,243,107,0.25)] backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-neon-lime hover:shadow-[0_0_40px_rgba(182,243,107,0.5)]"
       aria-label="Scroll to top"
     >
-      <ArrowUp className="h-5 w-5" />
+      <ArrowUp className="h-4 w-4" />
     </button>
   );
 }

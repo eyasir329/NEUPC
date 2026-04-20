@@ -77,7 +77,9 @@ const config = {
 
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
         heading: ['Space Grotesk', 'sans-serif'],
+        headline: ['Space Grotesk', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
 
