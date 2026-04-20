@@ -56,7 +56,7 @@ function Hero({ data = {}, settings = {} }) {
           {/* CTAs */}
           <div className="mt-2 flex flex-wrap items-center gap-4">
             <Link
-              href="/account"
+              href="/join"
               className="group bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-all hover:scale-[1.02] hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
             >
               Join the Club
@@ -97,13 +97,49 @@ function Hero({ data = {}, settings = {} }) {
         {/* ── Right column: decorative stack ─────────────────── */}
         <div className="relative hidden lg:col-span-5 lg:block">
           {/* Main portrait placeholder */}
-          <div className="ph-lime soft-glow-lime relative aspect-[4/5] w-full overflow-hidden rounded-3xl">
-            <div className="absolute top-6 left-6 font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
+          <div className="ph-lime soft-glow-lime relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-3xl border border-white/5 bg-zinc-950/50">
+            {/* 1. IDEAL UX: Place a real dark/moody photograph of your club here. */}
+            {/* Just add a photo to your public folder and uncomment the Image component below */}
+            {/* <Image 
+                  src="/your-club-photo.jpg" 
+                  alt="NEUPC Hackathon" 
+                  fill 
+                  className="object-cover opacity-40 mix-blend-luminosity transition-transform duration-700 hover:scale-105" 
+                /> */}
+
+            {/* 2. FALLBACK GRAPHIC: Abstract Competitive Programming C++ code art */}
+            <div className="from-neon-lime/10 absolute inset-0 bg-linear-to-br via-transparent to-transparent opacity-50" />
+            <pre className="pointer-events-none absolute -right-16 -bottom-12 -rotate-12 font-mono text-[10px] leading-[1.6] font-bold text-white/5 select-none sm:text-[12px]">
+              {`#include <bits/stdc++.h>
+using namespace std;
+
+void solve() {
+    int n, k;
+    cin >> n >> k;
+    vector<int> a(n);
+    for(int& x : a) cin >> x;
+    
+    // Core logic begins here...
+    sort(a.begin(), a.end());
+}
+
+int main() {
+    ios_base::sync_with_stdio(0);
+    cin.tie(0);
+    int t; 
+    cin >> t;
+    while(t--) solve();
+    return 0;
+}`}
+            </pre>
+
+            {/* Overlay UI elements */}
+            <div className="absolute top-6 left-6 font-mono text-[10px] font-bold tracking-[0.4em] text-zinc-400 uppercase">
               /// NEUPC.01
             </div>
-            <div className="absolute right-6 bottom-6 left-6 flex items-end justify-between">
+            <div className="absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
               <div>
-                <div className="font-heading text-4xl leading-none font-black">
+                <div className="font-heading text-4xl leading-none font-black text-white">
                   2024
                 </div>
                 <div className="mt-1 font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
