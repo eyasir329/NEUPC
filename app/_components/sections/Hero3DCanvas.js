@@ -118,7 +118,10 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     dragDistance: 0,
     previousPosition: { x: 0, y: 0 },
     velocity: { x: 0, y: 0 },
+    isTouch: false,
+    scrollLocked: false,
   });
+  const isInteractingRef = useRef(false);
   const isOverGlobeRef = useRef(false);
   const hitTestRef = useRef(null); // set by useEffect once raycaster is available
 
@@ -135,6 +138,10 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     interactionState.current.isDragging = true;
     interactionState.current.dragDistance = 0;
     interactionState.current.previousPosition = { x: e.clientX, y: e.clientY };
+    interactionState.current.isTouch = e.pointerType === 'touch';
+    interactionState.current.scrollLocked = true;
+    isInteractingRef.current = true;
+    // Block all scroll while touching the globe
     if (mountRef.current) {
       mountRef.current.style.touchAction = 'none';
     }
@@ -145,6 +152,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     if (!interactionState.current.isDragging) return;
     const deltaX = e.clientX - interactionState.current.previousPosition.x;
     const deltaY = e.clientY - interactionState.current.previousPosition.y;
+
     interactionState.current.dragDistance += Math.sqrt(
       deltaX * deltaX + deltaY * deltaY
     );
@@ -161,6 +169,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
   const handlePointerUp = (e) => {
     interactionState.current.isDragging = false;
+    interactionState.current.scrollLocked = false;
+    isInteractingRef.current = false;
     if (mountRef.current) {
       mountRef.current.style.touchAction = 'auto';
     }
@@ -524,9 +534,19 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       }
     };
 
+    // Prevent browser scroll when touch starts over the globe (must be non-passive)
+    const onTouchStart = (e) => {
+      if (!hitTestRef.current) return;
+      const touch = e.touches[0];
+      if (touch && hitTestRef.current(touch.clientX, touch.clientY)) {
+        e.preventDefault();
+      }
+    };
+
     mountEl.addEventListener('pointermove', onScenePointerMove);
     mountEl.addEventListener('pointerleave', onScenePointerLeave);
     mountEl.addEventListener('pointerup', onSceneClick);
+    mountEl.addEventListener('touchstart', onTouchStart, { passive: false });
 
     const colorCyan = new THREE.Color(0xb6f36b);
     const colorPurple = new THREE.Color(0x7c5cff);
@@ -546,7 +566,10 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         const factor = Math.pow(0.965, fpsScale);
         interactionState.current.velocity.x *= factor;
         interactionState.current.velocity.y *= factor;
-        interactionState.current.velocity.y += 0.00015 * fpsScale;
+        // Auto-spin only when user is not touching/hovering the globe
+        if (!isInteractingRef.current) {
+          interactionState.current.velocity.y += 0.00015 * fpsScale;
+        }
       }
 
       worldGroup.rotation.x += interactionState.current.velocity.x * fpsScale;
@@ -588,7 +611,12 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(nodeSprites);
       const sphereHit = raycaster.intersectObject(sphereLines);
-      isOverGlobeRef.current = intersects.length > 0 || sphereHit.length > 0;
+      const overGlobeNow = intersects.length > 0 || sphereHit.length > 0;
+      // For mouse (non-touch), pause auto-spin when hovering the globe
+      if (!interactionState.current.isDragging) {
+        isInteractingRef.current = overGlobeNow;
+      }
+      isOverGlobeRef.current = overGlobeNow;
 
       if (intersects.length > 0) {
         if (hoveredNode !== intersects[0].object) {
@@ -716,6 +744,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       mountEl.removeEventListener('pointermove', onScenePointerMove);
       mountEl.removeEventListener('pointerleave', onScenePointerLeave);
       mountEl.removeEventListener('pointerup', onSceneClick);
+      mountEl.removeEventListener('touchstart', onTouchStart);
 
       if (resizeObserver) {
         resizeObserver.disconnect();
@@ -764,6 +793,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         onPointerLeave={(e) => {
           handlePointerUp(e);
           isOverGlobeRef.current = false;
+          isInteractingRef.current = false;
           if (mountRef.current) {
             mountRef.current.style.cursor = 'default';
             mountRef.current.style.touchAction = 'auto';
