@@ -5,6 +5,7 @@
 
 import '@/app/_styles/global.css';
 
+import { Suspense } from 'react';
 import {
   Space_Grotesk,
   Inter,
@@ -12,19 +13,16 @@ import {
   Sora,
   Lora,
 } from 'next/font/google';
-import Header from './_components/sections/Header';
-import Footer from './_components/sections/Footer';
+import AsyncHeader from './_components/sections/AsyncHeader';
+import AsyncFooter from './_components/sections/AsyncFooter';
 import TopProgressBar from './_components/ui/TopProgressBar';
 import ToasterProvider from './_components/ui/ToasterProvider';
 import { UserRoleProvider } from './_components/ui/UserRoleProvider';
+import NavbarSkeleton from './_components/ui/NavbarSkeleton';
+import HydrationLoader from './_components/ui/HydrationLoader';
 import PageTransition from './_components/motion/PageTransition';
 import { auth } from '@/app/_lib/auth';
-import {
-  getSocialLinks,
-  getContactInfo,
-  getFooterData,
-  getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+
 import {
   SITE_URL,
   SITE_NAME,
@@ -134,13 +132,7 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const [session, social, contact, footer, settings] = await Promise.all([
-    auth(),
-    getSocialLinks(),
-    getContactInfo(),
-    getFooterData(),
-    getAllPublicSettings(),
-  ]);
+  const session = await auth();
 
   return (
     <html
@@ -151,24 +143,20 @@ export default async function RootLayout({ children }) {
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
+        <HydrationLoader />
         <TopProgressBar />
         <ToasterProvider />
-        <UserRoleProvider
-          role={session?.user?.role || null}
-          isLoggedIn={!!session}
-        >
-          <Header session={session} />
-          <main className="w-full flex-grow">
+        <Suspense fallback={<NavbarSkeleton />}>
+          <AsyncHeader />
+        </Suspense>
+        <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
+          <main className="w-full grow">
             <PageTransition>{children}</PageTransition>
           </main>
-          <Footer
-            session={session}
-            social={social}
-            contact={contact}
-            footer={footer}
-            settings={settings}
-          />
         </UserRoleProvider>
+        <Suspense fallback={null}>
+          <AsyncFooter />
+        </Suspense>
       </body>
     </html>
   );
