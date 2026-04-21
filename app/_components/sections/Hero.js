@@ -1,146 +1,222 @@
+'use client';
+
 /**
  * @file Hero
  * @module Hero
  */
 
 import Link from 'next/link';
-import SVG from '../ui/SVG';
-import JoinButton from '../ui/JoinButton';
-import Button from '../ui/Button';
+import { useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import dynamic from 'next/dynamic';
 
-// ─── Default Content ────────────────────────────────────────────────────────
-const DEFAULTS = {
-  title: 'Programming Club',
-  subtitle: '(NEUPC)',
-  department: 'Department of Computer Science and Engineering',
-  university: 'Netrokona University, Netrokona, Bangladesh',
+const Hero3DCanvas = dynamic(() => import('./Hero3DCanvas'), { ssr: false });
+
+const heroContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
+};
+const heroItem = {
+  hidden: { opacity: 0, y: 30, filter: 'blur(8px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+const heroStat = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 
-/**
- * Hero — Full-screen landing section with club name, department info,
- * CTA buttons, and an animated SVG illustration.
- *
- * @param {object} data – Overrides from site settings (hero_title, etc.)
- * @param {object} settings – All public settings map
- */
-function Hero({ data = {}, settings = {} }) {
-  const {
-    title = DEFAULTS.title,
-    subtitle = DEFAULTS.subtitle,
-    department = DEFAULTS.department,
-    university = DEFAULTS.university,
-  } = data;
+const DEFAULTS = {
+  department: 'Dept of CSE',
+  university: 'Netrokona University',
+};
 
-  const welcomeText =
-    settings.hero_welcome_text || `Welcome to ${settings.site_name || 'NEUPC'}`;
-  const joinLabel = settings.hero_join_label || 'Join Now';
-  const learnMoreLabel = settings.hero_learn_more_label || 'Learn More';
+function Hero({ data = {}, settings = {} }) {
+  const { department = DEFAULTS.department, university = DEFAULTS.university } =
+    data;
+  const [selectedNode, setSelectedNode] = useState(null);
+  const containerRef = useRef(null);
+
+  const { scrollY } = useScroll();
+  const yBg = useTransform(scrollY, [0, 1000], [0, 400]);
+  const opacityBg = useTransform(scrollY, [0, 600], [1, 0]);
+  const yText = useTransform(scrollY, [0, 1000], [0, 200]);
+
+  useEffect(() => {
+    if (!selectedNode) return undefined;
+
+    const timerId = window.setTimeout(() => {
+      setSelectedNode(null);
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [selectedNode]);
 
   return (
     <section
+      ref={containerRef}
       aria-label="Hero"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="relative z-0 flex min-h-[100svh] items-center overflow-hidden pt-[calc(var(--header-h,69px)+1.5rem)] pb-16 sm:pt-[calc(var(--header-h,69px)+2rem)] md:min-h-screen"
     >
-      {/* Ambient glow behind hero content */}
-      <div className="from-primary-500/15 via-secondary-500/10 pointer-events-none absolute top-1/2 left-1/2 h-72 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-br to-transparent blur-[120px] sm:h-96 sm:w-md md:h-150 md:w-200" />
+      {/* ── Full-bleed 3D canvas (hidden on mobile) ─────────── */}
+      <div className="absolute inset-0 z-0 hidden md:block">
+        <Hero3DCanvas onNodeClick={setSelectedNode} />
+        {/* Left veil keeps text readable */}
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#05060B]/90 via-[#05060B]/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-[#05060B] to-transparent" />
+      </div>
 
-      <div className="relative grid w-full max-w-7xl grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-2 lg:gap-20">
-        {/* ── Text Content ────────────────────────────────────────── */}
-        <div className="text-center lg:text-left">
-          {/* Small label above the title */}
-          <div
-            className="animate-fade-in mb-6 inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-linear-to-r from-white/[0.06] to-white/[0.02] px-5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_4px_24px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-all duration-500 hover:border-white/[0.14] hover:from-white/[0.09] hover:to-white/[0.04] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_28px_rgba(0,0,0,0.25)]"
-            style={{ animationDelay: '50ms' }}
-          >
-            {/* Live indicator dot */}
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="bg-primary-400/50 absolute inline-flex h-full w-full animate-ping rounded-full" />
-              <span className="bg-primary-400 relative inline-flex h-2 w-2 rounded-full shadow-[0_0_10px_rgba(8,131,149,0.75)]" />
-            </span>
-            {/* Separator */}
-            <span className="h-3.5 w-px shrink-0 bg-white/10" />
-            <span className="text-sm font-medium tracking-wide text-gray-300/85 transition-colors duration-300 hover:text-gray-200/95">
-              {welcomeText}
-            </span>
-          </div>
+      {/* Background accent orbs */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-[-1] overflow-hidden"
+        style={{ y: yBg, opacity: opacityBg }}
+      >
+        <div className="grid-overlay absolute inset-0 opacity-30" />
+        <div className="bg-neon-violet/10 absolute -top-40 -left-40 h-125 w-125 rounded-full blur-[140px]" />
+        <div className="bg-neon-lime/10 absolute top-1/3 -right-40 h-125 w-125 rounded-full blur-[140px]" />
+      </motion.div>
 
-          <h1
-            className="animate-slide-up mb-4 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl"
-            style={{ animationDelay: '150ms' }}
-          >
-            <span className="bg-linear-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-              {title}
-            </span>{' '}
-            <span className="from-primary-300 via-secondary-300 to-primary-400 bg-linear-to-r bg-clip-text text-transparent">
-              {subtitle}
-            </span>
-          </h1>
-
-          {/* Animated gradient divider */}
-          <div
-            className="animate-fade-in from-primary-500 via-secondary-400 to-primary-500 mx-auto my-6 h-1 w-20 rounded-full bg-linear-to-r shadow-[0_0_20px_rgba(8,131,149,0.4)] sm:my-8 sm:w-32 lg:mx-0"
-            style={{ animationDelay: '400ms' }}
-          />
-
-          <div
-            className="animate-slide-up space-y-3"
-            style={{ animationDelay: '500ms' }}
-          >
-            <h2 className="text-base font-medium tracking-wide text-gray-200/90 sm:text-lg md:text-xl lg:text-2xl">
-              {department}
-            </h2>
-            <p className="text-sm font-light tracking-wide text-gray-400 sm:text-base md:text-lg lg:text-xl">
-              {university}
-            </p>
-          </div>
-
-          {/* ── CTA Buttons ─────────────────────────────────────── */}
-          <div
-            className="animate-slide-up mt-8 flex flex-col items-center justify-center gap-3 sm:mt-14 sm:flex-row sm:gap-6 lg:justify-start"
-            style={{ animationDelay: '700ms' }}
-          >
-            <JoinButton
-              href="/join"
-              label="Join Now"
-              className="from-primary-500 to-secondary-500 hover:shadow-primary-500/40 group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-linear-to-r px-8 py-4 text-base font-semibold text-white shadow-[0_8px_32px_rgba(8,131,149,0.3)] transition-all duration-300 hover:shadow-[0_12px_40px_rgba(8,131,149,0.5)] focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:outline-none active:scale-[0.97] sm:w-auto md:px-10 md:py-4.5 md:text-lg"
-            >
-              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <span className="relative">{joinLabel}</span>
-              <svg
-                className="relative h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                />
-              </svg>
-            </JoinButton>
-            <Button
-              variant="secondary"
-              size="lg"
-              href="/about"
-              className="w-full sm:w-auto"
-            >
-              {learnMoreLabel}
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Illustration ────────────────────────────────────────── */}
-        <div
-          className="animate-scale-in relative hidden items-center justify-center sm:flex"
-          style={{ animationDelay: '400ms' }}
-          aria-hidden="true"
+      {/* ── Text content — left-aligned overlay ─────────────── */}
+      <motion.div
+        className="pointer-events-none relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 xl:px-8"
+        style={{ y: yText }}
+      >
+        <motion.div
+          className="pointer-events-auto flex max-w-xl flex-col items-start gap-8"
+          variants={heroContainer}
+          initial="hidden"
+          animate="visible"
         >
-          {/* Soft glow behind the SVG */}
-          <div className="from-primary-500/20 to-secondary-500/20 pointer-events-none absolute inset-0 rounded-full bg-linear-to-br blur-[80px]" />
-          <SVG />
+          {/* Eyebrow */}
+          <motion.div variants={heroItem} className="flex items-center gap-4">
+            <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
+            <span className="font-mono text-[9px] font-medium tracking-[0.24em] text-zinc-400 uppercase sm:text-[10px] sm:tracking-[0.3em] md:text-[11px] md:tracking-[0.35em]">
+              {department} · {university}
+            </span>
+          </motion.div>
+
+          {/* Kinetic headline */}
+          <motion.h1
+            variants={heroItem}
+            className="kinetic-headline font-heading text-[12vw] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]"
+          >
+            CODE.
+            <br />
+            <span className="text-stroke-lime text-transparent">COMPETE.</span>
+            <br />
+            <span className="neon-text">CREATE.</span>
+          </motion.h1>
+
+          {/* Subheadline */}
+          <motion.p
+            variants={heroItem}
+            className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg"
+          >
+            {settings?.hero_description ||
+              "Join Netrokona University's premier programming community — compete, build, and grow alongside passionate engineers."}
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            variants={heroItem}
+            className="mt-2 flex flex-wrap items-center gap-4"
+          >
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/join"
+                className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
+              >
+                Join the Club
+                <span
+                  aria-hidden
+                  className="transition-transform group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/events"
+                className="font-heading hover:border-neon-lime/50 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:text-white"
+              >
+                View Events
+              </Link>
+            </motion.div>
+          </motion.div>
+
+          {/* Stats row */}
+          <motion.div
+            variants={heroItem}
+            className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8"
+          >
+            {[
+              ['150+', 'Members'],
+              ['40+', 'Contests'],
+              ['12', 'Awards'],
+            ].map(([value, label], i) => (
+              <motion.div
+                key={label}
+                variants={heroStat}
+                custom={i}
+                className="flex items-baseline gap-2"
+              >
+                <span className="font-heading text-xl font-bold text-white">
+                  {value}
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
+                  {label}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Node detail panel — bottom-right (only visible when canvas is shown) */}
+      {selectedNode && (
+        <div className="absolute right-4 bottom-16 z-20 hidden w-64 rounded-2xl border border-white/10 bg-zinc-950/80 p-4 backdrop-blur-md md:right-6 md:block md:w-72 lg:right-10 lg:w-80">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
+              <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
+                {selectedNode.id} · Track
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedNode(null)}
+              aria-label="Close"
+              className="inline-flex min-h-9 min-w-9 touch-manipulation items-center justify-center font-mono text-[10px] tracking-widest text-zinc-400 uppercase transition-colors hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="font-heading text-lg leading-tight font-bold text-white">
+            {selectedNode.label}
+          </div>
+          <p className="mt-2 font-sans text-xs leading-relaxed text-zinc-400">
+            {selectedNode.description}
+          </p>
         </div>
+      )}
+
+      {/* Scroll indicator */}
+      <div className="pointer-events-none absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
+        <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
+          Scroll
+        </span>
+        <div className="h-8 w-[1px] bg-gradient-to-b from-zinc-600 to-transparent" />
       </div>
     </section>
   );

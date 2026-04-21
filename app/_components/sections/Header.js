@@ -3,22 +3,17 @@
  * @module Header
  */
 
-import { Suspense } from 'react';
 import Navigation from './Navigation';
 import Logo from '../ui/Logo';
+import ScrollHeader from '../ui/ScrollHeader';
 
-/** Site header — logo and navigation bar. */
-function Header() {
+export default function Header({ session }) {
   return (
-    <header className="border-primary-900 border-b px-4 py-4 sm:px-6 sm:py-5 md:px-8">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <ScrollHeader>
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
         <Logo />
-        <Suspense fallback={<div className="h-10 w-48" />}>
-          <Navigation />
-        </Suspense>
+        <Navigation session={session} />
       </div>
-    </header>
+    </ScrollHeader>
   );
 }
-
-export default Header;

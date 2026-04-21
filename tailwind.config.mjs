@@ -61,11 +61,25 @@ const config = {
           light: '#EBF4F6',
           dark: '#0F172A',
         },
+        // Design system colors
+        'neon-lime': '#B6F36B',
+        'neon-violet': '#7C5CFF',
+        'neon-cyan': '#5EEAD4',
+        'deep-void': '#020307',
+        surface: '#0C0E16',
+        'surface-2': '#12151F',
+        'on-bg': '#EEF1FA',
+        'on-surface': '#C8CDDE',
+        outline: '#2A2E3F',
+        'outline-2': '#1A1D28',
+        'site-bg': '#05060B',
       },
 
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
         heading: ['Space Grotesk', 'sans-serif'],
+        headline: ['Space Grotesk', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
 

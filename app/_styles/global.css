@@ -1,21 +1,288 @@
 @config '../../tailwind.config.mjs';
 @import 'tailwindcss';
 
+/* ── Design System Utilities ──────────────────────────────────────────────── */
+
+.kinetic-headline {
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+
+/* glass-panel — dark default, light override */
+.glass-panel {
+  background: rgba(12, 14, 22, 0.55);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(182, 243, 107, 0.08);
+}
+:root:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(8, 131, 149, 0.12);
+}
+
+.soft-glow-lime {
+  box-shadow: 0 0 80px -20px rgba(182, 243, 107, 0.35);
+}
+:root:not(.dark) .soft-glow-lime {
+  box-shadow: 0 0 80px -20px rgba(8, 131, 149, 0.2);
+}
+
+.soft-glow-violet {
+  box-shadow: 0 0 80px -20px rgba(124, 92, 255, 0.35);
+}
+:root:not(.dark) .soft-glow-violet {
+  box-shadow: 0 0 80px -20px rgba(124, 92, 255, 0.2);
+}
+
+/* holographic-card — dark default, light override */
+.holographic-card {
+  background: linear-gradient(
+    135deg,
+    rgba(182, 243, 107, 0.035) 0%,
+    rgba(124, 92, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(238, 241, 250, 0.05);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.holographic-card:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(182, 243, 107, 0.1) 0%,
+    rgba(124, 92, 255, 0.1) 100%
+  );
+  border-color: rgba(182, 243, 107, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 0 60px -20px rgba(182, 243, 107, 0.25);
+}
+:root:not(.dark) .holographic-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+:root:not(.dark) .holographic-card:hover {
+  background: #ffffff;
+  border-color: rgba(8, 131, 149, 0.3);
+  box-shadow: 0 8px 32px -8px rgba(8, 131, 149, 0.18);
+  transform: translateY(-4px);
+}
+
+/* text-stroke adapts: dark = lime outline, light = teal outline */
+.text-stroke-lime {
+  -webkit-text-stroke: 1.5px #b6f36b;
+}
+:root:not(.dark) .text-stroke-lime {
+  -webkit-text-stroke: 1.5px #088395;
+}
+
+/* neon-text — dark = lime glow, light = teal */
+.neon-text {
+  color: #b6f36b;
+  text-shadow: 0 0 18px rgba(182, 243, 107, 0.45);
+}
+:root:not(.dark) .neon-text {
+  color: #066575;
+  text-shadow: none;
+}
+
+/* grid-overlay — barely visible in light mode */
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(182, 243, 107, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(182, 243, 107, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+:root:not(.dark) .grid-overlay {
+  background-image:
+    linear-gradient(rgba(8, 131, 149, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 131, 149, 0.06) 1px, transparent 1px);
+}
+
+.pulse-dot {
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Placeholder pattern backgrounds */
+.ph {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(238, 241, 250, 0.05) 0 1px,
+      transparent 1px 10px
+    ),
+    #0f1220;
+  color: #6b7089;
+  border: 1px solid rgba(238, 241, 250, 0.06);
+}
+:root:not(.dark) .ph {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(8, 131, 149, 0.06) 0 1px,
+      transparent 1px 10px
+    ),
+    #f3f8f9;
+  color: #4a6370;
+  border: 1px solid rgba(8, 131, 149, 0.1);
+}
+
+.ph-lime {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(182, 243, 107, 0.18) 0 1px,
+      transparent 1px 10px
+    ),
+    #0f1220;
+  color: #b6f36b;
+  border: 1px solid rgba(182, 243, 107, 0.25);
+  box-shadow: inset 0 0 80px rgba(182, 243, 107, 0.08);
+}
+:root:not(.dark) .ph-lime {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(8, 131, 149, 0.1) 0 1px,
+      transparent 1px 10px
+    ),
+    #eef7f8;
+  color: #066575;
+  border: 1px solid rgba(8, 131, 149, 0.2);
+  box-shadow: inset 0 0 60px rgba(8, 131, 149, 0.04);
+}
+
+.ph-violet {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(124, 92, 255, 0.2) 0 1px,
+      transparent 1px 10px
+    ),
+    #0e1020;
+  color: #7c5cff;
+  border: 1px solid rgba(124, 92, 255, 0.28);
+}
+:root:not(.dark) .ph-violet {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(124, 92, 255, 0.1) 0 1px,
+      transparent 1px 10px
+    ),
+    #f3f2ff;
+  color: #5b3fe8;
+  border: 1px solid rgba(124, 92, 255, 0.2);
+}
+
+/* ─── Stat numeral glow (mode-aware) ─────────────────────────────── */
+.stat-numeral {
+  text-shadow: 0 0 24px rgba(182, 243, 107, 0.35);
+}
+:root:not(.dark) .stat-numeral {
+  text-shadow: 0 0 18px rgba(15, 118, 110, 0.25);
+}
+
+/* ─── Light-mode overrides for neon utility classes ───────────────────
+   In dark mode, neon lime/violet on near-black provides strong contrast.
+   In light mode those same colors become invisible on white-ish surfaces,
+   so we substitute darker, accessible equivalents while preserving the
+   two-color brand language (teal stands in for lime, violet stays violet).
+---------------------------------------------------------------------- */
+:root:not(.dark) {
+  /* Text */
+  .text-neon-lime { color: #0f766e !important; }
+  .text-neon-violet { color: #6d28d9 !important; }
+  .text-neon-lime\/70 { color: rgba(15, 118, 110, 0.75) !important; }
+  .text-neon-lime\/25 { color: rgba(15, 118, 110, 0.5) !important; }
+
+  /* Backgrounds (solid + alpha) */
+  .bg-neon-lime { background-color: #0f766e !important; }
+  .bg-neon-lime\/10 { background-color: rgba(15, 118, 110, 0.08) !important; }
+  .bg-neon-lime\/5  { background-color: rgba(15, 118, 110, 0.05) !important; }
+  .bg-neon-lime\/60 { background-color: rgba(15, 118, 110, 0.55) !important; }
+  .bg-neon-lime\/90 { background-color: rgba(15, 118, 110, 0.92) !important; }
+  .bg-neon-violet\/10 { background-color: rgba(109, 40, 217, 0.08) !important; }
+  .bg-neon-violet\/5  { background-color: rgba(109, 40, 217, 0.05) !important; }
+  .bg-neon-violet\/90 { background-color: rgba(109, 40, 217, 0.92) !important; }
+  .bg-deep-void,
+  .bg-deep-void\/80,
+  .bg-deep-void\/50,
+  .bg-deep-void\/40 { background-color: rgba(241, 245, 249, 0.85) !important; }
+
+  /* Borders */
+  .border-neon-lime { border-color: #0f766e !important; }
+  .border-neon-lime\/15 { border-color: rgba(15, 118, 110, 0.18) !important; }
+  .border-neon-lime\/20 { border-color: rgba(15, 118, 110, 0.22) !important; }
+  .border-neon-lime\/25 { border-color: rgba(15, 118, 110, 0.28) !important; }
+  .border-neon-lime\/30 { border-color: rgba(15, 118, 110, 0.32) !important; }
+  .border-l-neon-lime { border-left-color: #0f766e !important; }
+  .border-neon-violet\/20 { border-color: rgba(109, 40, 217, 0.2) !important; }
+  .border-neon-violet\/30 { border-color: rgba(109, 40, 217, 0.3) !important; }
+  .border-l-neon-violet { border-left-color: #6d28d9 !important; }
+
+  /* Hover variants */
+  .hover\:border-neon-lime:hover { border-color: #0f766e !important; }
+  .hover\:border-neon-lime\/50:hover { border-color: rgba(15, 118, 110, 0.5) !important; }
+  .hover\:text-neon-lime:hover { color: #0f766e !important; }
+  .hover\:text-neon-violet:hover { color: #6d28d9 !important; }
+  .hover\:bg-neon-lime:hover { background-color: #0f766e !important; }
+
+  /* Gradient stops */
+  .from-neon-lime { --tw-gradient-from: #0f766e var(--tw-gradient-from-position) !important; }
+  .from-neon-lime\/30 { --tw-gradient-from: rgba(15, 118, 110, 0.3) var(--tw-gradient-from-position) !important; }
+  .from-neon-lime\/5  { --tw-gradient-from: rgba(15, 118, 110, 0.06) var(--tw-gradient-from-position) !important; }
+  .to-neon-violet { --tw-gradient-to: #6d28d9 var(--tw-gradient-to-position) !important; }
+  .to-neon-violet\/5 { --tw-gradient-to: rgba(109, 40, 217, 0.06) var(--tw-gradient-to-position) !important; }
+  .via-neon-lime\/20 { --tw-gradient-stops: var(--tw-gradient-from), rgba(15,118,110,0.2) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
+  .via-neon-violet\/30 { --tw-gradient-stops: var(--tw-gradient-from), rgba(109,40,217,0.3) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
+}
+
 @layer base {
+  /* Light mode tokens */
   :root {
-    --foreground-rgb: 15, 23, 42; /* slate-900 */
-    --background-rgb: 235, 244, 246; /* #EBF4F6 */
+    --foreground-rgb: 15, 23, 42;
+    --background-rgb: 235, 244, 246;
+    --accent: #088395;
+    --accent-2: #7C5CFF;
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,0.07);
+    --muted: #64748b;
+    --muted-2: #94a3b8;
+    --heading: #0f172a;
+    --surface-token: #f1f5f9;
   }
 
+  /* Dark mode tokens */
   .dark {
-    --foreground-rgb: 226, 232, 240; /* slate-200 */
-    --background-rgb: 15, 23, 42; /* dark background */
+    --foreground-rgb: 226, 232, 240;
+    --background-rgb: 5, 6, 11;
+    --accent: #B6F36B;
+    --accent-2: #7C5CFF;
+    --card-bg: #0c0e16;
+    --card-border: rgba(238,241,250,0.05);
+    --muted: #71717a;
+    --muted-2: #52525b;
+    --heading: #ffffff;
+    --surface-token: #12151f;
   }
 
   /* Smooth scroll with reduced-motion respect */
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -26,17 +293,41 @@
 
   body {
     color: rgb(var(--foreground-rgb));
-    background: rgb(var(--background-rgb));
+    background:
+      radial-gradient(
+        900px 600px at 10% -5%,
+        rgba(124, 92, 255, 0.18),
+        transparent 60%
+      ),
+      radial-gradient(
+        700px 500px at 90% 10%,
+        rgba(182, 243, 107, 0.1),
+        transparent 60%
+      ),
+      radial-gradient(circle at 50% 100%, #0a0c14 0%, #05060b 100%);
     font-family: var(--font-inter), 'Inter', sans-serif;
-    text-size-adjust: 100%;
-    -webkit-text-size-adjust: 100%;
     @apply antialiased;
+  }
+
+  html:not(.dark) body {
+    background:
+      radial-gradient(
+        900px 600px at 10% -5%,
+        rgba(8, 131, 149, 0.08),
+        transparent 60%
+      ),
+      radial-gradient(
+        700px 500px at 90% 10%,
+        rgba(124, 92, 255, 0.06),
+        transparent 60%
+      ),
+      radial-gradient(circle at 50% 100%, #f8fcfd 0%, #ebf4f6 100%);
   }
 
   /* Refined selection color */
   ::selection {
-    background: rgba(8, 131, 149, 0.3);
-    color: white;
+    background: rgba(182, 243, 107, 0.3);
+    color: #000;
   }
 
   h1,
@@ -149,7 +440,7 @@
 
 @layer utilities {
   .text-balance {
-    text-wrap: balance;
+    overflow-wrap: anywhere;
   }
 
   .gradient-primary {
@@ -163,7 +454,6 @@
   /* Hide scrollbar but keep scrolling functionality */
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -172,8 +462,6 @@
 
   /* Thin themed scrollbar for dark UI */
   .scrollbar-themed {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
 
   .scrollbar-themed::-webkit-scrollbar {
@@ -232,7 +520,6 @@
 ====================== */
 
 .scrollbar-none {
-  scrollbar-width: none;
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
@@ -240,7 +527,6 @@
 
 /* Thin scrollbar for toolbar */
 .scrollbar-thin {
-  scrollbar-width: thin;
 }
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
@@ -575,8 +861,8 @@
   li
   > label
   input[type='checkbox'] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   width: 1rem;
   height: 1rem;
   border: 1.5px solid rgba(255, 255, 255, 0.25);
@@ -1164,8 +1450,8 @@
   overflow-x: auto;
   border: none;
   letter-spacing: 0;
-  tab-size: 2;
   -moz-tab-size: 2;
+  tab-size: 2;
   counter-reset: line-num;
   word-break: normal;
   overflow-wrap: normal;
@@ -1301,11 +1587,9 @@
 
 /* ── Code runner textarea — editor-style ────────────────── */
 .code-runner-textarea {
-  tab-size: 2;
   -moz-tab-size: 2;
+  tab-size: 2;
   caret-color: #58a6ff;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
   letter-spacing: 0;
   word-spacing: 0;
 }
@@ -1824,8 +2108,8 @@
 }
 
 .blog-content ul[data-type='taskList'] li > label input[type='checkbox'] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   width: 1rem;
   height: 1rem;
   border: 1.5px solid rgba(255, 255, 255, 0.2);
