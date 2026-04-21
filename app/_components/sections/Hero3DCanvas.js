@@ -169,7 +169,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       0.1,
       1000
     );
-    camera.position.z = 32;
+    camera.position.z = 28;
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
@@ -188,7 +189,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     scene.add(worldGroup);
 
     const coreRadius = 10.5;
-    const worldOffsetX = -coreRadius * 0.2;
+    const worldOffsetX = coreRadius * 1.6;
     const nodeBaseScale = 6.8;
     const nodePulse = 0.28;
     const nodeHoverBoost = 1.42;
@@ -412,10 +413,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       return tex;
     };
 
-    const extendedSnippets = [
-      ...MULTILINE_CODE_SNIPPETS,
-      ...MULTILINE_CODE_SNIPPETS,
-    ];
+    const extendedSnippets = MULTILINE_CODE_SNIPPETS.slice(0, 3);
     const snippetMeshes = [];
     const snippetData = extendedSnippets
       .map((text, i) => {
