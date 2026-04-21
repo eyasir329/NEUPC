@@ -10,20 +10,26 @@
  *   /api/image/proxy?url={encoded}  — proxies any external image URL
  */
 
+export const dynamic = 'force-dynamic'; // required — params differ per request
+export const fetchCache = 'force-cache'; // cache all fetch() calls inside this route
+
 const PLACEHOLDER = '/placeholder-event.svg';
+const SEVEN_DAYS = 604800;
 
 const PROXY_HEADERS = {
-  'Cache-Control': 'public, max-age=604800, immutable',
+  'Cache-Control': `public, max-age=${SEVEN_DAYS}, immutable`,
   'Access-Control-Allow-Origin': '*',
 };
 
-/** Redirect to placeholder image (short cache so it retries later). */
+/** In-process memory cache: fileId → ArrayBuffer + content-type */
+const memCache = new Map();
+
 function placeholderRedirect() {
   return new Response(null, {
     status: 302,
     headers: {
       Location: PLACEHOLDER,
-      'Cache-Control': 'public, max-age=300', // retry after 5 min
+      'Cache-Control': 'public, max-age=300',
     },
   });
 }
@@ -37,13 +43,17 @@ async function fetchImage(url) {
       Referer: new URL(url).origin + '/',
     },
     redirect: 'follow',
-    next: { revalidate: 604800 }, // cache upstream fetch for 7 days, matching PROXY_HEADERS
+    next: { revalidate: SEVEN_DAYS },
   });
   if (!res.ok) return null;
   const ct = res.headers.get('content-type') || '';
   if (!ct.startsWith('image/')) return null;
   const body = await res.arrayBuffer();
   if (body.byteLength === 0) return null;
+  return { body, ct };
+}
+
+function imageResponse(body, ct) {
   return new Response(body, {
     status: 200,
     headers: { 'Content-Type': ct, ...PROXY_HEADERS },
@@ -53,7 +63,7 @@ async function fetchImage(url) {
 export async function GET(request, { params }) {
   const { id } = await params;
 
-  // ── External URL proxy mode: /api/image/proxy?url=<encoded> ───────────
+  // ── External URL proxy mode ────────────────────────────────────────────
   if (id === 'proxy') {
     const { searchParams } = new URL(request.url);
     const rawUrl = searchParams.get('url');
@@ -62,9 +72,18 @@ export async function GET(request, { params }) {
       return placeholderRedirect();
     }
 
+    const cacheKey = `proxy:${rawUrl}`;
+    if (memCache.has(cacheKey)) {
+      const { body, ct } = memCache.get(cacheKey);
+      return imageResponse(body, ct);
+    }
+
     try {
       const result = await fetchImage(rawUrl);
-      if (result) return result;
+      if (result) {
+        memCache.set(cacheKey, result);
+        return imageResponse(result.body, result.ct);
+      }
       return placeholderRedirect();
     } catch (err) {
       console.error('Image proxy error (external):', err);
@@ -72,21 +91,31 @@ export async function GET(request, { params }) {
     }
   }
 
-  // ── Drive file ID mode: /api/image/{driveFileId} ──────────────────────
+  // ── Drive file ID mode ─────────────────────────────────────────────────
   if (!id || typeof id !== 'string' || id.length < 10) {
     return placeholderRedirect();
   }
 
+  // Serve from in-process memory cache (survives multiple requests per deploy)
+  if (memCache.has(id)) {
+    const { body, ct } = memCache.get(id);
+    return imageResponse(body, ct);
+  }
+
   try {
-    // Try Google CDN direct link
     const upstream = `https://lh3.googleusercontent.com/d/${id}`;
     const result = await fetchImage(upstream);
-    if (result) return result;
+    if (result) {
+      memCache.set(id, result);
+      return imageResponse(result.body, result.ct);
+    }
 
-    // Fallback: drive.google.com/thumbnail
     const fallback = `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
     const result2 = await fetchImage(fallback);
-    if (result2) return result2;
+    if (result2) {
+      memCache.set(id, result2);
+      return imageResponse(result2.body, result2.ct);
+    }
 
     return placeholderRedirect();
   } catch (err) {
