@@ -119,15 +119,25 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     previousPosition: { x: 0, y: 0 },
     velocity: { x: 0, y: 0 },
   });
+  const isOverGlobeRef = useRef(false);
+  const hitTestRef = useRef(null); // set by useEffect once raycaster is available
 
   useEffect(() => {
     onNodeClickRef.current = onNodeClick;
   }, [onNodeClick]);
 
   const handlePointerDown = (e) => {
+    // On touch/first contact, pointermove hasn't run yet — do a live hit test
+    const overGlobe = hitTestRef.current
+      ? hitTestRef.current(e.clientX, e.clientY)
+      : isOverGlobeRef.current;
+    if (!overGlobe) return;
     interactionState.current.isDragging = true;
     interactionState.current.dragDistance = 0;
     interactionState.current.previousPosition = { x: e.clientX, y: e.clientY };
+    if (mountRef.current) {
+      mountRef.current.style.touchAction = 'none';
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
@@ -151,6 +161,9 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
   const handlePointerUp = (e) => {
     interactionState.current.isDragging = false;
+    if (mountRef.current) {
+      mountRef.current.style.touchAction = 'auto';
+    }
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
@@ -391,7 +404,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
 
-      ctx.font = '14px "JetBrains Mono", monospace';
+      ctx.font = '13px "JetBrains Mono", monospace';
       ctx.fillStyle = isCyan
         ? 'rgba(182, 243, 107, 0.7)'
         : 'rgba(124, 92, 255, 0.7)';
@@ -405,7 +418,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       const lines = text.split('\n');
       lines.forEach((line, i) => {
-        ctx.fillText(line, 16, 16 + i * 20);
+        ctx.fillText(line, 16, 16 + i * 19);
       });
 
       const tex = new THREE.CanvasTexture(canvas);
@@ -421,7 +434,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         const tex = createSnippetTexture(text, isCyan);
         if (!tex) return null;
 
-        const snippetGeo = new THREE.PlaneGeometry(12, 6);
+        const snippetGeo = new THREE.PlaneGeometry(9.5, 4.75);
         const snippetMat = new THREE.MeshBasicMaterial({
           map: tex,
           transparent: true,
@@ -434,7 +447,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         const pos = new THREE.Vector3(
           THREE.MathUtils.randFloatSpread(60),
           THREE.MathUtils.randFloatSpread(50),
-          THREE.MathUtils.randFloat(-20, 10)
+          THREE.MathUtils.randFloat(-34, -18)
         );
         mesh.position.copy(pos);
         mesh.rotation.x = THREE.MathUtils.randFloatSpread(0.2);
@@ -463,6 +476,19 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     const mouse = new THREE.Vector2(-9999, -9999);
     let hoveredNode = null;
 
+    hitTestRef.current = (clientX, clientY) => {
+      const rect = mountEl.getBoundingClientRect();
+      const m = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(m, camera);
+      return (
+        raycaster.intersectObjects(nodeSprites).length > 0 ||
+        raycaster.intersectObject(sphereLines).length > 0
+      );
+    };
+
     const onScenePointerMove = (event) => {
       const rect = mountEl.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -473,10 +499,28 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       mouse.set(-9999, -9999);
     };
 
-    const onSceneClick = () => {
+    const onSceneClick = (event) => {
       if (interactionState.current.dragDistance > 5) return;
-      if (hoveredNode && onNodeClickRef.current) {
-        onNodeClickRef.current(hoveredNode.userData.nodeData);
+
+      let clickedNode = hoveredNode;
+
+      if (
+        event &&
+        typeof event.clientX === 'number' &&
+        typeof event.clientY === 'number'
+      ) {
+        const rect = mountEl.getBoundingClientRect();
+        const clickMouse = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(clickMouse, camera);
+        const clickIntersects = raycaster.intersectObjects(nodeSprites);
+        clickedNode = clickIntersects[0]?.object || null;
+      }
+
+      if (clickedNode && onNodeClickRef.current) {
+        onNodeClickRef.current(clickedNode.userData.nodeData);
       }
     };
 
@@ -543,17 +587,22 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(nodeSprites);
+      const sphereHit = raycaster.intersectObject(sphereLines);
+      isOverGlobeRef.current = intersects.length > 0 || sphereHit.length > 0;
 
       if (intersects.length > 0) {
         if (hoveredNode !== intersects[0].object) {
           hoveredNode = intersects[0].object;
           mountEl.style.cursor = 'pointer';
         }
-      } else if (hoveredNode) {
-        hoveredNode = null;
+      } else if (sphereHit.length > 0) {
+        if (hoveredNode) hoveredNode = null;
         mountEl.style.cursor = interactionState.current.isDragging
           ? 'grabbing'
           : 'grab';
+      } else if (hoveredNode) {
+        hoveredNode = null;
+        mountEl.style.cursor = 'default';
       }
 
       const timeSec = Date.now() * 0.001;
@@ -705,10 +754,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
   }, []);
 
   return (
-    <div
-      className="absolute inset-0 z-1 h-full w-full bg-transparent"
-      style={{ touchAction: 'none' }}
-    >
+    <div className="absolute inset-0 z-1 h-full w-full bg-transparent">
       <div
         ref={mountRef}
         onPointerDown={handlePointerDown}
@@ -717,7 +763,11 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         onPointerCancel={handlePointerUp}
         onPointerLeave={(e) => {
           handlePointerUp(e);
-          if (mountRef.current) mountRef.current.style.cursor = 'grab';
+          isOverGlobeRef.current = false;
+          if (mountRef.current) {
+            mountRef.current.style.cursor = 'default';
+            mountRef.current.style.touchAction = 'auto';
+          }
         }}
         className="absolute inset-0 z-0 h-full w-full outline-none"
       />

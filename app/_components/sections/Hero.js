@@ -37,7 +37,7 @@ function Hero({ data = {}, settings = {} }) {
       className="relative z-0 flex min-h-screen items-center overflow-hidden pt-[calc(var(--header-h,69px)+1.5rem)] pb-16 sm:pt-[calc(var(--header-h,69px)+2rem)]"
     >
       {/* ── Full-bleed 3D canvas (hidden on mobile) ─────────── */}
-      <div className="absolute inset-0 z-0 hidden md:block" style={{ touchAction: 'none' }}>
+      <div className="absolute inset-0 z-0 hidden md:block">
         <Hero3DCanvas onNodeClick={setSelectedNode} />
         {/* Left veil keeps text readable */}
         <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#05060B]/90 via-[#05060B]/50 to-transparent" />
@@ -52,19 +52,18 @@ function Hero({ data = {}, settings = {} }) {
       </div>
 
       {/* ── Text content — left-aligned overlay ─────────────── */}
-      <div className="pointer-events-none relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="pointer-events-none relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 xl:px-8">
         <div className="pointer-events-auto flex max-w-xl flex-col items-start gap-8">
-
           {/* Eyebrow */}
           <div className="flex items-center gap-4">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
-            <span className="font-mono text-[11px] font-medium tracking-[0.35em] text-zinc-400 uppercase">
+            <span className="font-mono text-[9px] font-medium tracking-[0.24em] text-zinc-400 uppercase sm:text-[10px] sm:tracking-[0.3em] md:text-[11px] md:tracking-[0.35em]">
               {department} · {university}
             </span>
           </div>
 
           {/* Kinetic headline */}
-          <h1 className="kinetic-headline font-heading text-[clamp(3.5rem,9vw,8rem)] leading-none font-black text-white uppercase select-none">
+          <h1 className="kinetic-headline font-heading text-[12vw] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]">
             CODE.
             <br />
             <span className="text-stroke-lime text-transparent">COMPETE.</span>
@@ -73,7 +72,7 @@ function Hero({ data = {}, settings = {} }) {
           </h1>
 
           {/* Subheadline */}
-          <p className="max-w-lg font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg">
+          <p className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg">
             {settings?.hero_description ||
               "Join Netrokona University's premier programming community — compete, build, and grow alongside passionate engineers."}
           </p>
@@ -82,20 +81,25 @@ function Hero({ data = {}, settings = {} }) {
           <div className="mt-2 flex flex-wrap items-center gap-4">
             <Link
               href="/join"
-              className="group bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-all hover:scale-[1.02] hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
+              className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-all hover:scale-[1.02] hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
             >
               Join the Club
-              <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+              <span
+                aria-hidden
+                className="transition-transform group-hover:translate-x-1"
+              >
+                →
+              </span>
             </Link>
             <Link
               href="/events"
-              className="font-heading inline-flex items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/50 hover:text-white"
+              className="font-heading hover:border-neon-lime/50 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:text-white"
             >
               View Events
             </Link>
           </div>
 
-          {/* Meta row */}
+          {/* Stats row */}
           <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8">
             {[
               ['150+', 'Members'],
@@ -103,17 +107,21 @@ function Hero({ data = {}, settings = {} }) {
               ['12', 'Awards'],
             ].map(([value, label]) => (
               <div key={label} className="flex items-baseline gap-2">
-                <span className="font-heading text-xl font-bold text-white">{value}</span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">{label}</span>
+                <span className="font-heading text-xl font-bold text-white">
+                  {value}
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Node detail panel — bottom-right */}
+      {/* Node detail panel — bottom-right (only visible when canvas is shown) */}
       {selectedNode && (
-        <div className="absolute right-6 bottom-16 z-20 w-72 rounded-2xl border border-white/10 bg-zinc-950/80 p-4 backdrop-blur-md sm:right-8 sm:w-80 lg:right-12">
+        <div className="absolute right-4 bottom-16 z-20 hidden w-64 rounded-2xl border border-white/10 bg-zinc-950/80 p-4 backdrop-blur-md md:right-6 md:block md:w-72 lg:right-10 lg:w-80">
           <div className="mb-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
@@ -125,7 +133,7 @@ function Hero({ data = {}, settings = {} }) {
               type="button"
               onClick={() => setSelectedNode(null)}
               aria-label="Close"
-              className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase transition-colors hover:text-white"
+              className="inline-flex min-h-9 min-w-9 touch-manipulation items-center justify-center font-mono text-[10px] tracking-widest text-zinc-400 uppercase transition-colors hover:text-white"
             >
               ✕
             </button>
@@ -141,7 +149,9 @@ function Hero({ data = {}, settings = {} }) {
 
       {/* Scroll indicator */}
       <div className="pointer-events-none absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
-        <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">Scroll</span>
+        <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
+          Scroll
+        </span>
         <div className="h-8 w-[1px] bg-gradient-to-b from-zinc-600 to-transparent" />
       </div>
     </section>
