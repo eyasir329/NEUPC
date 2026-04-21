@@ -6,21 +6,32 @@
  */
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import Hero3DCanvas from './Hero3DCanvas';
+import { useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import dynamic from 'next/dynamic';
+
+const Hero3DCanvas = dynamic(() => import('./Hero3DCanvas'), { ssr: false });
 
 const heroContainer = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.2 } },
+  visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
 };
 const heroItem = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] } },
+  hidden: { opacity: 0, y: 30, filter: 'blur(8px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 const heroStat = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 
 const DEFAULTS = {
@@ -32,6 +43,12 @@ function Hero({ data = {}, settings = {} }) {
   const { department = DEFAULTS.department, university = DEFAULTS.university } =
     data;
   const [selectedNode, setSelectedNode] = useState(null);
+  const containerRef = useRef(null);
+
+  const { scrollY } = useScroll();
+  const yBg = useTransform(scrollY, [0, 1000], [0, 400]);
+  const opacityBg = useTransform(scrollY, [0, 600], [1, 0]);
+  const yText = useTransform(scrollY, [0, 1000], [0, 200]);
 
   useEffect(() => {
     if (!selectedNode) return undefined;
@@ -47,8 +64,9 @@ function Hero({ data = {}, settings = {} }) {
 
   return (
     <section
+      ref={containerRef}
       aria-label="Hero"
-      className="relative z-0 flex min-h-screen items-center overflow-hidden pt-[calc(var(--header-h,69px)+1.5rem)] pb-16 sm:pt-[calc(var(--header-h,69px)+2rem)]"
+      className="relative z-0 flex min-h-[100svh] items-center overflow-hidden pt-[calc(var(--header-h,69px)+1.5rem)] pb-16 sm:pt-[calc(var(--header-h,69px)+2rem)] md:min-h-screen"
     >
       {/* ── Full-bleed 3D canvas (hidden on mobile) ─────────── */}
       <div className="absolute inset-0 z-0 hidden md:block">
@@ -59,14 +77,20 @@ function Hero({ data = {}, settings = {} }) {
       </div>
 
       {/* Background accent orbs */}
-      <div className="pointer-events-none absolute inset-0 z-[-1] overflow-hidden">
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-[-1] overflow-hidden"
+        style={{ y: yBg, opacity: opacityBg }}
+      >
         <div className="grid-overlay absolute inset-0 opacity-30" />
         <div className="bg-neon-violet/10 absolute -top-40 -left-40 h-125 w-125 rounded-full blur-[140px]" />
         <div className="bg-neon-lime/10 absolute top-1/3 -right-40 h-125 w-125 rounded-full blur-[140px]" />
-      </div>
+      </motion.div>
 
       {/* ── Text content — left-aligned overlay ─────────────── */}
-      <div className="pointer-events-none relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 xl:px-8">
+      <motion.div
+        className="pointer-events-none relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 xl:px-8"
+        style={{ y: yText }}
+      >
         <motion.div
           className="pointer-events-auto flex max-w-xl flex-col items-start gap-8"
           variants={heroContainer}
@@ -94,20 +118,31 @@ function Hero({ data = {}, settings = {} }) {
           </motion.h1>
 
           {/* Subheadline */}
-          <motion.p variants={heroItem} className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg">
+          <motion.p
+            variants={heroItem}
+            className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg"
+          >
             {settings?.hero_description ||
               "Join Netrokona University's premier programming community — compete, build, and grow alongside passionate engineers."}
           </motion.p>
 
           {/* CTAs */}
-          <motion.div variants={heroItem} className="mt-2 flex flex-wrap items-center gap-4">
+          <motion.div
+            variants={heroItem}
+            className="mt-2 flex flex-wrap items-center gap-4"
+          >
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link
                 href="/join"
                 className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
               >
                 Join the Club
-                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                <span
+                  aria-hidden
+                  className="transition-transform group-hover:translate-x-1"
+                >
+                  →
+                </span>
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
@@ -136,13 +171,17 @@ function Hero({ data = {}, settings = {} }) {
                 custom={i}
                 className="flex items-baseline gap-2"
               >
-                <span className="font-heading text-xl font-bold text-white">{value}</span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">{label}</span>
+                <span className="font-heading text-xl font-bold text-white">
+                  {value}
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
+                  {label}
+                </span>
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Node detail panel — bottom-right (only visible when canvas is shown) */}
       {selectedNode && (

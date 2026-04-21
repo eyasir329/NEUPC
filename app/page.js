@@ -10,7 +10,7 @@ import Achievements from './_components/sections/Achievements';
 import Blogs from './_components/sections/Blogs';
 import Join from './_components/sections/Join';
 import ScrollToTop from './_components/ui/ScrollToTop';
-import MotionSection from './_components/motion/MotionSection';
+import ScrollProgress from './_components/ui/ScrollProgress';
 import { OrganizationJsonLd, WebsiteJsonLd } from './_components/ui/JsonLd';
 import { getHomePageData } from './_lib/public-actions';
 import { buildMetadata, SITE_DESCRIPTION, SITE_TITLE } from './_lib/seo';
@@ -48,6 +48,7 @@ export default async function HomePage() {
 
   return (
     <main className="relative min-h-screen">
+      <ScrollProgress />
       {/* Structured Data */}
       <OrganizationJsonLd />
       <WebsiteJsonLd />
@@ -59,38 +60,30 @@ export default async function HomePage() {
       <About data={about} settings={settings} />
 
       {/* ── Events ──────────────────────────────────────────────────── */}
-      <MotionSection>
-        <Events
-          events={events}
-          featuredEvents={featuredEvents}
-          recentEvents={recentEvents}
-          settings={settings}
-        />
-      </MotionSection>
+      <Events
+        events={events}
+        featuredEvents={featuredEvents}
+        recentEvents={recentEvents}
+        settings={settings}
+      />
 
       {/* ── Achievements ────────────────────────────────────────────── */}
-      <MotionSection>
-        <Achievements
-          achievements={achievements}
-          participations={participations}
-          stats={stats}
-          settings={settings}
-        />
-      </MotionSection>
+      <Achievements
+        achievements={achievements}
+        participations={participations}
+        stats={stats}
+        settings={settings}
+      />
 
       {/* ── Blogs ───────────────────────────────────────────────────── */}
-      <MotionSection>
-        <Blogs
-          featuredBlogs={featuredBlogs}
-          recentBlogs={recentBlogs}
-          settings={settings}
-        />
-      </MotionSection>
+      <Blogs
+        featuredBlogs={featuredBlogs}
+        recentBlogs={recentBlogs}
+        settings={settings}
+      />
 
       {/* ── Join ────────────────────────────────────────────────────── */}
-      <MotionSection>
-        <Join benefits={joinBenefits} settings={settings} />
-      </MotionSection>
+      <Join benefits={joinBenefits} settings={settings} />
 
       <ScrollToTop />
     </main>

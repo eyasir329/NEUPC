@@ -19,7 +19,7 @@ import TopProgressBar from './_components/ui/TopProgressBar';
 import ToasterProvider from './_components/ui/ToasterProvider';
 import { UserRoleProvider } from './_components/ui/UserRoleProvider';
 import NavbarSkeleton from './_components/ui/NavbarSkeleton';
-import HydrationLoader from './_components/ui/HydrationLoader';
+import AppShell from './_components/ui/AppShell';
 import PageTransition from './_components/motion/PageTransition';
 import { auth } from '@/app/_lib/auth';
 
@@ -143,20 +143,21 @@ export default async function RootLayout({ children }) {
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
-        <HydrationLoader />
         <TopProgressBar />
         <ToasterProvider />
-        <Suspense fallback={<NavbarSkeleton />}>
-          <AsyncHeader />
-        </Suspense>
-        <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
-          <main className="w-full grow">
-            <PageTransition>{children}</PageTransition>
-          </main>
-        </UserRoleProvider>
-        <Suspense fallback={null}>
-          <AsyncFooter />
-        </Suspense>
+        <AppShell>
+          <Suspense fallback={<NavbarSkeleton />}>
+            <AsyncHeader />
+          </Suspense>
+          <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
+            <main className="w-full grow">
+              <PageTransition>{children}</PageTransition>
+            </main>
+          </UserRoleProvider>
+          <Suspense fallback={null}>
+            <AsyncFooter />
+          </Suspense>
+        </AppShell>
       </body>
     </html>
   );

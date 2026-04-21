@@ -8,8 +8,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { cn } from '@/app/_lib/utils';
-import { useScrollReveal } from '@/app/_lib/hooks';
+import { motion } from 'framer-motion';
 
 const DEFAULTS = {
   title: 'Who We Are',
@@ -19,8 +18,37 @@ const DEFAULTS = {
     'The club serves as a platform where students can explore competitive programming, software development, research discussions, and emerging technologies beyond the academic syllabus.',
 };
 
+// Animation variants
+const headerVariant = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+const gridContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
+};
+const imageVariant = {
+  hidden: { opacity: 0, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+const textVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
 function About({ data = {}, settings = {} }) {
-  const [ref, visible] = useScrollReveal({ threshold: 0.06 });
   const [isExpanded, setIsExpanded] = useState(false);
 
   const {
@@ -43,39 +71,37 @@ function About({ data = {}, settings = {} }) {
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* ── Section header (centred, like other sections) ─── */}
-        <div
-          className={cn(
-            'mb-16 space-y-5 text-center transition-all duration-700 sm:mb-20',
-            visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-          )}
+        <motion.div
+          variants={headerVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px 0px' }}
+          className="mb-16 space-y-5 text-center sm:mb-20"
         >
           <div className="flex items-center justify-center gap-4">
-            <span className="h-px w-10 bg-neon-violet" />
-            <span className="font-mono text-[11px] font-bold tracking-[0.5em] text-neon-violet uppercase">
+            <span className="bg-neon-violet h-px w-10" />
+            <span className="text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
               Identity / 001
             </span>
-            <span className="h-px w-10 bg-neon-violet" />
+            <span className="bg-neon-violet h-px w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-5xl font-black text-slate-900 uppercase md:text-6xl lg:text-7xl dark:text-white">
+          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-slate-900 uppercase dark:text-white">
             {title}
           </h2>
-        </div>
+        </motion.div>
 
         {/* ── Main content grid ──────────────────────────────── */}
-        <div
-          ref={ref}
-          className={cn(
-            'grid grid-cols-1 items-start gap-12 transition-all duration-700 lg:grid-cols-12 lg:items-center lg:gap-16',
-            visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          )}
+        <motion.div
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-40px 0px' }}
+          className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:items-center lg:gap-16"
         >
           {/* ── Image column ─────────────────────────────────── */}
-          <div
-            className={cn(
-              'relative lg:col-span-5',
-              'transition-all delay-200 duration-700',
-              visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-            )}
+          <motion.div
+            variants={imageVariant}
+            className="relative lg:col-span-5"
           >
             {/* Card */}
             <div className="ph-violet soft-glow-violet relative mx-auto aspect-[4/5] w-full max-w-[360px] overflow-hidden rounded-3xl sm:max-w-[420px] lg:max-w-full">
@@ -141,10 +167,13 @@ function About({ data = {}, settings = {} }) {
                 Active · {settings?.member_count || '150+'}
               </span>
             </div>
-          </div>
+          </motion.div>
 
           {/* ── Text column ──────────────────────────────────── */}
-          <div className="space-y-8 lg:col-span-7">
+          <motion.div
+            variants={textVariant}
+            className="space-y-8 lg:col-span-7"
+          >
             {/* Description */}
             <div className="space-y-4">
               <p className="font-sans text-base leading-[1.9] font-light text-slate-600 sm:text-lg dark:text-zinc-400">
@@ -156,7 +185,7 @@ function About({ data = {}, settings = {} }) {
                   <button
                     type="button"
                     onClick={() => setIsExpanded(true)}
-                    className="font-heading inline-flex touch-manipulation items-center gap-2 text-[10px] font-bold tracking-widest text-neon-lime uppercase transition-colors hover:opacity-80 sm:text-[11px]"
+                    className="font-heading text-neon-lime inline-flex touch-manipulation items-center gap-2 text-[10px] font-bold tracking-widest uppercase transition-colors hover:opacity-80 sm:text-[11px]"
                   >
                     Read More
                     <span aria-hidden className="text-base leading-none">
@@ -186,9 +215,9 @@ function About({ data = {}, settings = {} }) {
             {/* Mission / Vision */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-neon-lime/10">
+                <div className="bg-neon-lime/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
                   <svg
-                    className="h-5 w-5 text-neon-lime"
+                    className="text-neon-lime h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -201,7 +230,7 @@ function About({ data = {}, settings = {} }) {
                     />
                   </svg>
                 </div>
-                <h4 className="font-heading mb-2 text-[11px] font-bold tracking-widest text-neon-lime uppercase sm:text-[12px]">
+                <h4 className="font-heading text-neon-lime mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
                   Mission
                 </h4>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
@@ -211,9 +240,9 @@ function About({ data = {}, settings = {} }) {
               </div>
 
               <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-neon-violet/10">
+                <div className="bg-neon-violet/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
                   <svg
-                    className="h-5 w-5 text-neon-violet"
+                    className="text-neon-violet h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -231,7 +260,7 @@ function About({ data = {}, settings = {} }) {
                     />
                   </svg>
                 </div>
-                <h4 className="font-heading mb-2 text-[11px] font-bold tracking-widest text-neon-violet uppercase sm:text-[12px]">
+                <h4 className="font-heading text-neon-violet mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
                   Vision
                 </h4>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
@@ -245,7 +274,7 @@ function About({ data = {}, settings = {} }) {
             <div className="pt-2">
               <Link
                 href="/about"
-                className="group font-heading inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-slate-300 px-7 py-3 text-[10px] font-bold tracking-widest text-slate-700 uppercase transition-all hover:border-neon-violet hover:text-neon-violet focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-violet sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/15 dark:text-zinc-300"
+                className="group font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-slate-300 px-7 py-3 text-[10px] font-bold tracking-widest text-slate-700 uppercase transition-all focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/15 dark:text-zinc-300"
               >
                 Learn More
                 <span
@@ -256,8 +285,8 @@ function About({ data = {}, settings = {} }) {
                 </span>
               </Link>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

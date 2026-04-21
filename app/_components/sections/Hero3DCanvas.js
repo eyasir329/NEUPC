@@ -227,7 +227,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     const lineMat = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.28,
       blending: THREE.AdditiveBlending,
     });
     const sphereLines = new THREE.LineSegments(edges, lineMat);
@@ -258,11 +258,11 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       if (!ctx) return null;
 
       const themeColor = isCyan
-        ? 'rgba(182, 243, 107, 1)'
-        : 'rgba(124, 92, 255, 1)';
+        ? 'rgba(182, 243, 107, 1)'    // neon-lime
+        : 'rgba(124, 92, 255, 1)';    // neon-violet
       const darkColor = isCyan
-        ? 'rgba(182, 243, 107, 0.15)'
-        : 'rgba(124, 92, 255, 0.15)';
+        ? 'rgba(182, 243, 107, 0.18)'
+        : 'rgba(124, 92, 255, 0.18)';
       const textColor = 'rgba(255, 255, 255, 0.9)';
 
       const cx = 256;
@@ -296,7 +296,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       ctx.beginPath();
       ctx.arc(cx, cy, 38, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(10, 10, 15, 0.9)';
+      ctx.fillStyle = 'rgba(5, 6, 11, 0.92)'; // matches app bg #05060b
       ctx.fill();
       ctx.lineWidth = 1;
       ctx.strokeStyle = darkColor;
@@ -377,31 +377,36 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       nodeSprites.push(sprite);
     });
 
+    const colorLime = new THREE.Color(0xb6f36b);   // neon-lime
+    const colorPurple = new THREE.Color(0x7c5cff); // neon-violet
+
     const networkGeo = new THREE.BufferGeometry();
     const networkPos = [];
+    const networkColors = [];
+    const _nc = new THREE.Color();
     for (let i = 0; i < nodeSprites.length; i++) {
       for (let j = i + 1; j < nodeSprites.length; j++) {
         const d = nodeSprites[i].position.distanceTo(nodeSprites[j].position);
         if (d < coreRadius * 1.8) {
-          networkPos.push(
-            nodeSprites[i].position.x,
-            nodeSprites[i].position.y,
-            nodeSprites[i].position.z,
-            nodeSprites[j].position.x,
-            nodeSprites[j].position.y,
-            nodeSprites[j].position.z
-          );
+          const pi = nodeSprites[i].position;
+          const pj = nodeSprites[j].position;
+          networkPos.push(pi.x, pi.y, pi.z, pj.x, pj.y, pj.z);
+          // Color each endpoint by its X position (lime on left, violet on right)
+          const ti = THREE.MathUtils.clamp((pi.x + coreRadius) / (coreRadius * 2), 0, 1);
+          const tj = THREE.MathUtils.clamp((pj.x + coreRadius) / (coreRadius * 2), 0, 1);
+          _nc.copy(colorLime).lerp(colorPurple, ti);
+          networkColors.push(_nc.r, _nc.g, _nc.b);
+          _nc.copy(colorLime).lerp(colorPurple, tj);
+          networkColors.push(_nc.r, _nc.g, _nc.b);
         }
       }
     }
-    networkGeo.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(networkPos, 3)
-    );
+    networkGeo.setAttribute('position', new THREE.Float32BufferAttribute(networkPos, 3));
+    networkGeo.setAttribute('color', new THREE.Float32BufferAttribute(networkColors, 3));
     const networkMat = new THREE.LineBasicMaterial({
-      color: 0x7c5cff,
+      vertexColors: true,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.22,
       blending: THREE.AdditiveBlending,
     });
     const networkLines = new THREE.LineSegments(networkGeo, networkMat);
@@ -548,8 +553,6 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     mountEl.addEventListener('pointerup', onSceneClick);
     mountEl.addEventListener('touchstart', onTouchStart, { passive: false });
 
-    const colorCyan = new THREE.Color(0xb6f36b);
-    const colorPurple = new THREE.Color(0x7c5cff);
     const tempVec = new THREE.Vector3();
     const tempColor = new THREE.Color();
     const targetScaleVec = new THREE.Vector3();
@@ -588,7 +591,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           0,
           1
         );
-        tempColor.copy(colorCyan).lerp(colorPurple, t);
+        tempColor.copy(colorLime).lerp(colorPurple, t);
         wireframeColors.setXYZ(i, tempColor.r, tempColor.g, tempColor.b);
       }
       wireframeColors.needsUpdate = true;
@@ -603,7 +606,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           0,
           1
         );
-        tempColor.copy(colorCyan).lerp(colorPurple, t);
+        tempColor.copy(colorLime).lerp(colorPurple, t);
         ptColors.setXYZ(i, tempColor.r, tempColor.g, tempColor.b);
       }
       ptColors.needsUpdate = true;

@@ -6,6 +6,7 @@ import {
   getAllPublicSettings,
 } from '@/app/_lib/public-actions';
 import Footer from './Footer';
+import { ReadySignal } from '@/app/_components/ui/AppShell';
 
 export default async function AsyncFooter() {
   const [session, social, contact, footer, settings] = await Promise.all([
@@ -16,12 +17,15 @@ export default async function AsyncFooter() {
     getAllPublicSettings(),
   ]);
   return (
-    <Footer
-      session={session}
-      social={social}
-      contact={contact}
-      footer={footer}
-      settings={settings}
-    />
+    <>
+      <Footer
+        session={session}
+        social={social}
+        contact={contact}
+        footer={footer}
+        settings={settings}
+      />
+      <ReadySignal />
+    </>
   );
 }
