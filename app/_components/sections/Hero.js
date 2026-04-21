@@ -1,9 +1,12 @@
+'use client';
+
 /**
  * @file Hero
  * @module Hero
  */
 
 import Link from 'next/link';
+import { useState } from 'react';
 import Hero3DCanvas from './Hero3DCanvas';
 
 const DEFAULTS = {
@@ -14,6 +17,7 @@ const DEFAULTS = {
 function Hero({ data = {}, settings = {} }) {
   const { department = DEFAULTS.department, university = DEFAULTS.university } =
     data;
+  const [selectedNode, setSelectedNode] = useState(null);
 
   return (
     <section
@@ -98,7 +102,7 @@ function Hero({ data = {}, settings = {} }) {
         {/* ── Right column: decorative stack ─────────────────── */}
         <div className="relative hidden lg:col-span-5 lg:block">
           {/* Main portrait placeholder */}
-          <div className="ph-lime soft-glow-lime group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-3xl border border-white/5">
+          <div className="group relative flex aspect-[4/5] w-full items-center justify-center bg-transparent">
             {/* 1. IDEAL UX: Place a real dark/moody photograph of your club here. */}
             {/* Just add a photo to your public folder and uncomment the Image component below */}
             {/* <Image 
@@ -109,23 +113,7 @@ function Hero({ data = {}, settings = {} }) {
                 /> */}
 
             {/* 2. GRAPHIC: Interactive 3D Network art */}
-            <Hero3DCanvas />
-
-            {/* Coding overlays */}
-            <pre className="pointer-events-none absolute top-20 left-6 z-20 hidden rounded-xl border border-cyan-300/20 bg-zinc-950/40 px-3 py-2 font-mono text-[10px] leading-tight text-cyan-200/85 shadow-[0_0_30px_rgba(34,211,238,0.14)] backdrop-blur-sm xl:block">
-              {`for (const node of graph) {
-  node.rotateY(0.0015);
-}`}
-            </pre>
-            <pre className="pointer-events-none absolute right-6 bottom-28 z-20 hidden rounded-xl border border-violet-300/20 bg-zinc-950/40 px-3 py-2 font-mono text-[10px] leading-tight text-violet-200/85 shadow-[0_0_30px_rgba(167,139,250,0.14)] backdrop-blur-sm xl:block">
-              {`if (drag.active) {
-  velocity *= 0.965;
-}`}
-            </pre>
-            <pre className="pointer-events-none absolute top-1/2 left-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/15 bg-zinc-950/35 px-3 py-2 font-mono text-[9px] leading-tight text-zinc-200/80 shadow-[0_0_35px_rgba(255,255,255,0.08)] backdrop-blur-sm 2xl:block">
-              {`// NEUPC runtime
-render(scene, camera);`}
-            </pre>
+            <Hero3DCanvas onNodeClick={setSelectedNode} />
 
             {/* Overlay UI elements. pointer-events-none ensures we can drag the 3D globe underneath! */}
             <div className="pointer-events-none absolute top-6 left-6 font-mono text-[10px] font-bold tracking-[0.4em] text-zinc-400 uppercase">
@@ -136,25 +124,52 @@ render(scene, camera);`}
             <div className="pointer-events-none absolute top-6 right-6 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 backdrop-blur-md transition-opacity duration-700 group-hover:opacity-0">
               <div className="bg-neon-lime h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
               <span className="font-mono text-[9px] font-medium tracking-widest text-zinc-300 uppercase">
-                Drag to Rotate
+                Drag · Click a Node
               </span>
             </div>
 
-            <div className="pointer-events-none absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
-              <div>
-                <div className="font-heading text-4xl leading-none font-black text-white drop-shadow-lg">
-                  2024
+            {selectedNode ? (
+              <div className="absolute right-6 bottom-6 left-6 z-30 rounded-2xl border border-white/10 bg-zinc-950/75 p-4 backdrop-blur-md">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
+                      {selectedNode.id} · Track
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNode(null)}
+                    aria-label="Close"
+                    className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase transition-colors hover:text-white"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <div className="mt-1 font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
-                  Est. year
+                <div className="font-heading text-lg leading-tight font-bold text-white">
+                  {selectedNode.label}
+                </div>
+                <p className="mt-2 font-sans text-xs leading-relaxed text-zinc-400">
+                  {selectedNode.description}
+                </p>
+              </div>
+            ) : (
+              <div className="pointer-events-none absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
+                <div>
+                  <div className="font-heading text-4xl leading-none font-black text-white drop-shadow-lg">
+                    2024
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
+                    Est. year
+                  </div>
+                </div>
+                <div className="text-right font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
+                  N—22.02°
+                  <br />
+                  E—90.73°
                 </div>
               </div>
-              <div className="text-right font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
-                N—22.02°
-                <br />
-                E—90.73°
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Floating stats card */}

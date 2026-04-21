@@ -2,9 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 export const DATA_NODES = [
   {
@@ -187,35 +184,10 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     mountEl.appendChild(renderer.domElement);
 
-    const renderScene = new RenderPass(scene, camera);
-    renderScene.clearColor = new THREE.Color(0x000000);
-    renderScene.clearAlpha = 0;
-
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(mountEl.clientWidth, mountEl.clientHeight),
-      0.9,
-      0.8,
-      0.2
-    );
-    bloomPass.clearColor = new THREE.Color(0x000000);
-
-    const composer = new EffectComposer(renderer);
-    composer.addPass(renderScene);
-    composer.addPass(bloomPass);
-
     const worldGroup = new THREE.Group();
     scene.add(worldGroup);
 
     const coreRadius = 10.5;
-
-    const innerGeo = new THREE.IcosahedronGeometry(coreRadius * 0.98, 3);
-    const innerMat = new THREE.MeshBasicMaterial({
-      color: 0x020205,
-      transparent: true,
-      opacity: 0.1,
-    });
-    const innerSphere = new THREE.Mesh(innerGeo, innerMat);
-    worldGroup.add(innerSphere);
 
     const geo = new THREE.IcosahedronGeometry(coreRadius, 2);
     const edges = new THREE.EdgesGeometry(geo);
@@ -258,11 +230,11 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       if (!ctx) return null;
 
       const themeColor = isCyan
-        ? 'rgba(0, 242, 255, 1)'
-        : 'rgba(188, 19, 254, 1)';
+        ? 'rgba(182, 243, 107, 1)'
+        : 'rgba(124, 92, 255, 1)';
       const darkColor = isCyan
-        ? 'rgba(0, 242, 255, 0.15)'
-        : 'rgba(188, 19, 254, 0.15)';
+        ? 'rgba(182, 243, 107, 0.15)'
+        : 'rgba(124, 92, 255, 0.15)';
       const textColor = 'rgba(255, 255, 255, 0.9)';
 
       const cx = 256;
@@ -399,9 +371,9 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       new THREE.Float32BufferAttribute(networkPos, 3)
     );
     const networkMat = new THREE.LineBasicMaterial({
-      color: 0x88aaff,
+      color: 0x7c5cff,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.18,
       blending: THREE.AdditiveBlending,
     });
     const networkLines = new THREE.LineSegments(networkGeo, networkMat);
@@ -416,12 +388,14 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       ctx.font = '14px "JetBrains Mono", monospace';
       ctx.fillStyle = isCyan
-        ? 'rgba(0, 242, 255, 0.7)'
-        : 'rgba(188, 19, 254, 0.7)';
+        ? 'rgba(182, 243, 107, 0.7)'
+        : 'rgba(124, 92, 255, 0.7)';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
-      ctx.shadowColor = isCyan ? 'rgba(0,242,255,0.4)' : 'rgba(188,19,254,0.4)';
+      ctx.shadowColor = isCyan
+        ? 'rgba(182,243,107,0.4)'
+        : 'rgba(124,92,255,0.4)';
       ctx.shadowBlur = 8;
 
       const lines = text.split('\n');
@@ -508,8 +482,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     mountEl.addEventListener('pointerleave', onScenePointerLeave);
     mountEl.addEventListener('pointerup', onSceneClick);
 
-    const colorCyan = new THREE.Color(0x00f2ff);
-    const colorPurple = new THREE.Color(0xbc13fe);
+    const colorCyan = new THREE.Color(0xb6f36b);
+    const colorPurple = new THREE.Color(0x7c5cff);
     const tempVec = new THREE.Vector3();
     const tempColor = new THREE.Color();
     const targetScaleVec = new THREE.Vector3();
@@ -666,16 +640,16 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         data.mesh.material.opacity = pulse;
       });
 
-      composer.render();
+      renderer.render(scene, camera);
     }
 
     animate();
 
     const handleResize = () => {
-      renderer.setSize(mountEl.clientWidth, mountEl.clientHeight);
-      composer.setSize(mountEl.clientWidth, mountEl.clientHeight);
-      bloomPass.setSize(mountEl.clientWidth, mountEl.clientHeight);
-      camera.aspect = mountEl.clientWidth / mountEl.clientHeight;
+      const w = mountEl.clientWidth;
+      const h = mountEl.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
     };
 
@@ -705,8 +679,6 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       lineMat.dispose();
       pointsGeo.dispose();
       pointsMat.dispose();
-      innerGeo.dispose();
-      innerMat.dispose();
       networkGeo.dispose();
       networkMat.dispose();
       nodeSprites.forEach((s) => {
@@ -724,7 +696,6 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       });
 
       renderer.dispose();
-      composer.dispose();
       if (mountEl.contains(renderer.domElement)) {
         mountEl.removeChild(renderer.domElement);
       }
@@ -733,7 +704,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
   return (
     <div
-      className="absolute inset-0 z-10 h-full w-full overflow-hidden bg-transparent"
+      className="absolute inset-0 z-1 h-full w-full bg-transparent"
       style={{ touchAction: 'none' }}
     >
       <div
