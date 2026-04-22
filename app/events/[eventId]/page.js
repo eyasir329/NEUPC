@@ -20,13 +20,6 @@ import EventRegistrationCard from './EventRegistrationCard';
 
 /* ──────────────── Helpers ──────────────────────────────────────────────── */
 
-function formatDate(dateString) {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-}
-
 function formatTime(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleTimeString('en-US', {
@@ -153,6 +146,17 @@ function IconTag({ className = 'w-4 h-4' }) {
 
 /* ──────────────── Sub-components ───────────────────────────────────────── */
 
+function SectionLabel({ accent = 'lime', children }) {
+  const lineColor = accent === 'violet' ? 'bg-neon-violet' : 'bg-neon-lime';
+  const textColor = accent === 'violet' ? 'text-neon-violet' : 'text-neon-lime';
+  return (
+    <div className="flex items-center gap-3">
+      <span className={`h-px w-6 shrink-0 ${lineColor}`} />
+      <span className={`font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] ${textColor}`}>{children}</span>
+    </div>
+  );
+}
+
 function TagBadge({ children }) {
   return (
     <span className="inline-block rounded-full border border-neon-violet/20 bg-neon-violet/10 px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-neon-violet uppercase">
@@ -164,8 +168,8 @@ function TagBadge({ children }) {
 function SidebarRow({ label, value, highlight }) {
   return (
     <li className="flex items-start justify-between gap-4 border-b border-white/5 py-3 last:border-0 last:pb-0">
-      <span className="shrink-0 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">{label}</span>
-      <span className={`text-right font-heading text-sm font-bold leading-snug ${highlight || 'text-white'}`}>
+      <span className="shrink-0 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">{label}</span>
+      <span className={`text-right font-heading text-[13px] font-bold leading-snug sm:text-sm ${highlight || 'text-white'}`}>
         {value}
       </span>
     </li>
@@ -184,12 +188,12 @@ async function EventDetailPage({ params }) {
 
   const galleryItems = await getPublicEventGallery(event.id);
 
-  const heroImage   = driveImageUrl(event.cover_image || event.image);
-  const statusCfg   = getStatusConfig(event.status);
-  const duration    = getDuration(event.start_date, event.end_date);
-  const venueLabel  = getVenueLabel(event.venue_type);
-  const tags        = event.tags || [];
-  const isActive    = ['upcoming', 'ongoing'].includes(event.status);
+  const heroImage  = driveImageUrl(event.cover_image || event.image);
+  const statusCfg  = getStatusConfig(event.status);
+  const duration   = getDuration(event.start_date, event.end_date);
+  const venueLabel = getVenueLabel(event.venue_type);
+  const tags       = event.tags || [];
+  const isActive   = ['upcoming', 'ongoing'].includes(event.status);
 
   return (
     <main className="relative min-h-screen">
@@ -202,9 +206,10 @@ async function EventDetailPage({ params }) {
         ]}
       />
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-20 pb-10 sm:pt-24 sm:pb-14 lg:pb-16">
-        {/* Background image – subtle, grayscale */}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden pt-20 pb-10 sm:pt-28 sm:pb-14 lg:pt-32 lg:pb-20">
+
+        {/* Background image */}
         {heroImage && (
           <div className="absolute inset-0 z-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -221,16 +226,17 @@ async function EventDetailPage({ params }) {
         {/* Ambient */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-15" />
-          <div className="bg-neon-violet/8 absolute -top-32 -left-32 h-[400px] w-[400px] rounded-full blur-[120px]" />
-          <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[350px] w-[350px] rounded-full blur-[120px]" />
+          <div className="bg-neon-violet/8 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
+          <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+
           {/* Back link */}
           <nav className="mb-6 sm:mb-8">
             <Link
               href="/events"
-              className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
+              className="group inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
             >
               <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -240,50 +246,50 @@ async function EventDetailPage({ params }) {
           </nav>
 
           {/* Status + category eyebrow */}
-          <div className="mb-4 flex flex-wrap items-center gap-2.5 sm:mb-5">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] ${statusCfg.badge}`}>
+          <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-5">
+            <span className={`inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] ${statusCfg.badge}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
               {statusCfg.label}
             </span>
             {event.category && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
+              <span className="inline-flex min-h-[28px] items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
                 {event.category}
               </span>
             )}
           </div>
 
-          {/* Headline */}
-          <h1 className="kinetic-headline font-heading text-[clamp(2rem,7vw,5.5rem)] font-black leading-[1.05] text-white uppercase max-w-4xl">
+          {/* Title */}
+          <h1 className="kinetic-headline max-w-4xl font-heading text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] font-black text-white uppercase [line-height:1.05] sm:[line-height:0.95]">
             {event.title}
           </h1>
 
-          {/* Quick-info chips */}
-          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/8 pt-6 sm:mt-8 sm:gap-x-8 sm:pt-8">
+          {/* Quick-info chips — 2-col grid on mobile, auto-flow on larger */}
+          <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
             {event.start_date && (
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Date &amp; Time</span>
-                <span className="font-heading text-sm font-bold text-white sm:text-base">
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Date &amp; Time</span>
+                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm lg:text-[15px]">
                   {formatDateShort(event.start_date)}
                   {formatTime(event.start_date) ? ` · ${formatTime(event.start_date)}` : ''}
                 </span>
               </div>
             )}
             {event.location && (
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Venue</span>
-                <span className="font-heading text-sm font-bold text-white sm:text-base">{event.location}</span>
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Location</span>
+                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm lg:text-[15px]">{event.location}</span>
               </div>
             )}
             {duration && (
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Duration</span>
-                <span className="font-heading text-sm font-bold text-white sm:text-base">{duration}</span>
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Duration</span>
+                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm lg:text-[15px]">{duration}</span>
               </div>
             )}
             {event.participation_type && (
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Format</span>
-                <span className="font-heading text-sm font-bold text-white sm:text-base">
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Format</span>
+                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm lg:text-[15px]">
                   {event.participation_type === 'team'
                     ? `Team${event.team_size ? ` of ${event.team_size}` : ''}`
                     : 'Individual'}
@@ -292,196 +298,56 @@ async function EventDetailPage({ params }) {
             )}
           </div>
 
-          {/* CTA buttons */}
-          <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
-            {isActive && event.registration_required && (
+          {/* CTA buttons + deadline urgency */}
+          <div className="mt-6 sm:mt-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {isActive && event.registration_required && (
+                <a
+                  href="#register"
+                  className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
+                >
+                  Register Now
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                </a>
+              )}
               <a
-                href="#register"
-                className="group inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] sm:px-8 sm:py-3.5 sm:text-[11px]"
+                href="#about"
+                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/40 hover:text-white sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
               >
-                Register Now
-                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                View Details
               </a>
+            </div>
+            {/* Deadline urgency — shown near CTA so users see it before scrolling away */}
+            {isActive && event.registration_required && event.registration_deadline && (
+              <p className="mt-3 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-amber-400/80 uppercase sm:text-[10px]">
+                <span className="h-1 w-1 rounded-full bg-amber-400 animate-pulse" />
+                Registration closes {formatDateShort(event.registration_deadline)}
+              </p>
             )}
-            <a
-              href="#about"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/40 hover:text-white sm:px-8 sm:py-3.5 sm:text-[11px]"
-            >
-              View Details
-            </a>
           </div>
         </div>
       </section>
 
-      {/* ── About & Sidebar ───────────────────────────────────────────────── */}
-      <section id="about" className="relative overflow-hidden py-14 sm:py-20 lg:py-24">
+      {/* ── About & Sidebar ──────────────────────────────────────────────── */}
+      <section id="about" className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="bg-neon-violet/5 absolute -top-10 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full blur-[150px]" />
           <div className="grid-overlay absolute inset-0 opacity-15" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-12 xl:gap-16">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start lg:gap-10 xl:gap-14">
 
-            {/* ── Main content column ── */}
-            <div className="space-y-6 lg:col-span-8 sm:space-y-8">
+            {/* ── Sidebar — shown first on mobile so register CTA is visible early ── */}
+            <div className="order-first lg:order-last lg:col-span-4">
+              <div className="lg:sticky lg:top-24 space-y-4">
 
-              {/* Description + rich content */}
-              {(event.description || event.content) && (
-                <div className="holographic-card rounded-2xl p-5 sm:p-8">
-                  {event.description && (
-                    <p className="text-sm leading-[1.85] text-zinc-400 sm:text-base lg:text-lg">
-                      {event.description}
-                    </p>
-                  )}
-                  {event.content && (
-                    <div className="mt-5 border-t border-white/5 pt-5 sm:mt-6 sm:pt-6">
-                      <div
-                        className="blog-content leading-relaxed text-zinc-300"
-                        dangerouslySetInnerHTML={{ __html: event.content }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Info tiles grid */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4">
-                {event.category && (
-                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
-                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-lime/10 sm:h-9 sm:w-9">
-                      <IconTag className="h-4 w-4 text-neon-lime" />
-                    </div>
-                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">Category</h4>
-                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{event.category}</p>
-                  </div>
-                )}
-                <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
-                  <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-violet/10 sm:h-9 sm:w-9">
-                    <IconGroups className="h-4 w-4 text-neon-violet" />
-                  </div>
-                  <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">Format</h4>
-                  <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">
-                    {event.participation_type === 'team'
-                      ? `Team${event.team_size ? ` · ${event.team_size} members` : ''}`
-                      : 'Individual'}
-                  </p>
-                </div>
-                {event.eligibility && (
-                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
-                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-lime/10 sm:h-9 sm:w-9">
-                      <IconShield className="h-4 w-4 text-neon-lime" />
-                    </div>
-                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">Eligibility</h4>
-                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{event.eligibility}</p>
-                  </div>
-                )}
-                {venueLabel && (
-                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
-                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-violet/10 sm:h-9 sm:w-9">
-                      {event.venue_type === 'online'
-                        ? <IconGlobe className="h-4 w-4 text-neon-violet" />
-                        : event.venue_type === 'hybrid'
-                        ? <IconSync className="h-4 w-4 text-neon-violet" />
-                        : <IconLocation className="h-4 w-4 text-neon-violet" />}
-                    </div>
-                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">Venue</h4>
-                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{venueLabel}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Prerequisites */}
-              {event.prerequisites && (
-                <div className="holographic-card rounded-2xl p-5 sm:p-8">
-                  <div className="mb-5 flex items-center gap-3">
-                    <span className="bg-neon-lime h-px w-6" />
-                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
-                      Requirements
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {event.prerequisites.split('\n').filter(Boolean).map((line, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-3 rounded-lg border-l-2 border-neon-lime/20 py-2.5 pl-4 transition-all hover:border-neon-lime/50 hover:bg-neon-lime/5"
-                      >
-                        <span className="shrink-0 font-mono text-[9px] font-bold tracking-widest text-neon-lime/70 sm:text-[10px]">
-                          {String(i + 1).padStart(2, '0')}
-                        </span>
-                        <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{line.trim()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tags */}
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map(tag => <TagBadge key={tag}>{tag}</TagBadge>)}
-                </div>
-              )}
-            </div>
-
-            {/* ── Sidebar ── */}
-            <div className="lg:col-span-4">
-              <div className="sticky top-20 space-y-4 sm:space-y-5">
-
-                {/* Key details card */}
-                <div className="holographic-card rounded-2xl p-5 sm:p-6">
-                  <div className="mb-4 flex items-center gap-3">
-                    <span className="bg-neon-lime h-px w-5" />
-                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase">Details</span>
-                  </div>
-                  <ul className="space-y-0">
-                    {event.start_date && (
-                      <SidebarRow label="Date" value={formatDateShort(event.start_date)} />
-                    )}
-                    {event.start_date && formatTime(event.start_date) && (
-                      <SidebarRow label="Time" value={formatTime(event.start_date)} />
-                    )}
-                    {event.end_date && (
-                      <SidebarRow label="Ends" value={formatDateShort(event.end_date)} />
-                    )}
-                    {event.location && (
-                      <SidebarRow label="Venue" value={event.location} />
-                    )}
-                    {duration && (
-                      <SidebarRow label="Duration" value={duration} />
-                    )}
-                    <SidebarRow
-                      label="Format"
-                      value={
-                        event.participation_type === 'team'
-                          ? `Team${event.team_size ? ` (${event.team_size})` : ''}`
-                          : 'Individual'
-                      }
-                    />
-                    <SidebarRow
-                      label="Status"
-                      value={statusCfg.label}
-                      highlight={statusCfg.text}
-                    />
-                    {event.registration_required && event.registration_deadline && (
-                      <SidebarRow
-                        label="Deadline"
-                        value={formatDateShort(event.registration_deadline)}
-                        highlight="text-amber-400"
-                      />
-                    )}
-                    {event.max_participants && (
-                      <SidebarRow label="Capacity" value={`${event.max_participants} spots`} />
-                    )}
-                  </ul>
-                </div>
-
-                {/* Registration area */}
+                {/* Registration / status area */}
                 <div id="register">
                   {event.status === 'completed' ? (
-                    <div className="holographic-card rounded-2xl p-5 sm:p-6">
-                      <div className="mb-3 flex items-center gap-3">
-                        <IconCheck className="h-4 w-4 text-neon-lime" />
+                    <div className="holographic-card no-lift rounded-2xl p-5 sm:p-6">
+                      <div className="mb-4 flex items-center gap-3">
+                        <IconCheck className="h-4 w-4 shrink-0 text-neon-lime" />
                         <div>
                           <h3 className="font-heading text-sm font-bold text-white uppercase">Event Concluded</h3>
                           <p className="font-mono text-[9px] text-zinc-600 sm:text-[10px]">
@@ -493,9 +359,9 @@ async function EventDetailPage({ params }) {
                       {/* Mini gallery strip */}
                       {galleryItems.length > 0 && (
                         <div className="mb-4">
-                          <div className="flex gap-1 overflow-hidden rounded-xl">
+                          <div className="flex gap-1.5 overflow-hidden rounded-xl">
                             {galleryItems.slice(0, 3).map((gItem, gi) => (
-                              <div key={gItem.id} className="relative h-14 flex-1 overflow-hidden rounded-lg bg-white/3">
+                              <div key={gItem.id} className="relative h-16 flex-1 overflow-hidden rounded-lg bg-white/3 sm:h-20">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={driveImageUrl(gItem.url)}
@@ -525,7 +391,7 @@ async function EventDetailPage({ params }) {
                       </p>
                       <Link
                         href="/events"
-                        className="flex w-full items-center justify-center rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
+                        className="flex w-full items-center justify-center rounded-full border border-white/10 bg-white/4 px-5 py-3 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
                       >
                         Browse Events →
                       </Link>
@@ -535,25 +401,58 @@ async function EventDetailPage({ params }) {
                   )}
                 </div>
 
+                {/* Key details card — hidden on mobile (same info is in hero chips) */}
+                <div className="holographic-card no-lift hidden rounded-2xl p-5 lg:block sm:p-6">
+                  <div className="mb-4">
+                    <SectionLabel accent="lime">Details</SectionLabel>
+                  </div>
+                  <ul>
+                    {event.start_date && (
+                      <SidebarRow
+                        label="Starts"
+                        value={`${formatDateShort(event.start_date)}${formatTime(event.start_date) ? ` · ${formatTime(event.start_date)}` : ''}`}
+                      />
+                    )}
+                    {event.end_date && (
+                      <SidebarRow
+                        label="Ends"
+                        value={`${formatDateShort(event.end_date)}${formatTime(event.end_date) ? ` · ${formatTime(event.end_date)}` : ''}`}
+                      />
+                    )}
+                    {duration && <SidebarRow label="Duration" value={duration} />}
+                    {event.location && <SidebarRow label="Location" value={event.location} />}
+                    <SidebarRow label="Status" value={statusCfg.label} highlight={statusCfg.text} />
+                    {event.registration_required && event.registration_deadline && (
+                      <SidebarRow
+                        label="Reg. Deadline"
+                        value={formatDateShort(event.registration_deadline)}
+                        highlight="text-amber-400"
+                      />
+                    )}
+                    {event.max_participants && (
+                      <SidebarRow label="Capacity" value={`${event.max_participants} spots`} />
+                    )}
+                  </ul>
+                </div>
+
                 {/* Contact widget */}
-                <div className="holographic-card rounded-2xl p-5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <Link
+                  href="/contact"
+                  className="holographic-card group flex items-center gap-3 rounded-2xl p-4 sm:p-5"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                    <svg className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    <h3 className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">Need Help?</h3>
                   </div>
-                  <p className="mb-3 text-xs leading-relaxed text-zinc-600">
-                    Have questions about this event? Reach out to us.
-                  </p>
-                  <Link
-                    href="/contact"
-                    className="group inline-flex items-center gap-1.5 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase transition-opacity hover:opacity-75"
-                  >
-                    Contact Us
-                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
-                  </Link>
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">Need Help?</p>
+                    <p className="mt-0.5 text-xs text-zinc-600">Questions about this event?</p>
+                  </div>
+                  <svg className="h-3 w-3 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
 
                 {/* External event website */}
                 {event.external_url && (
@@ -577,125 +476,242 @@ async function EventDetailPage({ params }) {
                 )}
               </div>
             </div>
+
+            {/* ── Main content column ── */}
+            <div className="order-last space-y-5 lg:order-first lg:col-span-8 sm:space-y-6">
+
+              {/* Description + rich content */}
+              {(event.description || event.content) && (
+                <div className="holographic-card rounded-2xl p-5 sm:p-7">
+                  {event.description && (
+                    <p className="text-sm leading-[1.9] text-zinc-400 sm:text-base lg:text-[17px]">
+                      {event.description}
+                    </p>
+                  )}
+                  {event.content && (
+                    <div className={`${event.description ? 'mt-5 border-t border-white/5 pt-5 sm:mt-6 sm:pt-6' : ''}`}>
+                      <div
+                        className="blog-content leading-relaxed text-zinc-300"
+                        dangerouslySetInnerHTML={{ __html: event.content }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* At a Glance */}
+              {(event.eligibility || venueLabel || event.participation_type || event.category) && (
+                <div className="holographic-card rounded-2xl p-5 sm:p-6">
+                  <div className="mb-5">
+                    <SectionLabel accent="violet">At a Glance</SectionLabel>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {event.category && (
+                      <div>
+                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                          <IconTag className="h-3 w-3 shrink-0" /> Category
+                        </dt>
+                        <dd className="text-sm font-bold leading-snug text-white">{event.category}</dd>
+                      </div>
+                    )}
+                    {event.participation_type && (
+                      <div>
+                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                          <IconGroups className="h-3 w-3 shrink-0" /> Format
+                        </dt>
+                        <dd className="text-sm font-bold leading-snug text-white">
+                          {event.participation_type === 'team'
+                            ? `Team${event.team_size ? ` · ${event.team_size}` : ''}`
+                            : 'Individual'}
+                        </dd>
+                      </div>
+                    )}
+                    {venueLabel && (
+                      <div>
+                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                          {event.venue_type === 'online'
+                            ? <IconGlobe className="h-3 w-3 shrink-0" />
+                            : event.venue_type === 'hybrid'
+                            ? <IconSync className="h-3 w-3 shrink-0" />
+                            : <IconLocation className="h-3 w-3 shrink-0" />}
+                          Venue
+                        </dt>
+                        <dd className="text-sm font-bold leading-snug text-white">{venueLabel}</dd>
+                      </div>
+                    )}
+                    {event.eligibility && (
+                      <div>
+                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                          <IconShield className="h-3 w-3 shrink-0" /> Eligibility
+                        </dt>
+                        <dd className="text-sm font-bold leading-snug text-white">{event.eligibility}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+              )}
+
+              {/* Prerequisites */}
+              {event.prerequisites && (
+                <div className="holographic-card rounded-2xl p-5 sm:p-7">
+                  <div className="mb-5">
+                    <SectionLabel accent="lime">Requirements</SectionLabel>
+                  </div>
+                  <div className="space-y-2">
+                    {event.prerequisites.split('\n').filter(Boolean).map((line, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-3 rounded-lg border-l-2 border-neon-lime/20 py-2.5 pl-4 transition-all hover:border-neon-lime/50 hover:bg-neon-lime/5"
+                      >
+                        <span className="shrink-0 font-mono text-[9px] font-bold tracking-widest text-neon-lime/60 sm:text-[10px]">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <p className="text-sm leading-relaxed text-zinc-400">{line.trim()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div>
+                  <div className="mb-3">
+                    <SectionLabel accent="violet">Topics</SectionLabel>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map(tag => <TagBadge key={tag}>{tag}</TagBadge>)}
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </section>
 
-      {/* ── Schedule ──────────────────────────────────────────────────────── */}
+      {/* ── Schedule ─────────────────────────────────────────────────────── */}
       {event.end_date && event.start_date && (
-        <section className="relative overflow-hidden py-14 sm:py-20">
+        <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
           <div className="pointer-events-none absolute inset-0 z-0">
             <div className="bg-neon-lime/4 absolute top-1/3 left-1/2 h-[300px] w-[500px] -translate-x-1/2 rounded-full blur-[120px]" />
           </div>
-          <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
           <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-10 sm:mb-12">
-              <div className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">Timeline</span>
-              </div>
-              <h2 className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
+
+            <div className="mb-8 sm:mb-10">
+              <SectionLabel accent="lime">Timeline</SectionLabel>
+              <h2 className="kinetic-headline mt-3 font-heading text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
                 Event Schedule
               </h2>
             </div>
 
-            {/* Two-column timeline on desktop, stacked on mobile */}
             <div className="relative">
-              {/* Center spine – desktop only */}
-              <div className="absolute top-4 bottom-4 left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-neon-lime/30 via-neon-lime/10 to-neon-violet/20 md:block" />
+              {/* Vertical spine — visible from sm upward */}
+              <div className="absolute top-3.5 bottom-3.5 left-3.5 w-px bg-gradient-to-b from-neon-lime/40 via-white/10 to-neon-violet/30 sm:left-1/2 sm:-translate-x-1/2" />
 
               <div className="space-y-6 sm:space-y-8">
-                {/* Start */}
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-0">
-                  {/* Left date – desktop */}
-                  <div className="hidden md:flex md:w-5/12 md:flex-col md:items-end md:pr-8">
-                    <span className="font-heading text-base font-bold text-neon-lime">
-                      {formatDateShort(event.start_date)}
-                    </span>
-                    <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                      {formatTime(event.start_date)}
-                    </span>
-                  </div>
-                  {/* Node */}
-                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-lime shadow-[0_0_12px_rgba(182,243,107,0.5)] md:mx-auto">
+
+                {/* Start node */}
+                <div className="relative flex items-start gap-5 sm:items-center sm:gap-0">
+                  {/* Mobile/tablet node on left spine */}
+                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-lime shadow-[0_0_14px_rgba(182,243,107,0.55)] sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                     <div className="h-2 w-2 rounded-full bg-black/50" />
                   </div>
-                  {/* Card */}
-                  <div className="holographic-card rounded-xl p-4 md:w-5/12 md:pl-8">
+
+                  {/* Date label — desktop left */}
+                  <div className="hidden sm:flex sm:w-5/12 sm:flex-col sm:items-end sm:pr-8">
+                    <span className="font-heading text-sm font-bold text-neon-lime lg:text-base">
+                      {formatDateShort(event.start_date)}
+                    </span>
+                    {formatTime(event.start_date) && (
+                      <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                        {formatTime(event.start_date)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card — desktop right, mobile inline */}
+                  <div className="holographic-card min-w-0 flex-1 rounded-xl p-4 sm:ml-auto sm:w-5/12 sm:flex-none sm:pl-8">
                     {/* Mobile date */}
-                    <div className="mb-2 flex items-center gap-2 md:hidden">
-                      <span className="font-mono text-[9px] tracking-widest text-neon-lime uppercase">{formatDateShort(event.start_date)}</span>
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:hidden">
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase">
+                        {formatDateShort(event.start_date)}
+                      </span>
                       {formatTime(event.start_date) && (
                         <span className="font-mono text-[9px] text-zinc-600">· {formatTime(event.start_date)}</span>
                       )}
                     </div>
-                    <h4 className="font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">
+                    <h4 className="font-heading text-[11px] font-bold tracking-widest text-neon-lime uppercase">
                       Event Opens
                     </h4>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-500">
                       Registration closes and activities begin.
                     </p>
                   </div>
                 </div>
 
-                {/* End */}
-                <div className="flex flex-col gap-4 md:flex-row-reverse md:items-center md:gap-0">
-                  {/* Right date – desktop */}
-                  <div className="hidden md:flex md:w-5/12 md:flex-col md:items-start md:pl-8">
-                    <span className="font-heading text-base font-bold text-neon-violet">
-                      {formatDateShort(event.end_date)}
-                    </span>
-                    <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                      {formatTime(event.end_date)}
-                    </span>
-                  </div>
+                {/* End node */}
+                <div className="relative flex items-start gap-5 sm:flex-row-reverse sm:items-center sm:gap-0">
                   {/* Node */}
-                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-violet shadow-[0_0_12px_rgba(124,92,255,0.5)] md:mx-auto">
+                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-violet shadow-[0_0_14px_rgba(124,92,255,0.55)] sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                     <div className="h-2 w-2 rounded-full bg-black/50" />
                   </div>
-                  {/* Card */}
-                  <div className="holographic-card rounded-xl p-4 md:w-5/12 md:pr-8">
+
+                  {/* Date label — desktop right */}
+                  <div className="hidden sm:flex sm:w-5/12 sm:flex-col sm:items-start sm:pl-8">
+                    <span className="font-heading text-sm font-bold text-neon-violet lg:text-base">
+                      {formatDateShort(event.end_date)}
+                    </span>
+                    {formatTime(event.end_date) && (
+                      <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                        {formatTime(event.end_date)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card — desktop left, mobile inline */}
+                  <div className="holographic-card min-w-0 flex-1 rounded-xl p-4 sm:mr-auto sm:w-5/12 sm:flex-none sm:pr-8">
                     {/* Mobile date */}
-                    <div className="mb-2 flex items-center gap-2 md:hidden">
-                      <span className="font-mono text-[9px] tracking-widest text-neon-violet uppercase">{formatDateShort(event.end_date)}</span>
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:hidden">
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-neon-violet uppercase">
+                        {formatDateShort(event.end_date)}
+                      </span>
                       {formatTime(event.end_date) && (
                         <span className="font-mono text-[9px] text-zinc-600">· {formatTime(event.end_date)}</span>
                       )}
                     </div>
-                    <h4 className="font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">
+                    <h4 className="font-heading text-[11px] font-bold tracking-widest text-neon-violet uppercase">
                       Event Closes
                     </h4>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
-                      Wrap-up and conclusion.{duration ? ` Total duration: ${duration}.` : ''}
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                      Wrap-up and conclusion.{duration ? ` Total: ${duration}.` : ''}
                     </p>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* ── Gallery ───────────────────────────────────────────────────────── */}
+      {/* ── Gallery ──────────────────────────────────────────────────────── */}
       {galleryItems.length > 0 && (
-        <section id="event-gallery" className="relative overflow-hidden py-14 sm:py-20">
-          <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+        <section id="event-gallery" className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
+          <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
             <div className="bg-neon-violet/4 absolute top-1/4 right-0 h-[350px] w-[350px] rounded-full blur-[130px]" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
             {/* Header */}
-            <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mb-7 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="flex items-center gap-3">
-                  <span className="bg-neon-violet h-px w-7" />
-                  <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-violet uppercase sm:text-[11px]">
-                    Gallery
-                  </span>
-                </div>
-                <h2 className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
+                <SectionLabel accent="violet">Gallery</SectionLabel>
+                <h2 className="kinetic-headline mt-3 font-heading text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
                   {event.status === 'completed' ? 'Relive the Moments' : 'Event Gallery'}
                 </h2>
                 <p className="mt-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
@@ -717,7 +733,7 @@ async function EventDetailPage({ params }) {
                 <IconCheck className="h-3.5 w-3.5 text-neon-lime" />
                 {galleryItems.length} photo{galleryItems.length !== 1 ? 's' : ''} archived
               </div>
-              <span className="hidden font-mono text-[9px] tracking-widest text-zinc-700 uppercase sm:inline sm:text-[10px]">
+              <span className="font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
                 Tap to view full size
               </span>
             </div>
@@ -725,8 +741,8 @@ async function EventDetailPage({ params }) {
         </section>
       )}
 
-      {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-14 sm:py-20 lg:py-28">
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden py-12 sm:py-16 lg:py-24">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-15" />
           <div className="bg-neon-lime/4 absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
@@ -734,7 +750,7 @@ async function EventDetailPage({ params }) {
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-violet/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:items-center">
+            <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
               <div className="md:col-span-2">
                 <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
                   /// Join the Community
@@ -746,17 +762,17 @@ async function EventDetailPage({ params }) {
                   Join NEUPC to get early access to events, workshops, and contests — and be part of a thriving community of programmers.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:flex-col md:items-end">
                 <JoinButton
                   href="/join"
-                  className="group inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:px-8 sm:py-3.5 sm:text-[11px]"
+                  className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
                 >
                   Join the Club
                   <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
                 </JoinButton>
                 <Link
                   href="/events"
-                  className="font-mono text-[10px] tracking-[0.25em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-zinc-200 hover:underline sm:text-[11px]"
+                  className="text-center font-mono text-[10px] tracking-[0.25em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-zinc-200 hover:underline sm:text-[11px]"
                 >
                   Browse Events →
                 </Link>
