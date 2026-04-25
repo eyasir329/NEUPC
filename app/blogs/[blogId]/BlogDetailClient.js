@@ -315,24 +315,24 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         'group relative flex w-full items-start gap-2 rounded-lg py-1.5 pr-3 text-left text-xs transition-all duration-150',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
-          ? 'bg-primary-500/10 text-primary-300'
+          ? 'bg-neon-lime/10 text-neon-lime'
           : isPast
-            ? 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-            : 'text-gray-600 hover:bg-white/4 hover:text-gray-400'
+            ? 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
+            : 'text-zinc-600 hover:bg-white/4 hover:text-zinc-400'
       )}
     >
       {isActive && (
-        <span className="bg-primary-400 absolute inset-y-1 left-0 w-0.5 rounded-full" />
+        <span className="bg-neon-lime absolute inset-y-1 left-0 w-0.5 rounded-full" />
       )}
       {level === 2 && sectionNum != null && (
         <span
           className={cn(
             'mt-0.5 shrink-0 font-mono text-[9px] leading-none font-bold tabular-nums',
             isActive
-              ? 'text-primary-400/70'
+              ? 'text-neon-lime/70'
               : isPast
-                ? 'text-gray-600'
-                : 'text-gray-700'
+                ? 'text-zinc-600'
+                : 'text-zinc-700'
           )}
         >
           {String(sectionNum).padStart(2, '0')}
@@ -342,7 +342,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         <span
           className={cn(
             'mt-1.5 h-1 w-1 shrink-0 rounded-full',
-            isActive ? 'bg-primary-400' : isPast ? 'bg-gray-600' : 'bg-gray-700'
+            isActive ? 'bg-neon-lime' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
           )}
         />
       )}
@@ -363,69 +363,37 @@ function RelatedBlogCard({ blog }) {
   return (
     <Link
       href={`/blogs/${blog.slug || blog.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/5 hover:shadow-lg hover:shadow-black/30"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-white/8 bg-white/3 transition-all duration-300 hover:-translate-y-0.5 hover:border-neon-lime/20 hover:bg-white/5 hover:shadow-lg hover:shadow-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b]"
     >
       {blog.thumbnail ? (
         <div className="relative aspect-video overflow-hidden">
           <SafeImg
             src={driveImageUrl(blog.thumbnail)}
             alt={blog.title || ''}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
             fallback="/placeholder-blog.svg"
           />
-          <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           {blog.category && (
-            <span
-              className={cn(
-                'absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold backdrop-blur-sm',
-                cfg.badge
-              )}
-            >
-              <span>{cfg.emoji}</span>
-              {cfg.label}
+            <span className="absolute top-2.5 left-2.5 rounded-full bg-neon-lime/90 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-black uppercase backdrop-blur-sm">
+              {getCategoryLabel(blog.category)}
             </span>
           )}
         </div>
       ) : (
-        <div className="flex h-24 items-center justify-center rounded-t-2xl bg-white/4 text-3xl">
-          {cfg.emoji}
+        <div className="flex h-24 items-center justify-center rounded-t-xl bg-white/4 font-mono text-xs text-zinc-600 uppercase tracking-widest">
+          {getCategoryLabel(blog.category) || 'Article'}
         </div>
       )}
       <div className="flex flex-1 flex-col gap-2.5 p-4">
-        {!blog.thumbnail && blog.category && (
-          <span
-            className={cn(
-              'flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
-              cfg.badge
-            )}
-          >
-            <span>{cfg.emoji}</span>
-            {cfg.label}
-          </span>
-        )}
-        <h4 className="line-clamp-2 text-sm leading-snug font-semibold text-gray-200 transition-colors group-hover:text-white">
+        <h4 className="line-clamp-2 font-heading text-sm font-black leading-snug text-white transition-colors group-hover:text-neon-lime">
           {blog.title}
         </h4>
-        <div className="mt-auto flex items-center gap-2.5 border-t border-white/5 pt-3 text-[11px] text-gray-600">
-          <span className="flex items-center gap-1">
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-            {blog.read_time || blog.readTime || '5'} min read
-          </span>
+        <div className="mt-auto flex items-center gap-2.5 border-t border-white/5 pt-3 font-mono text-[10px] tracking-wider text-zinc-600 uppercase">
+          <span>{blog.read_time || blog.readTime || '5'} min</span>
           {(blog.views ?? 0) > 0 && (
             <>
-              <span>·</span>
+              <span className="h-0.5 w-0.5 rounded-full bg-white/20" />
               <span>{blog.views.toLocaleString()} views</span>
             </>
           )}
@@ -883,16 +851,18 @@ export default function BlogDetailClient({
   // ── Not found guard ────────────────────────────────────────────────────────
   if (!blog?.title) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#060810] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#05060b] text-white">
         <div className="text-center">
           <div className="mb-4 text-6xl">📭</div>
-          <h1 className="mb-3 text-3xl font-bold">Blog Not Found</h1>
-          <p className="mb-8 text-gray-400">
+          <h1 className="kinetic-headline mb-3 font-heading text-4xl font-black uppercase text-white">
+            Not Found
+          </h1>
+          <p className="mb-8 font-mono text-sm tracking-wider text-zinc-500">
             This article doesn&apos;t exist or has been removed.
           </p>
           <Link
             href="/blogs"
-            className="bg-primary-600 hover:bg-primary-500 rounded-xl px-6 py-3 font-semibold text-white transition-all"
+            className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)]"
           >
             ← Back to Blogs
           </Link>
@@ -927,7 +897,7 @@ export default function BlogDetailClient({
         {/* ── Reading Progress Bar ─────────────────────────────────────────── */}
         <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
           <div
-            className="from-primary-500 via-primary-400 to-primary-300 h-full bg-linear-to-r transition-all duration-150"
+            className="h-full bg-gradient-to-r from-neon-lime via-neon-lime/80 to-neon-lime/60 transition-all duration-150 shadow-[0_0_8px_rgba(182,243,107,0.6)]"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
@@ -941,7 +911,7 @@ export default function BlogDetailClient({
               <div className="flex items-center gap-3">
                 <Link
                   href="/blogs"
-                  className="group flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-sm text-gray-400 transition-all hover:border-white/20 hover:text-white"
+                  className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-3 py-1.5 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
                 >
                   <svg
                     className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
@@ -958,26 +928,22 @@ export default function BlogDetailClient({
                   </svg>
                   Blogs
                 </Link>
-                <span className="hidden text-gray-700 sm:block">/</span>
-                <span
-                  className={cn(
-                    'hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold sm:flex',
-                    catCls
-                  )}
-                >
-                  <span>{getCategoryConfig(meta.category).emoji}</span>
-                  {getCategoryLabel(meta.category)}
-                </span>
+                <span className="hidden text-zinc-700 sm:block">/</span>
+                {meta.category && (
+                  <span className="hidden rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase sm:block">
+                    {getCategoryLabel(meta.category)}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="hidden text-xs text-gray-600 tabular-nums md:block">
-                  {Math.round(scrollProgress)}% read · {meta.readTimeLabel}
+                <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 tabular-nums uppercase md:block">
+                  {Math.round(scrollProgress)}% · {meta.readTimeLabel}
                 </span>
                 {hasTOC && (
                   <button
                     onClick={() => setShowMobileTOC(!showMobileTOC)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all hover:text-white xl:hidden"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-neon-lime/30 hover:text-neon-lime xl:hidden"
                     title="Table of Contents"
                   >
                     <svg
@@ -1006,14 +972,14 @@ export default function BlogDetailClient({
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setShowMobileTOC(false)}
             />
-            <div className="absolute top-16 right-4 left-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117] shadow-2xl">
+            <div className="absolute top-16 right-4 left-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e16] shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
-                <h3 className="text-sm font-semibold text-white">
-                  Table of Contents
+                <h3 className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
+                  Contents
                 </h3>
                 <button
                   onClick={() => setShowMobileTOC(false)}
-                  className="text-gray-500 hover:text-white"
+                  className="text-zinc-500 hover:text-white"
                 >
                   <svg
                     className="h-4 w-4"
@@ -1077,7 +1043,7 @@ export default function BlogDetailClient({
             <div className="relative py-14 md:py-20">
               {/* Subtle ambient glow */}
               <div className="pointer-events-none absolute inset-0 -z-10">
-                <div className="bg-primary-500/6 absolute -top-40 left-1/2 h-125 w-125 -translate-x-1/2 rounded-full blur-3xl" />
+                <div className="bg-neon-violet/8 absolute -top-40 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full blur-3xl" />
               </div>
               <div className="mx-auto w-full max-w-450 px-4 sm:px-6 lg:px-8">
                 <div className="relative overflow-hidden rounded-xl border border-white/12 bg-white/4 p-4 backdrop-blur-xl sm:rounded-2xl sm:p-5 md:p-6 lg:p-8">
@@ -1113,7 +1079,7 @@ export default function BlogDetailClient({
                       <button
                         onClick={() => setTocCollapsed(false)}
                         title="Expand contents"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-gray-300"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-white/8 hover:text-neon-lime"
                       >
                         <svg
                           className="h-4 w-4"
@@ -1131,11 +1097,11 @@ export default function BlogDetailClient({
                       </button>
                       <div className="relative h-40 w-1 overflow-hidden rounded-full bg-white/8">
                         <div
-                          className="bg-primary-500 absolute top-0 left-0 w-full rounded-full transition-all duration-300"
+                          className="bg-neon-lime absolute top-0 left-0 w-full rounded-full transition-all duration-300"
                           style={{ height: `${scrollProgress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-gray-600 tabular-nums">
+                      <span className="text-[10px] text-zinc-600 tabular-nums">
                         {Math.round(scrollProgress)}%
                       </span>
                     </div>
@@ -1145,30 +1111,18 @@ export default function BlogDetailClient({
                       {/* Header */}
                       <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <svg
-                            className="text-primary-400 h-3.5 w-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 6h16M4 12h16M4 18h7"
-                            />
-                          </svg>
-                          <span className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase">
+                          <span className="bg-neon-lime h-px w-4" />
+                          <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
                             Contents
                           </span>
-                          <span className="rounded-md bg-white/8 px-1.5 py-0.5 text-[10px] text-gray-600 tabular-nums">
+                          <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
                             {tocItems.filter((s) => s.level === 2).length}
                           </span>
                         </div>
                         <button
                           onClick={() => setTocCollapsed(true)}
                           title="Collapse"
-                          className="flex h-6 w-6 items-center justify-center rounded-md text-gray-600 transition-all hover:bg-white/8 hover:text-gray-400"
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-neon-lime"
                         >
                           <svg
                             className="h-3.5 w-3.5"
@@ -1208,7 +1162,7 @@ export default function BlogDetailClient({
                       </nav>
                       {/* Footer: progress */}
                       <div className="border-t border-white/8 px-4 py-3">
-                        <div className="mb-1.5 flex items-center justify-between text-[10px] text-gray-600">
+                        <div className="mb-1.5 flex items-center justify-between text-[10px] text-zinc-600">
                           <span>
                             {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                             {tableOfContents.length} sections
@@ -1219,7 +1173,7 @@ export default function BlogDetailClient({
                         </div>
                         <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                           <div
-                            className="bg-primary-500 h-full rounded-full transition-all duration-300"
+                            className="bg-neon-lime h-full rounded-full transition-all duration-300"
                             style={{ width: `${scrollProgress}%` }}
                           />
                         </div>
@@ -1241,9 +1195,9 @@ export default function BlogDetailClient({
               <div className="mb-5 space-y-3">
                 {/* Toolbar row */}
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2.5">
-                  <span className="flex items-center gap-2 text-xs text-gray-500">
+                  <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg
-                      className="text-primary-400 h-4 w-4"
+                      className="text-neon-lime h-4 w-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1257,7 +1211,7 @@ export default function BlogDetailClient({
                     </svg>
                     <span className="hidden sm:inline">Reading</span>
                     {/* Live settings badge */}
-                    <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-gray-600 tabular-nums sm:flex">
+                    <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 tabular-nums sm:flex">
                       <span
                         style={{
                           fontFamily: FONT_FAMILIES.find(
@@ -1267,13 +1221,13 @@ export default function BlogDetailClient({
                       >
                         {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
                       </span>
-                      <span className="text-gray-700">·</span>
+                      <span className="text-zinc-700">·</span>
                       <span>
                         {FONT_SIZES.find((f) => f.id === fontSize)?.label}
                       </span>
                       {bgTheme !== 'dark' && (
                         <>
-                          <span className="text-gray-700">·</span>
+                          <span className="text-zinc-700">·</span>
                           <span className="capitalize">{bgTheme}</span>
                         </>
                       )}
@@ -1289,8 +1243,8 @@ export default function BlogDetailClient({
                           className={cn(
                             'rounded px-2 py-0.5 text-xs font-semibold transition-all',
                             fontSize === fs.id
-                              ? 'bg-primary-500/20 text-primary-300'
-                              : 'text-gray-500 hover:text-gray-300'
+                              ? 'bg-neon-lime/20 text-neon-lime'
+                              : 'text-zinc-500 hover:text-zinc-300'
                           )}
                         >
                           {fs.label}
@@ -1304,8 +1258,8 @@ export default function BlogDetailClient({
                       className={cn(
                         'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all',
                         showReadingSettings
-                          ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                          : 'border-white/10 bg-white/5 text-gray-500 hover:text-gray-300'
+                          ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                          : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
                       )}
                     >
                       <svg
@@ -1338,7 +1292,7 @@ export default function BlogDetailClient({
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                       {/* ── Typeface ── */}
                       <div className="space-y-2.5">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                           Typeface
                         </p>
                         <div className="grid grid-cols-2 gap-1.5">
@@ -1349,8 +1303,8 @@ export default function BlogDetailClient({
                               className={cn(
                                 'rounded-lg border px-2 py-2 text-xs transition-all',
                                 fontFamily === f.id
-                                  ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                  : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                  : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                               style={{ fontFamily: f.style }}
                             >
@@ -1362,7 +1316,7 @@ export default function BlogDetailClient({
 
                       {/* ── Size & Alignment ── */}
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                           Size & Align
                         </p>
                         <div className="flex gap-1">
@@ -1373,8 +1327,8 @@ export default function BlogDetailClient({
                               className={cn(
                                 'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all',
                                 fontSize === fs.id
-                                  ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                  : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                  : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                             >
                               {fs.label}
@@ -1400,8 +1354,8 @@ export default function BlogDetailClient({
                               className={cn(
                                 'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all',
                                 textAlign === a.id
-                                  ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                  : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                  : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                             >
                               <svg
@@ -1425,11 +1379,11 @@ export default function BlogDetailClient({
 
                       {/* ── Spacing ── */}
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                           Spacing
                         </p>
                         <div>
-                          <p className="mb-1.5 text-[10px] text-gray-600">
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
                             Line height
                           </p>
                           <div className="flex gap-1">
@@ -1440,8 +1394,8 @@ export default function BlogDetailClient({
                                 className={cn(
                                   'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all',
                                   lineHeight === lh
-                                    ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                    : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                    : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                                 )}
                               >
                                 {lh.slice(0, 3)}
@@ -1450,7 +1404,7 @@ export default function BlogDetailClient({
                           </div>
                         </div>
                         <div>
-                          <p className="mb-1.5 text-[10px] text-gray-600">
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
                             Letter spacing
                           </p>
                           <div className="flex gap-1">
@@ -1461,8 +1415,8 @@ export default function BlogDetailClient({
                                 className={cn(
                                   'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all',
                                   letterSpacing === ls
-                                    ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                    : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                    : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                                 )}
                               >
                                 {ls.slice(0, 3)}
@@ -1471,7 +1425,7 @@ export default function BlogDetailClient({
                           </div>
                         </div>
                         <div>
-                          <p className="mb-1.5 text-[10px] text-gray-600">
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
                             Paragraph gap
                           </p>
                           <div className="flex gap-1">
@@ -1482,8 +1436,8 @@ export default function BlogDetailClient({
                                 className={cn(
                                   'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all',
                                   paraSpacing === ps
-                                    ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                    : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                    : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                                 )}
                               >
                                 {ps.slice(0, 3)}
@@ -1495,7 +1449,7 @@ export default function BlogDetailClient({
 
                       {/* ── Theme & Layout ── */}
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                           Theme & Layout
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -1507,7 +1461,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'h-8 w-8 rounded-lg transition-all',
                                 bgTheme === t.id
-                                  ? 'ring-primary-400 scale-110 ring-2 ring-offset-1 ring-offset-[#0d1117]'
+                                  ? 'ring-neon-lime scale-110 ring-2 ring-offset-1 ring-offset-[#0c0e16]'
                                   : 'ring-1 ring-white/15 hover:ring-white/30'
                               )}
                               style={{ background: t.bg }}
@@ -1515,7 +1469,7 @@ export default function BlogDetailClient({
                           ))}
                         </div>
                         <div>
-                          <p className="mb-1.5 text-[10px] text-gray-600">
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
                             Content width
                           </p>
                           <div className="grid grid-cols-2 gap-1.5">
@@ -1526,8 +1480,8 @@ export default function BlogDetailClient({
                                 className={cn(
                                   'rounded-lg border py-1.5 text-xs capitalize transition-all',
                                   contentWidth === id
-                                    ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                                    : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                    : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                                 )}
                               >
                                 {id}
@@ -1540,8 +1494,8 @@ export default function BlogDetailClient({
                           className={cn(
                             'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all',
                             focusMode
-                              ? 'border-primary-500/40 bg-primary-500/10 text-primary-300'
-                              : 'border-white/8 bg-white/3 text-gray-500 hover:text-gray-300'
+                              ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                              : 'border-white/8 bg-white/3 text-zinc-500 hover:text-zinc-300'
                           )}
                         >
                           <span>Focus mode</span>
@@ -1549,7 +1503,7 @@ export default function BlogDetailClient({
                             className={cn(
                               'relative flex h-4 w-7 items-center rounded-full border transition-all',
                               focusMode
-                                ? 'border-primary-500/50 bg-primary-500/30'
+                                ? 'border-neon-lime/50 bg-neon-lime/30'
                                 : 'border-white/15 bg-white/5'
                             )}
                           >
@@ -1557,7 +1511,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'absolute h-3 w-3 rounded-full transition-all duration-200',
                                 focusMode
-                                  ? 'bg-primary-400 left-3.5'
+                                  ? 'bg-neon-lime left-3.5'
                                   : 'left-0.5 bg-gray-600'
                               )}
                             />
@@ -1568,7 +1522,7 @@ export default function BlogDetailClient({
 
                     {/* Reset footer */}
                     <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
-                      <p className="text-[10px] text-gray-600">
+                      <p className="text-[10px] text-zinc-600">
                         Settings saved in your browser
                       </p>
                       <button
@@ -1624,12 +1578,12 @@ export default function BlogDetailClient({
                       disabled={liked || liking}
                       aria-label={liked ? 'Already liked' : 'Like this post'}
                       className={cn(
-                        'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200',
                         liked
                           ? 'cursor-default border-rose-500/40 bg-rose-500/10 text-rose-400'
                           : liking
-                            ? 'cursor-wait border-white/10 bg-white/5 text-gray-400'
-                            : 'border-white/10 bg-white/5 text-gray-400 hover:border-rose-500/30 hover:bg-rose-500/8 hover:text-rose-300 active:scale-95'
+                            ? 'cursor-wait border-white/10 bg-white/5 text-zinc-400'
+                            : 'border-white/10 bg-white/5 text-zinc-400 hover:border-rose-500/30 hover:bg-rose-500/8 hover:text-rose-300 active:scale-95'
                       )}
                     >
                       <svg
@@ -1654,12 +1608,12 @@ export default function BlogDetailClient({
                       {liked ? (
                         <span className="text-xs text-rose-400/70">Liked</span>
                       ) : (
-                        <span className="text-xs text-gray-600">Like</span>
+                        <span className="text-xs text-zinc-600">Like</span>
                       )}
                     </button>
                   </div>
                   {/* View count */}
-                  <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-600 uppercase">
                     <svg
                       className="h-4 w-4"
                       fill="none"
@@ -1686,13 +1640,13 @@ export default function BlogDetailClient({
                 </div>
                 {meta.tags.length > 0 && (
                   <div className="mb-5 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
+                    <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
                       Tags:
                     </span>
                     {meta.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-gray-400 transition-colors hover:text-white"
+                        className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[9px] text-zinc-500 transition-colors hover:text-neon-lime"
                       >
                         #{tag}
                       </span>
@@ -1700,7 +1654,7 @@ export default function BlogDetailClient({
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
+                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
                     Share:
                   </span>
                   {SHARE_PLATFORMS.map((p) => (
@@ -1708,7 +1662,7 @@ export default function BlogDetailClient({
                       key={p.key}
                       onClick={() => handleShare(p.key)}
                       title={`Share on ${p.label}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-neon-lime/30 hover:text-neon-lime"
                     >
                       <svg
                         className="h-4 w-4"
@@ -1722,10 +1676,10 @@ export default function BlogDetailClient({
                   <button
                     onClick={handleCopy}
                     className={cn(
-                      'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-all',
+                      'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                       copied
-                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white'
+                        ? 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime'
+                        : 'border-white/10 bg-white/5 text-zinc-400 hover:border-neon-lime/30 hover:text-neon-lime'
                     )}
                   >
                     {copied ? (
@@ -1783,18 +1737,21 @@ export default function BlogDetailClient({
         {relatedBlogs.length > 0 && (
           <div className="border-t border-white/8 py-14 md:py-16">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-8 flex items-center justify-between">
+              <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
-                    Keep reading
-                  </p>
-                  <h2 className="mt-1 text-2xl font-bold text-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase">
+                      Keep Reading
+                    </span>
+                  </div>
+                  <h2 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl">
                     Related Articles
                   </h2>
                 </div>
                 <Link
                   href={`/blogs?category=${encodeURIComponent(meta.category)}`}
-                  className="text-sm text-gray-500 transition-colors hover:text-gray-200"
+                  className="font-mono text-[10px] tracking-wider text-zinc-600 uppercase transition-colors hover:text-neon-lime"
                 >
                   More in {getCategoryLabel(meta.category)} →
                 </Link>
@@ -1812,16 +1769,16 @@ export default function BlogDetailClient({
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
               <div>
-                <p className="text-sm font-semibold text-white">
+                <p className="font-heading text-base font-black text-white uppercase">
                   Enjoyed this article?
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                   Explore more from the NEUPC knowledge hub.
                 </p>
               </div>
               <Link
                 href="/blogs"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-full border border-white/12 px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/35 hover:text-neon-lime"
               >
                 ← Back to all articles
               </Link>
@@ -1832,7 +1789,7 @@ export default function BlogDetailClient({
         {showScrollTop && (
           <button
             onClick={scrollToTop}
-            className="fixed right-4 bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-[#060810]/90 text-gray-400 shadow-xl backdrop-blur-sm transition-all hover:border-white/25 hover:text-white sm:right-6"
+            className="fixed right-4 bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-[#05060b]/90 text-zinc-400 shadow-xl backdrop-blur-sm transition-all hover:border-neon-lime/40 hover:text-neon-lime sm:right-6"
             title="Back to top"
           >
             <svg
@@ -1890,42 +1847,38 @@ function HeroContent({ meta, catCls }) {
   return (
     <>
       {/* Badges */}
-      <div className="mb-4 flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
         {meta.featured && (
-          <span className="rounded-full border border-amber-500/45 bg-amber-500/18 px-2.5 py-1 text-[11px] font-semibold text-amber-200 shadow-sm sm:px-3 sm:text-xs">
-            ✨ Featured
+          <span className="rounded-full border border-neon-lime/30 bg-neon-lime/10 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase">
+            Featured
           </span>
         )}
-        <span
-          className={cn(
-            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:px-3 sm:text-xs',
-            catCls
-          )}
-        >
-          <span>{getCategoryConfig(meta.category).emoji}</span>
-          {getCategoryLabel(meta.category)}
-        </span>
+        {meta.category && (
+          <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-zinc-300 uppercase">
+            {getCategoryLabel(meta.category)}
+          </span>
+        )}
       </div>
 
       {/* Title */}
-      <h1 className="mb-4 text-2xl leading-tight font-bold text-white drop-shadow-sm sm:mb-5 sm:text-3xl md:text-4xl lg:text-5xl xl:text-[3.25rem]">
+      <h1 className="kinetic-headline mb-5 font-heading text-3xl font-black leading-none text-white uppercase sm:text-4xl md:text-5xl lg:text-6xl">
         {meta.title}
       </h1>
 
       {/* Excerpt */}
       {meta.excerpt && (
-        <p className="mb-5 max-w-3xl text-sm leading-relaxed text-gray-300 sm:text-base md:text-lg">
+        <p className="mb-6 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base md:text-lg">
           {meta.excerpt}
         </p>
       )}
 
       {/* Tags */}
       {meta.tags.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-1.5 sm:mb-6 sm:gap-2">
+        <div className="mb-6 flex flex-wrap gap-1.5">
           {meta.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-lg border border-white/12 bg-white/6 px-2 py-0.5 text-[11px] text-gray-300 sm:px-2.5 sm:py-1 sm:text-xs"
+              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[9px] text-zinc-500"
             >
               #{tag}
             </span>
@@ -1934,9 +1887,9 @@ function HeroContent({ meta, catCls }) {
       )}
 
       {/* Author + meta row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-400 sm:gap-x-5 sm:text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase sm:gap-x-5">
         <div className="flex items-center gap-2">
-          <div className="bg-primary-500/20 text-primary-300 ring-primary-500/20 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-bold ring-1">
+          <div className="bg-neon-lime/20 text-neon-lime ring-neon-lime/20 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-bold ring-1">
             {meta.authorAvatar ? (
               <SafeImg
                 src={driveImageUrl(meta.authorAvatar)}
@@ -1948,20 +1901,20 @@ function HeroContent({ meta, catCls }) {
               meta.authorInitials
             )}
           </div>
-          <span className="font-medium text-gray-200">{meta.authorName}</span>
+          <span className="font-heading text-sm font-black text-white normal-case">{meta.authorName}</span>
         </div>
         {meta.blogDate && (
           <>
-            <span className="text-gray-600">·</span>
+            <span className="h-0.5 w-0.5 rounded-full bg-white/20" />
             <span>{meta.blogDate}</span>
           </>
         )}
-        <span className="text-gray-600">·</span>
-        <span>⏱ {meta.readTimeLabel} read</span>
+        <span className="h-0.5 w-0.5 rounded-full bg-white/20" />
+        <span>{meta.readTimeLabel} read</span>
         {meta.views > 0 && (
           <>
-            <span className="text-gray-600">·</span>
-            <span>👁 {meta.views.toLocaleString()} views</span>
+            <span className="h-0.5 w-0.5 rounded-full bg-white/20" />
+            <span>{meta.views.toLocaleString()} views</span>
           </>
         )}
       </div>
