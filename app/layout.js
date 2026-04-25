@@ -132,7 +132,12 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.warn('[layout] auth() failed, continuing as unauthenticated:', error?.message);
+  }
 
   return (
     <html
