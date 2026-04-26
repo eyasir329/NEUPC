@@ -93,24 +93,24 @@ function InsightCard({ blog, index = 0 }) {
           </div>
           <h3
             className={cn(
-              'font-heading text-xl leading-snug font-black tracking-tight text-slate-900 uppercase transition-colors sm:text-2xl dark:text-white',
+              'font-heading text-xl leading-snug font-black tracking-tight text-white uppercase transition-colors sm:text-2xl',
               accent.hover
             )}
           >
             {blog.title}
           </h3>
-          <p className="line-clamp-3 text-sm leading-relaxed font-light text-slate-500 dark:text-zinc-500">
+          <p className="line-clamp-3 text-sm leading-relaxed font-light text-zinc-500">
             {getExcerpt(blog)}
           </p>
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5 sm:mt-8 sm:pt-6 dark:border-white/5">
+        <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-5 sm:mt-8 sm:pt-6">
           <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-[9px] font-bold tracking-widest text-slate-400 uppercase dark:text-zinc-600">
+            <span className="font-mono text-[9px] font-bold tracking-widest text-zinc-600 uppercase">
               Author
             </span>
-            <span className="font-mono text-[10px] font-bold tracking-widest text-slate-600 uppercase dark:text-zinc-400">
+            <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
               {getAuthorName(blog)}
             </span>
           </div>
@@ -118,7 +118,7 @@ function InsightCard({ blog, index = 0 }) {
             whileHover={{ x: 3 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 sm:h-10 sm:w-10 dark:border-white/10',
+              'flex h-9 w-9 items-center justify-center rounded-full border border-white/10 sm:h-10 sm:w-10',
               accent.icon
             )}
           >
@@ -176,7 +176,7 @@ function Blogs({
                 Knowledge Base / 004
               </span>
             </div>
-            <h2 className="kinetic-headline font-heading text-4xl font-black text-slate-900 uppercase sm:text-5xl md:text-6xl dark:text-white">
+            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
               {settings?.homepage_blogs_title || 'Insights'}
             </h2>
           </div>
@@ -184,7 +184,7 @@ function Blogs({
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/blogs"
-              className="font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet w-fit shrink-0 rounded-full border border-slate-200 bg-slate-50 px-6 py-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/10 dark:bg-white/5 dark:text-zinc-400"
+              className="font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               View All Posts →
             </Link>
@@ -214,7 +214,7 @@ function Blogs({
             className="holographic-card flex flex-col items-center gap-4 rounded-2xl py-20 text-center sm:py-24"
           >
             <div className="font-mono text-4xl opacity-20">{'{}'}</div>
-            <p className="font-mono text-[11px] tracking-[0.3em] text-slate-400 uppercase dark:text-zinc-600">
+            <p className="font-mono text-[11px] tracking-[0.3em] text-zinc-600 uppercase">
               {settings?.blogs_empty_message || 'No articles published yet'}
             </p>
           </motion.div>

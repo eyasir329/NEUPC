@@ -60,7 +60,7 @@ function About({ data = {}, settings = {} }) {
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       {/* Divider top */}
-      <div className="dark:via-neon-violet/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-slate-200 to-transparent" />
+      <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-neon-violet/20 to-transparent" />
 
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -85,7 +85,7 @@ function About({ data = {}, settings = {} }) {
             </span>
             <span className="bg-neon-violet h-px w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-slate-900 uppercase dark:text-white">
+          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-white uppercase">
             {title}
           </h2>
         </motion.div>
@@ -134,7 +134,7 @@ function About({ data = {}, settings = {} }) {
                 {/* Badge + label grouped */}
                 <div className="flex items-center gap-3">
                   {/* Est. badge — small, inline */}
-                  <div className="bg-neon-lime flex h-12 w-12 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-white shadow-lg dark:border-[#05060b]">
+                  <div className="bg-neon-lime flex h-12 w-12 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-[#05060b] shadow-lg">
                     <span className="font-heading text-[11px] leading-none font-black text-black italic">
                       2025
                     </span>
@@ -176,7 +176,7 @@ function About({ data = {}, settings = {} }) {
           >
             {/* Description */}
             <div className="space-y-4">
-              <p className="font-sans text-base leading-[1.9] font-light text-slate-600 sm:text-lg dark:text-zinc-400">
+              <p className="font-sans text-base leading-[1.9] font-light text-zinc-400 sm:text-lg">
                 {description1}
               </p>
 
@@ -197,13 +197,13 @@ function About({ data = {}, settings = {} }) {
 
               {description2 && isExpanded && (
                 <>
-                  <p className="font-sans text-sm leading-[1.9] font-light text-slate-500 sm:text-base dark:text-zinc-500">
+                  <p className="font-sans text-sm leading-[1.9] font-light text-zinc-500 sm:text-base">
                     {description2}
                   </p>
                   <button
                     type="button"
                     onClick={() => setIsExpanded(false)}
-                    className="font-heading inline-flex touch-manipulation items-center gap-1.5 text-[10px] font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-slate-700 sm:text-[11px] dark:text-zinc-500 dark:hover:text-zinc-300"
+                    className="font-heading inline-flex touch-manipulation items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-300 sm:text-[11px]"
                   >
                     <span aria-hidden>−</span>
                     Collapse
@@ -233,7 +233,7 @@ function About({ data = {}, settings = {} }) {
                 <h4 className="font-heading text-neon-lime mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
                   Mission
                 </h4>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
+                <p className="text-sm leading-relaxed text-zinc-400">
                   {settings?.mission ||
                     'Empowering students through technical leadership and hands-on system architecture.'}
                 </p>
@@ -263,7 +263,7 @@ function About({ data = {}, settings = {} }) {
                 <h4 className="font-heading text-neon-violet mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
                   Vision
                 </h4>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
+                <p className="text-sm leading-relaxed text-zinc-400">
                   {settings?.vision ||
                     'To be the primary incubator for future tech architects in the region.'}
                 </p>
@@ -274,7 +274,7 @@ function About({ data = {}, settings = {} }) {
             <div className="pt-2">
               <Link
                 href="/about"
-                className="group font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-slate-300 px-7 py-3 text-[10px] font-bold tracking-widest text-slate-700 uppercase transition-all focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/15 dark:text-zinc-300"
+                className="group font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-white/15 px-7 py-3 text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-all focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
               >
                 Learn More
                 <span

@@ -256,7 +256,7 @@
   ====================== */
 
   .card {
-    @apply shadow-soft rounded-2xl bg-white p-6 transition-all duration-300 dark:bg-slate-800;
+    @apply shadow-soft rounded-2xl bg-slate-800 p-6 transition-all duration-300;
   }
 
   .card-hover {
@@ -2520,5 +2520,6 @@
   word-wrap: normal;
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }

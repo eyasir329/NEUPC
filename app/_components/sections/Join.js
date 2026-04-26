@@ -76,10 +76,10 @@ function BenefitCard({ benefit }) {
       >
         <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
       </motion.div>
-      <h3 className="font-heading mb-2 text-base font-bold text-slate-900 sm:text-lg dark:text-white">
+      <h3 className="font-heading mb-2 text-base font-bold text-white sm:text-lg">
         {benefit.title}
       </h3>
-      <p className="text-sm leading-relaxed font-light text-slate-600 dark:text-zinc-400">
+      <p className="text-sm leading-relaxed font-light text-zinc-400">
         {benefit.description}
       </p>
     </motion.div>
@@ -116,14 +116,14 @@ function Join({ benefits, settings = {} }) {
             </span>
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-4xl font-black text-slate-900 uppercase sm:text-5xl md:text-6xl dark:text-white">
+          <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
             {settings?.homepage_join_title || (
               <>
                 Join the <span className="neon-text">Signal.</span>
               </>
             )}
           </h2>
-          <p className="mx-auto mt-5 max-w-xl px-2 text-sm leading-relaxed font-light text-slate-600 sm:mt-6 sm:px-0 sm:text-base dark:text-zinc-400">
+          <p className="mx-auto mt-5 max-w-xl px-2 text-sm leading-relaxed font-light text-zinc-400 sm:mt-6 sm:px-0 sm:text-base">
             {settings?.homepage_join_subtitle ||
               'Membership is free. What you get in return is a network, a craft, and a reason to keep shipping.'}
           </p>
@@ -156,10 +156,10 @@ function Join({ benefits, settings = {} }) {
               <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
                 /// Next cohort
               </p>
-              <h3 className="font-heading text-2xl leading-tight font-black text-slate-900 uppercase sm:text-3xl md:text-4xl dark:text-white">
+              <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
                 Ready to compete at the highest level?
               </h3>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-slate-600 sm:mt-4 dark:text-zinc-400">
+              <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
                 Applications are open. Submit once, and our committee reviews
                 within a week.
               </p>
@@ -187,7 +187,7 @@ function Join({ benefits, settings = {} }) {
               <motion.div whileHover={{ x: 2 }}>
                 <Link
                   href="/contact"
-                  className="font-mono text-[10px] tracking-[0.3em] text-slate-500 uppercase underline-offset-4 transition-colors hover:text-slate-900 hover:underline focus-visible:outline-none sm:text-[11px] dark:text-zinc-500 dark:hover:text-white"
+                  className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none sm:text-[11px]"
                 >
                   Or talk to us →
                 </Link>
