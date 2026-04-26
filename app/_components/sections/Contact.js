@@ -54,10 +54,10 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
               Contact / 006
             </span>
           </div>
-          <h2 className="kinetic-headline font-heading text-5xl font-black uppercase text-slate-900 md:text-6xl dark:text-white">
+          <h2 className="kinetic-headline font-heading text-5xl font-black uppercase text-white md:text-6xl">
             Get in <span className="neon-text">Touch.</span>
           </h2>
-          <p className="max-w-xl font-sans text-base font-light leading-relaxed text-slate-600 dark:text-zinc-400">
+          <p className="max-w-xl font-sans text-base font-light leading-relaxed text-zinc-400">
             {settings?.contact_description ||
               'Have a question, proposal, or just want to say hello? We are always open to new connections.'}
           </p>
@@ -78,22 +78,22 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
               <div className="space-y-5">
                 {contactItems.map(({ icon: Icon, label, value, href }) => (
                   <div key={label} className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-400">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="mb-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 dark:text-zinc-600">
+                      <p className="mb-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
                         {label}
                       </p>
                       {href ? (
                         <a
                           href={href}
-                          className="font-sans text-sm text-slate-700 transition-colors hover:text-neon-lime dark:text-zinc-300 dark:hover:text-neon-lime"
+                          className="font-sans text-sm text-zinc-300 transition-colors hover:text-neon-lime"
                         >
                           {value}
                         </a>
                       ) : (
-                        <p className="font-sans text-sm text-slate-700 dark:text-zinc-300">{value}</p>
+                        <p className="font-sans text-sm text-zinc-300">{value}</p>
                       )}
                     </div>
                   </div>
@@ -107,7 +107,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                 <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
                   Office Hours
                 </p>
-                <p className="font-sans text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
+                <p className="font-sans text-sm leading-relaxed text-zinc-400">
                   {contact.officeHours}
                 </p>
               </div>
@@ -116,7 +116,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
             {/* Social links */}
             {socialLinks.length > 0 && (
               <div>
-                <p className="mb-4 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 dark:text-zinc-600">
+                <p className="mb-4 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
                   Find us on
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -126,7 +126,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-all hover:border-neon-lime hover:text-neon-lime dark:border-white/10 dark:text-zinc-400 dark:hover:border-neon-lime dark:hover:text-neon-lime"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime"
                     >
                       <Icon className="h-4 w-4" />
                     </Link>
@@ -139,13 +139,13 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
           {/* ── Right: form ─────────────────────────────────────── */}
           <div className="glass-panel rounded-3xl p-8 md:p-10">
             {/* Terminal chrome */}
-            <div className="mb-8 flex items-center justify-between border-b border-slate-200/60 pb-5 dark:border-white/5">
+            <div className="mb-8 flex items-center justify-between border-b border-white/5 pb-5">
               <div className="flex gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-400/60" />
                 <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
                 <div className="h-3 w-3 rounded-full bg-neon-lime/60" />
               </div>
-              <span className="font-mono text-[10px] tracking-[0.3em] text-slate-400 dark:text-zinc-600">
+              <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-600">
                 message@neupc
               </span>
             </div>
@@ -160,7 +160,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                     type="text"
                     placeholder="Your name"
                     required
-                    className="w-full border-0 border-b border-slate-200 bg-transparent py-3 font-sans text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300 focus:border-neon-lime focus:ring-0 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-700 dark:focus:border-neon-lime"
+                    className="w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
                   />
                 </div>
                 <div className="space-y-2">
@@ -171,7 +171,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                     type="email"
                     placeholder="you@example.com"
                     required
-                    className="w-full border-0 border-b border-slate-200 bg-transparent py-3 font-sans text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300 focus:border-neon-lime focus:ring-0 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-700 dark:focus:border-neon-lime"
+                    className="w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
                   />
                 </div>
               </div>
@@ -180,12 +180,12 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                 <label className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
                   Subject
                 </label>
-                <select className="w-full cursor-pointer border-0 border-b border-slate-200 bg-transparent py-3 font-sans text-sm text-slate-900 outline-none focus:border-neon-lime focus:ring-0 dark:border-white/10 dark:text-white dark:focus:border-neon-lime">
+                <select className="w-full cursor-pointer border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none focus:border-neon-lime focus:ring-0">
                   {(contact.subjects?.length > 0
                     ? contact.subjects
                     : ['Membership', 'Partnership', 'Event', 'General']
                   ).map((s) => (
-                    <option key={s} className="dark:bg-surface">
+                    <option key={s} className="bg-surface">
                       {s}
                     </option>
                   ))}
@@ -200,7 +200,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                   placeholder="Tell us what's on your mind..."
                   rows={4}
                   required
-                  className="w-full resize-none border-0 border-b border-slate-200 bg-transparent py-3 font-sans text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300 focus:border-neon-lime focus:ring-0 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-700 dark:focus:border-neon-lime"
+                  className="w-full resize-none border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
                 />
               </div>
 

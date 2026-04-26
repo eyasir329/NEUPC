@@ -106,7 +106,7 @@ function Achievements({
   return (
     <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
       {/* Top divider */}
-      <div className="dark:via-neon-lime/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+      <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-neon-lime/20 to-transparent" />
 
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
@@ -129,10 +129,10 @@ function Achievements({
             </span>
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-4xl font-black text-slate-900 uppercase sm:text-5xl md:text-6xl lg:text-7xl dark:text-white">
+          <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl lg:text-7xl">
             Hall of <span className="neon-text">Victories</span>
           </h2>
-          <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-slate-500 sm:max-w-md sm:px-0 dark:text-zinc-400">
+          <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
             Our members compete and win at national and international
             programming contests.
           </p>
@@ -158,7 +158,7 @@ function Achievements({
                 {/* Image */}
                 <div className="w-full max-w-xs sm:max-w-sm lg:w-5/12 lg:max-w-none">
                   <div className="relative">
-                    <div className="dark:border-neon-lime/15 aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:p-3 dark:bg-[#020307]">
+                    <div className="aspect-square overflow-hidden rounded-2xl border border-neon-lime/15 bg-[#020307] p-2 sm:p-3">
                       {current.featured_photo?.url ? (
                         <div className="relative h-full w-full overflow-hidden rounded-xl">
                           <Image
@@ -210,12 +210,12 @@ function Achievements({
                       `Major Milestone ${current.year || new Date().getFullYear()}`}
                   </span>
 
-                  <h3 className="kinetic-headline font-heading text-3xl font-black text-slate-900 uppercase sm:text-4xl md:text-5xl lg:text-6xl dark:text-white">
+                  <h3 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl md:text-5xl lg:text-6xl">
                     {current.title}
                   </h3>
 
                   {current.description && (
-                    <p className="text-sm leading-loose font-light text-slate-500 sm:text-base lg:text-lg dark:text-zinc-400">
+                    <p className="text-sm leading-loose font-light text-zinc-400 sm:text-base lg:text-lg">
                       {current.description}
                     </p>
                   )}
@@ -231,9 +231,9 @@ function Achievements({
                         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                       </svg>
                     </div>
-                    <div className="dark:border-neon-violet/20 flex h-11 w-11 items-center justify-center rounded-full border border-violet-200 bg-violet-50 sm:h-14 sm:w-14 dark:bg-[#0c0e16]">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-neon-violet/20 bg-[#0c0e16] sm:h-14 sm:w-14">
                       <svg
-                        className="dark:text-neon-violet h-5 w-5 text-violet-600 sm:h-6 sm:w-6"
+                        className="h-5 w-5 text-neon-violet sm:h-6 sm:w-6"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -256,7 +256,7 @@ function Achievements({
               <div className="mt-6 flex items-center justify-between sm:mt-8">
                 <button
                   onClick={handlePrev}
-                  className="dark:hover:border-neon-lime dark:hover:text-neon-lime dark:focus-visible:ring-neon-lime flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-all hover:border-slate-900 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none sm:h-11 sm:w-11 dark:border-white/10 dark:text-zinc-400"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:outline-none sm:h-11 sm:w-11"
                   aria-label="Previous achievement"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -270,8 +270,8 @@ function Achievements({
                       className={cn(
                         'h-2 rounded-full transition-all duration-300 focus-visible:outline-none',
                         i === currentIndex
-                          ? 'dark:bg-neon-lime w-6 bg-emerald-500'
-                          : 'w-2 bg-slate-300 hover:bg-slate-400 dark:bg-white/20 dark:hover:bg-white/30'
+                          ? 'w-6 bg-neon-lime'
+                          : 'w-2 bg-white/20 hover:bg-white/30'
                       )}
                       aria-label={`Go to achievement ${i + 1}`}
                     />
@@ -280,7 +280,7 @@ function Achievements({
 
                 <button
                   onClick={handleNext}
-                  className="dark:hover:border-neon-lime dark:hover:text-neon-lime dark:focus-visible:ring-neon-lime flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-all hover:border-slate-900 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none sm:h-11 sm:w-11 dark:border-white/10 dark:text-zinc-400"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:outline-none sm:h-11 sm:w-11"
                   aria-label="Next achievement"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -296,7 +296,7 @@ function Achievements({
             viewport={{ once: true }}
             className="holographic-card rounded-2xl py-16 text-center sm:py-20"
           >
-            <p className="font-mono text-[11px] tracking-[0.3em] text-slate-400 uppercase dark:text-zinc-600">
+            <p className="font-mono text-[11px] tracking-[0.3em] text-zinc-600 uppercase">
               {settings?.achievements_empty_message ||
                 '[ No Featured Achievements ]'}
             </p>
@@ -309,7 +309,7 @@ function Achievements({
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-40px 0px' }}
-          className="mt-16 grid grid-cols-2 divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white/40 backdrop-blur-xl sm:mt-20 sm:rounded-3xl lg:grid-cols-4 dark:divide-white/5 dark:border-white/5 dark:bg-[#020307]/40"
+          className="mt-16 grid grid-cols-2 divide-white/5 overflow-hidden rounded-2xl border border-white/5 bg-[#020307]/40 backdrop-blur-xl sm:mt-20 sm:rounded-3xl lg:grid-cols-4"
         >
           {displayStats.map((stat, i) => (
             <motion.div
@@ -318,21 +318,21 @@ function Achievements({
               whileHover={{ scale: 1.05 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className={cn(
-                'group dark:hover:bg-neon-lime/5 hover:bg-neon-lime/5 relative cursor-default px-4 py-8 text-center transition-colors sm:px-6 sm:py-10',
+                'group hover:bg-neon-lime/5 relative cursor-default px-4 py-8 text-center transition-colors sm:px-6 sm:py-10',
                 i % 2 === 0 &&
                   i !== displayStats.length - 1 &&
-                  'border-r border-slate-200 dark:border-white/5',
+                  'border-r border-white/5',
                 i < displayStats.length - 2 &&
-                  'border-b border-slate-200 lg:border-b-0 dark:border-white/5',
+                  'border-b border-white/5 lg:border-b-0',
                 i < displayStats.length - 1 &&
                   i % 2 !== 0 &&
-                  'lg:border-r lg:border-slate-200 lg:dark:border-white/5'
+                  'lg:border-r lg:border-white/5'
               )}
             >
               <div className="stat-numeral font-heading text-neon-lime mb-2 text-4xl leading-none font-black tracking-tighter sm:mb-3 sm:text-5xl md:text-6xl">
                 {stat.value}
               </div>
-              <div className="font-mono text-[9px] font-bold tracking-[0.35em] text-slate-500 uppercase sm:text-[10px] sm:tracking-[0.4em] dark:text-zinc-500">
+              <div className="font-mono text-[9px] font-bold tracking-[0.35em] text-zinc-500 uppercase sm:text-[10px] sm:tracking-[0.4em]">
                 {stat.label}
               </div>
             </motion.div>
@@ -354,7 +354,7 @@ function Achievements({
           >
             <Link
               href="/achievements"
-              className="font-heading focus-visible:ring-neon-lime dark:hover:border-neon-lime dark:hover:text-neon-lime inline-flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-6 py-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase transition-colors hover:border-slate-900 hover:text-slate-900 focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/10 dark:bg-white/5 dark:text-zinc-400"
+              className="font-heading focus-visible:ring-neon-lime inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               {settings?.homepage_achievements_cta || 'View All Achievements'}
               <svg

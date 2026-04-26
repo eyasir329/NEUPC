@@ -15,18 +15,18 @@ const STATUS_STYLES = {
   upcoming: { dot: 'bg-neon-lime animate-pulse', text: 'text-neon-lime' },
   ongoing: { dot: 'bg-neon-violet animate-pulse', text: 'text-neon-violet' },
   completed: {
-    dot: 'bg-slate-400 dark:bg-zinc-600',
-    text: 'text-slate-400 dark:text-zinc-500',
+    dot: 'bg-zinc-600',
+    text: 'text-zinc-500',
   },
 };
 
 const CARD_ACCENT = [
   {
-    border: 'border-violet-200/60 dark:border-neon-violet/20',
-    tag: 'bg-violet-600 text-white dark:bg-neon-violet/90 dark:text-black',
+    border: 'border-neon-violet/20',
+    tag: 'bg-neon-violet/90 text-black',
     glow: 'group-hover:shadow-neon-violet/10',
-    hover: 'group-hover:text-violet-600 dark:group-hover:text-neon-violet',
-    badge: 'bg-violet-50 dark:bg-neon-violet/10',
+    hover: 'group-hover:text-neon-violet',
+    badge: 'bg-neon-violet/10',
   },
   {
     border: 'border-neon-lime/20',
@@ -36,11 +36,11 @@ const CARD_ACCENT = [
     badge: 'bg-neon-lime/10',
   },
   {
-    border: 'border-slate-200/60 dark:border-white/10',
-    tag: 'bg-slate-800 text-white dark:bg-white/90 dark:text-black',
+    border: 'border-white/10',
+    tag: 'bg-white/90 text-black',
     glow: 'group-hover:shadow-white/5',
-    hover: 'group-hover:text-slate-700 dark:group-hover:text-white',
-    badge: 'bg-slate-100 dark:bg-white/5',
+    hover: 'group-hover:text-white',
+    badge: 'bg-white/5',
   },
 ];
 
@@ -103,7 +103,7 @@ function EventCard({ event, index = 0 }) {
           ) : (
             <div className="h-full w-full" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent dark:from-[#05060b]/90 dark:via-[#05060b]/20 dark:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/90 via-[#05060b]/20 to-transparent" />
           <div
             className={cn(
               'absolute top-3 left-3 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase backdrop-blur-md sm:top-4 sm:left-4 sm:px-4 sm:py-1.5',
@@ -129,20 +129,20 @@ function EventCard({ event, index = 0 }) {
         <div className="flex flex-1 flex-col gap-3 px-1">
           <h3
             className={cn(
-              'font-heading text-lg leading-tight font-black tracking-tight text-slate-900 uppercase italic transition-colors sm:text-xl md:text-2xl dark:text-white',
+              'font-heading text-lg leading-tight font-black tracking-tight text-white uppercase italic transition-colors sm:text-xl md:text-2xl',
               accent.hover
             )}
           >
             {event.title}
           </h3>
-          <p className="line-clamp-2 text-sm leading-relaxed text-slate-500 dark:text-zinc-500">
+          <p className="line-clamp-2 text-sm leading-relaxed text-zinc-500">
             {event.description || 'Discover more about this exciting event.'}
           </p>
-          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-4 font-mono text-[10px] font-semibold tracking-widest text-slate-400 uppercase dark:border-white/5 dark:text-zinc-600">
+          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/5 pt-4 font-mono text-[10px] font-semibold tracking-widest text-zinc-600 uppercase">
             <span>{formatDate(event.start_date, { timeZone: 'UTC' })}</span>
             {event.venue && (
               <>
-                <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-white/10" />
+                <span className="h-1 w-1 rounded-full bg-white/10" />
                 <span className="max-w-[120px] truncate">{event.venue}</span>
               </>
             )}
@@ -184,14 +184,14 @@ function Events({
                 Activity Feed / 002
               </span>
             </div>
-            <h2 className="kinetic-headline font-heading text-4xl font-black text-slate-900 uppercase sm:text-5xl md:text-6xl dark:text-white">
+            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
               {settings?.homepage_events_title || 'Recent Events'}
             </h2>
           </div>
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/events"
-              className="font-heading focus-visible:ring-neon-lime dark:hover:border-neon-lime dark:hover:text-neon-lime w-fit shrink-0 rounded-full border border-slate-200 bg-slate-50 px-6 py-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase transition-colors hover:border-slate-900 hover:text-slate-900 focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/10 dark:bg-white/5 dark:text-zinc-400"
+              className="font-heading focus-visible:ring-neon-lime w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               View All →
             </Link>
@@ -221,7 +221,7 @@ function Events({
             className="flex flex-col items-center gap-4 py-20 text-center sm:py-24"
           >
             <div className="font-mono text-4xl opacity-20">[ ]</div>
-            <p className="font-mono text-[11px] tracking-[0.3em] text-slate-400 uppercase dark:text-zinc-600">
+            <p className="font-mono text-[11px] tracking-[0.3em] text-zinc-600 uppercase">
               {settings?.events_empty_message || 'No events found'}
             </p>
           </motion.div>
