@@ -8,6 +8,12 @@ import { motion } from 'framer-motion';
 import { cn } from '../_lib/utils';
 import CTASection from '../_components/ui/CTASection';
 import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
+import {
   Rocket,
   Eye,
   Terminal,
@@ -33,31 +39,6 @@ import {
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-
-/* ─── Motion variants (synced with events / achievements pages) ─────────── */
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
-};
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const viewport = { once: true, margin: '-40px 0px' };
 
 /* ─── Icon map ─────────────────────────────────────────────────────────── */
 
@@ -477,7 +458,7 @@ export default function AboutClient({
     : missionItems.slice(0, PREVIEW);
 
   return (
-    <div className="overflow-x-clip">
+    <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ================================================================ */}
       {/* HERO — same pattern as EventsClient                             */}
       {/* ================================================================ */}
