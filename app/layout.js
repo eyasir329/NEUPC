@@ -127,7 +127,7 @@ export const metadata = {
   // },
   category: 'education',
   other: {
-    'theme-color': '#0f172a',
+    'theme-color': '#05060B',
   },
 };
 

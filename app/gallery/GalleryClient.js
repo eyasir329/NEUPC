@@ -6,30 +6,14 @@ import dynamic from 'next/dynamic';
 import { cn, driveImageUrl } from '../_lib/utils';
 import SafeImg from '../_components/ui/SafeImg';
 import InlinePagination from '../_components/ui/InlinePagination';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), { ssr: false });
-
-// ─── Motion variants (synced with events/achievements pages) ─────────────────
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1, y: 0, filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-};
-
-const viewport = { once: true, margin: '-40px 0px' };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -373,7 +357,7 @@ export default function GalleryClient({
     (sortBy !== 'newest' ? 1 : 0);
 
   return (
-    <div className="overflow-x-clip">
+    <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">

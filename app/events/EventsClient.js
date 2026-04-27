@@ -8,38 +8,16 @@ import InlinePagination from '../_components/ui/InlinePagination';
 import SafeImg from '../_components/ui/SafeImg';
 import FeaturedCarousel from '../_components/ui/FeaturedCarousel';
 import { cn, driveImageUrl } from '../_lib/utils';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-
-// ─── Motion variants ──────────────────────────────────────────────────────────
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const viewport = { once: true, margin: '-40px 0px' };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -271,13 +249,7 @@ function FeaturedBanner({ event }) {
   const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
 
   return (
-    <motion.article
-      variants={fadeUp}
-      initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
-      className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]"
-    >
+    <article className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]">
       {/* Neon-lime top accent line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-lime/60 to-transparent z-10" />
 
@@ -381,7 +353,7 @@ function FeaturedBanner({ event }) {
           )}
         </div>
       </div>
-    </motion.article>
+    </article>
   );
 }
 
@@ -502,7 +474,7 @@ export default function EventsClient({ events = [], settings = {} }) {
   function clearAll() { updateSearch(''); updateCategory('all'); updateStatus('active'); }
 
   return (
-    <div className="overflow-x-clip">
+    <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
@@ -603,8 +575,7 @@ export default function EventsClient({ events = [], settings = {} }) {
             <motion.div
               variants={stagger}
               initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
+              animate="visible"
             >
               <motion.div variants={fadeUp} className="flex items-center gap-3">
                 <span className="bg-neon-lime h-px w-7" />

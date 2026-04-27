@@ -7,35 +7,16 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { cn, driveImageUrl, getInitials } from '../_lib/utils';
 import CTASection from '../_components/ui/CTASection';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-
-// ─── Motion variants (exact sync with events / achievements) ─────────────────
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1, y: 0, filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const viewport = { once: true, margin: '-40px 0px' };
 
 // ─── Fallback data ───────────────────────────────────────────────────────────
 
@@ -512,7 +493,7 @@ export default function CommitteeClient({
   const heroStats = propHeroStats.length > 0 ? propHeroStats : HERO_STATS_DEFAULT;
 
   return (
-    <div className="overflow-x-clip">
+    <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <Hero stats={heroStats} />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion';
 import { pageTransition } from './motion';
 
 const reducedPageTransition = {
@@ -23,15 +23,17 @@ export default function PageTransition({ children }) {
   if (!mounted) return <>{children}</>;
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial={transition.initial}
-        animate={transition.animate}
-        exit={transition.exit}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={pathname}
+          initial={transition.initial}
+          animate={transition.animate}
+          exit={transition.exit}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </MotionConfig>
   );
 }

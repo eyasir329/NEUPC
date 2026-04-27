@@ -133,6 +133,37 @@ export const reducedCardHover = {
   transition: { duration: 0.15 },
 };
 
+// ─── Public-Page Shared Variants ──────────────────────────────────────────────
+// Used across about / events / blogs / roadmaps / gallery / contact /
+// developers / committee / achievements. Keep these in sync with the
+// kinetic-headline + neon design language.
+
+export const pageFadeUp = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+export const pageStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
+};
+
+export const pageCardReveal = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+export const pageViewport = { once: true, margin: '-40px 0px' };
+
 // ─── Device-Aware Presets ─────────────────────────────────────────────────────
 
 /** Animation timing presets by device class. */

@@ -8,42 +8,23 @@ import dynamic from 'next/dynamic';
 import { cn } from '../_lib/utils';
 import InlinePagination from '../_components/ui/InlinePagination';
 import FeaturedCarousel from '../_components/ui/FeaturedCarousel';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
-// Motion variants — synced with homepage
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
-};
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const viewport = { once: true, margin: '-40px 0px' };
-
-function SectionEyebrow({ tag, title, accent, description }) {
+function SectionEyebrow({ tag, title, accent, description, onMount = false }) {
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
+      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
       className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
       <div className="flex items-center justify-center gap-3">
@@ -257,14 +238,8 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
   const image = achievement.featured_photo?.url;
 
   return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
-      className="group relative overflow-hidden rounded-2xl border border-neon-lime/10 bg-[#05060b]"
-    >
-      <div className="relative aspect-[4/5] w-full sm:aspect-[16/10] lg:aspect-[21/9]">
+    <div className="group relative overflow-hidden rounded-2xl border border-neon-lime/10 bg-[#08090f]">
+      <div className="relative aspect-[3/2] w-full sm:aspect-[16/10] lg:aspect-[21/9]">
         {/* Backdrop fill */}
         {image && (
           <Image
@@ -272,7 +247,8 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
             alt=""
             aria-hidden
             fill
-            className="scale-110 object-cover opacity-40 blur-2xl"
+            loading="lazy"
+            className="scale-110 object-cover opacity-25 blur-xl"
             sizes="100vw"
             unoptimized
           />
@@ -283,6 +259,7 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
           src={image ?? '/placeholder-event.png'}
           alt={achievement.title || 'Featured achievement'}
           fill
+          loading="lazy"
           className="object-contain object-center"
           sizes="100vw"
           unoptimized
@@ -391,7 +368,7 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1127,7 +1104,7 @@ function AchievementCard({ achievement, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#05060B] transition-all duration-300"
+      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300"
     >
       {/* Cover image */}
       <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
@@ -1235,7 +1212,7 @@ function ParticipationRecordCard({ record, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#05060B] transition-all duration-300"
+      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300"
     >
       {/* Cover */}
       <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-t-2xl">
@@ -1619,6 +1596,7 @@ export default function AchievementsClient({
               tag="Recognition / 001"
               title="Featured"
               accent="Victory"
+              onMount
             />
             <FeaturedAchievementsCarousel
               items={featuredAchievements}
