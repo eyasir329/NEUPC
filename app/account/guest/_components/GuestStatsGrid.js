@@ -1,85 +1,38 @@
-/**
- * @file Guest stats grid — responsive card grid showing key guest
- *   metrics such as events attended, public resources accessed,
- *   and membership application status.
- * @module GuestStatsGrid
- */
-
 'use client';
 
-import { Calendar, TrendingUp, Trophy, Bell } from 'lucide-react';
+import { Calendar, CheckCircle, Flame, Bell } from 'lucide-react';
 
-const statIcons = {
-  calendar: Calendar,
-  trendingUp: TrendingUp,
-  trophy: Trophy,
-  bell: Bell,
-};
+const STATS = [
+  { label: 'Registered', icon: Calendar, valueKey: 'registeredEvents', unit: 'active', trend: '+1 this week' },
+  { label: 'Attended',   icon: CheckCircle, valueKey: 'participationCount', unit: 'events', trend: 'Last: Apr 26' },
+  { label: 'Upcoming',   icon: Flame, valueKey: 'upcomingEvents', unit: 'available', trend: '2 closing soon' },
+  { label: 'Alerts',     icon: Bell, valueKey: 'notifications', unit: 'unread', trend: '1 urgent' },
+];
 
 export default function GuestStatsGrid({ stats }) {
-  const statsConfig = [
-    {
-      label: 'Registered',
-      value: stats.registeredEvents,
-      detail: 'Active events',
-      icon: 'calendar',
-      color: 'blue',
-      shadowColor: 'blue-500/20',
-    },
-    {
-      label: 'Upcoming',
-      value: stats.upcomingEvents,
-      detail: 'Available',
-      icon: 'trendingUp',
-      color: 'amber',
-      shadowColor: 'amber-500/20',
-    },
-    {
-      label: 'Attended',
-      value: stats.participationCount,
-      detail: 'Events',
-      icon: 'trophy',
-      color: 'green',
-      shadowColor: 'green-500/20',
-    },
-    {
-      label: 'Alerts',
-      value: stats.notifications,
-      detail: 'Unread',
-      icon: 'bell',
-      color: 'purple',
-      shadowColor: 'purple-500/20',
-    },
-  ];
-
   return (
-    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-      {statsConfig.map((stat, idx) => {
-        const Icon = statIcons[stat.icon];
-        return (
-          <div
-            key={idx}
-            className={`group rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-${stat.color}-500/20 sm:p-6`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-400">
-                  {stat.label}
-                </p>
-                <p className="mt-2 text-3xl font-bold text-white">
-                  {stat.value}
-                </p>
-                <p className={`mt-1 text-xs text-${stat.color}-400`}>
-                  {stat.detail}
-                </p>
-              </div>
-              <Icon
-                className={`h-8 w-8 text-${stat.color}-400 opacity-70 transition-transform duration-300 group-hover:scale-110`}
-              />
-            </div>
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {STATS.map(({ label, icon: Icon, valueKey, unit, trend }) => (
+        <div
+          key={label}
+          className="relative overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#111418] p-4"
+        >
+          <div className="mb-2 flex items-center gap-1.5">
+            <Icon className="h-3 w-3 text-gray-500" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-gray-500">
+              {label}
+            </span>
           </div>
-        );
-      })}
+          <div className="text-[28px] font-semibold leading-none tracking-tight tabular-nums text-white">
+            {stats[valueKey]}
+            <span className="ml-1 text-sm font-normal text-gray-500">{unit}</span>
+          </div>
+          <div className="mt-2 text-[11.5px] text-gray-500">{trend}</div>
+          <div className="absolute top-3.5 right-3.5 flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04]">
+            <Icon className="h-3.5 w-3.5 text-gray-400" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

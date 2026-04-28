@@ -1,15 +1,9 @@
-/**
- * @file Quick actions grid — navigation tiles linking to frequently
- *   used guest features such as events, profile, and applications.
- * @module GuestQuickActionsGrid
- */
-
 'use client';
 
 import Link from 'next/link';
 import { ChevronRight, User, Award, Calendar } from 'lucide-react';
 
-const quickActionIcons = {
+const iconMap = {
   user: User,
   award: Award,
   calendar: Calendar,
@@ -17,22 +11,22 @@ const quickActionIcons = {
 
 export default function QuickActionsGrid({ actions }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-3">
       {actions.map((action) => {
-        const Icon = quickActionIcons[action.iconKey];
+        const Icon = iconMap[action.iconKey] || Calendar;
         return (
           <Link
             key={action.id}
             href={action.link}
-            className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+            className="group flex items-center gap-3 rounded-[14px] border border-white/[0.07] bg-[#111418] px-4 py-3.5 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
           >
-            <div className="flex items-center gap-3">
-              <div className={`rounded-lg bg-${action.color}-500/20 p-2`}>
-                <Icon className={`h-5 w-5 text-${action.color}-400`} />
-              </div>
-              <span className="font-semibold text-white">{action.label}</span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
+              <Icon className="h-4 w-4 text-gray-400 transition-colors group-hover:text-white" />
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-white" />
+            <span className="flex-1 text-[13px] font-medium text-gray-200 group-hover:text-white">
+              {action.label}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-400" />
           </Link>
         );
       })}

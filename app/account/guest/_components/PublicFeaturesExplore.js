@@ -1,15 +1,9 @@
-/**
- * @file Public features explore — discovery panel showcasing publicly
- *   accessible club content like blogs, events, and achievements.
- * @module GuestPublicFeaturesExplore
- */
-
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Calendar, BookOpen, Target } from 'lucide-react';
+import { Calendar, BookOpen, Target, ChevronRight } from 'lucide-react';
 
-const featureIcons = {
+const iconMap = {
   calendar: Calendar,
   bookOpen: BookOpen,
   target: Target,
@@ -17,32 +11,28 @@ const featureIcons = {
 
 export default function PublicFeaturesExplore({ features }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-white">🌟 Explore</h2>
-        <p className="text-sm text-gray-400">Available for guest users</p>
+    <div className="overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#111418]">
+      <div className="border-b border-white/[0.07] px-4 py-3.5">
+        <h3 className="text-[13px] font-semibold text-white">Explore</h3>
+        <p className="mt-0.5 text-[11.5px] text-gray-500">Available for guest users</p>
       </div>
-      <div className="space-y-3">
+      <div className="divide-y divide-white/[0.07]">
         {features.map((feature) => {
-          const Icon = featureIcons[feature.iconKey];
+          const Icon = iconMap[feature.iconKey] || Calendar;
           return (
             <Link
               key={feature.id}
               href={feature.link}
-              className="group flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+              className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
             >
-              <div className="flex items-center gap-3">
-                <div className={`rounded-lg bg-${feature.color}-500/20 p-2`}>
-                  <Icon className={`h-5 w-5 text-${feature.color}-400`} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white group-hover:text-blue-300">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs text-gray-400">{feature.description}</p>
-                </div>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
+                <Icon className="h-4 w-4 text-gray-400 transition-colors group-hover:text-white" />
               </div>
-              <ChevronRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-white" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-medium text-white">{feature.title}</div>
+                <div className="text-[11.5px] text-gray-500">{feature.description}</div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-400" />
             </Link>
           );
         })}
