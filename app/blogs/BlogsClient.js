@@ -85,13 +85,12 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
 
 // ─── Section eyebrow (exact pattern from achievements page) ──────────────────
 
-function SectionEyebrow({ tag, title, accent, right }) {
+function SectionEyebrow({ tag, title, accent, right, onMount = false }) {
   return (
     <motion.div
       variants={stagger}
       initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
+      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
       className={cn(
         'mb-8 flex flex-col gap-1 sm:mb-10',
         right && 'sm:flex-row sm:items-end sm:justify-between'

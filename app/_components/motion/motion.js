@@ -162,7 +162,23 @@ export const pageCardReveal = {
   },
 };
 
-export const pageViewport = { once: true, margin: '-40px 0px' };
+export const pageViewport = { once: true, margin: '-80px 0px', amount: 0.1 };
+
+/**
+ * Trigger props for the first section directly after a hero.
+ * Animates on mount instead of waiting for scroll, so the section below
+ * the fold (or just below the hero) reveals without any perceived delay.
+ */
+export const pageMountTrigger = { initial: 'hidden', animate: 'visible' };
+
+/**
+ * Trigger props for sections further down the page. Pairs with `pageViewport`.
+ */
+export const pageScrollTrigger = {
+  initial: 'hidden',
+  whileInView: 'visible',
+  viewport: pageViewport,
+};
 
 // ─── Device-Aware Presets ─────────────────────────────────────────────────────
 

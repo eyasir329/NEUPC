@@ -206,8 +206,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="mb-12 space-y-4 sm:mb-16"
           >
             <div className="flex items-center gap-3">
@@ -229,8 +228,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={cardsStagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4"
           >
             {features.map((feature, i) => (
@@ -242,8 +240,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 sm:mt-10 sm:p-6"
           >
             <div className="flex items-start gap-4">
