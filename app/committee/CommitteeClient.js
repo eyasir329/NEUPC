@@ -135,13 +135,12 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
 
 // ─── Section heading (matches events "Featured Event" heading style) ──────────
 
-function SectionLabel({ tag, title, accent }) {
+function SectionLabel({ tag, title, accent, onMount = false }) {
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
+      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
       className="mb-10 sm:mb-14"
     >
       <div className="flex items-center gap-3 mb-3">
@@ -501,12 +500,11 @@ export default function CommitteeClient({
       {/* ── Advisory Board ───────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
         <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Guidance & Mentorship" title="Advisory" accent="Board" />
+          <SectionLabel tag="Guidance & Mentorship" title="Advisory" accent="Board" onMount />
           <motion.div
             variants={stagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="grid gap-4 sm:gap-5 md:grid-cols-2"
           >
             {advisors.map((advisor, i) => (

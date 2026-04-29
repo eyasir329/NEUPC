@@ -452,8 +452,7 @@ export default function GalleryClient({
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search + sort + year row */}

@@ -414,8 +414,7 @@ export default function ContactClient({
               <motion.div
                 variants={fadeUp}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="glass-panel rounded-2xl p-6 sm:p-7"
               >
                 <div className="mb-5 flex items-center gap-3">
@@ -459,8 +458,7 @@ export default function ContactClient({
               <motion.div
                 variants={fadeUp}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="glass-panel rounded-2xl p-6 sm:p-7"
               >
                 <div className="mb-5 flex items-center gap-3">
@@ -495,8 +493,7 @@ export default function ContactClient({
               <motion.div
                 variants={fadeUp}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="glass-panel rounded-2xl p-6 sm:p-7"
               >
                 <div className="mb-5 flex items-center gap-3">
@@ -549,8 +546,7 @@ export default function ContactClient({
             <motion.div
               variants={fadeUp}
               initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
+              animate="visible"
               className="lg:col-span-7"
             >
               <div className="glass-panel rounded-2xl p-6 sm:p-8 lg:p-10">
