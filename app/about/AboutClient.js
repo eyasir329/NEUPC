@@ -168,13 +168,12 @@ const DEFAULT_WHAT_WE_DO = [
 
 /* ─── Shared section eyebrow (matches AchievementsClient exactly) ──────── */
 
-function SectionEyebrow({ tag, title, accent, description, color = 'lime' }) {
+function SectionEyebrow({ tag, title, accent, description, color = 'lime', onMount = false }) {
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
+      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
       className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
       <div className="flex items-center justify-center gap-3">
@@ -573,13 +572,13 @@ export default function AboutClient({
             accent="Vision"
             description="What drives us every day and where we're headed as a community"
             color="violet"
+            onMount
           />
 
           <motion.div
             variants={stagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="grid gap-6 lg:grid-cols-2 lg:gap-8"
           >
             {/* Mission card */}

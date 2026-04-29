@@ -10,31 +10,23 @@ import { useState, useTransition } from 'react';
 import { useScrollLock } from '@/app/_lib/hooks';
 import {
   User,
-  Mail,
-  Phone,
   Shield,
   CheckCircle2,
   XCircle,
   Calendar,
-  Edit3,
   Save,
   X,
   Sparkles,
-  Star,
-  Bell,
-  Trophy,
-  CalendarDays,
-  Lock,
   LogOut,
   AlertTriangle,
-  ExternalLink,
-  Link as LinkIcon,
   Clock,
-  ArrowRight,
-  Upload,
   Trash2,
-  Camera,
   Loader2,
+  Upload,
+  Pencil,
+  Bell,
+  Award,
+  Github,
 } from 'lucide-react';
 import { updateGuestInfoAction } from '@/app/_lib/guest-actions';
 import {
@@ -42,17 +34,20 @@ import {
   removeAvatarAction,
 } from '@/app/_lib/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions';
+import {
+  PageHead,
+  CardHead,
+  Stat,
+  StatRow,
+  Badge,
+  Btn,
+  LockedRow,
+} from '../../_components/ui';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
-
 function formatDateTime(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-US', {
@@ -72,80 +67,77 @@ function profileCompletion(user) {
     !!user.avatar_url,
     !!(user.email_verified || user.is_email_verified),
   ];
-  const done = fields.filter(Boolean).length;
-  return Math.round((done / fields.length) * 100);
+  return Math.round((fields.filter(Boolean).length / fields.length) * 100);
 }
 
-function StatusBadge({ status }) {
-  const map = {
-    active: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-    pending: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-    suspended: 'text-red-400 bg-red-400/10 border-red-400/20',
-    banned: 'text-red-500 bg-red-500/10 border-red-500/20',
-    locked: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
-  };
-  return (
-    <span
-      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${map[status] ?? 'border-white/10 bg-white/5 text-white/40'}`}
-    >
-      {status ?? 'active'}
-    </span>
-  );
-}
-
-// ─── Delete Confirmation Modal ────────────────────────────────────────────────
 function DeleteModal({ onClose }) {
   const [confirmed, setConfirmed] = useState('');
   useScrollLock();
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-red-400/20 bg-[#0d0d0f] p-6"
+        className="gp-card w-full max-w-md"
+        style={{ borderColor: 'oklch(0.45 0.15 25)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl border border-red-400/25 bg-red-400/12">
-            <AlertTriangle className="size-5 text-red-400" />
+        <div className="gp-card-body">
+          <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
+            <div
+              className="grid place-items-center"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: 'oklch(0.68 0.18 25 / 0.12)',
+                border: '1px solid oklch(0.68 0.18 25 / 0.3)',
+                color: 'oklch(0.85 0.16 25)',
+              }}
+            >
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Delete account</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--gp-text-3)' }}>
+                This action is irreversible.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-white">Delete Account</h3>
-            <p className="text-xs text-white/40">This action is irreversible</p>
+          <p style={{ fontSize: 13, color: 'var(--gp-text-2)', lineHeight: 1.5, marginBottom: 14 }}>
+            Deleting your account permanently removes your data, registrations, and any pending applications. Type{' '}
+            <span className="gp-mono" style={{ color: 'oklch(0.85 0.16 25)' }}>
+              DELETE
+            </span>{' '}
+            to confirm.
+          </p>
+          <input
+            value={confirmed}
+            onChange={(e) => setConfirmed(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            className="gp-input"
+            style={{ marginBottom: 12 }}
+          />
+          <div className="flex gap-2">
+            <button
+              disabled={confirmed !== 'DELETE'}
+              className="gp-btn gp-btn-danger flex-1 justify-center"
+              style={{ opacity: confirmed === 'DELETE' ? 1 : 0.4 }}
+            >
+              Delete account
+            </button>
+            <button onClick={onClose} className="gp-btn flex-1 justify-center">
+              Cancel
+            </button>
           </div>
-        </div>
-        <p className="mb-4 text-sm leading-relaxed text-white/55">
-          Deleting your account will permanently remove all your data,
-          registrations, and any pending membership applications. To confirm,
-          type <span className="font-mono text-red-400">DELETE</span> below.
-        </p>
-        <input
-          value={confirmed}
-          onChange={(e) => setConfirmed(e.target.value)}
-          placeholder="Type DELETE to confirm"
-          className="mb-4 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-red-400/30"
-        />
-        <div className="flex gap-2">
-          <button
-            disabled={confirmed !== 'DELETE'}
-            className="flex-1 rounded-xl border border-red-400/25 bg-red-400/12 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-35"
-          >
-            Delete Account
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-white/8 bg-white/4 py-2.5 text-sm text-white/50 transition hover:bg-white/8"
-          >
-            Cancel
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Edit Form ────────────────────────────────────────────────────────────────
 function EditInfoForm({ user, onCancel, onSaved }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -167,89 +159,58 @@ function EditInfoForm({ user, onCancel, onSaved }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/40">
-            Full Name <span className="text-red-400">*</span>
-          </label>
-          <input
-            name="full_name"
-            defaultValue={user.full_name ?? ''}
-            required
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/25 focus:bg-white/8"
-            placeholder="Your full name"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/40">
-            Phone
-          </label>
-          <input
-            name="phone"
-            defaultValue={user.phone ?? ''}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/25 focus:bg-white/8"
-            placeholder="+880 1xxx xxxxxx"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label className="gp-field-label">Full name *</label>
+        <input className="gp-input" name="full_name" defaultValue={user.full_name ?? ''} required />
       </div>
-
+      <div>
+        <label className="gp-field-label">Phone</label>
+        <input className="gp-input" name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1xxx xxxxxx" />
+      </div>
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-400/8 px-3 py-2 text-xs text-red-400">
-          <XCircle className="size-3.5 shrink-0" />
-          {error}
+        <div
+          className="sm:col-span-2"
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'oklch(0.68 0.18 25 / 0.1)',
+            border: '1px solid oklch(0.68 0.18 25 / 0.3)',
+            color: 'oklch(0.85 0.16 25)',
+            fontSize: 12,
+          }}
+        >
+          <XCircle size={12} style={{ display: 'inline', marginRight: 6 }} /> {error}
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-3 py-2 text-xs text-emerald-400">
-          <CheckCircle2 className="size-3.5 shrink-0" />
-          Profile updated successfully
+        <div
+          className="sm:col-span-2"
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'oklch(0.74 0.14 155 / 0.12)',
+            border: '1px solid oklch(0.74 0.14 155 / 0.3)',
+            color: 'oklch(0.85 0.14 155)',
+            fontSize: 12,
+          }}
+        >
+          <CheckCircle2 size={12} style={{ display: 'inline', marginRight: 6 }} /> Profile updated.
         </div>
       )}
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex items-center gap-2 rounded-xl bg-blue-500/20 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/30 disabled:opacity-50"
-        >
-          <Save className="size-3.5" />
-          {isPending ? 'Saving…' : 'Save Changes'}
+      <div className="sm:col-span-2 flex gap-2">
+        <button type="submit" disabled={isPending} className="gp-btn gp-btn-primary">
+          <Save size={13} /> {isPending ? 'Saving…' : 'Save changes'}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-sm text-white/50 transition hover:text-white/70"
-        >
-          <X className="size-3.5" />
-          Cancel
+        <button type="button" onClick={onCancel} className="gp-btn">
+          <X size={13} /> Cancel
         </button>
       </div>
     </form>
   );
 }
 
-// ─── Section Card ──────────────────────────────────────────────────────────────
-function SectionCard({ icon: Icon, iconColor, title, action, children }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/3">
-      <div className="flex items-center justify-between gap-3 border-b border-white/6 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex size-8 items-center justify-center rounded-lg border border-white/8 bg-white/5 ${iconColor}`}
-          >
-            <Icon className="size-4" />
-          </div>
-          <h3 className="text-sm font-semibold text-white/70">{title}</h3>
-        </div>
-        {action}
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  );
-}
-
-// ─── Guest Avatar Uploader ────────────────────────────────────────────────────
-function GuestAvatarUploader({ user, initials }) {
+function AvatarUploader({ user, initials }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const isImage = user.avatar_url?.startsWith('/api/image/');
@@ -287,41 +248,40 @@ function GuestAvatarUploader({ user, initials }) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="group relative">
+      <div className="relative">
         {isImage ? (
           <img
             src={user.avatar_url}
             alt={user.full_name ?? 'Avatar'}
-            className="size-24 rounded-2xl border border-white/12 object-cover"
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 14,
+              border: '1px solid var(--gp-line)',
+              objectFit: 'cover',
+            }}
           />
         ) : (
-          <div className="flex size-24 items-center justify-center rounded-2xl border border-white/10 bg-linear-to-br from-violet-500/35 to-blue-500/35">
-            <span className="text-3xl font-bold text-white">{initials}</span>
+          <div
+            className="grid place-items-center"
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 14,
+              background:
+                'linear-gradient(135deg, oklch(0.5 0.15 var(--gp-accent-h)), oklch(0.35 0.1 var(--gp-accent-h)))',
+              fontSize: 22,
+              fontWeight: 600,
+              color: '#fff',
+            }}
+          >
+            {initials}
           </div>
         )}
-        <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-2xl bg-black/50 opacity-0 transition group-hover:opacity-100">
-          {uploading ? (
-            <Loader2 className="size-6 animate-spin text-white" />
-          ) : (
-            <Camera className="size-6 text-white" />
-          )}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleFileChange}
-          />
-        </label>
       </div>
       <div className="flex items-center gap-1.5">
-        <label className="flex cursor-pointer items-center gap-1 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-[10px] text-white/50 transition hover:bg-white/8 hover:text-white/70">
-          {uploading ? (
-            <Loader2 className="size-2.5 animate-spin" />
-          ) : (
-            <Upload className="size-2.5" />
-          )}
-          Upload
+        <label className="gp-btn gp-btn-sm" style={{ cursor: 'pointer' }}>
+          {uploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -335,19 +295,40 @@ function GuestAvatarUploader({ user, initials }) {
             type="button"
             onClick={handleRemove}
             disabled={uploading}
-            className="flex items-center gap-1 rounded-lg border border-red-400/15 bg-red-400/5 px-2 py-1 text-[10px] text-red-400/60 transition hover:bg-red-400/10 hover:text-red-400 disabled:opacity-50"
+            className="gp-btn gp-btn-sm gp-btn-danger"
           >
-            <Trash2 className="size-2.5" />
-            Remove
+            <Trash2 size={11} /> Remove
           </button>
         )}
       </div>
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p style={{ fontSize: 10.5, color: 'oklch(0.85 0.16 25)' }}>{error}</p>}
     </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+function FieldDisplay({ label, value, suffix }) {
+  return (
+    <div>
+      <div
+        className="gp-mono"
+        style={{
+          fontSize: 10.5,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          color: 'var(--gp-text-4)',
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div className="flex items-center gap-2" style={{ fontSize: 13.5 }}>
+        {value}
+        {suffix}
+      </div>
+    </div>
+  );
+}
+
 export default function GuestProfileClient({ user, stats }) {
   const [editing, setEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -360,145 +341,81 @@ export default function GuestProfileClient({ user, stats }) {
     .toUpperCase();
 
   const completion = profileCompletion(user);
-
-  const ACTIVITY = [
-    {
-      label: 'Events Registered',
-      value: stats.eventsRegistered,
-      icon: CalendarDays,
-      color: 'text-blue-400',
-      bg: 'bg-blue-400/10 border-blue-400/15',
-      href: '/account/guest/participation',
-    },
-    {
-      label: 'Events Attended',
-      value: stats.eventsAttended,
-      icon: CheckCircle2,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10 border-emerald-400/15',
-      href: '/account/guest/participation',
-    },
-    {
-      label: 'Certificates',
-      value: stats.certificates,
-      icon: Trophy,
-      color: 'text-amber-400',
-      bg: 'bg-amber-400/10 border-amber-400/15',
-      href: '/account/guest/participation',
-    },
-    {
-      label: 'Notifications',
-      value: stats.notices,
-      icon: Bell,
-      color: 'text-violet-400',
-      bg: 'bg-violet-400/10 border-violet-400/15',
-      href: '/account/guest/notifications',
-    },
-  ];
+  const verified = user.email_verified || user.is_email_verified;
 
   return (
-    <>
+    <div className="gp-page">
       {showDelete && <DeleteModal onClose={() => setShowDelete(false)} />}
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            My Profile
-          </h1>
-          <p className="text-sm text-white/40">
-            Manage your account information and preferences
-          </p>
-        </div>
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="mt-3 flex w-fit items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/55 transition hover:bg-white/10 hover:text-white/80 sm:mt-0"
-          >
-            <Edit3 className="size-3.5" />
-            Edit Profile
-          </button>
-        )}
-      </div>
+      <PageHead
+        eyebrow="Account"
+        title="My profile"
+        sub="Manage your account information and visibility."
+        actions={
+          !editing && (
+            <Btn onClick={() => setEditing(true)}>
+              <Pencil size={13} /> Edit profile
+            </Btn>
+          )
+        }
+      />
 
-      {/* ── Profile Overview Card ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6">
-        <div className="absolute inset-0 bg-linear-to-br from-violet-500/6 via-transparent to-blue-500/4" />
-
-        <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            <GuestAvatarUploader user={user} initials={initials} />
-            <div className="absolute -right-1.5 -bottom-1.5 flex size-7 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/20">
-              <Star className="size-3.5 text-amber-400" />
-            </div>
-          </div>
-
-          {/* Name & badges */}
-          <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-xl font-bold text-white sm:text-2xl">
-              {user.full_name || 'Guest User'}
-            </h2>
-            <p className="mt-0.5 text-sm text-white/45">{user.email}</p>
-            <div className="mt-2.5 flex flex-wrap justify-center gap-2 sm:justify-start">
-              <StatusBadge status={user.account_status ?? 'active'} />
-              <span className="flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-xs text-amber-400">
-                <Star className="size-2.5" />
-                Guest Account
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-white/40">
-                <Calendar className="size-2.5" />
-                Since{' '}
-                {new Date(user.created_at ?? Date.now()).toLocaleDateString(
-                  'en-US',
-                  { month: 'short', year: 'numeric' }
-                )}
-              </span>
-            </div>
-
-            {/* Profile completion bar */}
-            <div className="mx-auto mt-4 max-w-xs sm:mx-0">
-              <div className="mb-1 flex items-center justify-between text-[11px]">
-                <span className="text-white/30">Profile completion</span>
+      {/* Profile overview */}
+      <div className="gp-card" style={{ padding: 22, marginBottom: 16 }}>
+        <div className="flex items-center gap-5 flex-wrap">
+          <AvatarUploader user={user} initials={initials} />
+          <div className="flex-1 min-w-55">
+            <div className="flex flex-wrap items-center gap-2.5" style={{ marginBottom: 4 }}>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 600, letterSpacing: '-0.015em' }}>
+                {user.full_name || 'Guest user'}
+              </h2>
+              <Badge variant="success">
                 <span
-                  className={
-                    completion >= 80
-                      ? 'text-emerald-400'
-                      : completion >= 50
-                        ? 'text-amber-400'
-                        : 'text-red-400'
-                  }
-                >
-                  {completion}%
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/8">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    completion >= 80
-                      ? 'bg-emerald-400'
-                      : completion >= 50
-                        ? 'bg-amber-400'
-                        : 'bg-red-400'
-                  }`}
-                  style={{ width: `${completion}%` }}
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'oklch(0.85 0.14 155)',
+                  }}
                 />
+                {user.account_status ?? 'active'}
+              </Badge>
+              <Badge variant="accent">Guest account</Badge>
+            </div>
+            <div
+              className="gp-mono"
+              style={{ fontSize: 12.5, color: 'var(--gp-text-3)', marginBottom: 10 }}
+            >
+              {user.email} · Joined {formatDate(user.created_at)}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>
+              <span>Profile completeness</span>
+              <div className="gp-progress" style={{ width: 200 }}>
+                <div className="gp-progress-fill" style={{ width: `${completion}%` }} />
               </div>
-              {completion < 100 && (
-                <p className="mt-1 text-[10px] text-white/25">
-                  {!user.phone && 'Add phone • '}
-                  {!user.avatar_url && 'Upload avatar • '}
-                  {!(user.email_verified || user.is_email_verified) &&
-                    'Verify email'}
-                </p>
-              )}
+              <b className="gp-mono" style={{ color: 'var(--gp-text)' }}>
+                {completion}%
+              </b>
             </div>
           </div>
+          <div style={{ textAlign: 'right' }}>
+            <div
+              className="gp-mono"
+              style={{
+                fontSize: 11,
+                color: 'var(--gp-text-4)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: 4,
+              }}
+            >
+              Last active
+            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 500 }}>{formatDateTime(user.last_login)}</div>
+          </div>
         </div>
-
-        {/* Inline edit form */}
         {editing && (
-          <div className="relative mt-6 border-t border-white/8 pt-5">
+          <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--gp-line)' }}>
             <EditInfoForm
               user={user}
               onCancel={() => setEditing(false)}
@@ -508,257 +425,193 @@ export default function GuestProfileClient({ user, stats }) {
         )}
       </div>
 
-      {/* ── Activity Summary ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {ACTIVITY.map(({ label, value, icon: Icon, color, bg, href }) => (
-          <a
-            key={label}
-            href={href}
-            className="group flex flex-col gap-3 rounded-2xl border border-white/8 bg-white/3 p-4 transition hover:border-white/12 hover:bg-white/5"
-          >
-            <div
-              className={`flex size-9 items-center justify-center rounded-xl border ${bg}`}
-            >
-              <Icon className={`size-4 ${color}`} />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-white">{value}</p>
-              <p className="mt-0.5 text-xs leading-tight text-white/40">
-                {label}
-              </p>
-            </div>
-            <ArrowRight
-              className={`size-3.5 ${color} -mt-1 opacity-0 transition-opacity group-hover:opacity-100`}
+      <StatRow cols={4}>
+        <Stat icon={Calendar} label="Registered" value={stats.eventsRegistered} />
+        <Stat icon={CheckCircle2} label="Attended" value={stats.eventsAttended} />
+        <Stat icon={Award} label="Certificates" value={stats.certificates} />
+        <Stat icon={Bell} label="Notifications" value={stats.notices} />
+      </StatRow>
+
+      <div className="grid gap-4 sm:grid-cols-2" style={{ marginBottom: 16 }}>
+        <div className="gp-card">
+          <CardHead
+            icon={User}
+            title="Personal information"
+            action={
+              !editing && (
+                <Btn variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil size={11} /> Edit
+                </Btn>
+              )
+            }
+          />
+          <div className="gp-card-body grid gap-4">
+            <FieldDisplay label="Full name" value={user.full_name || '—'} />
+            <FieldDisplay
+              label="Email"
+              value={user.email}
+              suffix={
+                verified ? (
+                  <Badge variant="success" style={{ fontSize: 9, padding: '1px 5px' }}>
+                    verified
+                  </Badge>
+                ) : (
+                  <Badge style={{ fontSize: 9, padding: '1px 5px' }}>unverified</Badge>
+                )
+              }
             />
-          </a>
-        ))}
+            <FieldDisplay label="Phone" value={user.phone || '—'} />
+            <FieldDisplay
+              label="Account role"
+              value="Guest"
+              suffix={<Badge variant="accent">Upgrade available</Badge>}
+            />
+          </div>
+        </div>
+
+        <div className="gp-card">
+          <CardHead icon={Shield} title="Security" />
+          <div className="gp-card-body grid gap-4">
+            <FieldDisplay
+              label="Sign-in method"
+              value={
+                <span className="flex items-center gap-2">
+                  <Github size={14} /> Google OAuth · Managed externally
+                </span>
+              }
+            />
+            <FieldDisplay label="Last login" value={formatDateTime(user.last_login)} />
+            <div>
+              <div
+                className="gp-mono"
+                style={{
+                  fontSize: 10.5,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--gp-text-4)',
+                  marginBottom: 4,
+                }}
+              >
+                2FA
+              </div>
+              <LockedRow label="Two-factor authentication" reason="Available to members for added security." />
+            </div>
+            {user.suspension_expires_at &&
+              new Date(user.suspension_expires_at) > new Date() && (
+                <div
+                  className="flex items-start gap-3"
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    background: 'oklch(0.78 0.13 75 / 0.1)',
+                    border: '1px solid oklch(0.78 0.13 75 / 0.3)',
+                  }}
+                >
+                  <Clock size={14} style={{ color: 'oklch(0.85 0.13 75)', marginTop: 2 }} />
+                  <div style={{ fontSize: 12.5 }}>
+                    <div style={{ fontWeight: 600, color: 'oklch(0.85 0.13 75)' }}>Account suspended</div>
+                    <div style={{ color: 'var(--gp-text-3)' }}>
+                      Expires: {formatDateTime(user.suspension_expires_at)}
+                    </div>
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
       </div>
 
-      {/* ── Personal Information ── */}
-      <SectionCard
-        icon={User}
-        iconColor="text-blue-400"
-        title="Personal Information"
-        action={
-          !editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/45 transition hover:bg-white/8 hover:text-white/70"
-            >
-              <Edit3 className="size-3" />
-              Edit
-            </button>
-          )
-        }
+      {/* Upgrade banner */}
+      <div
+        className="gp-card"
+        style={{
+          padding: 18,
+          marginBottom: 16,
+          background: 'linear-gradient(135deg, var(--gp-surface), oklch(0.18 0.02 var(--gp-accent-h)))',
+          borderColor: 'var(--gp-accent-line)',
+        }}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex items-center gap-3.5 flex-wrap" style={{ marginBottom: 14 }}>
+          <div
+            className="grid place-items-center"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 9,
+              background: 'var(--gp-accent-soft)',
+              border: '1px solid var(--gp-accent-line)',
+              color: 'var(--gp-accent-text)',
+            }}
+          >
+            <Sparkles size={18} />
+          </div>
+          <div className="flex-1">
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
+              Upgrade to full membership
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gp-text-3)' }}>
+              Unlock the complete NEUPC experience.
+            </div>
+          </div>
+          <Btn href="/account/guest/membership-application" variant="primary">
+            Apply now →
+          </Btn>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
           {[
-            {
-              label: 'Full Name',
-              value: user.full_name || '—',
-              editable: true,
-            },
-            {
-              label: 'Email Address',
-              value: user.email,
-              suffix:
-                user.email_verified || user.is_email_verified ? (
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                    <CheckCircle2 className="size-3" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[11px] text-white/30">
-                    <XCircle className="size-3" />
-                    Unverified
-                  </span>
-                ),
-              editable: false,
-            },
-            {
-              label: 'Phone Number',
-              value: user.phone || '—',
-              suffix:
-                user.phone &&
-                (user.phone_verified ? (
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                    <CheckCircle2 className="size-3" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-white/25">Unverified</span>
-                )),
-              editable: true,
-            },
-            {
-              label: 'Account Role',
-              value: 'Guest',
-              editable: false,
-              suffix: (
-                <span className="text-[11px] text-amber-400/60">
-                  Upgrade available
-                </span>
-              ),
-            },
-          ].map(({ label, value, editable, suffix }) => (
+            'Contest participation & rankings',
+            'Performance analytics dashboard',
+            'Members-only resources & editorials',
+            'Achievement badges & certificates',
+            'Advanced notification system',
+            'Mentor access & guidance',
+          ].map((t) => (
             <div
-              key={label}
-              className="rounded-xl border border-white/6 bg-white/2 px-4 py-3"
+              key={t}
+              className="flex items-center gap-2"
+              style={{ fontSize: 12.5, color: 'var(--gp-text-2)' }}
             >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="text-[11px] tracking-wider text-white/25 uppercase">
-                  {label}
-                </p>
-                {!editable && (
-                  <Lock className="size-3 shrink-0 text-white/15" />
-                )}
-              </div>
-              <p className="text-sm font-medium text-white/70">{value}</p>
-              {suffix && <div className="mt-0.5">{suffix}</div>}
+              <CheckCircle2 size={13} style={{ color: 'var(--gp-accent-text)' }} /> {t}
             </div>
           ))}
         </div>
-
-        {editing && (
-          <div className="mt-5 border-t border-white/6 pt-5">
-            <EditInfoForm
-              user={user}
-              onCancel={() => setEditing(false)}
-              onSaved={() => setEditing(false)}
-            />
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ── Security ── */}
-      <SectionCard icon={Shield} iconColor="text-emerald-400" title="Security">
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-3">
-              <p className="mb-1 text-[11px] tracking-wider text-white/25 uppercase">
-                Last Login
-              </p>
-              <p className="text-sm text-white/60">
-                {formatDateTime(user.last_login)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-3">
-              <p className="mb-1 text-[11px] tracking-wider text-white/25 uppercase">
-                Authentication
-              </p>
-              <p className="text-sm text-white/60">Google OAuth</p>
-            </div>
-          </div>
-          <div className="rounded-xl border border-white/6 bg-white/2 px-4 py-3">
-            <p className="mb-1 text-[11px] tracking-wider text-white/25 uppercase">
-              Two-Factor Authentication
-            </p>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-white/50">
-                Not available for guest accounts
-              </p>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/30">
-                Member only
-              </span>
-            </div>
-          </div>
-          {user.suspension_expires_at &&
-            new Date(user.suspension_expires_at) > new Date() && (
-              <div className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/6 px-4 py-3">
-                <Clock className="mt-0.5 size-4 shrink-0 text-amber-400" />
-                <div>
-                  <p className="text-sm font-medium text-amber-300">
-                    Account Suspended
-                  </p>
-                  <p className="mt-0.5 text-xs text-white/40">
-                    Expires: {formatDateTime(user.suspension_expires_at)}
-                  </p>
-                </div>
-              </div>
-            )}
-        </div>
-      </SectionCard>
-
-      {/* ── Upgrade CTA ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-violet-400/5 p-6">
-        <div className="absolute inset-0 bg-linear-to-br from-violet-500/10 via-transparent to-blue-500/5" />
-        <div className="relative">
-          <div className="mb-5 flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-violet-400/25 bg-violet-400/15">
-              <Sparkles className="size-5 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">
-                🚀 Upgrade to Full Membership
-              </h3>
-              <p className="mt-0.5 text-sm text-white/45">
-                Unlock the complete NEUPC experience
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {[
-              'Contest participation & rankings',
-              'Performance analytics dashboard',
-              'Member-only resources & materials',
-              'Achievement badges & certificates',
-              'Advanced notification system',
-              'Mentor access & guidance',
-            ].map((feat) => (
-              <div
-                key={feat}
-                className="flex items-center gap-2.5 rounded-xl border border-violet-400/10 bg-violet-400/5 px-3.5 py-2.5"
-              >
-                <CheckCircle2 className="size-3.5 shrink-0 text-violet-400" />
-                <span className="text-sm text-white/60">{feat}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* ── Danger Zone ── */}
-      <div className="overflow-hidden rounded-2xl border border-red-400/12">
-        <div className="flex items-center gap-3 border-b border-red-400/10 px-5 py-4">
-          <AlertTriangle className="size-4 text-red-400/70" />
-          <h3 className="text-sm font-semibold text-red-400/70">Danger Zone</h3>
-        </div>
-        <div className="divide-y divide-white/5">
-          <div className="flex items-center justify-between gap-4 px-5 py-4">
+      {/* Danger zone */}
+      <div className="gp-card">
+        <CardHead
+          title={
+            <span style={{ color: 'oklch(0.85 0.16 25)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <LogOut size={14} /> Danger zone
+            </span>
+          }
+        />
+        <div className="gp-card-body grid gap-3">
+          <div className="gp-row-between">
             <div>
-              <p className="text-sm font-medium text-white/60">Sign Out</p>
-              <p className="text-xs text-white/30">End your current session</p>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Sign out</div>
+              <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>
+                End your current session.
+              </div>
             </div>
             <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-xl border border-red-400/18 bg-red-400/7 px-4 py-2 text-sm font-medium text-red-400/80 transition hover:bg-red-400/14"
-              >
-                <LogOut className="size-3.5" />
-                Sign Out
+              <button type="submit" className="gp-btn">
+                <LogOut size={12} /> Sign out
               </button>
             </form>
           </div>
-          <div className="flex items-center justify-between gap-4 px-5 py-4">
+          <div className="gp-row-between">
             <div>
-              <p className="text-sm font-medium text-white/60">
-                Delete Account
-              </p>
-              <p className="text-xs text-white/30">
-                Permanently remove your account and all data
-              </p>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Delete account</div>
+              <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>
+                Permanently remove your account and all associated data.
+              </div>
             </div>
-            <button
-              onClick={() => setShowDelete(true)}
-              className="flex items-center gap-2 rounded-xl border border-red-400/18 bg-red-400/7 px-4 py-2 text-sm font-medium text-red-400/80 transition hover:bg-red-400/14"
-            >
-              <AlertTriangle className="size-3.5" />
-              Delete
+            <button onClick={() => setShowDelete(true)} className="gp-btn gp-btn-danger">
+              <X size={12} /> Delete
             </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -147,13 +147,12 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
 
 // ─── Section heading (exact match events / achievements) ─────────────────────
 
-function SectionLabel({ tag, title, accent }) {
+function SectionLabel({ tag, title, accent, onMount = false }) {
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
+      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
       className="mb-10 sm:mb-14"
     >
       <div className="flex items-center gap-3 mb-3">
@@ -572,13 +571,12 @@ export default function DevelopersClient({
       {/* ── Core Developers ──────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
         <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Engineering Team" title="Core" accent="Developers" />
+          <SectionLabel tag="Engineering Team" title="Core" accent="Developers" onMount />
           {coreDevelopers.length > 0 ? (
             <motion.div
               variants={stagger}
               initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
+              animate="visible"
               className="grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4"
             >
               {coreDevelopers.map((dev, i) => (

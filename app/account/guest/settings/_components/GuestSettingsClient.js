@@ -1,6 +1,6 @@
 /**
  * @file Guest settings client — account preferences panel for
- *   notification settings, theme, and privacy options.
+ *   notification settings and account actions.
  * @module GuestSettingsClient
  */
 
@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import {
-  Settings,
   User,
   Bell,
   Shield,
@@ -17,18 +16,26 @@ import {
   X,
   Edit3,
   CheckCircle2,
-  XCircle,
-  Toggle,
   Sparkles,
   AlertTriangle,
   Clock,
+  Mail,
 } from 'lucide-react';
 import { updateGuestInfoAction } from '@/app/_lib/guest-actions';
 import { signOutAction } from '@/app/_lib/actions';
+import {
+  PageHead,
+  CardHead,
+  Stat,
+  StatRow,
+  Badge,
+  Btn,
+  Toggle,
+  Locked,
+  UpgradeBanner,
+} from '../../_components/ui';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const NOTIF_KEY = 'neupc_guest_notif_prefs';
-
 const DEFAULT_PREFS = {
   emailNotices: true,
   browserNotices: false,
@@ -47,49 +54,28 @@ function formatDate(iso) {
   });
 }
 
-function StatusBadge({ status }) {
-  const map = {
-    active: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-    pending: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-    suspended: 'text-red-400 bg-red-400/10 border-red-400/20',
-    banned: 'text-red-500 bg-red-500/10 border-red-500/20',
-  };
-  return (
-    <span
-      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${map[status] ?? 'border-white/10 bg-white/5 text-white/40'}`}
-    >
-      {status}
-    </span>
+function ToggleRow({ label, desc, checked, onChange, disabled, lockedReason }) {
+  const inner = (
+    <Toggle on={checked} onChange={(v) => !disabled && onChange(v)} disabled={disabled} />
   );
-}
-
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-function ToggleRow({ label, desc, checked, onChange }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex items-center justify-between" style={{ padding: '12px 0' }}>
       <div>
-        <p className="text-sm font-medium text-white/70">{label}</p>
-        {desc && <p className="text-xs text-white/30">{desc}</p>}
+        <div style={{ fontSize: 13, fontWeight: 500, color: disabled ? 'var(--gp-text-3)' : 'var(--gp-text)' }}>
+          {label}
+          {disabled && (
+            <Badge mono style={{ fontSize: 9, marginLeft: 6, padding: '1px 5px' }}>
+              MEMBERS
+            </Badge>
+          )}
+        </div>
+        {desc && <div style={{ fontSize: 11.5, color: 'var(--gp-text-4)' }}>{desc}</div>}
       </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
-          checked
-            ? 'border-blue-400/40 bg-blue-400/25'
-            : 'border-white/12 bg-white/6'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 size-3.5 rounded-full transition-all duration-200 ${
-            checked ? 'left-4 bg-blue-400' : 'left-0.5 bg-white/30'
-          }`}
-        />
-      </button>
+      {disabled && lockedReason ? <Locked feature={lockedReason}>{inner}</Locked> : inner}
     </div>
   );
 }
 
-// ─── Edit Form ─────────────────────────────────────────────────────────────────
 function EditPersonalForm({ user, onCancel, onSaved }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -106,86 +92,51 @@ function EditPersonalForm({ user, onCancel, onSaved }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-4 space-y-3 border-t border-white/6 pt-4"
-    >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs text-white/35">Full Name</label>
-          <input
-            name="full_name"
-            defaultValue={user.full_name ?? ''}
-            required
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-white/35">Phone</label>
-          <input
-            name="phone"
-            defaultValue={user.phone ?? ''}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20"
-            placeholder="+880 1xxx xxxxxx"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2" style={{ marginTop: 12 }}>
+      <div>
+        <label className="gp-field-label">Full name</label>
+        <input className="gp-input" name="full_name" defaultValue={user.full_name ?? ''} required />
       </div>
       <div>
-        <label className="mb-1 block text-xs text-white/35">Avatar URL</label>
-        <input
-          name="avatar_url"
-          defaultValue={user.avatar_url ?? ''}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20"
-          placeholder="https://..."
-        />
+        <label className="gp-field-label">Phone</label>
+        <input className="gp-input" name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1xxx xxxxxx" />
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex items-center gap-2 rounded-xl bg-blue-500/18 px-4 py-2 text-sm font-medium text-blue-300 transition hover:bg-blue-500/26 disabled:opacity-50"
+      <div className="sm:col-span-2">
+        <label className="gp-field-label">Avatar URL</label>
+        <input className="gp-input" name="avatar_url" defaultValue={user.avatar_url ?? ''} placeholder="https://..." />
+      </div>
+      {error && (
+        <div
+          className="sm:col-span-2"
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'oklch(0.68 0.18 25 / 0.1)',
+            border: '1px solid oklch(0.68 0.18 25 / 0.3)',
+            color: 'oklch(0.85 0.16 25)',
+            fontSize: 12,
+          }}
         >
-          <Save className="size-3.5" />
-          {isPending ? 'Saving…' : 'Save'}
+          {error}
+        </div>
+      )}
+      <div className="sm:col-span-2 flex gap-2">
+        <button type="submit" disabled={isPending} className="gp-btn gp-btn-primary">
+          <Save size={13} /> {isPending ? 'Saving…' : 'Save'}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/4 px-4 py-2 text-sm text-white/40 transition hover:text-white/60"
-        >
-          <X className="size-3.5" />
-          Cancel
+        <button type="button" onClick={onCancel} className="gp-btn">
+          <X size={13} /> Cancel
         </button>
       </div>
     </form>
   );
 }
 
-// ─── Section wrapper ──────────────────────────────────────────────────────────
-function Section({ icon: Icon, iconColor = 'text-blue-400', title, children }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/3">
-      <div className="flex items-center gap-3 border-b border-white/6 px-5 py-4">
-        <div
-          className={`flex size-8 items-center justify-center rounded-lg border border-white/8 bg-white/5 ${iconColor}`}
-        >
-          <Icon className="size-4" />
-        </div>
-        <h3 className="text-sm font-semibold text-white/70">{title}</h3>
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function GuestSettingsClient({ user }) {
   const [editing, setEditing] = useState(false);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [prefsSaved, setPrefsSaved] = useState(false);
 
-  // Load prefs from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(NOTIF_KEY);
@@ -203,216 +154,217 @@ export default function GuestSettingsClient({ user }) {
     setTimeout(() => setPrefsSaved(false), 2000);
   }
 
+  const verified = user.email_verified || user.is_email_verified;
+
   return (
-    <>
-      {/* ── Header ── */}
-      <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Settings</h1>
-        <p className="text-sm text-white/40">Manage your account preferences</p>
-      </div>
+    <div className="gp-page" style={{ maxWidth: 880 }}>
+      <PageHead
+        eyebrow="Account"
+        title="Settings"
+        sub="Manage your account preferences and notifications."
+      />
 
-      {/* ── Account status card ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {[
-          {
-            label: 'Account Status',
-            value: <StatusBadge status={user.account_status ?? 'active'} />,
-          },
-          {
-            label: 'Email',
-            value: (
-              <span className="flex items-center gap-1.5 text-sm text-white/60">
-                {user.email_verified || user.is_email_verified ? (
-                  <CheckCircle2 className="size-3.5 text-emerald-400" />
-                ) : (
-                  <XCircle className="size-3.5 text-white/20" />
-                )}
-                {user.email_verified || user.is_email_verified
-                  ? 'Verified'
-                  : 'Unverified'}
-              </span>
-            ),
-          },
-          {
-            label: 'Last Login',
-            value: (
-              <span className="text-xs text-white/55">
-                {user.last_login
-                  ? new Date(user.last_login).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—'}
-              </span>
-            ),
-          },
-        ].map(({ label, value }) => (
-          <div
-            key={label}
-            className="rounded-2xl border border-white/8 bg-white/3 px-4 py-3"
-          >
-            <p className="mb-1 text-[11px] tracking-wider text-white/25 uppercase">
-              {label}
-            </p>
-            {value}
-          </div>
-        ))}
-      </div>
+      <StatRow cols={3}>
+        <Stat
+          icon={Shield}
+          label="Account"
+          value={<span style={{ fontSize: 18 }}>{user.account_status ?? 'Active'}</span>}
+          trend="Guest tier"
+        />
+        <Stat
+          icon={Mail}
+          label="Email"
+          value={<span style={{ fontSize: 18 }}>{verified ? 'Verified' : 'Unverified'}</span>}
+          trend={user.email}
+        />
+        <Stat
+          icon={Clock}
+          label="Last login"
+          value={<span style={{ fontSize: 18 }}>{formatDate(user.last_login)}</span>}
+        />
+      </StatRow>
 
-      {/* ── Personal Info ── */}
-      <Section
-        icon={User}
-        iconColor="text-blue-400"
-        title="Personal Information"
-      >
-        <div className="space-y-2">
-          {[
-            { label: 'Full Name', value: user.full_name },
-            { label: 'Email', value: user.email },
-            { label: 'Phone', value: user.phone || '—' },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-xs text-white/30">{label}</span>
-              <span className="text-sm text-white/65">{value}</span>
+      {/* Personal info */}
+      <div className="gp-card" style={{ marginBottom: 16 }}>
+        <CardHead
+          icon={User}
+          title="Personal information"
+          action={
+            !editing && (
+              <Btn variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                <Edit3 size={11} /> Edit
+              </Btn>
+            )
+          }
+        />
+        <div className="gp-card-body">
+          {!editing ? (
+            <div className="grid gap-2.5">
+              {[
+                { label: 'Full name', value: user.full_name || '—' },
+                { label: 'Email', value: user.email },
+                { label: 'Phone', value: user.phone || '—' },
+              ].map((f) => (
+                <div className="gp-row-between" key={f.label}>
+                  <span style={{ fontSize: 12, color: 'var(--gp-text-3)' }}>{f.label}</span>
+                  <span style={{ fontSize: 13 }}>{f.value}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <EditPersonalForm
+              user={user}
+              onCancel={() => setEditing(false)}
+              onSaved={() => setEditing(false)}
+            />
+          )}
         </div>
-        {!editing ? (
-          <button
-            onClick={() => setEditing(true)}
-            className="mt-4 flex items-center gap-2 rounded-xl border border-white/8 bg-white/4 px-4 py-2 text-sm text-white/50 transition hover:bg-white/8 hover:text-white/70"
-          >
-            <Edit3 className="size-3.5" />
-            Edit Personal Info
-          </button>
-        ) : (
-          <EditPersonalForm
-            user={user}
-            onCancel={() => setEditing(false)}
-            onSaved={() => setEditing(false)}
-          />
-        )}
-      </Section>
+      </div>
 
-      {/* ── Notification Preferences ── */}
-      <Section
-        icon={Bell}
-        iconColor="text-violet-400"
-        title="Notification Preferences"
-      >
-        {prefsSaved && (
-          <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-3 py-2 text-xs text-emerald-400">
-            <CheckCircle2 className="size-3.5" />
-            Preferences saved
+      {/* Notification prefs */}
+      <div className="gp-card" style={{ marginBottom: 16 }}>
+        <CardHead
+          icon={Bell}
+          title="Notification preferences"
+          action={<span className="gp-muted" style={{ fontSize: 11.5 }}>Stored on this device</span>}
+        />
+        <div className="gp-card-body">
+          {prefsSaved && (
+            <div
+              className="flex items-center gap-2"
+              style={{
+                marginBottom: 10,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'oklch(0.74 0.14 155 / 0.12)',
+                border: '1px solid oklch(0.74 0.14 155 / 0.3)',
+                color: 'oklch(0.85 0.14 155)',
+                fontSize: 12,
+              }}
+            >
+              <CheckCircle2 size={13} /> Preferences saved
+            </div>
+          )}
+          <div className="divide-y" style={{ borderColor: 'var(--gp-line)' }}>
+            <ToggleRow
+              label="Email notices"
+              desc="Important updates delivered via email"
+              checked={prefs.emailNotices}
+              onChange={(v) => togglePref('emailNotices', v)}
+            />
+            <div style={{ borderTop: '1px solid var(--gp-line)' }}>
+              <ToggleRow
+                label="Browser notifications"
+                desc="Push notifications when you're online"
+                checked={prefs.browserNotices}
+                onChange={(v) => togglePref('browserNotices', v)}
+              />
+            </div>
+            <div style={{ borderTop: '1px solid var(--gp-line)' }}>
+              <ToggleRow
+                label="Event reminders"
+                desc="Reminded 24h before events you're registered for"
+                checked={prefs.eventReminders}
+                onChange={(v) => togglePref('eventReminders', v)}
+              />
+            </div>
+            <div style={{ borderTop: '1px solid var(--gp-line)' }}>
+              <ToggleRow
+                label="Weekly digest"
+                desc="Summary of all club activity each week"
+                checked={prefs.weeklyDigest}
+                onChange={(v) => togglePref('weeklyDigest', v)}
+              />
+            </div>
+            <div style={{ borderTop: '1px solid var(--gp-line)' }}>
+              <ToggleRow
+                label="Personalized recommendations"
+                desc="ML-driven event suggestions based on your interests"
+                checked={false}
+                onChange={() => {}}
+                disabled
+                lockedReason="Personalized recommendations are member-only."
+              />
+            </div>
           </div>
-        )}
-        <p className="mb-1 text-xs text-white/30">
-          Stored locally on this device.
-        </p>
-        <div className="divide-y divide-white/5">
-          <ToggleRow
-            label="Email Notices"
-            desc="Receive important notices by email"
-            checked={prefs.emailNotices}
-            onChange={(v) => togglePref('emailNotices', v)}
-          />
-          <ToggleRow
-            label="Browser Notifications"
-            desc="Push notifications when on site"
-            checked={prefs.browserNotices}
-            onChange={(v) => togglePref('browserNotices', v)}
-          />
-          <ToggleRow
-            label="Event Reminders"
-            desc="Reminders before events start"
-            checked={prefs.eventReminders}
-            onChange={(v) => togglePref('eventReminders', v)}
-          />
-          <ToggleRow
-            label="Weekly Digest"
-            desc="Summary of club activity each week"
-            checked={prefs.weeklyDigest}
-            onChange={(v) => togglePref('weeklyDigest', v)}
-          />
         </div>
-      </Section>
+      </div>
 
-      {/* ── Security ── */}
-      <Section
-        icon={Shield}
-        iconColor="text-emerald-400"
-        title="Account Security"
-      >
-        <div className="space-y-3">
-          <div className="rounded-xl border border-white/8 bg-white/3 px-4 py-3 text-sm text-white/50">
-            Account authenticated via Google OAuth. Password management is
-            handled by your Google account.
+      {/* Security */}
+      <div className="gp-card" style={{ marginBottom: 16 }}>
+        <CardHead icon={Shield} title="Account security" />
+        <div className="gp-card-body">
+          <div
+            className="flex items-center gap-2.5"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: 'var(--gp-surface-2)',
+              border: '1px solid var(--gp-line)',
+              fontSize: 12.5,
+              color: 'var(--gp-text-2)',
+            }}
+          >
+            <Shield size={14} style={{ color: 'oklch(0.85 0.14 155)' }} />
+            Account authenticated via Google OAuth. Password management is handled by your Google account.
           </div>
           {user.suspension_expires_at &&
             new Date(user.suspension_expires_at) > new Date() && (
-              <div className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/6 px-4 py-3">
-                <Clock className="mt-0.5 size-4 shrink-0 text-amber-400" />
-                <div>
-                  <p className="text-sm font-medium text-amber-300">
-                    Account Suspended
-                  </p>
-                  <p className="text-xs text-white/40">
-                    Suspension ends: {formatDate(user.suspension_expires_at)}
-                  </p>
+              <div
+                className="flex items-start gap-3"
+                style={{
+                  marginTop: 12,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'oklch(0.78 0.13 75 / 0.1)',
+                  border: '1px solid oklch(0.78 0.13 75 / 0.3)',
+                }}
+              >
+                <Clock size={14} style={{ color: 'oklch(0.85 0.13 75)', marginTop: 2 }} />
+                <div style={{ fontSize: 12.5 }}>
+                  <div style={{ fontWeight: 600, color: 'oklch(0.85 0.13 75)' }}>Account suspended</div>
+                  <div style={{ color: 'var(--gp-text-3)' }}>Expires: {formatDate(user.suspension_expires_at)}</div>
                   {user.suspension_reason && (
-                    <p className="mt-0.5 text-xs text-white/30">
-                      Reason: {user.suspension_reason}
-                    </p>
+                    <div style={{ color: 'var(--gp-text-4)', marginTop: 2 }}>Reason: {user.suspension_reason}</div>
                   )}
                 </div>
               </div>
             )}
         </div>
-      </Section>
+      </div>
 
-      {/* ── Membership CTA ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-violet-400/15 bg-violet-400/5 p-5">
-        <div className="absolute inset-0 bg-linear-to-r from-violet-500/8 to-transparent" />
-        <div className="relative flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-400/12">
-              <Sparkles className="size-4 text-violet-400" />
-            </div>
+      <div style={{ marginBottom: 16 }}>
+        <UpgradeBanner
+          icon={Sparkles}
+          title="Ready to upgrade?"
+          desc="Apply for full club membership today."
+          ctaLabel="Apply now"
+        />
+      </div>
+
+      {/* Danger zone */}
+      <div className="gp-card">
+        <CardHead
+          title={
+            <span style={{ color: 'oklch(0.85 0.16 25)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <AlertTriangle size={14} /> Danger zone
+            </span>
+          }
+        />
+        <div className="gp-card-body">
+          <div className="gp-row-between">
             <div>
-              <p className="text-sm font-semibold text-white/80">
-                Ready to upgrade?
-              </p>
-              <p className="text-xs text-white/35">
-                Apply for full club membership today.
-              </p>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Sign out</div>
+              <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>End your current session.</div>
             </div>
+            <form action={signOutAction}>
+              <button type="submit" className="gp-btn gp-btn-danger">
+                <LogOut size={12} /> Sign out
+              </button>
+            </form>
           </div>
         </div>
       </div>
-
-      {/* ── Danger Zone ── */}
-      <div className="rounded-2xl border border-red-400/15 bg-red-400/3">
-        <div className="flex items-center gap-3 border-b border-red-400/10 px-5 py-4">
-          <AlertTriangle className="size-4 text-red-400" />
-          <h3 className="text-sm font-semibold text-red-400/80">Danger Zone</h3>
-        </div>
-        <div className="flex items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <p className="text-sm font-medium text-white/60">Sign Out</p>
-            <p className="text-xs text-white/30">End your current session</p>
-          </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-400/8 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-400/15"
-            >
-              <LogOut className="size-3.5" />
-              Sign Out
-            </button>
-          </form>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

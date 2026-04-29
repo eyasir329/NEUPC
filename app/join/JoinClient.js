@@ -1,46 +1,27 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useIsMember } from '../_components/ui/UserRoleProvider';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
-// ─── Motion variants — synced with Events / Achievements / Homepage ──────────
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
 const cardsStagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
-
-const viewport = { once: true, margin: '-40px 0px' };
 
 // ─── Default features ────────────────────────────────────────────────────────
 
@@ -119,6 +100,13 @@ function FeatureCard({ feature }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function JoinClient({ features: propFeatures = [], settings = {} }) {
+  const isLoggedIn = useIsMember();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoggedIn) router.replace('/account');
+  }, [isLoggedIn, router]);
+
   const handleGoogleSignIn = () => signIn('google', { callbackUrl: '/account' });
 
   const features =
@@ -228,8 +216,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="mb-12 space-y-4 sm:mb-16"
           >
             <div className="flex items-center gap-3">
@@ -251,8 +238,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={cardsStagger}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4"
           >
             {features.map((feature, i) => (
@@ -264,8 +250,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
+            animate="visible"
             className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 sm:mt-10 sm:p-6"
           >
             <div className="flex items-start gap-4">
