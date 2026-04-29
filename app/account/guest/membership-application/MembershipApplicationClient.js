@@ -363,7 +363,7 @@ export default function MembershipApplicationClient({
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+    <div className="gp-page mx-auto" style={{ maxWidth: 720 }}>
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 ring-1 ring-blue-500/25">

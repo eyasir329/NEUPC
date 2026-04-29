@@ -17,6 +17,8 @@
 /.next/
 /out/
 
+/.devcontainer/
+
 /.claude/
 
 # next.js / tooling caches
