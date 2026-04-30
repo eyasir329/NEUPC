@@ -17,11 +17,9 @@ export default async function MemberCertificatesPage() {
   const certificates = await getUserCertificates(user.id).catch(() => []);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <MemberCertificatesClient
-        certificates={certificates}
-        userName={user.full_name}
-      />
-    </div>
+    <MemberCertificatesClient
+      certificates={certificates}
+      userName={user.full_name}
+    />
   );
 }
