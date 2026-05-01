@@ -17,7 +17,7 @@ function Skeleton({ className = '' }) {
 
 function StatsRow({ count = 4 }) {
   return (
-    <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-4 2xl:grid-cols-6">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`rounded-[12px] ${SURFACE} px-4 py-[14px]`}>
           <Skeleton className="mb-2 h-[11px] w-20" />
@@ -50,7 +50,7 @@ function TableRows({ rows = 6 }) {
 
 function CardGrid({ count = 6 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`rounded-[12px] ${SURFACE} overflow-hidden`}>
           <Skeleton className="h-28 w-full rounded-none" />
@@ -71,7 +71,7 @@ function CardGrid({ count = 6 }) {
 
 function FormSkeleton({ fields = 6 }) {
   return (
-    <div className={`space-y-5 rounded-[12px] ${SURFACE} p-5 sm:p-6`}>
+    <div className={`space-y-5 rounded-[12px] ${SURFACE} p-5 sm:p-6 max-w-4xl`}>
       {Array.from({ length: fields }).map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-[11px] w-24" />
@@ -132,7 +132,7 @@ export default function AccountLoading({
 }) {
   return (
     <div
-      className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8"
+      className="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12"
       role="status"
       aria-label="Loading"
     >
@@ -141,7 +141,7 @@ export default function AccountLoading({
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-2">
             {title ? (
-              <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/30">
+              <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
                 {title}
               </h1>
             ) : (
@@ -176,7 +176,7 @@ export default function AccountLoading({
           <>
             <StatsRow count={4} />
             <TabsBar />
-            <CardGrid count={6} />
+            <CardGrid count={10} />
           </>
         )}
 

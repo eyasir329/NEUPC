@@ -246,7 +246,7 @@ export default function MemberAchievementsClient({
             subtitle="Contest results added by admins will appear here."
           />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
             {earnedAchievements.map((ach) => {
               const tone = getResultTone(ach.result);
               const Icon = tone.Icon;
@@ -332,7 +332,7 @@ export default function MemberAchievementsClient({
             subtitle="Great job! You are all caught up."
           />
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10">
             {lockedItems.map((item) => (
               <div
                 key={item.id}

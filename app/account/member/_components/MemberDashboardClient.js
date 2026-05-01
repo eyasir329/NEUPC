@@ -102,7 +102,7 @@ export default function MemberDashboardClient({ session }) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12">
       <MemberHeader firstName={firstName} userLevel={userLevel} />
       <MemberStatsGrid stats={stats} />
 
