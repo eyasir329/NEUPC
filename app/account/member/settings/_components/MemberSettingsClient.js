@@ -1171,7 +1171,7 @@ export default function MemberSettingsClient({ user }) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="mx-auto w-full max-w-[1600px] space-y-5">
       {/* Page header */}
       <div>
         <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
@@ -1211,7 +1211,7 @@ export default function MemberSettingsClient({ user }) {
         </aside>
 
         {/* Content panel */}
-        <div className="min-w-0 flex-1">{content[active]}</div>
+        <div className="min-w-0 flex-1 max-w-4xl">{content[active]}</div>
       </div>
     </div>
   );

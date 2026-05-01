@@ -393,7 +393,7 @@ export default function MemberBootcampsClient({
           {filteredAvailable.length === 0 ? (
             <p className="py-8 text-center text-[13px] text-[#5b5e66]">No bootcamps match your search.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visibleAvailable.map((bootcamp, i) => (
                 <AvailableMiniCard
                   key={bootcamp.id}

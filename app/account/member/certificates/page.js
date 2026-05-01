@@ -70,7 +70,7 @@ export default async function MemberCertificatesPage() {
     : tempCertificates;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8">
+    <div className="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12">
       <MemberCertificatesClient
         certificates={displayCertificates}
         userName={user.full_name}

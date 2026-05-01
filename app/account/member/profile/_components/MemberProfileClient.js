@@ -600,7 +600,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
   const connectedCount = allHandles.filter(h => h.handle).length;
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
+    <div className="space-y-5 w-full max-w-[1600px] mx-auto">
 
       {/* Page title */}
       <div>
@@ -676,7 +676,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:gap-8">
             {/* Desktop sidebar */}
             <aside className="hidden lg:block">
               <nav className="sticky top-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-2 space-y-0.5">

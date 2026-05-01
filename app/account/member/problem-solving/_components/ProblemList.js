@@ -1226,7 +1226,7 @@ export default function ProblemList({
   return (
     <div className="space-y-6">
       {/* Analytics Header with Goals Widget */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 2xl:grid-cols-6">
         <div className="lg:col-span-3">
           <AnalyticsHeader
             problems={problems}
