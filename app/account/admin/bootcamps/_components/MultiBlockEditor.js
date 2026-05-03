@@ -87,7 +87,7 @@ Your task is to transform raw lesson data into polished Rich Text (HTML) that wi
   <div data-has-copy="true" style="position:relative; margin:24px 0;">
     <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; border:1px solid #273647; border-bottom:none; border-radius:8px 8px 0 0; padding:8px 12px;">
       <span style="font-size:12px; color:#908fa0; font-weight:600;">LANGUAGE_NAME</span>
-      <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:#8083ff15; border:1px solid #8083ff30; border-radius:6px; padding:4px 12px; cursor:pointer;">Copy</button>
+      <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[data-has-copy=&quot;true&quot;]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:#8083ff15; border:1px solid #8083ff30; border-radius:6px; padding:4px 12px; cursor:pointer;">Copy</button>
     </div>
     <pre style="margin:0; background:#010f1f; border:1px solid #273647; border-top:none; border-radius:0 0 8px 8px; padding:16px 20px; overflow-x:auto; font-size:13px; line-height:1.6;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa;">YOUR CODE HERE</code></pre>
   </div>
@@ -150,7 +150,7 @@ For EVERY code block, use this structure with a copy button:
 <div data-has-copy="true" style="position:relative; margin:24px 0; border-radius:10px; overflow:hidden; border:1px solid #273647;">
   <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; padding:10px 16px; border-bottom:1px solid #273647;">
     <span style="font-size:12px; color:#908fa0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">LANGUAGE_NAME</span>
-    <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[style]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:rgba(128,131,255,0.08); border:1px solid rgba(128,131,255,0.2); border-radius:6px; padding:4px 14px; cursor:pointer; font-weight:600; transition:all 0.2s;">Copy</button>
+    <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[data-has-copy=&quot;true&quot;]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:rgba(128,131,255,0.08); border:1px solid rgba(128,131,255,0.2); border-radius:6px; padding:4px 14px; cursor:pointer; font-weight:600; transition:all 0.2s;">Copy</button>
   </div>
   <pre style="margin:0; background:#010f1f; padding:20px; overflow-x:auto; font-size:13px; line-height:1.7;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa; white-space:pre;">YOUR CODE HERE</code></pre>
 </div>

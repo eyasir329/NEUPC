@@ -324,21 +324,34 @@ export default function LessonContentRenderer({ content, lessonId }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
-  // Wire copy-button click handlers (buttons are pre-built by the marked renderer)
+  // Wire copy-button click handlers for all block types
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const btns = container.querySelectorAll('.md-copy-btn[data-copy-btn]');
+    const btns = container.querySelectorAll('[data-copy-btn]');
     btns.forEach((btn) => {
+      // Remove inline onclick handlers from old generated content to prevent crashes
+      if (btn.hasAttribute('onclick')) {
+        btn.removeAttribute('onclick');
+      }
+
       if (btn._wired) return;
       btn._wired = true;
       btn.addEventListener('click', () => {
-        const code = btn.closest('.md-code-block')?.querySelector('code');
+        // Find code tag in various structures: Markdown, HTML prompt, RichText prompt
+        let code = btn.closest('[data-has-copy="true"]')?.querySelector('code') 
+                   || btn.closest('.md-code-block')?.querySelector('code')
+                   || btn.closest('div')?.nextElementSibling?.querySelector('code');
+                   
         if (!code) return;
         navigator.clipboard.writeText(code.textContent).then(() => {
+          const originalText = btn.textContent;
           btn.textContent = '✓ Copied!';
           btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+          setTimeout(() => { 
+            btn.textContent = originalText === '✓ Copied!' ? 'Copy' : originalText; 
+            btn.classList.remove('copied'); 
+          }, 2000);
         });
       });
     });
