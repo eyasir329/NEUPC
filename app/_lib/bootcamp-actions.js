@@ -12,8 +12,8 @@ import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { auth } from '@/app/_lib/auth';
 import { uploadToDrive } from './gdrive';
+import { extractDriveFileId } from './utils';
 import {
-  extractDriveFileId,
   getFileMetadata,
   canAccessFile,
 } from './bootcamp-video';
@@ -195,6 +195,46 @@ export async function uploadBootcampThumbnailAction(formData) {
 }
 
 /**
+ * Upload an image for a lesson content block.
+ */
+export async function uploadLessonImageAction(formData) {
+  const adminId = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  if (!ALLOWED_BOOTCAMP_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, or WebP.' };
+  }
+
+  if (file.size > MAX_BOOTCAMP_IMAGE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${MAX_BOOTCAMP_IMAGE_SIZE / (1024 * 1024)}MB`,
+    };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `lesson_img_${adminId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'lesson-images'
+    );
+
+    return { success: true, url };
+  } catch (error) {
+    console.error('Lesson image upload error:', error);
+    return { error: error.message || 'Failed to upload image.' };
+  }
+}
+
+/**
  * Get a single bootcamp by ID or slug with full curriculum.
  */
 export async function getBootcampWithCurriculum(idOrSlug) {
@@ -211,7 +251,7 @@ export async function getBootcampWithCurriculum(idOrSlug) {
         modules (
           id, title, description, order_index, is_published, total_lessons, total_duration,
           lessons (
-            id, title, description, video_source, duration, order_index, 
+            id, title, description, content, video_source, video_id, video_url, duration, order_index, 
             is_free_preview, is_published
           )
         )
@@ -768,7 +808,9 @@ export async function updateLesson(lessonId, data) {
     .single();
 
   if (module?.courses?.bootcamp_id) {
-    revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    const bootcampId = module.courses.bootcamp_id;
+    revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+    revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
   }
 
   return lesson;

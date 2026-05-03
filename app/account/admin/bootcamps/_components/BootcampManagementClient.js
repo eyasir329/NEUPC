@@ -6,61 +6,70 @@ import Link from 'next/link';
 import {
   GraduationCap,
   Plus,
-  Edit3,
-  Trash2,
-  Loader2,
   Search,
   Terminal,
+  LayoutGrid,
+  LayoutList,
+  TrendingUp,
+  Users,
+  Zap,
+  BookOpen,
+  ChevronDown,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
+import BootcampCard from './BootcampCard';
 import BootcampFormModal from './BootcampFormModal';
-import { sortBootcamps, formatDate, SORT_OPTIONS } from './bootcampConfig';
-import { deleteBootcamp } from '@/app/_lib/bootcamp-actions';
+import BootcampTableRow from './BootcampTableRow';
+import { sortBootcamps, SORT_OPTIONS } from './bootcampConfig';
+import { deleteBootcamp, toggleBootcampFeatured } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 
-function statusPill(status) {
-  if (status === 'published')
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-        ACTIVE
-      </span>
-    );
-  if (status === 'archived')
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-        ARCHIVED
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-      DRAFT
-    </span>
-  );
-}
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All Tracks', color: 'text-gray-300' },
+  { value: 'published', label: 'Published', color: 'text-emerald-400' },
+  { value: 'draft', label: 'Draft', color: 'text-amber-400' },
+  { value: 'archived', label: 'Archived', color: 'text-gray-500' },
+];
 
 export default function BootcampManagementClient({ initialBootcamps }) {
   const router = useRouter();
   const [bootcamps, setBootcamps] = useState(initialBootcamps ?? []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortKey, setSortKey] = useState('newest');
+  const [viewMode, setViewMode] = useState('grid');
   const [formModal, setFormModal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setBootcamps(initialBootcamps ?? []);
   }, [initialBootcamps]);
 
-  const handleDelete = useCallback(async (id, e) => {
-    e.stopPropagation();
-    if (!confirm('Delete this bootcamp forever?')) return;
+  const handleDelete = useCallback(async (id) => {
+    if (!confirm('Permanently delete this bootcamp? This cannot be undone.')) return;
     setDeleteLoading(id);
     try {
       await deleteBootcamp(id);
       setBootcamps((prev) => prev.filter((b) => b.id !== id));
-      toast.success('Bootcamp deleted');
+      toast.success('Bootcamp deleted successfully');
     } catch (err) {
       toast.error(err.message || 'Failed to delete bootcamp');
     } finally {
       setDeleteLoading(null);
+    }
+  }, []);
+
+  const handleToggleFeatured = useCallback(async (id) => {
+    try {
+      await toggleBootcampFeatured(id);
+      setBootcamps((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, is_featured: !b.is_featured } : b))
+      );
+      toast.success('Featured status updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update featured status');
     }
   }, []);
 
@@ -69,225 +78,294 @@ export default function BootcampManagementClient({ initialBootcamps }) {
     setFormModal(null);
   }, [router]);
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: bootcamps.length,
     published: bootcamps.filter((b) => b.status === 'published').length,
+    draft: bootcamps.filter((b) => b.status === 'draft').length,
     totalEnrollments: bootcamps.reduce((s, b) => s + (b.enrollment_count ?? 0), 0),
-  };
+    totalLessons: bootcamps.reduce((s, b) => s + (b.total_lessons ?? 0), 0),
+  }), [bootcamps]);
 
   const filtered = useMemo(() => {
-    return bootcamps.filter((b) => {
+    let result = bootcamps.filter((b) => {
       const matchStatus = statusFilter === 'all' || b.status === statusFilter;
       const matchSearch =
         !search ||
         b.title?.toLowerCase().includes(search.toLowerCase()) ||
-        b.description?.toLowerCase().includes(search.toLowerCase());
+        b.description?.toLowerCase().includes(search.toLowerCase()) ||
+        b.batch_info?.toLowerCase().includes(search.toLowerCase());
       return matchStatus && matchSearch;
     });
-  }, [bootcamps, statusFilter, search]);
+    return sortBootcamps(result, sortKey);
+  }, [bootcamps, statusFilter, search, sortKey]);
+
+  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (sortKey !== 'newest' ? 1 : 0);
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
-      <div className="p-8 pt-10 max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
+      <div className="min-h-screen p-6 md:p-8 pt-8 max-w-7xl mx-auto space-y-6">
+
+        {/* ── Page Header ─────────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-semibold text-gray-900 tracking-tight">
-              Track Management
-            </h2>
-            <p className="text-base text-gray-500 mt-1">
-              Manage and track all educational programs across the platform.
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/25">
+                <GraduationCap className="h-5 w-5 text-violet-400" />
+              </div>
+              <span className="text-xs font-semibold text-violet-400/70 uppercase tracking-[0.18em] font-mono">
+                Admin / Bootcamps
+              </span>
+            </div>
+            <h1 className="kinetic-headline text-3xl md:text-4xl font-bold text-white">
+              Track <span className="neon-text">Management</span>
+            </h1>
+            <p className="text-sm text-gray-500 mt-1.5">
+              {stats.total} learning tracks · {stats.totalEnrollments} total enrollments
             </p>
           </div>
+
           <button
             onClick={() => setFormModal({ mode: 'create' })}
-            className="bg-indigo-600 text-white text-sm font-medium px-6 py-2.5 rounded-xl shadow hover:bg-indigo-500 transition-all flex items-center gap-2"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_24px_rgba(124,92,255,0.45)] sm:w-auto w-full"
           >
-            <Plus className="h-4 w-4" />
-            Create New Track
+            <span className="absolute inset-0 translate-y-full group-hover:translate-y-0 bg-violet-500 transition-transform duration-300 ease-out" />
+            <Plus className="relative h-4 w-4" />
+            <span className="relative">Create New Track</span>
           </button>
         </div>
 
-        {/* Filters & Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Status:
-              </span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-white border border-gray-200 text-gray-800 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-indigo-400"
-              >
-                <option value="all">All Statuses</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-                <option value="archived">Archived</option>
-              </select>
+        {/* ── Stats Row ────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            {
+              label: 'Total Tracks',
+              value: stats.total,
+              icon: GraduationCap,
+              color: 'text-violet-400',
+              bg: 'bg-violet-500/10 border-violet-500/20',
+            },
+            {
+              label: 'Published',
+              value: stats.published,
+              icon: Zap,
+              color: 'text-emerald-400',
+              bg: 'bg-emerald-500/10 border-emerald-500/20',
+            },
+            {
+              label: 'Total Students',
+              value: stats.totalEnrollments,
+              icon: Users,
+              color: 'text-blue-400',
+              bg: 'bg-blue-500/10 border-blue-500/20',
+            },
+            {
+              label: 'Total Lessons',
+              value: stats.totalLessons,
+              icon: BookOpen,
+              color: 'text-amber-400',
+              bg: 'bg-amber-500/10 border-amber-500/20',
+            },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div
+              key={label}
+              className={`glass-panel rounded-2xl p-4 border ${bg} flex items-center gap-3`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bg} border`}>
+                <Icon className={`h-5 w-5 ${color}`} />
+              </div>
+              <div>
+                <div className={`text-2xl font-bold stat-numeral ${color}`}>{value}</div>
+                <div className="text-xs text-gray-500 font-medium">{label}</div>
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* ── Toolbar: Search + Filters + View Toggle ──────────────────────── */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tracks, descriptions, batches..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+            {STATUS_FILTERS.map(({ value, label, color }) => (
+              <button
+                key={value}
+                onClick={() => setStatusFilter(value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  statusFilter === value
+                    ? `bg-white/10 ${color}`
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {label}
+                {value !== 'all' && (
+                  <span className={`ml-1.5 text-[10px] tabular-nums ${statusFilter === value ? color : 'text-gray-600'}`}>
+                    {bootcamps.filter((b) => b.status === value).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort + View toggle */}
+          <div className="flex items-center gap-2 ml-auto">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search bootcamps..."
-                className="border border-gray-200 rounded-lg py-1.5 pl-9 pr-3 text-sm text-gray-800 outline-none focus:border-indigo-400 placeholder:text-gray-400"
-              />
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                className="appearance-none bg-white/5 border border-white/10 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                style={{ colorScheme: 'dark' }}
+              >
+                {SORT_OPTIONS.map(({ key, label }) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
             </div>
-          </div>
-          <div className="flex items-center gap-6 text-sm">
-            <span className="text-gray-500">
-              Total Tracks:{' '}
-              <span className="font-semibold text-gray-800">{stats.total}</span>
-            </span>
-            <span className="text-gray-500">
-              Active:{' '}
-              <span className="font-semibold text-gray-800">{stats.published}</span>
-            </span>
-            <span className="text-gray-500">
-              Total Students:{' '}
-              <span className="font-semibold text-gray-800">{stats.totalEnrollments}</span>
-            </span>
+
+            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-violet-500/20 text-violet-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-violet-500/20 text-violet-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="List view"
+              >
+                <LayoutList className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Title &amp; Description
-                </th>
-                <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
-                  Students Enrolled
-                </th>
-                <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Last Updated
-                </th>
-                <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-12 text-center text-sm text-gray-400"
+        {/* ── Results Summary ───────────────────────────────────────────────── */}
+        {(search || statusFilter !== 'all') && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>
+              Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
+              <span className="text-white font-medium">{bootcamps.length}</span> tracks
+            </span>
+            {(search || statusFilter !== 'all') && (
+              <button
+                onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                className="ml-2 flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors font-medium"
+              >
+                <X className="h-3 w-3" />
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Empty State ───────────────────────────────────────────────────── */}
+        {filtered.length === 0 && (
+          <div className="flex min-h-[340px] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
+            <div className="text-center max-w-xs">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10">
+                <Terminal className="h-7 w-7 text-gray-600" />
+              </div>
+              {search || statusFilter !== 'all' ? (
+                <>
+                  <p className="text-white font-semibold mb-1">No tracks found</p>
+                  <p className="text-sm text-gray-500 mb-4">Try adjusting your search or filters.</p>
+                  <button
+                    onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                    className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium underline underline-offset-2"
                   >
-                    No tracks found.
-                  </td>
-                </tr>
+                    Clear all filters
+                  </button>
+                </>
               ) : (
-                filtered.map((b) => (
-                  <tr
-                    key={b.id}
-                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                    onClick={() =>
-                      router.push(`/account/admin/bootcamps/${b.id}`)
-                    }
+                <>
+                  <p className="text-white font-semibold mb-1">No tracks yet</p>
+                  <p className="text-sm text-gray-500 mb-4">Create your first learning track to get started.</p>
+                  <button
+                    onClick={() => setFormModal({ mode: 'create' })}
+                    className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all"
                   >
-                    <td className="py-4 px-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden text-indigo-400">
-                          {b.thumbnail ? (
-                            <img
-                              src={b.thumbnail}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Terminal className="h-5 w-5" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-900">
-                            {b.title}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-0.5 line-clamp-1">
-                            {b.description || 'No description provided'}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 align-top">{statusPill(b.status)}</td>
-                    <td className="py-4 px-6 align-top text-right">
-                      <div className="text-sm font-medium text-gray-800">
-                        {b.enrollment_count ?? 0}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 align-top">
-                      <div className="text-sm text-gray-800">
-                        {b.updated_at
-                          ? new Date(b.updated_at).toLocaleDateString()
-                          : '—'}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">by Admin</div>
-                    </td>
-                    <td className="py-4 px-6 align-top text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Link
-                          href={`/account/admin/bootcamps/${b.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Link>
-                        <button
-                          onClick={(e) => handleDelete(b.id, e)}
-                          disabled={deleteLoading === b.id}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                          title="Delete"
-                        >
-                          {deleteLoading === b.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                    <Plus className="h-3.5 w-3.5" />
+                    Create Track
+                  </button>
+                </>
               )}
-            </tbody>
-          </table>
-
-          {/* Pagination footer */}
-          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing{' '}
-              <span className="font-medium text-gray-800">1</span> to{' '}
-              <span className="font-medium text-gray-800">{filtered.length}</span> of{' '}
-              <span className="font-medium text-gray-800">{filtered.length}</span> tracks
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                disabled
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
             </div>
           </div>
-        </div>
-      </div>
+        )}
+
+        {/* ── Grid View ──────────────────────────────────────────────────────── */}
+        {filtered.length > 0 && viewMode === 'grid' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map((b) => (
+              <BootcampCard
+                key={b.id}
+                bootcamp={b}
+                onToggleFeatured={handleToggleFeatured}
+                onDelete={handleDelete}
+                deleteLoading={deleteLoading === b.id}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── List View ──────────────────────────────────────────────────────── */}
+        {filtered.length > 0 && viewMode === 'list' && (
+          <div className="glass-panel rounded-2xl overflow-hidden border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-white/8">
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Track</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Students</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Lessons</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Updated</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filtered.map((b) => (
+                    <BootcampTableRow
+                      key={b.id}
+                      bootcamp={b}
+                      onToggleFeatured={handleToggleFeatured}
+                      onDelete={handleDelete}
+                      deleteLoading={deleteLoading === b.id}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-white/8 px-5 py-3 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                {filtered.length} track{filtered.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* ── Create / Edit Modal ──────────────────────────────────────────────── */}
       {formModal && (
         <BootcampFormModal
           bootcamp={formModal.bootcamp ?? null}
