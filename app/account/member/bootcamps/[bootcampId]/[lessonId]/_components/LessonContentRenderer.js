@@ -1,32 +1,226 @@
 'use client';
 
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { remark } from 'remark';
-import html from 'remark-html';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { marked } from 'marked';
+import { createLowlight, common } from 'lowlight';
 import VideoPlayer from './VideoPlayer';
 import { BookOpen, Play, ListVideo } from 'lucide-react';
 import { driveImageUrl } from '@/app/_lib/utils';
+
+const lowlight = createLowlight(common);
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseContentBlocks(content) {
   if (!content) return [];
   try {
     const parsed = typeof content === 'string' ? JSON.parse(content) : content;
     if (Array.isArray(parsed)) return parsed;
-  } catch (e) {
-    // Legacy HTML/string content
-  }
+  } catch (e) {}
   return [{ id: 'legacy', type: 'richText', content }];
 }
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function hastToString(node) {
+  if (!node) return '';
+  if (node.type === 'text') return escapeHtml(node.value);
+  if (node.type === 'element') {
+    const cls = node.properties?.className;
+    const ca = cls ? ` class="${Array.isArray(cls) ? cls.join(' ') : cls}"` : '';
+    return `<${node.tagName}${ca}>${(node.children || []).map(hastToString).join('')}</${node.tagName}>`;
+  }
+  if (node.type === 'root') return (node.children || []).map(hastToString).join('');
+  return '';
+}
+
+function highlightCode(code, lang) {
+  try {
+    const l = (lang || '').trim().toLowerCase();
+    if (l && lowlight.registered(l)) return hastToString(lowlight.highlight(l, code));
+  } catch {}
+  return escapeHtml(code);
+}
+
+// ─── Custom marked renderer (Claude-style output) — marked v18 compatible ─────
+//
+// In marked v18, renderer methods receive the full token object.
+// Inline text (paragraph, heading, strong, em, link, blockquote) is NOT
+// pre-rendered into a `text` string — instead use this.parser.parseInline(tokens)
+// for inline content and this.parser.parse(tokens) for block content.
+// List/table now receive full token objects with items/rows arrays.
+
+function buildRenderer() {
+  const r = new marked.Renderer();
+
+  // --- Block-level ---
+
+  r.heading = function ({ tokens, depth }) {
+    const text = this.parser.parseInline(tokens);
+    const sz = { 1: '1.375rem', 2: '1.125rem', 3: '1rem', 4: '0.9rem', 5: '0.85rem', 6: '0.8rem' };
+    return `<h${depth} class="md-h md-h${depth}" style="font-size:${sz[depth] || '1rem'}">${text}</h${depth}>\n`;
+  };
+
+  r.paragraph = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<p class="md-p">${text}</p>\n`;
+  };
+
+  r.blockquote = function ({ tokens }) {
+    const body = this.parser.parse(tokens);
+    return `<blockquote class="md-bq">${body}</blockquote>\n`;
+  };
+
+  r.hr = () => `<hr class="md-hr">\n`;
+
+  r.list = function (token) {
+    const { ordered, start, items } = token;
+    let body = '';
+    for (const item of items) body += this.listitem(item);
+    const tag = ordered ? 'ol' : 'ul';
+    const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
+    return `<${tag} class="md-${tag}"${startAttr}>${body}</${tag}>\n`;
+  };
+
+  r.listitem = function (item) {
+    const body = this.parser.parse(item.tokens);
+    if (item.task) {
+      return `<li class="md-li md-task"><input type="checkbox" ${item.checked ? 'checked' : ''} disabled> ${body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1')}</li>\n`;
+    }
+    // Strip wrapping <p> tags for tight lists (single-paragraph items)
+    const inner = item.loose ? body : body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
+    return `<li class="md-li">${inner}</li>\n`;
+  };
+
+  r.table = function (token) {
+    // Render header cells
+    let headerHtml = '';
+    for (const cell of token.header) {
+      const text = this.parser.parseInline(cell.tokens);
+      const al = cell.align ? ` style="text-align:${cell.align}"` : '';
+      headerHtml += `<th class="md-th"${al}>${text}</th>`;
+    }
+    // Render body rows
+    let bodyHtml = '';
+    for (const row of token.rows) {
+      let rowHtml = '';
+      for (const cell of row) {
+        const text = this.parser.parseInline(cell.tokens);
+        const al = cell.align ? ` style="text-align:${cell.align}"` : '';
+        rowHtml += `<td class="md-td"${al}>${text}</td>`;
+      }
+      bodyHtml += `<tr class="md-tr">${rowHtml}</tr>`;
+    }
+    return `<div class="md-table-wrap"><table class="md-table"><thead><tr class="md-tr">${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>\n`;
+  };
+
+  r.code = ({ text, lang }) => {
+    const language = (lang || '').trim().toLowerCase();
+    const highlighted = highlightCode(text, language);
+    return [
+      `<div class="md-code-block" data-has-copy="true">`,
+      `  <div class="md-code-header">`,
+      `    <span class="md-code-lang">${language || 'code'}</span>`,
+      `    <button class="md-copy-btn" data-copy-btn="true">Copy</button>`,
+      `  </div>`,
+      `  <div class="md-code-scroll">`,
+      `    <pre class="md-pre"><code class="language-${language} hljs">${highlighted}</code></pre>`,
+      `  </div>`,
+      `</div>\n`,
+    ].join('');
+  };
+
+  // --- Inline-level ---
+
+  r.strong = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<strong class="md-strong">${text}</strong>`;
+  };
+
+  r.em = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<em class="md-em">${text}</em>`;
+  };
+
+  r.codespan = ({ text }) => `<code class="md-inline-code">${text}</code>`;
+
+  r.link = function ({ href, title, tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<a href="${href}" class="md-a"${title ? ` title="${escapeHtml(title)}"` : ''} target="_blank" rel="noopener">${text}</a>`;
+  };
+
+  r.image = ({ href, text, title }) =>
+    `<img src="${href}" alt="${escapeHtml(text || '')}"${title ? ` title="${escapeHtml(title)}"` : ''} class="md-img" loading="lazy">`;
+
+  return r;
+}
+
+const MD_RENDERER = buildRenderer();
 
 function processMarkdown(markdown) {
   if (!markdown) return '';
   try {
-    return remark().use(html).processSync(markdown).toString();
+    return marked.parse(markdown, { gfm: true, breaks: true, renderer: MD_RENDERER });
   } catch (e) {
-    console.error('Failed to parse markdown', e);
-    return `<p>Failed to parse markdown content.</p>`;
+    return `<p>Failed to parse markdown.</p>`;
   }
 }
+
+// ─── Scoped styles for markdown viewer ────────────────────────────────────────
+
+const MD_STYLES = `
+.md-viewer{display:grid;grid-template-columns:1fr;gap:.75rem;line-height:1.65rem;color:#908fa0;}
+.md-h{font-weight:700;color:#d4e4fa;margin-top:.75rem;margin-bottom:-.25rem;min-width:0;}
+.md-h1{font-size:1.375rem}.md-h2{font-size:1.125rem}.md-h3{font-size:1rem}.md-h4{font-size:.9rem}
+.md-p{line-height:1.7;word-break:break-word;white-space:normal;min-width:0;}
+.md-strong{color:#d4e4fa;font-weight:600;}
+.md-em{font-style:italic;}
+.md-a{color:#8083ff;text-decoration:none;}.md-a:hover{text-decoration:underline;}
+.md-img{max-width:100%;height:auto;border-radius:.75rem;border:1px solid rgba(255,255,255,.08);display:block;margin:.5rem 0;}
+.md-bq{margin-left:.5rem;border-left:4px solid rgba(255,255,255,.12);padding:.5rem 1rem;border-radius:0 .5rem .5rem 0;background:rgba(255,255,255,.02);}
+.md-hr{border:none;border-top:.5px solid #273647;margin:.75rem .375rem;}
+.md-ul,.md-ol{padding-left:1.5rem;line-height:1.7;display:flex;flex-direction:column;gap:.2rem;}
+.md-ul .md-li{list-style-type:disc;}.md-ol .md-li{list-style-type:decimal;}
+.md-li{padding-left:.25rem;min-width:0;}
+.md-task input{margin-right:.4rem;accent-color:#8083ff;}
+.md-inline-code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .4em;border-radius:.35rem;font-size:.875em;font-family:monospace;}
+.md-table-wrap{overflow-x:auto;width:100%;margin:.5rem 0;}
+.md-table{min-width:100%;border-collapse:collapse;font-size:.875rem;line-height:1.7;text-align:left;}
+.md-th{color:#d4e4fa;border-bottom:.5px solid rgba(68,69,84,.8);padding:.5rem 1rem .5rem 0;vertical-align:top;font-weight:700;}
+.md-td{border-bottom:.5px solid rgba(39,54,71,.5);padding:.5rem 1rem .5rem 0;vertical-align:top;color:#908fa0;}
+.md-code-block{border-radius:.625rem;overflow:hidden;border:.5px solid #273647;margin:.25rem 0;}
+.md-code-header{display:flex;align-items:center;justify-content:space-between;background:#0d1117;padding:.625rem 1rem;border-bottom:.5px solid #273647;}
+.md-code-lang{font-size:.75rem;color:#464554;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.md-copy-btn{font-size:.6875rem;color:#8083ff;background:rgba(128,131,255,.08);border:1px solid rgba(128,131,255,.2);border-radius:.375rem;padding:.25rem .875rem;cursor:pointer;font-weight:600;transition:all .2s;}
+.md-copy-btn:hover{background:rgba(128,131,255,.15);}
+.md-copy-btn.copied{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08);}
+.md-code-scroll{overflow-x:auto;}
+.md-pre{margin:0;padding:1.125rem 1.25rem;background:#010f1f;overflow-x:auto;}
+.md-pre code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.8125rem;line-height:1.7;white-space:pre;color:#d4e4fa;background:transparent;}
+/* highlight.js token colors */
+.hljs-comment,.hljs-quote{color:#818898;font-style:italic;}
+.hljs-keyword,.hljs-selector-tag,.hljs-subst{color:#f47b85;font-weight:600;}
+.hljs-number,.hljs-literal,.hljs-variable,.hljs-template-variable,.hljs-tag .hljs-attr{color:#5eedec;}
+.hljs-string,.hljs-doctag{color:#9be963;}
+.hljs-title,.hljs-section,.hljs-selector-id{color:#70b8ff;font-weight:600;}
+.hljs-type,.hljs-class .hljs-title{color:#5eedec;}
+.hljs-tag,.hljs-name,.hljs-attribute{color:#f47b85;}
+.hljs-regexp,.hljs-link{color:#9be963;}
+.hljs-symbol,.hljs-bullet{color:#cc7bf4;}
+.hljs-built_in,.hljs-builtin-name{color:#70b8ff;}
+.hljs-meta{color:#818898;}
+.hljs-deletion{color:#f47b85;}
+.hljs-addition{color:#9be963;}
+.hljs-emphasis{font-style:italic;}
+.hljs-strong{font-weight:700;}
+.hljs-params{color:#d4e4fa;}
+.hljs-variable,.hljs-template-variable{color:#fbad60;}
+.hljs-operator,.hljs-punctuation{color:#d3d7de;}
+`;
 
 // ─── Multi-video playlist ─────────────────────────────────────────────────────
 
@@ -130,65 +324,23 @@ export default function LessonContentRenderer({ content, lessonId }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
-  // Auto-inject copy buttons on <pre> code blocks
+  // Wire copy-button click handlers (buttons are pre-built by the marked renderer)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const preBlocks = container.querySelectorAll('pre');
-    preBlocks.forEach((pre) => {
-      // Skip if already has a copy button (from HTML prompt or previous run)
-      if (pre.parentElement?.querySelector('[data-copy-btn]')) return;
-      if (pre.closest('[data-has-copy]')) return;
-
-      const code = pre.querySelector('code') || pre;
-      const lang = code.className?.match(/language-(\w+)/)?.[1] || '';
-
-      // Create wrapper
-      const wrapper = document.createElement('div');
-      wrapper.setAttribute('data-has-copy', 'true');
-      wrapper.style.cssText = 'position:relative; margin:24px 0; border-radius:10px; overflow:hidden; border:1px solid #273647;';
-
-      // Create header bar
-      const header = document.createElement('div');
-      header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; background:#0d1117; padding:10px 16px; border-bottom:1px solid #273647;';
-
-      const langLabel = document.createElement('span');
-      langLabel.style.cssText = 'font-size:12px; color:#908fa0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;';
-      langLabel.textContent = lang || 'Code';
-
-      const copyBtn = document.createElement('button');
-      copyBtn.setAttribute('data-copy-btn', 'true');
-      copyBtn.textContent = 'Copy';
-      copyBtn.style.cssText = 'font-size:11px; color:#8083ff; background:rgba(128,131,255,0.08); border:1px solid rgba(128,131,255,0.2); border-radius:6px; padding:4px 14px; cursor:pointer; font-weight:600; transition:all 0.2s;';
-      copyBtn.addEventListener('click', () => {
+    const btns = container.querySelectorAll('.md-copy-btn[data-copy-btn]');
+    btns.forEach((btn) => {
+      if (btn._wired) return;
+      btn._wired = true;
+      btn.addEventListener('click', () => {
+        const code = btn.closest('.md-code-block')?.querySelector('code');
+        if (!code) return;
         navigator.clipboard.writeText(code.textContent).then(() => {
-          copyBtn.textContent = '✓ Copied!';
-          copyBtn.style.color = '#34d399';
-          copyBtn.style.borderColor = 'rgba(52,211,153,0.3)';
-          copyBtn.style.background = 'rgba(52,211,153,0.08)';
-          setTimeout(() => {
-            copyBtn.textContent = 'Copy';
-            copyBtn.style.color = '#8083ff';
-            copyBtn.style.borderColor = 'rgba(128,131,255,0.2)';
-            copyBtn.style.background = 'rgba(128,131,255,0.08)';
-          }, 2000);
+          btn.textContent = '✓ Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
         });
       });
-
-      header.appendChild(langLabel);
-      header.appendChild(copyBtn);
-
-      // Style the pre block
-      pre.style.cssText = 'margin:0; background:#010f1f; padding:20px; overflow-x:auto; font-size:13px; line-height:1.7;';
-      if (code !== pre) {
-        code.style.cssText = "font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa; white-space:pre;";
-      }
-
-      // Wrap: insert wrapper before pre, move pre into wrapper
-      pre.parentNode.insertBefore(wrapper, pre);
-      wrapper.appendChild(header);
-      wrapper.appendChild(pre);
     });
   }, [blocks]);
 
@@ -215,10 +367,13 @@ export default function LessonContentRenderer({ content, lessonId }) {
         if (block.type === 'markdown') {
           const htmlContent = processMarkdown(block.content);
           return (
-            <div
-              key={block.id}
-              dangerouslySetInnerHTML={{ __html: htmlContent }}
-            />
+            <div key={block.id}>
+              <style dangerouslySetInnerHTML={{ __html: MD_STYLES }} />
+              <div
+                className="md-viewer"
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
+              />
+            </div>
           );
         }
 
@@ -236,22 +391,48 @@ export default function LessonContentRenderer({ content, lessonId }) {
             }
           }
 
+          const validImages = images.filter(img => img.url);
+          if (validImages.length === 0) return null;
+
+          let gridClass = "grid gap-4 sm:gap-6 ";
+          if (validImages.length === 1) {
+            gridClass += "grid-cols-1 max-w-4xl mx-auto";
+          } else if (validImages.length === 2) {
+            gridClass += "grid-cols-1 sm:grid-cols-2";
+          } else if (validImages.length === 3) {
+            gridClass += "grid-cols-1 sm:grid-cols-2";
+          } else if (validImages.length === 4) {
+            gridClass += "grid-cols-1 sm:grid-cols-2";
+          } else {
+            gridClass += "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
+          }
+
           return (
-            <div key={block.id} className="flex flex-col gap-8">
-              {images.map((img) => {
-                if (!img.url) return null;
+            <div key={block.id} className={gridClass}>
+              {validImages.map((img, idx) => {
+                const isFeatured = validImages.length === 3 && idx === 0;
                 return (
                   <div
                     key={img.id}
-                    className="rounded-2xl border border-white/8 overflow-hidden bg-black/20 flex justify-center p-2 shadow-lg group/img relative"
+                    className={`rounded-2xl border border-white/10 overflow-hidden bg-[#020810] flex justify-center items-center shadow-xl group/img relative ${
+                      isFeatured ? "sm:col-span-2" : ""
+                    }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={driveImageUrl(img.url)}
                       alt={img.alt || 'Lesson image'}
-                      className="max-w-full h-auto rounded-xl transition-transform duration-500 group-hover/img:scale-[1.01]"
+                      className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 ease-out group-hover/img:scale-[1.02]"
                       loading="lazy"
                     />
+                    
+                    {img.alt && (
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 pointer-events-none pt-12 pb-4 px-6 flex items-end">
+                        <p className="text-white/90 text-sm font-medium drop-shadow-md translate-y-2 group-hover/img:translate-y-0 transition-transform duration-300">
+                          {img.alt}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
