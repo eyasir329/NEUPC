@@ -2736,7 +2736,7 @@ export default function ProblemSolvingClient({ userId }) {
   };
 
   return (
-    <div className="flex min-h-full text-gray-300 selection:bg-violet-500/30">
+    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
       {/* ── Secondary left nav ───────────────────────────────────────── */}
       <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
         {/* Section header */}
@@ -2876,21 +2876,19 @@ export default function ProblemSolvingClient({ userId }) {
           </div>
         </div>
 
-        <main className="flex-1 p-4 pb-10 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="space-y-8"
-              >
-                {renderTab()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        <main className="flex-1 p-4 pb-10 sm:p-5 lg:p-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -15, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-8"
+            >
+              {renderTab()}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
