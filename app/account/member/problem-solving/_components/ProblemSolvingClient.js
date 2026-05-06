@@ -505,119 +505,111 @@ function ActivityHeatmap({ data }) {
 // Difficulty donut
 // =====================================================================
 function DifficultyDonut({ statistics }) {
-  const easy = Number(statistics?.easy_solved || 0);
+  const easy   = Number(statistics?.easy_solved   || 0);
   const medium = Number(statistics?.medium_solved || 0);
-  const hard =
-    Number(statistics?.hard_solved || 0) +
-    Number(statistics?.expert_solved || 0);
-  const total = easy + medium + hard || 1;
-  const C = 2 * Math.PI * 28; // ≈ 175.93
-  const easyLen = (easy / total) * C;
-  const mediumLen = (medium / total) * C;
-  const hardLen = (hard / total) * C;
+  const hard   = Number(statistics?.hard_solved   || 0) + Number(statistics?.expert_solved || 0);
+  const total  = easy + medium + hard || 1;
+
+  // SVG ring geometry
+  const R = 54; // radius to stroke centre
+  const CX = 70;
+  const CY = 70;
+  const C  = 2 * Math.PI * R;
+  const GAP = 3; // px gap between segments
+
+  const tiers = [
+    { label: 'Easy',   count: easy,   color: '#34d399', glow: 'rgba(52,211,153,0.35)',  text: 'text-emerald-400', bar: 'bg-emerald-500' },
+    { label: 'Medium', count: medium, color: '#fbbf24', glow: 'rgba(251,191,36,0.35)',  text: 'text-amber-400',   bar: 'bg-amber-400'   },
+    { label: 'Hard',   count: hard,   color: '#fb7185', glow: 'rgba(251,113,133,0.35)', text: 'text-rose-400',    bar: 'bg-rose-500'    },
+  ];
+
+  // Build dash offsets for each segment with a small gap
+  let offset = 0;
+  const segments = tiers.map((t) => {
+    const len = (t.count / total) * C;
+    const visLen = Math.max(0, len - GAP);
+    const seg = { ...t, len: visLen, offset };
+    offset += len;
+    return seg;
+  });
+
   return (
-    <div className="relative flex h-[320px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl transition-all hover:bg-zinc-900/80">
-      <div className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-white/5 blur-[80px]" />
-      <h3 className="mb-6 flex shrink-0 items-center gap-2 text-base font-semibold text-white">
-        <SlidersHorizontal className="h-4 w-4 text-indigo-400" />
-        By difficulty
-      </h3>
-      <div className="flex flex-1 flex-col items-center justify-center gap-6">
-        <div className="relative flex h-28 w-28 shrink-0 items-center justify-center drop-shadow-xl">
-          <div className="absolute inset-0 rounded-full bg-indigo-500/5 blur-xl" />
-          <svg
-            viewBox="0 0 80 80"
-            width="112"
-            height="112"
-            className="relative z-10 pb-1 drop-shadow-md"
-          >
-            <circle
-              cx="40"
-              cy="40"
-              r="28"
-              fill="none"
-              stroke="rgba(255,255,255,0.05)"
-              strokeWidth="10"
-            />
-            {easy > 0 && (
-              <circle
-                cx="40"
-                cy="40"
-                r="28"
-                fill="none"
-                stroke="#34d399"
-                strokeWidth="10"
-                strokeDasharray={`${easyLen} ${C - easyLen}`}
-                strokeDashoffset="0"
-                transform="rotate(-90 40 40)"
-                className="drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]"
-              />
-            )}
-            {medium > 0 && (
-              <circle
-                cx="40"
-                cy="40"
-                r="28"
-                fill="none"
-                stroke="#fbbf24"
-                strokeWidth="10"
-                strokeDasharray={`${mediumLen} ${C - mediumLen}`}
-                strokeDashoffset={`${-easyLen}`}
-                transform="rotate(-90 40 40)"
-                className="drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]"
-              />
-            )}
-            {hard > 0 && (
-              <circle
-                cx="40"
-                cy="40"
-                r="28"
-                fill="none"
-                stroke="#fb7185"
-                strokeWidth="10"
-                strokeDasharray={`${hardLen} ${C - hardLen}`}
-                strokeDashoffset={`${-(easyLen + mediumLen)}`}
-                transform="rotate(-90 40 40)"
-                className="drop-shadow-[0_0_4px_rgba(251,113,133,0.5)]"
-              />
+    <div className="relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900/60 p-6 shadow-lg backdrop-blur-xl">
+      {/* ambient glow */}
+      <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-violet-500/[0.06] blur-[60px]" />
+
+      {/* Header */}
+      <div className="relative z-10 mb-5 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-[13px] font-semibold text-white">
+          <SlidersHorizontal className="h-4 w-4 text-violet-400" />
+          By Difficulty
+        </h3>
+        <span className="text-[11px] font-medium text-gray-500">
+          {formatNumber(total)} solved
+        </span>
+      </div>
+
+      {/* Donut + rows side by side */}
+      <div className="relative z-10 flex items-center gap-6">
+
+        {/* SVG donut */}
+        <div className="relative shrink-0">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            {/* track */}
+            <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="14" />
+            {/* segments */}
+            {segments.map((s) =>
+              s.count > 0 ? (
+                <circle
+                  key={s.label}
+                  cx={CX} cy={CY} r={R}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="14"
+                  strokeLinecap="round"
+                  strokeDasharray={`${s.len} ${C - s.len}`}
+                  strokeDashoffset={-s.offset}
+                  transform={`rotate(-90 ${CX} ${CY})`}
+                  style={{ filter: `drop-shadow(0 0 6px ${s.glow})` }}
+                />
+              ) : null
             )}
           </svg>
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pt-0.5">
-            <span className="font-mono text-xl leading-none font-bold text-white">
+          {/* centre label */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold tabular-nums text-white leading-none">
               {formatNumber(total)}
             </span>
-            <span className="mt-1 text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+            <span className="mt-1 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
               Total
             </span>
           </div>
         </div>
-        <div className="flex w-full justify-center gap-2">
-          {[
-            { col: '#34d399', label: 'Easy', n: easy, bg: 'bg-emerald-500/10' },
-            { col: '#fbbf24', label: 'Med', n: medium, bg: 'bg-amber-500/10' },
-            { col: '#fb7185', label: 'Hard', n: hard, bg: 'bg-rose-500/10' },
-          ].map((row) => (
-            <div
-              key={row.label}
-              className={cn(
-                'flex flex-1 flex-col items-center justify-center rounded-xl border border-white/5 px-1 py-2 text-center shadow-inner',
-                row.bg
-              )}
-            >
-              <span className="font-mono text-sm font-bold text-white">
-                {formatNumber(row.n)}
-              </span>
-              <div className="mt-1 flex items-center gap-1">
-                <div
-                  className="h-1.5 w-1.5 rounded-full shadow-sm"
-                  style={{ backgroundColor: row.col }}
-                />
-                <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
-                  {row.label}
-                </span>
+
+        {/* Tier rows */}
+        <div className="flex flex-1 flex-col gap-3.5">
+          {tiers.map((t) => {
+            const pct = Math.round((t.count / total) * 100);
+            return (
+              <div key={t.label} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className={cn('text-[12px] font-semibold', t.text)}>{t.label}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[13px] font-bold tabular-nums text-white">{formatNumber(t.count)}</span>
+                    <span className="text-[10px] text-gray-600">{pct}%</span>
+                  </div>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                  <motion.div
+                    className={cn('h-full rounded-full', t.bar)}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -799,9 +791,24 @@ function OverviewTab({
       .map(([name, count]) => ({ name, value: count / max }));
   }, [recentSubmissions]);
 
+  const solved = Number(statistics?.total_solved || 0);
+  const submissions = Number(statistics?.total_submissions || 0);
+  const accuracy = submissions > 0 ? (solved / submissions) * 100 : 0;
+  const accuracyDisplay = accuracy.toFixed(1);
+
+  // Arc gauge geometry (semicircle, 180°)
+  const ARC_R = 38;
+  const ARC_CX = 56;
+  const ARC_CY = 54;
+  const ARC_C = Math.PI * ARC_R; // half circumference
+  const arcFill = (accuracy / 100) * ARC_C;
+  const arcColor = accuracy >= 70 ? '#34d399' : accuracy >= 45 ? '#fbbf24' : '#fb7185';
+  const arcGlow  = accuracy >= 70 ? 'rgba(52,211,153,0.4)' : accuracy >= 45 ? 'rgba(251,191,36,0.4)' : 'rgba(251,113,133,0.4)';
+  const arcTextColor = accuracy >= 70 ? 'text-emerald-400' : accuracy >= 45 ? 'text-amber-400' : 'text-rose-400';
+
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,1fr)_200px]">
         {stats.map((s, i) => (
           <motion.div
             key={i}
@@ -840,6 +847,66 @@ function OverviewTab({
             </div>
           </motion.div>
         ))}
+
+        {/* Accuracy card */}
+        <motion.div
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1 xl:col-span-1"
+        >
+          <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
+            style={{ background: arcColor }} />
+
+          <div className="relative z-10 mb-1 flex items-center justify-between">
+            <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+              Avg Accuracy
+            </span>
+            <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
+              <Target className="h-5 w-5" style={{ color: arcColor }} />
+            </div>
+          </div>
+
+          {/* Semicircle gauge */}
+          <div className="relative z-10 flex flex-col items-center">
+            <svg width="112" height="64" viewBox="0 0 112 64" className="overflow-visible">
+              {/* track */}
+              <path
+                d={`M ${ARC_CX - ARC_R} ${ARC_CY} A ${ARC_R} ${ARC_R} 0 0 1 ${ARC_CX + ARC_R} ${ARC_CY}`}
+                fill="none"
+                stroke="rgba(255,255,255,0.06)"
+                strokeWidth="10"
+                strokeLinecap="round"
+              />
+              {/* fill */}
+              <path
+                d={`M ${ARC_CX - ARC_R} ${ARC_CY} A ${ARC_R} ${ARC_R} 0 0 1 ${ARC_CX + ARC_R} ${ARC_CY}`}
+                fill="none"
+                stroke={arcColor}
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${arcFill} ${ARC_C}`}
+                style={{ filter: `drop-shadow(0 0 6px ${arcGlow})` }}
+              />
+              {/* needle dot at tip */}
+              {accuracy > 0 && (() => {
+                const angle = Math.PI - (accuracy / 100) * Math.PI;
+                const nx = ARC_CX + Math.cos(angle) * ARC_R;
+                const ny = ARC_CY - Math.sin(angle) * ARC_R;
+                return <circle cx={nx} cy={ny} r="4" fill={arcColor} style={{ filter: `drop-shadow(0 0 4px ${arcGlow})` }} />;
+              })()}
+            </svg>
+
+            {/* value below gauge */}
+            <div className="-mt-2 flex flex-col items-center">
+              <span className={cn('text-3xl font-bold tabular-nums leading-none', arcTextColor)}>
+                {accuracyDisplay}%
+              </span>
+              <span className="mt-1 text-sm font-medium text-zinc-500">
+                {formatNumber(solved)} / {formatNumber(submissions)}
+              </span>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -2401,55 +2468,6 @@ export default function ProblemSolvingClient({ userId }) {
     upcomingContests,
   } = problemSolvingData;
 
-  const activeTabLabel = useMemo(
-    () => TABS.find((t) => t.id === activeTab)?.label ?? 'Overview',
-    [activeTab]
-  );
-
-  const userInitial = useMemo(() => {
-    if (!userId) return 'U';
-    return String(userId).slice(0, 1).toUpperCase();
-  }, [userId]);
-
-  const SidebarItem = ({ tab }) => {
-    const Icon = tab.icon;
-    const active = activeTab === tab.id;
-    return (
-      <button
-        onClick={() => handleTabChange(tab.id)}
-        className={cn(
-          'group relative z-10 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300',
-          active ? 'text-white' : 'text-zinc-400 hover:text-white'
-        )}
-      >
-        {active && (
-          <motion.div
-            layoutId="active-nav-pill"
-            className="absolute inset-0 -z-10 rounded-xl bg-white/10 ring-1 ring-white/5"
-            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-        <Icon
-          className={cn(
-            'h-4 w-4 transition-transform duration-300',
-            active
-              ? 'text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]'
-              : 'group-hover:scale-110'
-          )}
-        />
-        <span className="relative">
-          {tab.label}
-          {tab.id === 'recommended' && (
-            <span className="absolute -top-1 -right-3 flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-            </span>
-          )}
-        </span>
-      </button>
-    );
-  };
-
   const renderTab = () => {
     if (loading) return <LoadingState />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
@@ -2504,145 +2522,145 @@ export default function ProblemSolvingClient({ userId }) {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-zinc-950 font-sans text-zinc-300 selection:bg-indigo-500/30">
-      {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 flex-col items-stretch border-r border-white/5 bg-zinc-950 px-4 pt-6 pb-6 md:flex">
-        <div className="mb-10 flex items-center gap-3 px-2 text-[18px] font-bold tracking-tight text-white">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-            <span className="text-sm text-white">NE</span>
-          </div>
-          Problem Solving
+    <div className="flex min-h-full text-gray-300 selection:bg-violet-500/30">
+      {/* ── Secondary left nav ───────────────────────────────────────── */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
+        {/* Section header */}
+        <div className="border-b border-white/[0.06] px-4 py-[14px]">
+          <p className="text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
+            Problem Solving
+          </p>
         </div>
-        <nav className="relative flex-1 space-y-1.5 overflow-y-auto">
-          <div className="mb-2 px-3 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <p className="mb-0.5 px-3 pt-3 pb-1 text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
             Dashboard
+          </p>
+          <div className="space-y-0.5">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={cn(
+                    'group/nav relative flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    active
+                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                  )}
+                >
+                  {active && (
+                    <div className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
+                  )}
+                  <Icon className="h-[17px] w-[17px] shrink-0" />
+                  <span className="flex-1 truncate text-left">{tab.label}</span>
+                  {tab.id === 'recommended' && (
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          {TABS.map((tab) => (
-            <SidebarItem key={tab.id} tab={tab} />
-          ))}
         </nav>
-        <div className="mt-auto space-y-2 pt-6">
-          <div className="mb-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
-            <div className="mb-2 flex items-center gap-3">
-              <Crown className="h-5 w-5 text-yellow-500" />
-              <p className="text-sm font-medium text-zinc-200">Pro Features</p>
-            </div>
-            <p className="mb-3 text-xs leading-relaxed text-zinc-500">
-              Upgrade to competitive programming pro
-            </p>
-            <button className="w-full rounded-md bg-white/10 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20">
-              Upgrade Now
-            </button>
+
+        {/* Sync status + actions */}
+        <div className="shrink-0 border-t border-white/[0.06] px-3 py-3 space-y-1.5">
+          <div className="flex items-center gap-2 px-3 py-1.5">
+            <span className="relative flex h-2 w-2 shrink-0">
+              {syncing && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span className={cn('relative inline-flex h-2 w-2 rounded-full', syncing ? 'bg-emerald-400' : 'bg-emerald-500/70')} />
+            </span>
+            <span className="text-[12px] text-gray-500">{syncing ? 'Syncing…' : 'Synced'}</span>
           </div>
           <button
-            onClick={() => setSettingsOpen(true)}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:bg-white/5 hover:text-white"
+            onClick={handleSync}
+            disabled={syncing}
+            className="group/nav flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200 disabled:opacity-50"
           >
-            <Settings className="h-4 w-4" /> Settings
+            <RefreshCw className={cn('h-[17px] w-[17px] shrink-0', syncing ? 'animate-spin' : 'transition-transform duration-300 group-hover/nav:rotate-180')} />
+            Sync Now
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="group/nav flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
+          >
+            <Settings className="h-[17px] w-[17px] shrink-0" />
+            Settings
           </button>
         </div>
       </aside>
 
-      {/* Main column */}
-      <div className="relative flex min-w-0 flex-1 flex-col bg-zinc-950/50">
-        {/* Subtle background glow effect */}
-        <div className="pointer-events-none absolute top-0 left-1/2 h-[300px] w-[800px] -translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px]" />
-
-        <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-white/5 bg-zinc-950/80 px-8 backdrop-blur-xl">
-          <div className="flex flex-1 items-center gap-4">
-            <span className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white">
-              {activeTabLabel}
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 transition-colors duration-300 hover:bg-white/10 lg:flex">
-              <span className="relative flex h-2.5 w-2.5">
-                {syncing && (
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-                )}
-                <span
-                  className={cn(
-                    'relative inline-flex h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]',
-                    syncing ? 'bg-emerald-400' : 'bg-emerald-500/80 shadow-none'
-                  )}
-                />
-              </span>
-              <span className="text-sm font-medium text-zinc-300">
-                {syncing ? 'Syncing...' : 'Synced 2m ago'}
-              </span>
-            </div>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="group flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-500 disabled:opacity-70 disabled:hover:translate-y-0"
-            >
-              <RefreshCw
-                className={cn(
-                  'h-4 w-4',
-                  syncing
-                    ? 'animate-spin'
-                    : 'transition-transform duration-300 group-hover:rotate-180'
-                )}
-              />
-              Sync Code
-            </button>
-            <div className="hidden h-8 w-px bg-white/10 md:block" />
-            <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-gradient-to-tr from-zinc-800 to-zinc-700 text-sm font-bold text-white shadow-inner ring-offset-2 ring-offset-zinc-950 transition-transform hover:scale-105 hover:ring-2 hover:ring-indigo-500/50">
-              {userInitial}
-            </button>
-          </div>
-        </header>
-
-        <main className="hide-scrollbar flex-1 overflow-y-auto scroll-smooth p-6 pb-24 md:p-10">
-          <div className="mx-auto max-w-6xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="space-y-8"
+      {/* ── Main content ─────────────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile / tablet horizontal tab bar (visible below xl) */}
+        <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center justify-between gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      active
+                        ? 'border-violet-500 text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="flex shrink-0 items-center gap-1.5 py-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
+                aria-label="Sync"
               >
-                {renderTab()}
-              </motion.div>
-            </AnimatePresence>
+                <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200"
+                aria-label="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </main>
-      </div>
+        </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="pb-safe fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-white/10 bg-zinc-950/90 px-3 py-3 backdrop-blur-xl md:hidden">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={cn(
-                'relative flex flex-1 flex-col items-center gap-1.5 rounded-xl p-2 transition-all',
-                active
-                  ? 'text-indigo-400'
-                  : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-              )}
+        <main className="flex-1 p-4 pb-10 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-6xl">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -15, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-8"
             >
-              {active && (
-                <span className="absolute -top-3 left-1/2 h-1 w-4 -translate-x-1/2 rounded-b-full bg-indigo-500" />
-              )}
-              <Icon
-                className={cn(
-                  'h-5 w-5',
-                  active ? 'drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : ''
-                )}
-              />
-              <span className="text-[10px] font-medium tracking-wide">
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+              {renderTab()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+      </div>
 
       {/* Toast */}
       <AnimatePresence>
