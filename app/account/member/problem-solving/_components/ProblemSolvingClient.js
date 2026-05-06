@@ -40,6 +40,7 @@ import {
   useProblemSolving,
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
+import ProblemDetailModal from './ProblemDetailModal';
 
 // =====================================================================
 // Constants & helpers
@@ -153,6 +154,32 @@ const getErrorMessage = (error, fallbackMessage) => {
   }
   return fallbackMessage;
 };
+
+function buildProblemUrl(platform, problemId) {
+  if (!problemId) return null;
+  const p = (platform || '').toLowerCase();
+  if (p === 'codeforces') {
+    // problemId is typically "1234A" or "1234/A"
+    const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
+    if (match) return `https://codeforces.com/problemset/problem/${match[1]}/${match[2]}`;
+    if (String(problemId).includes('/')) {
+      const [contest, prob] = String(problemId).split('/');
+      return `https://codeforces.com/problemset/problem/${contest}/${prob}`;
+    }
+    return null;
+  }
+  if (p === 'leetcode') return `https://leetcode.com/problems/${problemId}/`;
+  if (p === 'atcoder') {
+    // problemId like "abc123_a"
+    const parts = String(problemId).split('_');
+    if (parts.length >= 2) return `https://atcoder.jp/contests/${parts.slice(0, -1).join('_')}/tasks/${problemId}`;
+    return null;
+  }
+  if (p === 'codechef') return `https://www.codechef.com/problems/${problemId}`;
+  if (p === 'spoj') return `https://www.spoj.com/problems/${problemId}/`;
+  if (p === 'hackerrank') return `https://www.hackerrank.com/challenges/${problemId}`;
+  return null;
+}
 
 function formatNumber(n) {
   const v = Number(n || 0);
@@ -505,22 +532,45 @@ function ActivityHeatmap({ data }) {
 // Difficulty donut
 // =====================================================================
 function DifficultyDonut({ statistics }) {
-  const easy   = Number(statistics?.easy_solved   || 0);
+  const easy = Number(statistics?.easy_solved || 0);
   const medium = Number(statistics?.medium_solved || 0);
-  const hard   = Number(statistics?.hard_solved   || 0) + Number(statistics?.expert_solved || 0);
-  const total  = easy + medium + hard || 1;
+  const hard =
+    Number(statistics?.hard_solved || 0) +
+    Number(statistics?.expert_solved || 0);
+  const total = easy + medium + hard || 1;
 
   // SVG ring geometry
   const R = 54; // radius to stroke centre
   const CX = 70;
   const CY = 70;
-  const C  = 2 * Math.PI * R;
+  const C = 2 * Math.PI * R;
   const GAP = 3; // px gap between segments
 
   const tiers = [
-    { label: 'Easy',   count: easy,   color: '#34d399', glow: 'rgba(52,211,153,0.35)',  text: 'text-emerald-400', bar: 'bg-emerald-500' },
-    { label: 'Medium', count: medium, color: '#fbbf24', glow: 'rgba(251,191,36,0.35)',  text: 'text-amber-400',   bar: 'bg-amber-400'   },
-    { label: 'Hard',   count: hard,   color: '#fb7185', glow: 'rgba(251,113,133,0.35)', text: 'text-rose-400',    bar: 'bg-rose-500'    },
+    {
+      label: 'Easy',
+      count: easy,
+      color: '#34d399',
+      glow: 'rgba(52,211,153,0.35)',
+      text: 'text-emerald-400',
+      bar: 'bg-emerald-500',
+    },
+    {
+      label: 'Medium',
+      count: medium,
+      color: '#fbbf24',
+      glow: 'rgba(251,191,36,0.35)',
+      text: 'text-amber-400',
+      bar: 'bg-amber-400',
+    },
+    {
+      label: 'Hard',
+      count: hard,
+      color: '#fb7185',
+      glow: 'rgba(251,113,133,0.35)',
+      text: 'text-rose-400',
+      bar: 'bg-rose-500',
+    },
   ];
 
   // Build dash offsets for each segment with a small gap
@@ -551,18 +601,26 @@ function DifficultyDonut({ statistics }) {
 
       {/* Donut + rows side by side */}
       <div className="relative z-10 flex items-center gap-6">
-
         {/* SVG donut */}
         <div className="relative shrink-0">
           <svg width="140" height="140" viewBox="0 0 140 140">
             {/* track */}
-            <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="14" />
+            <circle
+              cx={CX}
+              cy={CY}
+              r={R}
+              fill="none"
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth="14"
+            />
             {/* segments */}
             {segments.map((s) =>
               s.count > 0 ? (
                 <circle
                   key={s.label}
-                  cx={CX} cy={CY} r={R}
+                  cx={CX}
+                  cy={CY}
+                  r={R}
                   fill="none"
                   stroke={s.color}
                   strokeWidth="14"
@@ -577,7 +635,7 @@ function DifficultyDonut({ statistics }) {
           </svg>
           {/* centre label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold tabular-nums text-white leading-none">
+            <span className="text-2xl leading-none font-bold text-white tabular-nums">
               {formatNumber(total)}
             </span>
             <span className="mt-1 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
@@ -593,9 +651,13 @@ function DifficultyDonut({ statistics }) {
             return (
               <div key={t.label} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className={cn('text-[12px] font-semibold', t.text)}>{t.label}</span>
+                  <span className={cn('text-[12px] font-semibold', t.text)}>
+                    {t.label}
+                  </span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[13px] font-bold tabular-nums text-white">{formatNumber(t.count)}</span>
+                    <span className="text-[13px] font-bold text-white tabular-nums">
+                      {formatNumber(t.count)}
+                    </span>
                     <span className="text-[10px] text-gray-600">{pct}%</span>
                   </div>
                 </div>
@@ -802,9 +864,20 @@ function OverviewTab({
   const ARC_CY = 54;
   const ARC_C = Math.PI * ARC_R; // half circumference
   const arcFill = (accuracy / 100) * ARC_C;
-  const arcColor = accuracy >= 70 ? '#34d399' : accuracy >= 45 ? '#fbbf24' : '#fb7185';
-  const arcGlow  = accuracy >= 70 ? 'rgba(52,211,153,0.4)' : accuracy >= 45 ? 'rgba(251,191,36,0.4)' : 'rgba(251,113,133,0.4)';
-  const arcTextColor = accuracy >= 70 ? 'text-emerald-400' : accuracy >= 45 ? 'text-amber-400' : 'text-rose-400';
+  const arcColor =
+    accuracy >= 70 ? '#34d399' : accuracy >= 45 ? '#fbbf24' : '#fb7185';
+  const arcGlow =
+    accuracy >= 70
+      ? 'rgba(52,211,153,0.4)'
+      : accuracy >= 45
+        ? 'rgba(251,191,36,0.4)'
+        : 'rgba(251,113,133,0.4)';
+  const arcTextColor =
+    accuracy >= 70
+      ? 'text-emerald-400'
+      : accuracy >= 45
+        ? 'text-amber-400'
+        : 'text-rose-400';
 
   return (
     <>
@@ -854,8 +927,10 @@ function OverviewTab({
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1 xl:col-span-1"
         >
-          <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
-            style={{ background: arcColor }} />
+          <div
+            className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
+            style={{ background: arcColor }}
+          />
 
           <div className="relative z-10 mb-1 flex items-center justify-between">
             <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
@@ -868,7 +943,12 @@ function OverviewTab({
 
           {/* Semicircle gauge */}
           <div className="relative z-10 flex flex-col items-center">
-            <svg width="112" height="64" viewBox="0 0 112 64" className="overflow-visible">
+            <svg
+              width="112"
+              height="64"
+              viewBox="0 0 112 64"
+              className="overflow-visible"
+            >
               {/* track */}
               <path
                 d={`M ${ARC_CX - ARC_R} ${ARC_CY} A ${ARC_R} ${ARC_R} 0 0 1 ${ARC_CX + ARC_R} ${ARC_CY}`}
@@ -888,17 +968,31 @@ function OverviewTab({
                 style={{ filter: `drop-shadow(0 0 6px ${arcGlow})` }}
               />
               {/* needle dot at tip */}
-              {accuracy > 0 && (() => {
-                const angle = Math.PI - (accuracy / 100) * Math.PI;
-                const nx = ARC_CX + Math.cos(angle) * ARC_R;
-                const ny = ARC_CY - Math.sin(angle) * ARC_R;
-                return <circle cx={nx} cy={ny} r="4" fill={arcColor} style={{ filter: `drop-shadow(0 0 4px ${arcGlow})` }} />;
-              })()}
+              {accuracy > 0 &&
+                (() => {
+                  const angle = Math.PI - (accuracy / 100) * Math.PI;
+                  const nx = ARC_CX + Math.cos(angle) * ARC_R;
+                  const ny = ARC_CY - Math.sin(angle) * ARC_R;
+                  return (
+                    <circle
+                      cx={nx}
+                      cy={ny}
+                      r="4"
+                      fill={arcColor}
+                      style={{ filter: `drop-shadow(0 0 4px ${arcGlow})` }}
+                    />
+                  );
+                })()}
             </svg>
 
             {/* value below gauge */}
             <div className="-mt-2 flex flex-col items-center">
-              <span className={cn('text-3xl font-bold tabular-nums leading-none', arcTextColor)}>
+              <span
+                className={cn(
+                  'text-3xl leading-none font-bold tabular-nums',
+                  arcTextColor
+                )}
+              >
                 {accuracyDisplay}%
               </span>
               <span className="mt-1 text-sm font-medium text-zinc-500">
@@ -1085,6 +1179,7 @@ function OverviewTab({
 function ProblemsTab({ submissions }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
+  const [selectedProblem, setSelectedProblem] = useState(null);
   const PAGE_SIZE = 15;
 
   const list = useMemo(() => {
@@ -1259,10 +1354,7 @@ function ProblemsTab({ submissions }) {
                 <tr
                   key={`${s.platform}-${s.problem_id}-${i}`}
                   className="group cursor-pointer transition-colors hover:bg-white/[0.04]"
-                  onClick={() => {
-                    if (s.problem_url)
-                      window.open(s.problem_url, '_blank', 'noopener');
-                  }}
+                  onClick={() => setSelectedProblem(s)}
                 >
                   <td className="px-5 py-4 text-center">
                     {isAc ? (
@@ -1276,8 +1368,15 @@ function ProblemsTab({ submissions }) {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-zinc-200 transition-colors group-hover:text-indigo-300">
                       {title}
-                      {s.problem_url && (
-                        <ExternalLink className="h-3 w-3 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                      {(s.problem_url || buildProblemUrl(s.platform, s.problem_id)) && (
+                        <ExternalLink
+                          className="h-3 w-3 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = s.problem_url || buildProblemUrl(s.platform, s.problem_id);
+                            window.open(url, '_blank', 'noopener');
+                          }}
+                        />
                       )}
                     </div>
                     <div className="mt-1 font-mono text-[11px] text-zinc-500">
@@ -1374,6 +1473,13 @@ function ProblemsTab({ submissions }) {
           </button>
         </div>
       </div>
+
+      {selectedProblem && (
+        <ProblemDetailModal
+          problem={selectedProblem}
+          onClose={() => setSelectedProblem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1559,7 +1665,13 @@ function RatingLineChart({ ratingHistory }) {
   );
 }
 
-function ContestsTab({ ratingHistory, contestHistory, upcomingContests, onSync, syncing }) {
+function ContestsTab({
+  ratingHistory,
+  contestHistory,
+  upcomingContests,
+  onSync,
+  syncing,
+}) {
   const [expanded, setExpanded] = useState(null);
 
   return (
@@ -1593,7 +1705,7 @@ function ContestsTab({ ratingHistory, contestHistory, upcomingContests, onSync, 
             </button>
           </div>
           <div className="flex flex-col items-center justify-center p-6 text-sm text-zinc-400">
-            {(!upcomingContests || upcomingContests.length === 0) ? (
+            {!upcomingContests || upcomingContests.length === 0 ? (
               <>
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
                   <Calendar className="h-5 w-5 text-zinc-500" />
@@ -1617,20 +1729,42 @@ function ContestsTab({ ratingHistory, contestHistory, upcomingContests, onSync, 
                   {upcomingContests.map((c, i) => {
                     const meta = getPlatformMeta(c.platform);
                     return (
-                      <div key={i} className="flex items-center justify-between py-4 group transition-colors hover:bg-white/[0.04] px-4 -mx-4 rounded-xl">
+                      <div
+                        key={i}
+                        className="group -mx-4 flex items-center justify-between rounded-xl px-4 py-4 transition-colors hover:bg-white/[0.04]"
+                      >
                         <div className="flex items-center gap-4">
-                          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm', meta.tagBg, meta.tagBorder)}>
-                            <span className={cn('font-bold', meta.tagText)}>{meta.short}</span>
+                          <div
+                            className={cn(
+                              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm',
+                              meta.tagBg,
+                              meta.tagBorder
+                            )}
+                          >
+                            <span className={cn('font-bold', meta.tagText)}>
+                              {meta.short}
+                            </span>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">{c.name}</h4>
+                            <h4 className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">
+                              {c.name}
+                            </h4>
                             <div className="mt-1 flex items-center gap-4 text-xs font-medium tracking-wide text-zinc-500">
-                              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {c.date}</span>
-                              <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {c.duration}</span>
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" /> {c.date}
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" /> {c.duration}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-all hover:bg-white/10 hover:text-white hover:scale-105">
+                        <a
+                          href={c.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-all hover:scale-105 hover:bg-white/10 hover:text-white"
+                        >
                           <ExternalLink className="h-4 w-4" />
                         </a>
                       </div>
@@ -2199,171 +2333,251 @@ function RecommendationsTab({ submissions }) {
 }
 
 function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
+  // Derive a display name from the first connected handle, fallback to 'Member'
+  const displayName =
+    (handles || [])[0]?.handle ||
+    (typeof userId === 'string' ? userId.slice(0, 12) : 'Member');
+  const avatarLetter = displayName.slice(0, 1).toUpperCase();
+
+  const statItems = [
+    {
+      value: formatNumber(statistics?.total_solved),
+      label: 'Solved',
+      accent: 'text-violet-400',
+    },
+    {
+      value: formatNumber(statistics?.weighted_score),
+      label: 'Score',
+      accent: 'text-sky-400',
+    },
+    {
+      value: formatNumber((contestHistory || []).length),
+      label: 'Contests',
+      accent: 'text-amber-400',
+    },
+    {
+      value: statistics?.global_rank ? `#${statistics.global_rank}` : '—',
+      label: 'Global Rank',
+      accent: 'text-emerald-400',
+    },
+    {
+      value: statistics?.current_streak ? `${statistics.current_streak}d` : '—',
+      label: 'Streak',
+      accent: 'text-orange-400',
+    },
+  ];
+
+  const hasHandles = (handles || []).length > 0;
+
   return (
-    <div className="space-y-6">
-      <div className="group relative flex flex-col items-start gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl md:flex-row md:items-end md:p-10">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
-        <div className="relative z-10 flex h-24 w-24 shrink-0 rotate-3 items-center justify-center rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500 to-purple-500 text-4xl font-black text-white shadow-xl transition-transform hover:rotate-0 md:h-32 md:w-32">
-          {String(userId || 'U')
-            .slice(0, 1)
-            .toUpperCase()}
-        </div>
-        <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="text-3xl font-black tracking-tight text-white md:text-5xl">
-            {String(userId || 'User').slice(0, 8)}
-          </h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(handles || []).map((h) => {
-              const meta = getPlatformMeta(h.platform);
-              return (
-                <span
-                  key={h.platform}
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-1 font-mono text-[11px] font-bold text-zinc-300 backdrop-blur-sm"
-                >
-                  @{h.handle}{' '}
-                  <span className="ml-1 opacity-50">({meta.short})</span>
+    <div className="space-y-5">
+      {/* ── Hero card ────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900">
+        {/* subtle gradient wash */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-sky-600/5" />
+        {/* top strip accent */}
+        <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+
+        <div className="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8 sm:p-8">
+          {/* Avatar */}
+          <div className="shrink-0">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500 to-purple-600 text-3xl font-black text-white shadow-lg ring-4 ring-violet-500/20 sm:h-24 sm:w-24 sm:text-4xl">
+              {avatarLetter}
+            </div>
+          </div>
+
+          {/* Identity */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {displayName}
+              </h2>
+              {hasHandles && (
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+                  Active
                 </span>
+              )}
+            </div>
+
+            {/* Platform handles row */}
+            {hasHandles && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {(handles || []).map((h) => {
+                  const meta = getPlatformMeta(h.platform);
+                  return (
+                    <span
+                      key={h.platform}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold',
+                        meta.tagBg,
+                        meta.tagText,
+                        meta.tagBorder
+                      )}
+                    >
+                      <span className="opacity-60">{meta.short}</span>
+                      <span>@{h.handle}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Stats row */}
+            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/[0.06] pt-5">
+              {statItems.map((s) => (
+                <div key={s.label} className="flex flex-col">
+                  <span
+                    className={cn(
+                      'font-mono text-xl font-bold sm:text-2xl',
+                      s.accent
+                    )}
+                  >
+                    {s.value}
+                  </span>
+                  <span className="mt-0.5 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
+                    {s.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Platform accounts ────────────────────────────────────────── */}
+      {hasHandles && (
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+            <h3 className="text-sm font-semibold text-gray-300">
+              Connected Platforms
+            </h3>
+            <span className="text-[11px] font-medium text-gray-500">
+              {handles.length} account{handles.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-px bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
+            {(handles || []).map((h, idx) => {
+              const meta = getPlatformMeta(h.platform);
+              const ps = statistics?.platform_stats?.[h.platform];
+              const isLast = idx === handles.length - 1;
+              return (
+                <div
+                  key={h.platform}
+                  className={cn(
+                    'flex flex-col gap-4 bg-gray-900 p-5 transition-colors hover:bg-white/[0.02]',
+                    // round corners on last item when odd count fills last col
+                    idx === 0 ? 'rounded-bl-none' : '',
+                    isLast && handles.length % 3 !== 0 ? '' : ''
+                  )}
+                >
+                  {/* Platform header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-black text-gray-950',
+                          meta.color
+                        )}
+                      >
+                        {meta.short}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-gray-200">
+                          {meta.name}
+                        </p>
+                        <p className="font-mono text-[11px] text-gray-500">
+                          @{h.handle}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      </span>
+                      Live
+                    </span>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 divide-x divide-white/[0.05] rounded-xl border border-white/[0.06] bg-black/20">
+                    {[
+                      { v: ps?.rating || '—', l: 'Rating' },
+                      { v: ps?.max_rating || ps?.rating || '—', l: 'Peak' },
+                      { v: formatNumber(ps?.solved_count), l: 'Solved' },
+                    ].map((item) => (
+                      <div
+                        key={item.l}
+                        className="flex flex-col items-center py-3"
+                      >
+                        <span className="font-mono text-base font-bold text-white">
+                          {item.v}
+                        </span>
+                        <span className="mt-0.5 text-[9px] font-semibold tracking-widest text-gray-500 uppercase">
+                          {item.l}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               );
             })}
           </div>
-          <div className="mt-8 flex flex-wrap gap-6 md:gap-10">
-            {[
-              {
-                v: formatNumber(statistics?.total_solved),
-                l: 'Solved',
-              },
-              {
-                v: formatNumber(statistics?.weighted_score),
-                l: 'Score',
-              },
-              {
-                v: formatNumber((contestHistory || []).length),
-                l: 'Contests',
-              },
-              {
-                v: statistics?.global_rank ? `#${statistics.global_rank}` : '—',
-                l: 'Rank',
-              },
-              {
-                v: formatNumber(statistics?.current_streak),
-                l: 'Streak',
-              },
-            ].map((s) => (
-              <div key={s.l} className="flex flex-col">
-                <span className="font-mono text-2xl font-black text-white md:text-3xl">
-                  {s.v}
-                </span>
-                <span className="mt-1 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-                  {s.l}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {(handles || []).map((h) => {
-          const meta = getPlatformMeta(h.platform);
-          const ps = statistics?.platform_stats?.[h.platform];
-          return (
-            <div
-              key={h.platform}
-              className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl transition-transform hover:-translate-y-1"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black text-zinc-950 shadow-inner',
-                      meta.color
-                    )}
-                  >
-                    {meta.short}
-                  </div>
-                  <div>
-                    <div className="font-bold text-zinc-200">{meta.name}</div>
-                    <div className="font-mono text-xs font-medium text-zinc-400">
-                      @{h.handle}
-                    </div>
-                  </div>
-                </div>
-                <span className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black tracking-widest text-emerald-400 uppercase shadow-sm">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                  </span>
-                  Live
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-4 border-t border-white/5 pt-5">
-                <div>
-                  <div className="font-mono text-2xl font-black text-white">
-                    {ps?.rating || '—'}
-                  </div>
-                  <div className="mt-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-                    Current
-                  </div>
-                </div>
-                <div>
-                  <div className="font-mono text-2xl font-black text-zinc-400">
-                    {ps?.max_rating || ps?.rating || '—'}
-                  </div>
-                  <div className="mt-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-                    Peak
-                  </div>
-                </div>
-                <div>
-                  <div className="font-mono text-2xl font-black text-white">
-                    {formatNumber(ps?.solved_count)}
-                  </div>
-                  <div className="mt-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-                    Solved
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* ── Achievements ─────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <Trophy className="h-4 w-4 text-amber-400" />
+            Achievements
+          </h3>
+          {(badges || []).length > 0 && (
+            <span className="text-[11px] font-medium text-gray-500">
+              {badges.length} earned
+            </span>
+          )}
+        </div>
 
-      {(badges || []).length > 0 && (
-        <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-white/5 pb-4">
-            <div>
-              <h3 className="flex items-center gap-2 font-black text-white">
-                <Trophy className="h-5 w-5 text-amber-400" />
-                Achievements
-              </h3>
-              <p className="mt-1 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-                {badges.length} earned
-              </p>
+        {(badges || []).length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-3xl">
+              🏆
             </div>
+            <p className="text-sm font-medium text-gray-400">
+              No achievements yet
+            </p>
+            <p className="max-w-xs text-[12px] text-gray-600">
+              Keep solving problems and participating in contests to earn
+              badges.
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        ) : (
+          <div className="grid grid-cols-1 gap-px bg-white/[0.04] sm:grid-cols-2 xl:grid-cols-3">
             {badges.map((b, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 rounded-xl border border-white/5 bg-black/20 p-4 transition-colors hover:bg-white/[0.02]"
+                className="flex items-center gap-4 bg-gray-900 p-5 transition-colors hover:bg-white/[0.02]"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-2xl ring-1 ring-white/10 drop-shadow-md">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-xl">
                   {b.icon || '🏆'}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-bold text-zinc-200">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-gray-200">
                     {b.name || b.badge_name || 'Badge'}
-                  </div>
+                  </p>
                   {b.description && (
-                    <div className="mt-1 line-clamp-2 text-[11px] leading-snug font-medium text-zinc-400">
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-gray-500">
                       {b.description}
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -2526,17 +2740,17 @@ export default function ProblemSolvingClient({ userId }) {
       {/* ── Secondary left nav ───────────────────────────────────────── */}
       <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
         {/* Section header */}
-        <div className="border-b border-white/[0.06] px-4 py-[14px]">
+        {/* <div className="border-b border-white/[0.06] px-4 py-[14px]">
           <p className="text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
             Problem Solving
           </p>
-        </div>
+        </div> */}
 
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <p className="mb-0.5 px-3 pt-3 pb-1 text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
+          {/* <p className="mb-0.5 px-3 pt-3 pb-1 text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
             Dashboard
-          </p>
+          </p> */}
           <div className="space-y-0.5">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -2546,7 +2760,7 @@ export default function ProblemSolvingClient({ userId }) {
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={cn(
-                    'group/nav relative flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    'group/nav relative flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
                     active
                       ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
                       : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
@@ -2570,27 +2784,41 @@ export default function ProblemSolvingClient({ userId }) {
         </nav>
 
         {/* Sync status + actions */}
-        <div className="shrink-0 border-t border-white/[0.06] px-3 py-3 space-y-1.5">
+        <div className="shrink-0 space-y-1.5 border-t border-white/[0.06] px-3 py-3">
           <div className="flex items-center gap-2 px-3 py-1.5">
             <span className="relative flex h-2 w-2 shrink-0">
               {syncing && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               )}
-              <span className={cn('relative inline-flex h-2 w-2 rounded-full', syncing ? 'bg-emerald-400' : 'bg-emerald-500/70')} />
+              <span
+                className={cn(
+                  'relative inline-flex h-2 w-2 rounded-full',
+                  syncing ? 'bg-emerald-400' : 'bg-emerald-500/70'
+                )}
+              />
             </span>
-            <span className="text-[12px] text-gray-500">{syncing ? 'Syncing…' : 'Synced'}</span>
+            <span className="text-[12px] text-gray-500">
+              {syncing ? 'Syncing…' : 'Synced'}
+            </span>
           </div>
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="group/nav flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200 disabled:opacity-50"
+            className="group/nav flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200 disabled:opacity-50"
           >
-            <RefreshCw className={cn('h-[17px] w-[17px] shrink-0', syncing ? 'animate-spin' : 'transition-transform duration-300 group-hover/nav:rotate-180')} />
+            <RefreshCw
+              className={cn(
+                'h-[17px] w-[17px] shrink-0',
+                syncing
+                  ? 'animate-spin'
+                  : 'transition-transform duration-300 group-hover/nav:rotate-180'
+              )}
+            />
             Sync Now
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="group/nav flex w-full min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
+            className="group/nav flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
           >
             <Settings className="h-[17px] w-[17px] shrink-0" />
             Settings
@@ -2618,7 +2846,9 @@ export default function ProblemSolvingClient({ userId }) {
                         : 'border-transparent text-gray-500 hover:text-gray-300'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
+                    <Icon
+                      className={cn('h-4 w-4', active ? 'text-violet-400' : '')}
+                    />
                     <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 );
@@ -2631,7 +2861,9 @@ export default function ProblemSolvingClient({ userId }) {
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
                 aria-label="Sync"
               >
-                <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+                <RefreshCw
+                  className={cn('h-4 w-4', syncing && 'animate-spin')}
+                />
               </button>
               <button
                 onClick={() => setSettingsOpen(true)}
@@ -2646,20 +2878,20 @@ export default function ProblemSolvingClient({ userId }) {
 
         <main className="flex-1 p-4 pb-10 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -15, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-8"
-            >
-              {renderTab()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </main>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-8"
+              >
+                {renderTab()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
       </div>
 
       {/* Toast */}
