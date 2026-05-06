@@ -34,6 +34,7 @@ import {
   Bell,
   Radar,
   LineChart,
+  Clock,
 } from 'lucide-react';
 import {
   useProblemSolving,
@@ -142,6 +143,7 @@ const DEFAULT_PROBLEM_SOLVING_DATA = {
   leaderboard: null,
   ratingHistory: [],
   contestHistory: [],
+  upcomingContests: [],
 };
 
 const getErrorMessage = (error, fallbackMessage) => {
@@ -1490,14 +1492,14 @@ function RatingLineChart({ ratingHistory }) {
   );
 }
 
-function ContestsTab({ ratingHistory, contestHistory, onSync, syncing }) {
+function ContestsTab({ ratingHistory, contestHistory, upcomingContests, onSync, syncing }) {
   const [expanded, setExpanded] = useState(null);
 
   return (
     <div className="space-y-6">
       <RatingLineChart ratingHistory={ratingHistory} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
+      <div className="flex flex-col gap-6">
         <div className="flex h-max flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] p-5">
             <div>
@@ -1523,22 +1525,53 @@ function ContestsTab({ ratingHistory, contestHistory, onSync, syncing }) {
               />
             </button>
           </div>
-          <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center text-sm text-zinc-400">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
-              <Calendar className="h-5 w-5 text-zinc-500" />
-            </div>
-            <p className="mb-6">
-              Upcoming contest data appears here once your platform sync is
-              complete.
-            </p>
-            <button
-              onClick={onSync}
-              disabled={syncing}
-              className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-500 disabled:opacity-70 disabled:hover:translate-y-0"
-            >
-              <Bell className="h-4 w-4 transition-transform group-hover:scale-110" />
-              Sync Platforms
-            </button>
+          <div className="flex flex-col items-center justify-center p-6 text-sm text-zinc-400">
+            {(!upcomingContests || upcomingContests.length === 0) ? (
+              <>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                  <Calendar className="h-5 w-5 text-zinc-500" />
+                </div>
+                <p className="mb-6">
+                  Upcoming contest data appears here once your platform sync is
+                  complete.
+                </p>
+                <button
+                  onClick={onSync}
+                  disabled={syncing}
+                  className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-500 disabled:opacity-70 disabled:hover:translate-y-0"
+                >
+                  <Bell className="h-4 w-4 transition-transform group-hover:scale-110" />
+                  Sync Platforms
+                </button>
+              </>
+            ) : (
+              <div className="w-full text-left">
+                <div className="divide-y divide-white/5">
+                  {upcomingContests.map((c, i) => {
+                    const meta = getPlatformMeta(c.platform);
+                    return (
+                      <div key={i} className="flex items-center justify-between py-4 group transition-colors hover:bg-white/[0.04] px-4 -mx-4 rounded-xl">
+                        <div className="flex items-center gap-4">
+                          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm', meta.tagBg, meta.tagBorder)}>
+                            <span className={cn('font-bold', meta.tagText)}>{meta.short}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">{c.name}</h4>
+                            <div className="mt-1 flex items-center gap-4 text-xs font-medium tracking-wide text-zinc-500">
+                              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {c.date}</span>
+                              <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {c.duration}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-all hover:bg-white/10 hover:text-white hover:scale-105">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2365,6 +2398,7 @@ export default function ProblemSolvingClient({ userId }) {
     leaderboard,
     ratingHistory,
     contestHistory,
+    upcomingContests,
   } = problemSolvingData;
 
   const activeTabLabel = useMemo(
@@ -2441,6 +2475,7 @@ export default function ProblemSolvingClient({ userId }) {
           <ContestsTab
             ratingHistory={ratingHistory}
             contestHistory={contestHistory}
+            upcomingContests={upcomingContests}
             onSync={handleSync}
             syncing={syncing}
           />
