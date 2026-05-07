@@ -5,34 +5,21 @@ import {
   FolderOpen,
   Pin,
   Sparkles,
-  ChevronRight,
   PlusCircle,
-  BarChart3,
   Eye,
   Star,
   CheckCircle2,
-  Filter,
-  Search,
 } from 'lucide-react';
 
-function StatCard({ icon: Icon, label, value, iconBg, iconColor, sub }) {
+function StatBadge({ icon: Icon, label, value, colorClass }) {
   return (
-    <div className="flex items-center gap-3 rounded-[12px] border border-white/[0.06] bg-[#121317] px-4 py-[14px] transition-colors hover:border-white/[0.09] hover:bg-[#181a1f]">
-      <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] ${iconBg}`}
-      >
-        <Icon className={`h-4 w-4 ${iconColor}`} />
+    <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-2.5 border border-white/[0.06] backdrop-blur-md transition-all hover:bg-white/[0.06] hover:border-white/[0.1]">
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] ${colorClass}`}>
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="min-w-0">
-        <p className="text-[22px] leading-none font-semibold tracking-tight text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-[11.5px] font-medium text-white/40">
-          {label}
-        </p>
-        {sub && (
-          <p className="mt-0.5 truncate text-[10.5px] text-white/25">{sub}</p>
-        )}
+      <div>
+        <p className="text-[10.5px] font-semibold uppercase tracking-wider text-white/40">{label}</p>
+        <p className="text-[16px] font-bold tracking-tight text-white/95 leading-none mt-0.5">{value}</p>
       </div>
     </div>
   );
@@ -58,138 +45,83 @@ export default function ResourcesPageHeader({
   const isGuest = role === 'guest';
   const isMember = role === 'member';
   const isAdmin = role === 'admin';
-  const dashboardHref = `/account/${role}`;
 
   return (
-    <div className="space-y-5">
-      {/* Page head */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-            {isAdmin ? 'Resource Management' : 'Resources'}
-          </h1>
-          <p className="mt-1 text-[13px] text-white/40">
-            {isGuest
-              ? 'Public guides and materials from the club'
-              : isAdmin
-                ? `Manage and distribute educational resources · ${total} total`
-                : `Learning materials curated for members · ${pinnedCount} bookmarked`}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          {isAdmin && onCreateNew && (
-            <button
-              onClick={onCreateNew}
-              className="font-500 flex items-center gap-2 rounded-[8px] border border-white/[0.09] bg-white/[0.06] px-[11px] py-[6px] text-[12.5px] text-white/80 transition-all hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              New Resource
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      {isGuest && (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-          <StatCard
-            icon={Layers}
-            label="Public Resources"
-            value={total}
-            iconBg="bg-[#1a2535]"
-            iconColor="text-[#60a5fa]"
-          />
-          <StatCard
-            icon={FolderOpen}
-            label="Categories"
-            value={categoryCount}
-            iconBg="bg-[#1e1a2e]"
-            iconColor="text-[#a78bfa]"
-          />
-        </div>
-      )}
-
-      {isMember && (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <StatCard
-            icon={Layers}
-            label="Total Resources"
-            value={total}
-            iconBg="bg-[#1a2535]"
-            iconColor="text-[#60a5fa]"
-          />
-          <StatCard
-            icon={Pin}
-            label="Pinned"
-            value={pinnedCount}
-            iconBg="bg-[#231e14]"
-            iconColor="text-[#fbbf24]"
-          />
-          <StatCard
-            icon={FolderOpen}
-            label="Categories"
-            value={categoryCount}
-            iconBg="bg-[#1e1a2e]"
-            iconColor="text-[#a78bfa]"
-          />
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <StatCard
-            icon={BookOpen}
-            label="Total"
-            value={total}
-            iconBg="bg-[#1a2535]"
-            iconColor="text-[#60a5fa]"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Published"
-            value={publishedCount ?? 0}
-            iconBg="bg-[#14261e]"
-            iconColor="text-[#4ade80]"
-          />
-          <StatCard
-            icon={Star}
-            label="Pinned"
-            value={pinnedCount}
-            sub={`${draftCount ?? 0} draft · ${scheduledCount ?? 0} scheduled`}
-            iconBg="bg-[#231e14]"
-            iconColor="text-[#fbbf24]"
-          />
-          <StatCard
-            icon={Eye}
-            label="Public"
-            value={publicCount ?? 0}
-            sub={`${membersCount ?? 0} members-only`}
-            iconBg="bg-[#1e1a2e]"
-            iconColor="text-[#a78bfa]"
-          />
-        </div>
-      )}
-
-      {/* Guest CTA */}
-      {isGuest && (
-        <div className="rounded-[10px] border border-[rgba(167,139,250,0.18)] bg-[rgba(124,83,255,0.06)] px-4 py-3.5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#a78bfa]" />
-              <p className="text-[12.5px] leading-relaxed text-white/50">
-                Join as a member to unlock the full resource library.
-              </p>
+    <div className="space-y-6 mb-8">
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#0b0d12] p-6 sm:p-10 shadow-2xl">
+        {/* Subtle background effects */}
+        <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-violet-600/15 blur-[100px] pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-blue-600/10 blur-[100px] pointer-events-none" />
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.015] pointer-events-none mix-blend-overlay" />
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 mb-4 backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+              <span className="text-[11px] font-medium text-white/70">
+                {isAdmin ? 'Admin Dashboard' : 'Member Hub'}
+              </span>
             </div>
-            <Link
-              href="/register"
-              className="shrink-0 rounded-[7px] border border-[rgba(167,139,250,0.28)] bg-[rgba(124,83,255,0.12)] px-3.5 py-1.5 text-[11.5px] font-semibold text-[#c4b5fd] transition-all hover:bg-[rgba(124,83,255,0.22)]"
-            >
-              Become a Member
-            </Link>
+            
+            <h1 className="text-[36px] sm:text-[44px] font-bold tracking-tight text-white leading-tight">
+              {isAdmin ? 'Resource Management' : 'Resource Library'}
+            </h1>
+            <p className="mt-3 text-[15px] sm:text-[16px] leading-relaxed text-white/50 max-w-xl">
+              {isGuest
+                ? 'Explore public guides, tutorials, and materials curated by the club to accelerate your learning journey.'
+                : isAdmin
+                  ? 'Manage and distribute educational resources to members and the public.'
+                  : 'Access exclusive learning materials, guides, and tools carefully curated to boost your problem-solving skills.'}
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              {isGuest && (
+                <>
+                  <StatBadge icon={Layers} label="Resources" value={total} colorClass="text-blue-400" />
+                  <StatBadge icon={FolderOpen} label="Categories" value={categoryCount} colorClass="text-purple-400" />
+                </>
+              )}
+              {isMember && (
+                <>
+                  <StatBadge icon={Layers} label="Total Resources" value={total} colorClass="text-blue-400" />
+                  <StatBadge icon={Pin} label="Pinned" value={pinnedCount} colorClass="text-amber-400" />
+                  <StatBadge icon={FolderOpen} label="Categories" value={categoryCount} colorClass="text-purple-400" />
+                </>
+              )}
+              {isAdmin && (
+                <>
+                  <StatBadge icon={BookOpen} label="Total" value={total} colorClass="text-blue-400" />
+                  <StatBadge icon={CheckCircle2} label="Published" value={publishedCount ?? 0} colorClass="text-emerald-400" />
+                  <StatBadge icon={Star} label="Pinned" value={pinnedCount} colorClass="text-amber-400" />
+                  <StatBadge icon={Eye} label="Public" value={publicCount ?? 0} colorClass="text-purple-400" />
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            {isAdmin && onCreateNew && (
+              <button
+                onClick={onCreateNew}
+                className="group flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[13px] font-semibold text-black transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <PlusCircle className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                New Resource
+              </button>
+            )}
+            {isGuest && (
+              <Link
+                href="/register"
+                className="group flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-[13px] font-semibold text-white transition-all hover:bg-violet-500 hover:scale-[1.02] shadow-[0_0_20px_rgba(124,83,255,0.3)]"
+              >
+                <Sparkles className="h-4 w-4" />
+                Become a Member
+              </Link>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {children}
     </div>
