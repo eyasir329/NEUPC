@@ -1,16 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import {
-  Bookmark,
-  BookmarkCheck,
   Pin,
   ExternalLink,
-  Calendar,
   Globe,
-  Lock,
   ImageIcon,
   PlayCircle,
   FileText,
@@ -19,227 +15,138 @@ import {
   Edit3,
   Trash2,
   Star,
+  Play,
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 import { safeExternalHref } from '@/app/_lib/resources/embed-utils';
-import SocialCardEmbed from '@/app/_components/resources/SocialCardEmbed';
 
-// ─── Per-type visual config ──────────────────────────────────────────────────
+// ─── Type config ─────────────────────────────────────────────────────────────
 
-const TYPE_STYLES = {
+const TYPE_CONFIG = {
   image: {
     icon: ImageIcon,
-    gradient: 'from-purple-600/40 to-indigo-600/40',
-    badge: 'border-purple-500/25 bg-purple-500/12 text-purple-200',
+    gradient: 'from-violet-600/30 via-purple-600/20 to-transparent',
+    accent: 'bg-violet-500/15 text-violet-300 border-violet-500/20',
+    dot: 'bg-violet-400',
   },
   video: {
     icon: PlayCircle,
-    gradient: 'from-red-600/40 to-rose-600/40',
-    badge: 'border-red-500/25 bg-red-500/12 text-red-200',
+    gradient: 'from-rose-600/30 via-red-600/20 to-transparent',
+    accent: 'bg-rose-500/15 text-rose-300 border-rose-500/20',
+    dot: 'bg-rose-400',
   },
   rich_text: {
     icon: FileText,
-    gradient: 'from-emerald-600/40 to-teal-600/40',
-    badge: 'border-emerald-500/25 bg-emerald-500/12 text-emerald-200',
+    gradient: 'from-emerald-600/30 via-teal-600/20 to-transparent',
+    accent: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+    dot: 'bg-emerald-400',
   },
   youtube: {
     icon: PlayCircle,
-    gradient: 'from-red-600/40 to-rose-600/40',
-    badge: 'border-red-500/25 bg-red-500/12 text-red-200',
+    gradient: 'from-red-600/30 via-rose-600/20 to-transparent',
+    accent: 'bg-red-500/15 text-red-300 border-red-500/20',
+    dot: 'bg-red-400',
   },
   facebook_post: {
     icon: Share2,
-    gradient: 'from-blue-600/40 to-indigo-600/40',
-    badge: 'border-blue-500/25 bg-blue-500/12 text-blue-200',
+    gradient: 'from-blue-600/30 via-indigo-600/20 to-transparent',
+    accent: 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+    dot: 'bg-blue-400',
   },
   linkedin_post: {
     icon: Share2,
-    gradient: 'from-sky-600/40 to-blue-600/40',
-    badge: 'border-sky-500/25 bg-sky-500/12 text-sky-200',
+    gradient: 'from-sky-600/30 via-blue-600/20 to-transparent',
+    accent: 'bg-sky-500/15 text-sky-300 border-sky-500/20',
+    dot: 'bg-sky-400',
   },
   external_link: {
     icon: Globe,
-    gradient: 'from-cyan-600/40 to-teal-600/40',
-    badge: 'border-cyan-500/25 bg-cyan-500/12 text-cyan-200',
+    gradient: 'from-cyan-600/30 via-teal-600/20 to-transparent',
+    accent: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/20',
+    dot: 'bg-cyan-400',
   },
   file: {
     icon: FileDown,
-    gradient: 'from-amber-600/40 to-orange-600/40',
-    badge: 'border-amber-500/25 bg-amber-500/12 text-amber-200',
+    gradient: 'from-amber-600/30 via-orange-600/20 to-transparent',
+    accent: 'bg-amber-500/15 text-amber-300 border-amber-500/20',
+    dot: 'bg-amber-400',
   },
 };
 
-const FALLBACK_STYLE = {
+const FALLBACK_CONFIG = {
   icon: FileText,
-  gradient: 'from-gray-600/40 to-slate-600/40',
-  badge: 'border-gray-500/25 bg-gray-500/12 text-gray-200',
+  gradient: 'from-slate-600/30 via-gray-600/20 to-transparent',
+  accent: 'bg-slate-500/15 text-slate-300 border-slate-500/20',
+  dot: 'bg-slate-400',
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date(dateStr));
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(dateStr));
   } catch {
     return null;
   }
 }
 
-function getYouTubeVideoId(url) {
+function getYouTubeThumbnail(url) {
   if (!url) return null;
   try {
     const u = new URL(url);
-    if (u.hostname.includes('youtu.be')) {
-      return u.pathname.replace('/', '') || null;
-    }
-    if (u.pathname === '/watch') {
-      return u.searchParams.get('v');
-    }
-    if (u.pathname.startsWith('/shorts/')) {
-      return u.pathname.split('/')[2] || null;
-    }
-    if (u.pathname.startsWith('/embed/')) {
-      return u.pathname.split('/')[2] || null;
-    }
-    return null;
+    let id = null;
+    if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+    else if (u.pathname === '/watch') id = u.searchParams.get('v');
+    else if (u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2];
+    else if (u.pathname.startsWith('/embed/')) id = u.pathname.split('/')[2];
+    return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
   } catch {
     return null;
   }
-}
-
-function getFileExtension(url) {
-  if (!url) return '';
-  try {
-    return new URL(url).pathname.split('.').pop()?.toLowerCase() || '';
-  } catch {
-    return '';
-  }
-}
-
-function getPdfPreviewSrc(fileUrl) {
-  if (!fileUrl) return '';
-  const proxyMatch = fileUrl.match(/^\/api\/image\/([^/?#&]+)/);
-  if (proxyMatch?.[1]) {
-    return `https://drive.google.com/file/d/${proxyMatch[1]}/preview`;
-  }
-  return `${fileUrl}#page=1&view=FitH`;
 }
 
 function extractDriveFileId(url) {
   if (!url) return null;
-  const proxyMatch = url.match(/^\/api\/image\/([^/?#&]+)/);
-  if (proxyMatch?.[1]) return proxyMatch[1];
-  const driveFileMatch = url.match(/\/file\/d\/([^/?#&]+)/);
-  if (driveFileMatch?.[1]) return driveFileMatch[1];
-  const idParamMatch = url.match(/[?&]id=([^&#]+)/);
-  if (idParamMatch?.[1]) return idParamMatch[1];
+  const m1 = url.match(/^\/api\/image\/([^/?#&]+)/);
+  if (m1?.[1]) return m1[1];
+  const m2 = url.match(/\/file\/d\/([^/?#&]+)/);
+  if (m2?.[1]) return m2[1];
   return null;
 }
 
-function getDriveVideoThumbnailUrl(fileUrl) {
-  const driveFileId = extractDriveFileId(fileUrl);
-  if (!driveFileId) return '';
-  return `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1200`;
-}
-
-function getExternalWebsiteUrl(resource) {
+function getExternalUrl(resource) {
   if (resource?.resource_type !== 'external_link') return null;
-  const websiteUrl =
+  return (
     safeExternalHref(resource?.embed_url) ||
     safeExternalHref(resource?.file_url) ||
-    safeExternalHref(resource?.url);
-  if (!websiteUrl) return null;
-  return websiteUrl.split('#')[0];
+    safeExternalHref(resource?.url)
+  ) || null;
 }
 
-function getAutoCover(resource) {
-  if (resource?.thumbnail) return null;
+function getCoverSrc(resource) {
+  if (resource?.thumbnail) return resource.thumbnail;
   if (resource?.resource_type === 'youtube' && resource?.embed_url) {
-    const id = getYouTubeVideoId(resource.embed_url);
-    if (id) return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+    return getYouTubeThumbnail(resource.embed_url);
   }
-  const websiteUrl = getExternalWebsiteUrl(resource);
-  if (websiteUrl) {
-    return `https://image.thum.io/get/width/1200/crop/450/noanimate/${encodeURI(websiteUrl)}`;
+  if (resource?.resource_type === 'video' && resource?.file_url) {
+    const id = extractDriveFileId(resource.file_url);
+    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
   }
+  const extUrl = getExternalUrl(resource);
+  if (extUrl) return `https://image.thum.io/get/width/800/crop/400/noanimate/${encodeURI(extUrl.split('#')[0])}`;
   return null;
 }
 
-function getAutoCoverFallback(resource) {
-  const websiteUrl = getExternalWebsiteUrl(resource);
-  if (!websiteUrl) return null;
-  return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(websiteUrl)}?w=1200`;
-}
+const isUnoptimized = (src) =>
+  src?.startsWith('https://image.thum.io') ||
+  src?.startsWith('https://i.ytimg.com') ||
+  src?.startsWith('https://drive.google.com/thumbnail') ||
+  src?.startsWith('https://s.wordpress.com');
 
-// ─── Badge sub-components ────────────────────────────────────────────────────
+const isPlayable = (type) => type === 'youtube' || type === 'video';
 
-function TypeBadge({ typeStyle, typeLabel }) {
-  return (
-    <span
-      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold backdrop-blur-md ${typeStyle.badge}`}
-    >
-      {typeLabel}
-    </span>
-  );
-}
-
-function PinnedBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/12 px-2 py-0.5 text-[10px] font-semibold text-amber-200 backdrop-blur-md">
-      <Pin className="h-2.5 w-2.5" /> Pinned
-    </span>
-  );
-}
-
-function VisibilityBadge({ visibility }) {
-  if (!visibility) return null;
-  if (visibility === 'public') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-black/40 px-2 py-0.5 text-[10px] text-emerald-300 backdrop-blur-md">
-        <Globe className="h-2.5 w-2.5" /> Public
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-black/40 px-2 py-0.5 text-[10px] text-blue-300 backdrop-blur-md">
-      <Lock className="h-2.5 w-2.5" /> Members
-    </span>
-  );
-}
-
-function AdminOverlay({ resource, onEdit, onDelete }) {
-  return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-black/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit?.(resource);
-        }}
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:border-blue-500/30 hover:bg-blue-500/30 focus:ring-2 focus:ring-blue-500/40 focus:outline-none"
-        title="Edit resource"
-        aria-label={`Edit ${resource.title}`}
-      >
-        <Edit3 className="h-4 w-4" />
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete?.(resource);
-        }}
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:border-red-500/30 hover:bg-red-500/30 focus:ring-2 focus:ring-red-500/40 focus:outline-none"
-        title="Delete resource"
-        aria-label={`Delete ${resource.title}`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ResourceCard({
   resource,
@@ -251,179 +158,169 @@ export default function ResourceCard({
   detailBasePath = '',
   onOpen,
 }) {
-  const [videoPreviewStatus, setVideoPreviewStatus] = useState('idle');
+  const [imgFailed, setImgFailed] = useState(false);
 
-  const tags = resource?.tags || [];
-  const typeLabel = RESOURCE_TYPE_LABELS[resource?.resource_type] || 'Resource';
-  const href = detailBasePath ? `${detailBasePath}/${resource.id}` : null;
-  const typeStyle = TYPE_STYLES[resource?.resource_type] || FALLBACK_STYLE;
-  const TypeIcon = typeStyle.icon;
+  const type = resource?.resource_type;
+  const cfg = TYPE_CONFIG[type] || FALLBACK_CONFIG;
+  const TypeIcon = cfg.icon;
+  const typeLabel = RESOURCE_TYPE_LABELS[type] || 'Resource';
   const date = formatDate(resource?.published_at || resource?.created_at);
-  const autoCover = getAutoCover(resource);
-  const autoCoverFallback = getAutoCoverFallback(resource);
-  const mediaMimeType = String(
-    resource?.content?.uploadedMediaMimeType ||
-      resource?.content?.mediaMimeType ||
-      ''
-  ).toLowerCase();
-  const isPdfFile =
-    resource?.resource_type === 'file' &&
-    (getFileExtension(resource?.file_url) === 'pdf' ||
-      mediaMimeType === 'application/pdf' ||
-      String(resource?.title || '')
-        .toLowerCase()
-        .endsWith('.pdf'));
-  const pdfPreviewSrc = isPdfFile ? getPdfPreviewSrc(resource?.file_url) : '';
-  const isVideoFile = resource?.resource_type === 'video' && resource?.file_url;
-  const driveVideoThumbnail = isVideoFile
-    ? getDriveVideoThumbnailUrl(resource?.file_url)
-    : '';
+  const coverSrc = getCoverSrc(resource);
+  const hasCover = coverSrc && !imgFailed;
+  const playable = isPlayable(type);
+  const canOpen = !showAdminActions && typeof onOpen === 'function';
 
-  useEffect(() => {
-    if (!isVideoFile) {
-      setVideoPreviewStatus('idle');
-      return;
-    }
-    setVideoPreviewStatus('loading');
-  }, [isVideoFile, resource?.id, resource?.file_url]);
-
-  useEffect(() => {
-    if (!isVideoFile || videoPreviewStatus !== 'loading') return;
-    const timer = setTimeout(() => {
-      setVideoPreviewStatus((prev) => (prev === 'loading' ? 'failed' : prev));
-    }, 7000);
-    return () => clearTimeout(timer);
-  }, [isVideoFile, videoPreviewStatus]);
-
-  const showDriveVideoThumbnail = Boolean(
-    driveVideoThumbnail && videoPreviewStatus !== 'failed'
-  );
-  const showInlineVideoPreview = Boolean(
-    isVideoFile && !driveVideoThumbnail && videoPreviewStatus !== 'failed'
-  );
-  const showVideoPlaceholder = Boolean(
-    isVideoFile && !resource?.thumbnail && videoPreviewStatus === 'failed'
-  );
-
-  const isSocialPost = ['facebook_post', 'linkedin_post'].includes(
-    resource?.resource_type
-  );
-  const canOpenInModal = !showAdminActions && typeof onOpen === 'function';
-
-  const openResource = () => {
-    if (!canOpenInModal) return;
-    onOpen(resource);
-  };
-
-  const handleCardKeyDown = (e) => {
-    if (!canOpenInModal) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openResource();
-    }
+  const handleOpen = () => canOpen && onOpen(resource);
+  const handleKey = (e) => {
+    if (canOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleOpen(); }
   };
 
   return (
-    <article
-      className={`group relative flex flex-col rounded-[12px] border border-white/[0.06] bg-[#121317] transition-all duration-150 hover:border-white/[0.09] hover:bg-[#181a1f] ${
-        canOpenInModal ? 'cursor-pointer' : ''
-      }`}
-      onClick={openResource}
-      onKeyDown={handleCardKeyDown}
-      role={canOpenInModal ? 'button' : undefined}
-      tabIndex={canOpenInModal ? 0 : undefined}
-      aria-label={canOpenInModal ? `Open ${resource.title}` : undefined}
+    <motion.article
+      layout
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 }
+      }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className={`group relative flex flex-col rounded-[20px] border border-white/[0.05] bg-[#12141a]/80 backdrop-blur-xl transition-all duration-300
+        hover:border-white/[0.12] hover:bg-[#161820] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]
+        ${canOpen ? 'cursor-pointer' : ''}`}
+      onClick={handleOpen}
+      onKeyDown={handleKey}
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      aria-label={canOpen ? `Open ${resource.title}` : undefined}
     >
-      {/* ── Card body ── */}
-      <div className="flex flex-1 flex-col gap-[6px] p-4">
-        {/* Top row: type pill + bookmark */}
-        <div className="flex items-center justify-between gap-2 mb-[2px]">
-          <div className="flex items-center gap-1.5">
-            <TypeBadge typeStyle={typeStyle} typeLabel={typeLabel} />
-            {resource.is_pinned && <PinnedBadge />}
-          </div>
-          {!showAdminActions && onToggleBookmark && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleBookmark(resource.id); }}
-              className={`cursor-pointer p-1 transition-colors focus:outline-none ${
-                bookmarked ? 'text-[#fbbf24]' : 'text-white/20 hover:text-white/50'
-              }`}
-              aria-label={bookmarked ? `Remove bookmark from ${resource.title}` : `Bookmark ${resource.title}`}
-              aria-pressed={bookmarked}
-            >
-              <Star className="h-3.5 w-3.5" fill={bookmarked ? 'currentColor' : 'none'} />
-            </button>
-          )}
-          {showAdminActions && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); onEdit?.(resource); }}
-                className="flex h-[26px] items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2 text-[11px] text-white/40 transition-all hover:border-blue-500/25 hover:bg-blue-500/10 hover:text-blue-300"
-                aria-label={`Edit ${resource.title}`}
-              >
-                <Edit3 className="h-3 w-3" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete?.(resource); }}
-                className="flex h-[26px] items-center gap-1 rounded-[5px] border border-red-500/20 bg-transparent px-2 text-[11px] text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-300"
-                aria-label={`Delete ${resource.title}`}
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
+      {/* ── Cover area ── */}
+      <div className={`relative w-full overflow-hidden rounded-t-[20px] ${hasCover ? 'h-[170px]' : 'h-[100px]'}`}>
+        {hasCover ? (
+          <>
+            <Image
+              src={coverSrc}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"
+              onError={() => setImgFailed(true)}
+              unoptimized={isUnoptimized(coverSrc)}
+            />
+            {/* scrim */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#12141a] via-[#12141a]/20 to-transparent" />
+            {/* play overlay */}
+            {playable && canOpen && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-2xl transition-transform group-hover:scale-110">
+                  <Play className="h-5 w-5 text-white fill-white ml-1" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* icon gradient placeholder */
+          <div className={`h-full w-full bg-gradient-to-br ${cfg.gradient} bg-[#12141a]`}>
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
+            <div className="flex h-full items-center justify-center relative z-10">
+              <TypeIcon className="h-8 w-8 text-white/20" />
             </div>
+          </div>
+        )}
+
+        {/* badges top-right */}
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {resource.is_pinned && (
+            <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-black/40 px-2.5 py-1 text-[9.5px] font-bold tracking-wider text-amber-300 backdrop-blur-md shadow-lg">
+              <Pin className="h-2.5 w-2.5" /> PINNED
+            </span>
           )}
+          <span className={`rounded-full border px-3 py-1 text-[9.5px] font-bold tracking-wider uppercase backdrop-blur-md shadow-lg ${hasCover ? 'bg-black/40 ' + cfg.accent.replace('bg-', 'border-').split(' ')[0] + ' text-white/90' : cfg.accent}`}>
+            {typeLabel}
+          </span>
         </div>
 
-        {/* Title */}
-        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-white">
+        {/* bookmark button */}
+        {!showAdminActions && onToggleBookmark && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleBookmark(resource.id); }}
+            className={`absolute top-3 left-3 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-200 focus:outline-none shadow-lg
+              ${bookmarked
+                ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 opacity-100 scale-100'
+                : 'border-white/20 bg-black/40 text-white/50 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 hover:border-amber-500/40 hover:bg-amber-500/20 hover:text-amber-300'
+              }`}
+            aria-label={bookmarked ? `Remove bookmark` : `Bookmark`}
+            aria-pressed={bookmarked}
+          >
+            <Star className="h-3.5 w-3.5" fill={bookmarked ? 'currentColor' : 'none'} />
+          </button>
+        )}
+      </div>
+
+      {/* ── Card body ── */}
+      <div className="flex flex-1 flex-col gap-2.5 p-5 pt-4">
+        {/* admin actions row */}
+        {showAdminActions && (
+          <div className="flex items-center justify-end gap-1.5 -mt-2 mb-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit?.(resource); }}
+              className="flex h-[28px] items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 text-[11px] font-medium text-white/50 transition-all hover:border-blue-500/30 hover:bg-blue-500/15 hover:text-blue-300"
+              aria-label={`Edit ${resource.title}`}
+            >
+              <Edit3 className="h-3 w-3" /> Edit
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete?.(resource); }}
+              className="flex h-[28px] items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 text-[11px] font-medium text-red-400/80 transition-all hover:bg-red-500/15 hover:text-red-300 hover:border-red-500/30"
+              aria-label={`Delete ${resource.title}`}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        {/* type dot + label (when no cover) */}
+        {!hasCover && (
+          <div className="flex items-center gap-2 -mt-1">
+            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} shadow-[0_0_8px_currentColor]`} />
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-white/40">{typeLabel}</span>
+          </div>
+        )}
+
+        {/* title */}
+        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-white/90 group-hover:text-white transition-colors">
           {resource.title}
         </h3>
 
-        {/* Description */}
+        {/* description */}
         {resource.description && (
-          <p className="line-clamp-2 text-[12.5px] leading-[1.45] text-white/40">
+          <p className="line-clamp-2 text-[13px] leading-relaxed text-white/40 group-hover:text-white/50 transition-colors">
             {resource.description}
           </p>
         )}
 
-        {/* Footer */}
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-t border-white/[0.06] pt-[10px]">
-          <div className="flex min-w-0 items-center gap-[6px] flex-wrap">
+        {/* footer */}
+        <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-white/[0.06]">
+          <div className="flex min-w-0 items-center gap-2 text-[11.5px] text-white/30 font-medium">
             {resource.category?.name && (
-              <span className="text-[11.5px] text-white/30">{resource.category.name}</span>
+              <span className="truncate max-w-[120px] px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">
+                {resource.category.name}
+              </span>
             )}
-            {resource.category?.name && date && (
-              <span className="text-white/20 text-[11px]">·</span>
-            )}
-            {date && (
-              <time dateTime={resource?.published_at || resource?.created_at} className="text-[11.5px] text-white/30">
-                {date}
-              </time>
-            )}
+            {resource.category?.name && date && <span className="opacity-40">·</span>}
+            {date && <time dateTime={resource?.published_at || resource?.created_at} className="truncate">{date}</time>}
           </div>
 
-          {!showAdminActions && canOpenInModal && (
+          {canOpen && (
             <button
-              onClick={(e) => { e.stopPropagation(); openResource(); }}
-              className="flex shrink-0 items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2.5 py-1 text-[11px] font-medium text-white/40 transition-all hover:border-white/[0.14] hover:bg-[#1f2127] hover:text-white/80"
-              aria-label={`View ${resource.title}`}
+              onClick={(e) => { e.stopPropagation(); handleOpen(); }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1 text-[11px] font-semibold text-white/40 transition-all hover:border-white/[0.2] hover:bg-white/[0.06] hover:text-white group-hover:border-white/[0.15] group-hover:text-white/80 group-hover:bg-white/[0.04]"
             >
-              View <ExternalLink className="h-2.5 w-2.5" />
+              Open <ExternalLink className="h-3 w-3" />
             </button>
-          )}
-          {!showAdminActions && !canOpenInModal && href && (
-            <Link
-              href={href}
-              onClick={(e) => e.stopPropagation()}
-              className="flex shrink-0 items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2.5 py-1 text-[11px] font-medium text-white/40 transition-all hover:border-white/[0.14] hover:bg-[#1f2127] hover:text-white/80"
-              aria-label={`View ${resource.title}`}
-            >
-              View <ExternalLink className="h-2.5 w-2.5" />
-            </Link>
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
