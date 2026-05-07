@@ -25,6 +25,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { updateMemberProfileAction } from '@/app/_lib/member-profile-actions';
+import { PageHeader, ActionButton } from '../../_components/_ui';
 
 // ─── Platform registry ────────────────────────────────────────────────────────
 const HANDLE_PLATFORMS = [
@@ -602,11 +603,19 @@ export default function MemberProfileClient({ user, memberProfile }) {
   return (
     <div className="space-y-5 w-full max-w-[1600px] mx-auto">
 
-      {/* Page title */}
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">Profile</h1>
-        <p className="mt-1 text-[13px] text-white/40">Your public NEUPC identity</p>
-      </div>
+      <PageHeader
+        icon={User}
+        title="Profile"
+        subtitle="Your public NEUPC identity, handles, and bio"
+        accent="violet"
+        actions={
+          !editing && (
+            <ActionButton tone="primary" icon={Pencil} onClick={() => setEditing(true)}>
+              Edit profile
+            </ActionButton>
+          )
+        }
+      />
 
       {/* Hero */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">

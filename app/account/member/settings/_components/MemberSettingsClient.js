@@ -38,6 +38,8 @@ import {
   removeAvatarAction,
 } from '@/app/_lib/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions';
+import { PageHeader } from '../../_components/_ui';
+import { Settings as SettingsIcon } from 'lucide-react';
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
 const SECTIONS = [
@@ -1172,15 +1174,12 @@ export default function MemberSettingsClient({ user }) {
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-5">
-      {/* Page header */}
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-          Settings
-        </h1>
-        <p className="mt-1 text-[13px] text-white/40">
-          Manage your account, preferences, and security
-        </p>
-      </div>
+      <PageHeader
+        icon={SettingsIcon}
+        title="Settings"
+        subtitle="Manage your account, preferences, and security"
+        accent="gray"
+      />
 
       {/* Mobile: horizontal scrollable tab bar */}
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">

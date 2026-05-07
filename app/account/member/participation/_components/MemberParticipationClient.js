@@ -19,7 +19,9 @@ import {
   Users,
   Check,
   MapPin,
+  Activity,
 } from 'lucide-react';
+import { PageHeader } from '../../_components/_ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -702,17 +704,12 @@ export default function MemberParticipationClient({
 
   return (
     <div className="space-y-5">
-      {/* Page head */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-            Participation
-          </h1>
-          <p className="mt-1 text-[13px] text-white/40">
-            A complete record of everything you've done at NEUPC
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={Activity}
+        title="Participation"
+        subtitle="A complete record of everything you've done at NEUPC"
+        accent="cyan"
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">

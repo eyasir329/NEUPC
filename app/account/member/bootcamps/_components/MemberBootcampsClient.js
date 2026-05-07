@@ -9,6 +9,7 @@ import {
   Sparkles, CheckCircle2, X,
 } from 'lucide-react';
 import { enrollUser } from '@/app/_lib/bootcamp-actions';
+import { PageHeader } from '../../_components/_ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -398,47 +399,37 @@ export default function MemberBootcampsClient({ bootcamps = [], enrollmentMap = 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
 
-      {/* ── Page Header ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-violet-500/8 via-white/2 to-indigo-500/5 p-5 sm:p-7">
-        <div className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-violet-500/8 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-indigo-500/6 blur-3xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="mb-1 flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-violet-400" />
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-violet-400">Learning Hub</span>
-            </div>
-            <h1 className="text-[22px] sm:text-[28px] font-extrabold tracking-tight text-white">
-              My Bootcamps
-            </h1>
-            <p className="mt-1 text-[12px] sm:text-[13px] text-gray-500">
-              {enrolledBootcamps.length > 0
-                ? `${enrolledBootcamps.length} enrolled · ${totalLessonsCompleted} lessons completed`
-                : 'Start learning today'}
-              {availableBootcamps.length > 0 && ` · ${availableBootcamps.length} available`}
-            </p>
-          </div>
-          {/* Search */}
+      <PageHeader
+        icon={GraduationCap}
+        title="My Bootcamps"
+        subtitle={
+          enrolledBootcamps.length > 0
+            ? `${enrolledBootcamps.length} enrolled · ${totalLessonsCompleted} lessons completed${availableBootcamps.length > 0 ? ` · ${availableBootcamps.length} available` : ''}`
+            : 'Structured tracks to level up your craft'
+        }
+        accent="violet"
+        actions={
           <div className="relative w-full sm:w-auto">
-            <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-600 pointer-events-none" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
             <input
               type="text"
               placeholder="Search bootcamps…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-full sm:w-56 rounded-xl border border-white/8 bg-white/5 pl-9 pr-9 text-[12.5px] text-white placeholder-gray-600 outline-none transition-all focus:border-violet-500/40 focus:bg-white/8 focus:ring-1 focus:ring-violet-500/20"
+              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pl-9 pr-9 text-[12.5px] text-white placeholder-gray-600 outline-none transition-all focus:border-violet-500/40 focus:bg-white/[0.05] focus:ring-1 focus:ring-violet-500/20 sm:w-56"
             />
             {search && (
               <button
+                type="button"
                 onClick={() => setSearch('')}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-600 transition-colors hover:text-gray-300"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Stats Bar ── */}
       {(enrolledBootcamps.length > 0 || availableBootcamps.length > 0) && (

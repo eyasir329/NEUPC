@@ -13,6 +13,12 @@ import {
   Search,
   Check,
 } from 'lucide-react';
+import {
+  PageHeader,
+  StatCard,
+  ActionButton,
+  EmptyState,
+} from '../../_components/_ui';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -329,10 +335,10 @@ export default function MemberCertificatesClient({ certificates, userName }) {
   const fromContests = certificates.filter((c) => c.contests).length;
 
   const STATS = [
-    { label: 'Total', value: certificates.length, accent: '#60a5fa', Icon: Award },
-    { label: 'Verified', value: verified, accent: '#4ade80', Icon: Shield },
-    { label: 'From Events', value: fromEvents, accent: '#a78bfa', Icon: Trophy },
-    { label: 'From Contests', value: fromContests, accent: '#fbbf24', Icon: Star },
+    { label: 'Total', value: certificates.length, accent: 'blue', icon: Award },
+    { label: 'Verified', value: verified, accent: 'emerald', icon: Shield },
+    { label: 'From Events', value: fromEvents, accent: 'violet', icon: Trophy },
+    { label: 'From Contests', value: fromContests, accent: 'amber', icon: Star },
   ];
 
   return (
@@ -340,38 +346,21 @@ export default function MemberCertificatesClient({ certificates, userName }) {
       <CertModal cert={selected} onClose={() => setSelected(null)} />
 
       <div className="space-y-5">
-        {/* Page head */}
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-              Certificates
-            </h1>
-            <p className="mt-1 text-[13px] text-white/40">
-              {certificates.length} verified{' '}
-              {certificates.length === 1 ? 'certificate' : 'certificates'} · all
-              blockchain-anchored
-            </p>
-          </div>
-          <button className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.09] bg-[#1f2127] px-[11px] py-[6px] text-[12.5px] font-medium text-white/75 transition hover:border-white/[0.14] hover:text-white/90">
-            <Download size={13} strokeWidth={1.6} />
-            Download all
-          </button>
-        </div>
+        <PageHeader
+          icon={Award}
+          title="Certificates"
+          subtitle={`${certificates.length} earned · ${verified} verified`}
+          accent="amber"
+          actions={
+            <ActionButton tone="primary" icon={Download}>
+              Download all
+            </ActionButton>
+          }
+        />
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-4">
-          {STATS.map(({ label, value, accent, Icon }) => (
-            <div
-              key={label}
-              className="rounded-xl border border-white/[0.06] bg-[#121317] px-4 py-[14px]"
-            >
-              <p className="mb-1.5 text-[11.5px] font-medium text-white/40">{label}</p>
-              <p
-                className="font-['Inter'] text-[26px] font-semibold leading-none tracking-[-0.02em] text-white/90 tabular-nums"
-              >
-                {value}
-              </p>
-            </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {STATS.map((s, i) => (
+            <StatCard key={s.label} {...s} delay={i * 0.05} />
           ))}
         </div>
 
@@ -416,18 +405,17 @@ export default function MemberCertificatesClient({ certificates, userName }) {
 
         {/* Grid */}
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.06] bg-[#121317] py-20">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
-              <Award size={28} strokeWidth={1.6} className="text-white/20" />
-            </div>
-            <div className="text-center">
-              <p className="font-medium text-white/50">No certificates found</p>
-              <p className="mt-1 text-[12.5px] text-white/30">
-                {certificates.length === 0
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
+            <EmptyState
+              icon={Award}
+              title="No certificates found"
+              description={
+                certificates.length === 0
                   ? 'Participate in events and contests to earn certificates.'
-                  : 'Try adjusting the filters.'}
-              </p>
-            </div>
+                  : 'Try adjusting the filters.'
+              }
+              accent="amber"
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">

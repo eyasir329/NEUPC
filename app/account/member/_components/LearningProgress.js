@@ -1,62 +1,67 @@
 /**
- * @file Learning progress tracker — dashboard widget showing the
- *   member’s roadmap and bootcamps completion percentages.
+ * @file Learning progress tracker — roadmap completion bars.
  * @module MemberLearningProgress
  */
 
 'use client';
 
-const progressColors = {
-  blue: 'bg-blue-500',
-  green: 'bg-green-500',
-  purple: 'bg-purple-500',
-};
+import { Map, ArrowRight } from 'lucide-react';
+import { GlassCard, SectionHeader, GradientBar, ActionButton } from './_ui';
+import { motion } from 'framer-motion';
 
-const progressTextColors = {
+const TONE_TEXT = {
   blue: 'text-blue-400',
-  green: 'text-green-400',
-  purple: 'text-purple-400',
+  emerald: 'text-emerald-400',
+  violet: 'text-violet-400',
+  amber: 'text-amber-400',
+  orange: 'text-orange-400',
+  rose: 'text-rose-400',
 };
 
 export default function LearningProgress({ roadmaps }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">🗺 Learning Progress</h2>
-          <p className="text-sm text-gray-400">Track your roadmap completion</p>
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-        {roadmaps.map((roadmap, idx) => (
-          <div
-            key={idx}
-            className="rounded-lg border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Map}
+        title="Learning Progress"
+        subtitle="Roadmaps and bootcamp tracks you've started"
+        accent="violet"
+        action={
+          <ActionButton
+            tone="primary"
+            icon={ArrowRight}
+            href="/account/member/bootcamps"
           >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-semibold text-white">{roadmap.name}</h3>
+            All Tracks
+          </ActionButton>
+        }
+      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        {roadmaps.map((roadmap, i) => (
+          <motion.div
+            key={roadmap.name}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: i * 0.04 }}
+            className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3.5 transition-all hover:border-white/[0.1] hover:bg-white/[0.04]"
+          >
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <h3 className="text-xs font-semibold text-white">
+                {roadmap.name}
+              </h3>
               <span
-                className={`text-sm font-bold ${progressTextColors[roadmap.color]}`}
+                className={`text-xs font-bold ${TONE_TEXT[roadmap.tone] ?? 'text-gray-300'}`}
               >
                 {roadmap.progress}%
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className={`h-full rounded-full ${progressColors[roadmap.color]} transition-all duration-500`}
-                style={{ width: `${roadmap.progress}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-gray-400">
-              {roadmap.progress >= 80
-                ? 'Almost there!'
-                : roadmap.progress >= 50
-                  ? 'Great progress!'
-                  : 'Keep going!'}
+            <GradientBar value={roadmap.progress} tone={roadmap.tone} />
+            <p className="mt-1.5 text-[10px] text-gray-500">
+              {roadmap.completed} of {roadmap.total} lessons
             </p>
-          </div>
+          </motion.div>
         ))}
       </div>
-    </div>
+    </GlassCard>
   );
 }

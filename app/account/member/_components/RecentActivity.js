@@ -1,66 +1,68 @@
 /**
- * @file Recent activity feed — dashboard widget listing the member’s
- *   latest actions (event registrations, submissions, forum posts).
+ * @file Recent activity feed — chronological list of the member's
+ *   latest actions, rendered with the shared `_ui` primitives.
  * @module MemberRecentActivity
  */
 
 'use client';
 
-import { Calendar, CheckCircle, Award, MessageSquare } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle,
+  Award,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  Activity,
+} from 'lucide-react';
+import { GlassCard, SectionHeader, IconChip } from './_ui';
+import { motion } from 'framer-motion';
 
-const iconMap = {
-  Calendar: Calendar,
-  CheckCircle: CheckCircle,
-  Award: Award,
-  MessageSquare: MessageSquare,
-};
-
-const colorClasses = {
-  blue: 'bg-blue-500/20',
-  green: 'bg-green-500/20',
-  amber: 'bg-amber-500/20',
-  purple: 'bg-purple-500/20',
-};
-
-const iconColorClasses = {
-  blue: 'text-blue-400',
-  green: 'text-green-400',
-  amber: 'text-amber-400',
-  purple: 'text-purple-400',
+const ICON_MAP = {
+  Calendar,
+  CheckCircle,
+  Award,
+  MessageSquare,
+  BookOpen,
+  FileText,
 };
 
 export default function RecentActivity({ recentActivities }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-white">⚡ Recent Activity</h2>
-        <p className="text-sm text-gray-400">Your latest actions</p>
-      </div>
-      <div className="space-y-3">
-        {recentActivities.map((activity, idx) => {
-          const Icon = iconMap[activity.icon];
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Activity}
+        title="Recent Activity"
+        subtitle="Your latest actions"
+        accent="emerald"
+      />
+      <div className="relative space-y-1">
+        <div className="absolute top-2 bottom-2 left-[18px] w-px bg-white/[0.06]" />
+        {recentActivities.map((activity, i) => {
+          const Icon = ICON_MAP[activity.icon] ?? Activity;
           return (
-            <div
-              key={idx}
-              className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25, delay: i * 0.04 }}
+              className="relative flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-white/[0.02]"
             >
-              <div
-                className={`rounded-full ${colorClasses[activity.color]} p-2`}
-              >
-                <Icon
-                  className={`h-4 w-4 ${iconColorClasses[activity.color]}`}
-                />
+              <div className="relative z-10">
+                <IconChip icon={Icon} accent={activity.tone} size="sm" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-white">
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="text-xs leading-relaxed text-gray-200">
                   {activity.action}
                 </p>
-                <p className="mt-1 text-xs text-gray-400">{activity.time}</p>
+                <p className="mt-0.5 text-[10px] text-gray-500">
+                  {activity.time}
+                </p>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
-    </div>
+    </GlassCard>
   );
 }

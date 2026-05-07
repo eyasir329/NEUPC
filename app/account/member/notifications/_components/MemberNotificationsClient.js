@@ -1,5 +1,6 @@
 /**
- * @file Member Notifications Client — redesigned to match Linear/Vercel dark UI.
+ * @file Member Notifications Client — redesigned to match the
+ *   problem-solving page aesthetic via shared `_ui` primitives.
  * @module MemberNotificationsClient
  */
 
@@ -18,88 +19,72 @@ import {
   MessageSquare,
   Settings,
   Check,
-  CheckCheck,
   Trash2,
-  X,
+  AtSign,
+  Inbox,
 } from 'lucide-react';
 import {
   markAsReadAction,
   markAllAsReadAction,
   deleteNotificationAction,
 } from '@/app/_lib/notification-actions';
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
+import {
+  PageHeader,
+  GlassCard,
+  TabBar,
+  EmptyState,
+  ActionButton,
+  IconChip,
+} from '../../_components/_ui';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
 
 const MOCK_NOTIFICATIONS = [
-  { id: 'n1', notification_type: 'event',       title: 'Web3 Workshop starts in 2 hours',             message: 'Reminder for your registered event on Mar 20 at 2:00 PM.', created_at: ago(0.05), is_read: false, link: null },
-  { id: 'n2', notification_type: 'mention',     title: 'Sajid Hossain replied to your thread',         message: '"How to debug Express middleware order?"',                  created_at: ago(0.2),  is_read: false, link: null },
-  { id: 'n3', notification_type: 'achievement', title: "You earned the 'Open-Source Contributor' badge", message: '5 PRs merged in NEUPC repos.',                           created_at: ago(72),   is_read: true,  link: null },
-  { id: 'n4', notification_type: 'system',      title: 'Codeforces sync completed',                    message: '+12 new submissions imported.',                           created_at: ago(5),    is_read: true,  link: null },
-  { id: 'n5', notification_type: 'event',       title: "Spring Cup '26 registration opens tomorrow",   message: 'Save your seat — limited to 500 participants.',           created_at: ago(24),   is_read: true,  link: null },
-  { id: 'n6', notification_type: 'system',      title: 'New lesson available: JWT Authentication',     message: 'In Full-Stack Web Development bootcamp.',                 created_at: ago(48),   is_read: true,  link: null },
-  { id: 'n7', notification_type: 'mention',     title: 'Nusrat Jahan mentioned you in a thread',       message: '"Best resources for graph algorithms?" — check it out.',  created_at: ago(36),   is_read: true,  link: null },
-  { id: 'n8', notification_type: 'achievement', title: "30-day streak milestone reached!",             message: "You've solved problems 30 days in a row. Keep it up!",   created_at: ago(96),   is_read: true,  link: null },
+  { id: 'n1', notification_type: 'event', title: 'Web3 & Smart Contract Workshop starts in 2 hours', message: 'Reminder for your registered event on May 12 at 14:00 in CSE Seminar Hall.', created_at: ago(0.05), is_read: false },
+  { id: 'n2', notification_type: 'mention', title: 'Sajid Hossain replied to your thread', message: '"How to debug Express middleware order?" — your reply was upvoted 12 times.', created_at: ago(0.2), is_read: false },
+  { id: 'n3', notification_type: 'achievement', title: "You earned the 'Open-Source Contributor' badge", message: '5 PRs merged in NEUPC repos this month.', created_at: ago(3), is_read: false },
+  { id: 'n4', notification_type: 'mention', title: 'Nusrat Jahan mentioned you', message: '"@you check this elegant DP transition for LIS!" in #algorithms.', created_at: ago(6), is_read: false },
+  { id: 'n5', notification_type: 'system', title: 'Codeforces sync completed', message: '+12 new submissions imported. Rating updated to 1547.', created_at: ago(8), is_read: false },
+  { id: 'n6', notification_type: 'event', title: "Inter-University Hackathon '26 registration opens tomorrow", message: 'Save your seat — limited to 312 participants across 78 teams.', created_at: ago(24), is_read: true },
+  { id: 'n7', notification_type: 'lesson', title: 'New lesson available: JWT Authentication', message: 'In Full-Stack Web Development bootcamp · 22 min · by Tanvir Ahmed.', created_at: ago(36), is_read: true },
+  { id: 'n8', notification_type: 'achievement', title: '30-day streak milestone reached!', message: "You've solved problems 30 days in a row. Keep it up!", created_at: ago(48), is_read: true },
+  { id: 'n9', notification_type: 'system', title: 'Profile review approved', message: 'Your member profile changes are now live.', created_at: ago(72), is_read: true },
+  { id: 'n10', notification_type: 'event', title: 'Reminder: NEUPC Monthly Contest #27', message: 'Starts May 24, 20:00 BDT on Codeforces — 2.5 hours, 6 problems.', created_at: ago(96), is_read: true },
 ];
-
-// ─── Type → icon + tone ───────────────────────────────────────────────────────
 
 const TYPE_CONFIG = {
-  event:       { icon: Calendar,      tone: 'accent',   label: 'Events'  },
-  mention:     { icon: MessageSquare, tone: 'info',     label: 'Mentions'},
-  achievement: { icon: Trophy,        tone: 'warning',  label: 'System'  },
-  system:      { icon: Zap,           tone: 'default',  label: 'System'  },
-  info:        { icon: AlertCircle,   tone: 'info',     label: 'System'  },
-  success:     { icon: CheckCircle2,  tone: 'success',  label: 'System'  },
-  lesson:      { icon: BookOpen,      tone: 'accent',   label: 'System'  },
+  event:       { icon: Calendar,      accent: 'blue' },
+  mention:     { icon: AtSign,        accent: 'violet' },
+  achievement: { icon: Trophy,        accent: 'amber' },
+  system:      { icon: Zap,           accent: 'cyan' },
+  info:        { icon: AlertCircle,   accent: 'sky' },
+  success:     { icon: CheckCircle2,  accent: 'emerald' },
+  lesson:      { icon: BookOpen,      accent: 'pink' },
 };
 
-const TONE_ICON = {
-  accent:  'bg-indigo-500/15 text-indigo-300  border border-indigo-500/25',
-  info:    'bg-blue-500/15   text-blue-300    border border-blue-500/25',
-  warning: 'bg-yellow-500/15 text-yellow-300  border border-yellow-500/25',
-  success: 'bg-green-500/15  text-green-300   border border-green-500/25',
-  danger:  'bg-red-500/15    text-red-300     border border-red-500/25',
-  default: 'bg-white/8       text-gray-300    border border-white/10',
-};
+const cfg = (t) => TYPE_CONFIG[t] ?? TYPE_CONFIG.system;
 
-function cfg(type) {
-  return TYPE_CONFIG[type] || TYPE_CONFIG.system;
-}
-
-// ─── Tabs ─────────────────────────────────────────────────────────────────────
-
-const TABS = [
-  { id: 'all',      label: 'All'      },
-  { id: 'unread',   label: 'Unread'   },
-  { id: 'mentions', label: 'Mentions' },
-  { id: 'events',   label: 'Events'   },
-  { id: 'system',   label: 'System'   },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const SYSTEM_TYPES = ['system', 'achievement', 'info', 'success', 'lesson'];
 
 function timeAgo(iso) {
   if (!iso) return '';
   const s = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (s < 60)    return 'now';
-  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d`;
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function tabCount(notifs, tabId) {
-  if (tabId === 'all')      return notifs.length;
-  if (tabId === 'unread')   return notifs.filter(n => !n.is_read).length;
-  if (tabId === 'mentions') return notifs.filter(n => n.notification_type === 'mention').length;
-  if (tabId === 'events')   return notifs.filter(n => n.notification_type === 'event').length;
-  if (tabId === 'system')   return notifs.filter(n => ['system','achievement','info','success','lesson'].includes(n.notification_type)).length;
-  return 0;
+function tabFilter(notifs, id) {
+  if (id === 'all') return notifs;
+  if (id === 'unread') return notifs.filter((n) => !n.is_read);
+  if (id === 'mentions') return notifs.filter((n) => n.notification_type === 'mention');
+  if (id === 'events') return notifs.filter((n) => n.notification_type === 'event');
+  if (id === 'system') return notifs.filter((n) => SYSTEM_TYPES.includes(n.notification_type));
+  return notifs;
 }
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MemberNotificationsClient({
   notifications: serverNotifs = [],
@@ -110,234 +95,155 @@ export default function MemberNotificationsClient({
   const [tab, setTab] = useState('all');
   const [isPending, startTransition] = useTransition();
 
-  const unreadCount = notifs.filter(n => !n.is_read).length;
+  const unreadCount = notifs.filter((n) => !n.is_read).length;
+  const filtered = useMemo(() => tabFilter(notifs, tab), [notifs, tab]);
 
-  const filtered = useMemo(() => {
-    if (tab === 'all')      return notifs;
-    if (tab === 'unread')   return notifs.filter(n => !n.is_read);
-    if (tab === 'mentions') return notifs.filter(n => n.notification_type === 'mention');
-    if (tab === 'events')   return notifs.filter(n => n.notification_type === 'event');
-    if (tab === 'system')   return notifs.filter(n => ['system','achievement','info','success','lesson'].includes(n.notification_type));
-    return notifs;
-  }, [notifs, tab]);
+  const tabs = [
+    { value: 'all', label: 'All', icon: Inbox, count: notifs.length },
+    { value: 'unread', label: 'Unread', icon: Bell, count: unreadCount },
+    { value: 'mentions', label: 'Mentions', icon: AtSign, count: tabFilter(notifs, 'mentions').length },
+    { value: 'events', label: 'Events', icon: Calendar, count: tabFilter(notifs, 'events').length },
+    { value: 'system', label: 'System', icon: Zap, count: tabFilter(notifs, 'system').length },
+  ];
 
   const markRead = (id) => {
     startTransition(async () => {
       if (!useMock) await markAsReadAction(id).catch(() => {});
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     });
   };
 
   const markAllRead = () => {
     startTransition(async () => {
       if (!useMock) await markAllAsReadAction().catch(() => {});
-      setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
     });
   };
 
   const del = (id) => {
     startTransition(async () => {
       if (!useMock) await deleteNotificationAction(id).catch(() => {});
-      setNotifs(prev => prev.filter(n => n.id !== id));
+      setNotifs((prev) => prev.filter((n) => n.id !== id));
     });
   };
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-end justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-            Inbox
-          </h1>
-          <p className="mt-1 text-[13px] text-white/40">
-            {unreadCount > 0 ? `${unreadCount} unread · all caught up after that` : 'All caught up'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ background: 'transparent', borderColor: 'rgba(255,255,255,0.09)', color: 'var(--text-2, #b4b6bd)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <Check className="h-3.5 w-3.5" /> Mark all as read
-            </button>
-          )}
-          <button
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors"
-            style={{ background: 'transparent', borderColor: 'rgba(255,255,255,0.09)', color: 'var(--text-2, #b4b6bd)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Settings className="h-3.5 w-3.5" /> Preferences
-          </button>
-        </div>
-      </div>
-
-      {/* Underline tabs */}
-      <div className="flex gap-0 mb-5 overflow-x-auto scrollbar-none" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        {TABS.map(({ id, label }) => {
-          const count = tabCount(notifs, id);
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className="relative flex items-center gap-1.5 px-4 py-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors"
-              style={{ color: active ? 'var(--text-1, #ededee)' : 'var(--text-3, #8a8d96)', border: 0, background: 'transparent' }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text-1, #ededee)'; }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-3, #8a8d96)'; }}
-            >
-              {label}
-              <span
-                className="rounded-full px-1.5 py-px text-[10.5px] font-medium tabular-nums"
-                style={{
-                  background: active ? 'rgba(124,131,255,0.12)' : 'rgba(255,255,255,0.06)',
-                  border: active ? '1px solid rgba(124,131,255,0.20)' : '1px solid rgba(255,255,255,0.06)',
-                  color: active ? '#aab0ff' : 'var(--text-3, #8a8d96)',
-                }}
-              >
-                {count}
-              </span>
-              {active && (
-                <span className="absolute bottom-0 left-0 right-0 h-[1.5px] rounded-t-full" style={{ background: 'var(--accent, #7c83ff)' }} />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Notification list */}
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-xl border text-center" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-          <BellOff className="h-10 w-10 mb-3" style={{ color: 'var(--text-4, #5b5e66)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-3, #8a8d96)' }}>No notifications here</p>
-        </div>
-      ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ background: 'var(--bg-2, #121317)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          {filtered.map((n, i) => {
-            const { icon: Icon, tone } = cfg(n.notification_type);
-            const isLast = i === filtered.length - 1;
-            return (
-              <NotifRow
-                key={n.id}
-                notif={n}
-                Icon={Icon}
-                tone={tone}
-                isLast={isLast}
-                isPending={isPending}
-                onMarkRead={() => markRead(n.id)}
-                onDelete={() => del(n.id)}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── NotifRow ─────────────────────────────────────────────────────────────────
-
-function NotifRow({ notif, Icon, tone, isLast, isPending, onMarkRead, onDelete }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      className="group"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '32px 1fr auto 8px',
-        gap: '14px',
-        alignItems: 'center',
-        padding: '12px 18px',
-        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.06)',
-        cursor: 'pointer',
-        background: hovered
-          ? 'var(--bg-3, #181a1f)'
-          : notif.is_read
-            ? 'transparent'
-            : 'rgba(124,131,255,0.04)',
-        transition: 'background .12s',
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Icon */}
-      <div
-        className={`flex items-center justify-center rounded-lg ${TONE_ICON[tone] || TONE_ICON.default}`}
-        style={{ width: 32, height: 32 }}
-      >
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-
-      {/* Body */}
-      <div className="min-w-0 flex flex-col gap-0.5">
-        <div
-          className="text-[13px] font-medium leading-snug"
-          style={{ color: notif.is_read ? 'var(--text-2, #b4b6bd)' : 'var(--text-1, #ededee)' }}
-        >
-          {notif.title}
-        </div>
-        {notif.message && (
-          <div
-            className="text-[11.5px] truncate"
-            style={{ color: 'var(--text-3, #8a8d96)' }}
-          >
-            {notif.message}
-          </div>
-        )}
-        {/* Inline actions — show on hover */}
-        {hovered && (
-          <div className="flex items-center gap-2 mt-1">
-            {!notif.is_read && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onMarkRead(); }}
+      <PageHeader
+        icon={Bell}
+        title="Inbox"
+        subtitle={
+          unreadCount > 0
+            ? `${unreadCount} unread · ${notifs.length} total`
+            : 'All caught up'
+        }
+        accent="rose"
+        actions={
+          <>
+            {unreadCount > 0 && (
+              <ActionButton
+                tone="ghost"
+                icon={Check}
+                onClick={markAllRead}
                 disabled={isPending}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors disabled:opacity-50"
-                style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2, #b4b6bd)' }}
               >
-                <Check className="h-2.5 w-2.5" /> Mark read
-              </button>
+                Mark all read
+              </ActionButton>
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              disabled={isPending}
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors disabled:opacity-50"
-              style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-3, #8a8d96)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#fca5a5'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-3, #8a8d96)'; }}
-            >
-              <Trash2 className="h-2.5 w-2.5" /> Delete
-            </button>
-          </div>
-        )}
-      </div>
+            <ActionButton tone="ghost" icon={Settings}>
+              Preferences
+            </ActionButton>
+          </>
+        }
+      />
 
-      {/* Time */}
-      <div
-        className="text-[11.5px] tabular-nums shrink-0 whitespace-nowrap"
-        style={{ color: 'var(--text-3, #8a8d96)' }}
-      >
-        {timeAgo(notif.created_at)}
-      </div>
+      <TabBar tabs={tabs} value={tab} onChange={setTab} />
 
-      {/* Unread dot */}
-      <div className="flex items-center justify-center">
-        {!notif.is_read && (
-          <span
-            className="rounded-full"
-            style={{ width: 6, height: 6, background: 'var(--accent, #7c83ff)', display: 'block' }}
+      {filtered.length === 0 ? (
+        <GlassCard padding="p-0">
+          <EmptyState
+            icon={BellOff}
+            title="No notifications here"
+            description={
+              tab === 'unread'
+                ? "You're all caught up — nothing unread."
+                : 'New notifications will show up here.'
+            }
+            accent="rose"
           />
-        )}
-      </div>
+        </GlassCard>
+      ) : (
+        <GlassCard padding="p-0">
+          <AnimatePresence initial={false}>
+            {filtered.map((n, i) => (
+              <motion.div
+                key={n.id}
+                layout
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: 12 }}
+                transition={{ duration: 0.18, delay: i * 0.02 }}
+                className={`group relative flex items-start gap-3 border-b border-white/[0.04] px-4 py-3 transition-colors last:border-0 hover:bg-white/[0.025] ${
+                  !n.is_read ? 'bg-violet-500/[0.025]' : ''
+                }`}
+              >
+                {!n.is_read && (
+                  <span className="absolute top-1/2 left-1 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(124,131,255,0.7)]" />
+                )}
+
+                <IconChip
+                  icon={cfg(n.notification_type).icon}
+                  accent={cfg(n.notification_type).accent}
+                  size="sm"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p
+                      className={`text-[13px] leading-snug ${
+                        n.is_read
+                          ? 'font-medium text-gray-300'
+                          : 'font-semibold text-white'
+                      }`}
+                    >
+                      {n.title}
+                    </p>
+                    <span className="shrink-0 font-mono text-[10px] tabular-nums text-gray-500">
+                      {timeAgo(n.created_at)}
+                    </span>
+                  </div>
+                  {n.message && (
+                    <p className="mt-0.5 line-clamp-2 text-[11.5px] text-gray-500">
+                      {n.message}
+                    </p>
+                  )}
+
+                  <div className="mt-1.5 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    {!n.is_read && (
+                      <button
+                        type="button"
+                        onClick={() => markRead(n.id)}
+                        disabled={isPending}
+                        className="inline-flex items-center gap-1 rounded border border-white/[0.06] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-gray-300 transition hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50"
+                      >
+                        <Check className="h-2.5 w-2.5" /> Mark read
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => del(n.id)}
+                      disabled={isPending}
+                      className="inline-flex items-center gap-1 rounded border border-white/[0.06] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-gray-400 transition hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" /> Delete
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </GlassCard>
+      )}
     </div>
   );
 }

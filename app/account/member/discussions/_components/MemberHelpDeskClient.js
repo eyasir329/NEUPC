@@ -27,6 +27,7 @@ import {
   fetchUserStatsAction,
 } from '@/app/_lib/discussion-actions';
 import { useDiscussionRealtime } from '@/app/_hooks/useDiscussionRealtime';
+import { PageHeader, ActionButton, Pill } from '../../_components/_ui';
 import CreateDiscussionModal from './CreateDiscussionModal';
 import DiscussionDetailView from './DiscussionDetailView';
 import RoadmapView from './RoadmapView';
@@ -429,49 +430,39 @@ export default function MemberHelpDeskClient({
 
   return (
     <div className="space-y-0">
-      {/* ── Page header ── */}
-      <div className="pb-5 pt-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
-              Discussions
-            </h1>
-            <p className="mt-1 text-[13px] text-white/40">
-              {discussions.length} active threads
-              {activeTab === 'all' && (
-                <span
-                  className={`ml-2 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] ${
-                    isConnected
-                      ? 'bg-green-500/10 text-green-400'
-                      : 'bg-yellow-500/10 text-yellow-400'
-                  }`}
-                >
-                  {isConnected ? <Wifi className="h-2.5 w-2.5" /> : <WifiOff className="h-2.5 w-2.5" />}
-                  {isConnected ? 'Live' : 'Connecting'}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { fetchDiscussions(); fetchStats(); }}
-              disabled={isLoading}
-              className="flex h-[30px] items-center gap-1.5 rounded-md border border-white/[0.09] bg-transparent px-3 text-[12.5px] font-medium text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-gray-200 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="flex h-[30px] items-center gap-1.5 rounded-md bg-gray-100 px-3 text-[12.5px] font-medium text-gray-900 transition-colors hover:bg-white"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New thread
-            </button>
-          </div>
-        </div>
+      <div className="pb-5">
+        <PageHeader
+          icon={MessageSquare}
+          title="Help Desk"
+          subtitle={`${discussions.length} active threads`}
+          accent="pink"
+          meta={
+            activeTab === 'all' && (
+              <Pill tone={isConnected ? 'emerald' : 'amber'} icon={isConnected ? Wifi : WifiOff}>
+                {isConnected ? 'Live' : 'Connecting'}
+              </Pill>
+            )
+          }
+          actions={
+            <>
+              <ActionButton
+                tone="ghost"
+                icon={RefreshCw}
+                onClick={() => { fetchDiscussions(); fetchStats(); }}
+                disabled={isLoading}
+              >
+                Refresh
+              </ActionButton>
+              <ActionButton
+                tone="primary"
+                icon={Plus}
+                onClick={() => setShowCreateModal(true)}
+              >
+                New thread
+              </ActionButton>
+            </>
+          }
+        />
       </div>
 
       {/* ── Tabs ── */}
