@@ -166,6 +166,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
         label: 'Activities',
         items: [
           {
+            id: 'daily-activity',
+            label: 'Daily Activity',
+            icon: CheckSquare,
+            href: '/account/member/daily-activity',
+          },
+          {
             id: 'events',
             label: 'Events',
             icon: Calendar,

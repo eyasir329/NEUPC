@@ -145,7 +145,9 @@ export function SectionHeader({
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="flex items-center gap-2.5">
         {Icon && (
-          <Icon className={`h-4 w-4 text-${accent}-400 flex-shrink-0`} />
+          <Icon
+            className={`h-4 w-4 shrink-0 ${ACCENT_TEXT[accent] ?? ACCENT_TEXT.gray}`}
+          />
         )}
         <div>
           <h2 className="text-sm font-semibold text-gray-200">{title}</h2>
@@ -168,7 +170,7 @@ export function IconChip({ icon: Icon, accent = 'blue', size = 'md' }) {
   };
   return (
     <div
-      className={`inline-flex rounded-lg border border-${accent}-500/20 bg-${accent}-500/10 text-${accent}-400 ${sizes[size]}`}
+      className={`inline-flex rounded-lg border ${ACCENT_CHIP[accent] ?? ACCENT_CHIP.blue} ${sizes[size]}`}
     >
       <Icon />
     </div>
@@ -188,11 +190,11 @@ export function StatCard({
 }) {
   const inner = (
     <>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex min-h-9 items-start justify-between gap-3">
         {Icon && <IconChip icon={Icon} accent={accent} />}
         {trend && (
           <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium whitespace-nowrap ${
               trend.dir === 'up'
                 ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                 : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -217,8 +219,14 @@ export function StatCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
+      className="h-full"
     >
-      <GlassCard hover href={href} padding="p-4">
+      <GlassCard
+        hover
+        href={href}
+        padding="p-4"
+        className="flex h-full flex-col"
+      >
         {inner}
       </GlassCard>
     </motion.div>
@@ -325,7 +333,7 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center py-12 text-center">
       {Icon && (
         <div
-          className={`mb-3 rounded-2xl border border-${accent}-500/20 bg-${accent}-500/10 p-3 text-${accent}-400`}
+          className={`mb-3 rounded-2xl border p-3 ${ACCENT_CHIP[accent] ?? ACCENT_CHIP.gray}`}
         >
           <Icon className="h-7 w-7" />
         </div>

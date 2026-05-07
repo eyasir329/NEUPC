@@ -25,24 +25,23 @@ const STATUS_TONE = {
 
 export default function UpcomingEventsSection({ upcomingEvents }) {
   return (
-    <div className="lg:col-span-2">
-      <GlassCard padding="p-5">
-        <SectionHeader
-          icon={Calendar}
-          title="Upcoming Events"
-          subtitle="Workshops, contests, and meetups you can join"
-          accent="blue"
-          action={
-            <ActionButton
-              tone="primary"
-              icon={ArrowRight}
-              href="/account/member/events"
-            >
-              View All
-            </ActionButton>
-          }
-        />
-        <div className="space-y-2.5">
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Calendar}
+        title="Upcoming Events"
+        subtitle="Workshops, contests, and meetups you can join"
+        accent="blue"
+        action={
+          <ActionButton
+            tone="primary"
+            icon={ArrowRight}
+            href="/account/member/events"
+          >
+            View All
+          </ActionButton>
+        }
+      />
+      <div className="grid gap-2.5 sm:grid-cols-2">
           {upcomingEvents.map((event, i) => (
             <motion.div
               key={event.id}
@@ -86,8 +85,7 @@ export default function UpcomingEventsSection({ upcomingEvents }) {
               <ChevronRight className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-gray-300" />
             </motion.div>
           ))}
-        </div>
-      </GlassCard>
-    </div>
+      </div>
+    </GlassCard>
   );
 }

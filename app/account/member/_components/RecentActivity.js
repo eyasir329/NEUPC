@@ -1,6 +1,6 @@
 /**
- * @file Recent activity feed — chronological list of the member's
- *   latest actions, rendered with the shared `_ui` primitives.
+ * @file Recent activity feed — chronological timeline of the member's
+ *   last few actions. Caps at 4 items with a "View all" affordance.
  * @module MemberRecentActivity
  */
 
@@ -14,8 +14,9 @@ import {
   BookOpen,
   FileText,
   Activity,
+  ArrowRight,
 } from 'lucide-react';
-import { GlassCard, SectionHeader, IconChip } from './_ui';
+import { GlassCard, SectionHeader, IconChip, ActionButton } from './_ui';
 import { motion } from 'framer-motion';
 
 const ICON_MAP = {
@@ -27,7 +28,12 @@ const ICON_MAP = {
   FileText,
 };
 
+const MAX_ITEMS = 4;
+
 export default function RecentActivity({ recentActivities }) {
+  const visible = recentActivities.slice(0, MAX_ITEMS);
+  const extra = recentActivities.length - visible.length;
+
   return (
     <GlassCard padding="p-5">
       <SectionHeader
@@ -35,10 +41,22 @@ export default function RecentActivity({ recentActivities }) {
         title="Recent Activity"
         subtitle="Your latest actions"
         accent="emerald"
+        action={
+          extra > 0 && (
+            <ActionButton
+              tone="ghost"
+              icon={ArrowRight}
+              href="/account/member/participation"
+            >
+              All {recentActivities.length}
+            </ActionButton>
+          )
+        }
       />
       <div className="relative space-y-1">
-        <div className="absolute top-2 bottom-2 left-[18px] w-px bg-white/[0.06]" />
-        {recentActivities.map((activity, i) => {
+        {/* Vertical timeline line — aligned with IconChip size="sm" centre (p-1.5 + h-3.5 ≈ 13px from row left at p-2) */}
+        <div className="absolute top-3 bottom-3 left-[21px] w-px bg-white/[0.06]" />
+        {visible.map((activity, i) => {
           const Icon = ICON_MAP[activity.icon] ?? Activity;
           return (
             <motion.div

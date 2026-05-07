@@ -11,8 +11,7 @@ import { motion } from 'framer-motion';
 
 export default function AchievementsSection({ achievements }) {
   return (
-    <div className="lg:col-span-2">
-      <GlassCard padding="p-5">
+    <GlassCard padding="p-5">
         <SectionHeader
           icon={Trophy}
           title="Achievements"
@@ -73,8 +72,7 @@ export default function AchievementsSection({ achievements }) {
               )}
             </motion.div>
           ))}
-        </div>
-      </GlassCard>
-    </div>
+      </div>
+    </GlassCard>
   );
 }

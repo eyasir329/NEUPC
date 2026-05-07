@@ -1,24 +1,17 @@
 /**
- * @file Member stats grid — six headline metrics + 30-day sparkline,
- *   styled with the shared `_ui` design primitives.
+ * @file Member stats grid — 4 hero metrics (problems, rating, events,
+ *   achievements). Sparkline + activity moved to dedicated widgets.
  * @module MemberStatsGrid
  */
 
 'use client';
 
-import {
-  Calendar,
-  Trophy,
-  MessageSquare,
-  Target,
-  Code2,
-  TrendingUp,
-} from 'lucide-react';
-import { StatCard, GlassCard, Sparkline } from './_ui';
+import { Calendar, Trophy, Code2, TrendingUp } from 'lucide-react';
+import { StatCard } from './_ui';
 
-export default function MemberStatsGrid({ stats, activity = [] }) {
+export default function MemberStatsGrid({ stats }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         icon={Code2}
         label="Problems Solved"
@@ -26,7 +19,7 @@ export default function MemberStatsGrid({ stats, activity = [] }) {
         sublabel="Across 5 platforms"
         accent="emerald"
         href="/account/member/problem-solving"
-        trend={{ dir: 'up', value: '12 this week' }}
+        trend={{ dir: 'up', value: '12 / week' }}
         delay={0}
       />
       <StatCard
@@ -35,6 +28,7 @@ export default function MemberStatsGrid({ stats, activity = [] }) {
         value={stats.contestRating}
         sublabel="Specialist tier"
         accent="violet"
+        href="/account/member/problem-solving"
         trend={{ dir: 'up', value: '+34' }}
         delay={0.04}
       />
@@ -56,31 +50,6 @@ export default function MemberStatsGrid({ stats, activity = [] }) {
         href="/account/member/achievements"
         delay={0.12}
       />
-      <StatCard
-        icon={MessageSquare}
-        label="Unread"
-        value={stats.unreadMessages}
-        sublabel="Help Desk replies"
-        accent="rose"
-        href="/account/member/notifications"
-        delay={0.16}
-      />
-      <GlassCard padding="p-4" className="hidden 2xl:block">
-        <div className="flex items-start justify-between">
-          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-2 text-cyan-400">
-            <Target className="h-5 w-5" />
-          </div>
-        </div>
-        <div className="mt-3">
-          <div className="text-xs text-gray-400">Last 30 Days</div>
-          <div className="mt-2">
-            <Sparkline data={activity} tone="emerald" />
-          </div>
-          <div className="mt-1 text-[10px] text-gray-500">
-            {activity.reduce((a, b) => a + b, 0)} solves
-          </div>
-        </div>
-      </GlassCard>
     </div>
   );
 }

@@ -1,7 +1,18 @@
 /**
- * @file Member dashboard shell — composes the redesigned dashboard view
- *   using the shared `_ui` design primitives that mirror the
- *   problem-solving page's visual language.
+ * @file Member dashboard shell — clarity-first layout with a clear
+ *   primary/secondary hierarchy.
+ *
+ * Layout (top → bottom):
+ *   1. MemberHeader             — greeting + level + XP + streak (one row)
+ *   2. ProfileCompletenessNudge — only when < 100% (dismissible)
+ *   3. MemberStatsGrid          — 4 hero metrics
+ *   4. Action zone              — 2/3 primary stack + 1/3 side rail
+ *        primary: NextContest · ContinueLearning · DailyPractice
+ *        rail:    TodaysPlan · NotificationsPreview · RecentActivity
+ *   5. UpcomingEvents           — full-width
+ *   6. LearningProgress         — full-width
+ *   7. AchievementsSection      — demoted (vanity, not actionable)
+ *
  * @module MemberDashboardClient
  */
 
@@ -13,8 +24,16 @@ import UpcomingEventsSection from './UpcomingEventsSection';
 import RecentActivity from './RecentActivity';
 import LearningProgress from './LearningProgress';
 import AchievementsSection from './AchievementsSection';
-import QuickAccessSection from './QuickAccessSection';
+import ContinueLearningCard from './ContinueLearningCard';
+import NextContestCountdown from './NextContestCountdown';
+import NotificationsPreview from './NotificationsPreview';
+import ProfileCompletenessNudge from './ProfileCompletenessNudge';
+import DailyPracticeCard from './DailyPracticeCard';
+import TodaysPlan from './TodaysPlan';
 import { PageShell } from './_ui';
+
+const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
+const hoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();
 
 export default function MemberDashboardClient({ session }) {
   const firstName = session.user.name?.split(' ')[0] || 'Member';
@@ -38,6 +57,151 @@ export default function MemberDashboardClient({ session }) {
     rank: 47,
     totalMembers: 412,
   };
+
+  // Profile completeness checklist — show nudge only if not 100%
+  const profileChecklist = [
+    { id: 'avatar', label: 'Avatar', done: true },
+    { id: 'bio', label: 'Bio', done: true },
+    { id: 'cf', label: 'Codeforces', done: true },
+    { id: 'lc', label: 'LeetCode', done: false },
+    { id: 'github', label: 'GitHub', done: true },
+    { id: 'skills', label: 'Skills', done: false },
+    { id: 'cgpa', label: 'CGPA', done: false },
+  ];
+
+  // Continue-learning resume target
+  const resume = {
+    bootcamp: 'DSA Mastery Track',
+    lessonTitle: 'Segment Trees · Lazy Propagation',
+    moduleIndex: 7,
+    lessonIndex: 3,
+    duration: 28,
+    completedLessons: 46,
+    totalLessons: 50,
+    remaining: 4,
+    lastOpened: '2h ago',
+    href: '/account/member/bootcamps',
+  };
+
+  // Next registered contest with live countdown
+  const nextContest = {
+    title: 'NEUPC Monthly Contest #27',
+    platform: 'Codeforces',
+    location: 'Online',
+    registered: 156,
+    startAt: inHours(18 + 0.45),
+    href: '/account/member/events',
+  };
+
+  // Top unread notifications (subset of full inbox)
+  const notifications = [
+    {
+      id: 'n1',
+      notification_type: 'event',
+      title: 'Web3 Workshop starts in 2 hours',
+      message: 'Reminder for your registered event in CSE Seminar Hall.',
+      created_at: hoursAgo(0.05),
+      is_read: false,
+    },
+    {
+      id: 'n2',
+      notification_type: 'mention',
+      title: 'Sajid Hossain replied to your thread',
+      message: '"How to debug Express middleware order?" — upvoted 12 times.',
+      created_at: hoursAgo(0.2),
+      is_read: false,
+    },
+    {
+      id: 'n3',
+      notification_type: 'achievement',
+      title: "You earned the 'Open-Source Contributor' badge",
+      message: '5 PRs merged in NEUPC repos this month.',
+      created_at: hoursAgo(3),
+      is_read: false,
+    },
+    {
+      id: 'n4',
+      notification_type: 'system',
+      title: 'Codeforces sync completed',
+      message: '+12 new submissions imported.',
+      created_at: hoursAgo(6),
+      is_read: false,
+    },
+    {
+      id: 'n5',
+      notification_type: 'mention',
+      title: 'Nusrat Jahan mentioned you',
+      message: '"@you check this elegant DP transition for LIS!"',
+      created_at: hoursAgo(8),
+      is_read: false,
+    },
+    {
+      id: 'n6',
+      notification_type: 'lesson',
+      title: 'New lesson: JWT Authentication',
+      message: 'In Full-Stack Web Dev bootcamp · 22 min.',
+      created_at: hoursAgo(36),
+      is_read: true,
+    },
+    {
+      id: 'n7',
+      notification_type: 'event',
+      title: "Hackathon '26 registration opens tomorrow",
+      message: 'Limited to 312 participants across 78 teams.',
+      created_at: hoursAgo(24),
+      is_read: true,
+    },
+  ];
+
+  // Daily practice recommendation
+  const dailyProblem = {
+    title: 'Two Pointers · Maximum Subarray with Distinct Values',
+    difficulty: 'Medium',
+    platform: 'Codeforces',
+    tags: ['two-pointers', 'sliding-window', 'arrays'],
+    solvedBy: 4218,
+    estTime: 25,
+    href: 'https://codeforces.com/problemset/problem/1234/D',
+  };
+  const todaySolved = 3;
+  const dailyGoal = 5;
+  const last7 = [4, 2, 5, 7, 3, 6, todaySolved];
+
+  // Today's plan — derived from registrations, replies, lessons
+  const todaysPlan = [
+    {
+      id: 'p1',
+      type: 'practice',
+      title: `Solve ${dailyGoal - todaySolved} more problems`,
+      subtitle: "Today's daily goal · +50 XP",
+      accent: 'emerald',
+      href: '/account/member/problem-solving',
+    },
+    {
+      id: 'p2',
+      type: 'reply',
+      title: 'Reply to 2 unanswered Help Desk threads',
+      subtitle: 'You were mentioned · 1 hour overdue',
+      accent: 'violet',
+      href: '/account/member/discussions',
+    },
+    {
+      id: 'p3',
+      type: 'lesson',
+      title: 'Finish Segment Trees lesson',
+      subtitle: '28 min · resumes from where you stopped',
+      accent: 'pink',
+      href: '/account/member/bootcamps',
+    },
+    {
+      id: 'p4',
+      type: 'contest',
+      title: 'Confirm seat for Hackathon \'26',
+      subtitle: 'Registration window closes in 2 days',
+      accent: 'amber',
+      href: '/account/member/events',
+    },
+  ];
 
   const upcomingEvents = [
     {
@@ -96,42 +260,12 @@ export default function MemberDashboardClient({ session }) {
   ];
 
   const recentActivities = [
-    {
-      action: 'Solved "Two Pointers Approach" on Codeforces Round 991',
-      time: '12 minutes ago',
-      icon: 'CheckCircle',
-      tone: 'emerald',
-    },
-    {
-      action: 'Registered for NEUPC Monthly Contest #27',
-      time: '2 hours ago',
-      icon: 'Calendar',
-      tone: 'blue',
-    },
-    {
-      action: 'Earned the "30-Day Streak" achievement badge',
-      time: '1 day ago',
-      icon: 'Award',
-      tone: 'amber',
-    },
-    {
-      action: 'Replied to "DP Optimization Tricks" in Help Desk',
-      time: '2 days ago',
-      icon: 'MessageSquare',
-      tone: 'violet',
-    },
-    {
-      action: 'Completed module: "Graph Traversal Patterns"',
-      time: '3 days ago',
-      icon: 'BookOpen',
-      tone: 'cyan',
-    },
-    {
-      action: 'Submitted certificate request for ICPC Regional',
-      time: '5 days ago',
-      icon: 'FileText',
-      tone: 'pink',
-    },
+    { action: 'Solved "Two Pointers Approach" on Codeforces Round 991', time: '12 minutes ago', icon: 'CheckCircle', tone: 'emerald' },
+    { action: 'Registered for NEUPC Monthly Contest #27', time: '2 hours ago', icon: 'Calendar', tone: 'blue' },
+    { action: 'Earned the "30-Day Streak" achievement badge', time: '1 day ago', icon: 'Award', tone: 'amber' },
+    { action: 'Replied to "DP Optimization Tricks" in Help Desk', time: '2 days ago', icon: 'MessageSquare', tone: 'violet' },
+    { action: 'Completed module: "Graph Traversal Patterns"', time: '3 days ago', icon: 'BookOpen', tone: 'cyan' },
+    { action: 'Submitted certificate request for ICPC Regional', time: '5 days ago', icon: 'FileText', tone: 'pink' },
   ];
 
   const achievements = [
@@ -145,11 +279,6 @@ export default function MemberDashboardClient({ session }) {
     { title: 'Hackathon Winner', icon: '🚀', earned: false, progress: 30 },
   ];
 
-  const last30Activity = [
-    1, 0, 2, 3, 1, 0, 4, 2, 5, 3, 1, 2, 6, 4, 3, 2, 1, 0, 3, 5, 4, 2, 6, 7, 3,
-    2, 4, 5, 8, 6,
-  ];
-
   return (
     <PageShell>
       <MemberHeader
@@ -157,19 +286,37 @@ export default function MemberDashboardClient({ session }) {
         userLevel={userLevel}
         streakDays={stats.streakDays}
       />
-      <MemberStatsGrid stats={stats} activity={last30Activity} />
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <UpcomingEventsSection upcomingEvents={upcomingEvents} />
-        <RecentActivity recentActivities={recentActivities} />
+      <ProfileCompletenessNudge checklist={profileChecklist} />
+
+      <MemberStatsGrid stats={stats} />
+
+      <div className="grid gap-5 lg:grid-cols-3 lg:items-stretch">
+        <div className="flex flex-col gap-5 lg:col-span-2">
+          <NextContestCountdown contest={nextContest} />
+          <ContinueLearningCard resume={resume} />
+          <div className="flex flex-1 flex-col">
+            <DailyPracticeCard
+              problem={dailyProblem}
+              todaySolved={todaySolved}
+              dailyGoal={dailyGoal}
+              weekActivity={last7}
+              streak={stats.streakDays}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-5">
+          <TodaysPlan items={todaysPlan} />
+          <NotificationsPreview items={notifications} />
+          <RecentActivity recentActivities={recentActivities} />
+        </div>
       </div>
+
+      <UpcomingEventsSection upcomingEvents={upcomingEvents} />
 
       <LearningProgress roadmaps={roadmaps} />
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <AchievementsSection achievements={achievements} />
-        <QuickAccessSection />
-      </div>
+      <AchievementsSection achievements={achievements} />
     </PageShell>
   );
 }
