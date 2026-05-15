@@ -1,10 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   normalizeEmbed,
   safeExternalHref,
 } from '@/app/_lib/resources/embed-utils';
-import { FileDown, Download, ExternalLink, Loader2 } from 'lucide-react';
+import { FileDown, Download, ExternalLink, Loader2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 // ─── File helpers ─────────────────────────────────────────────────────────────
 
@@ -309,6 +310,192 @@ function LinkedInIcon({ className = 'h-7 w-7' }) {
   );
 }
 
+// ─── Text File Reader ─────────────────────────────────────────────────────────
+
+function TextFileReader({ fileUrl, title, className = '' }) {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Check if it's a Google Drive URL
+  const isDrive = fileUrl?.includes('drive.google.com') || fileUrl?.match(/^\/api\/image\//);
+
+  useEffect(() => {
+    if (!fileUrl || isDrive) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+    
+    fetch(fileUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch text');
+        return res.text();
+      })
+      .then((text) => {
+        if (isMounted) {
+          setContent(text);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error('Error fetching text file:', err);
+          setError(true);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fileUrl, isDrive]);
+
+  // If it's a Drive URL or we encountered a CORS/fetch error, fall back to an iframe
+  if (isDrive || error) {
+    let embedSrc = fileUrl;
+    const driveMatch = fileUrl.match(/^\/api\/image\/([^/?#&]+)/);
+    if (driveMatch?.[1]) {
+      embedSrc = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+    } else if (fileUrl.includes('drive.google.com/file/d/')) {
+      const fileIdMatch = fileUrl.match(/file\/d\/([^/?#&]+)/);
+      if (fileIdMatch?.[1]) {
+        embedSrc = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+      }
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+          <iframe
+            src={embedSrc}
+            title={title || 'Text Document'}
+            className="h-full w-full border-0 bg-white"
+            loading="lazy"
+            allowFullScreen
+          />
+        </div>
+        <div className="flex justify-end">
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in new tab
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className={`relative flex aspect-[3/4] w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0d1117] md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+        {/* Header bar */}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-white/[0.02] px-4 py-2">
+          <span className="flex items-center gap-2 text-xs font-medium text-gray-400">
+            <FileDown className="h-3.5 w-3.5 text-gray-500" />
+            {title || 'text_file.txt'}
+          </span>
+        </div>
+        
+        {/* Content area */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6 [scrollbar-width:thin]">
+          {loading ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-white/20" />
+            </div>
+          ) : (
+            <pre className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-gray-300 break-words">
+              {content}
+            </pre>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex justify-end">
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Open in new tab
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─── Image File Viewer ────────────────────────────────────────────────────────
+
+function ImageFileViewer({ fileUrl, title, className = '' }) {
+  const [scale, setScale] = useState(1);
+
+  const handleZoomIn = () => setScale((s) => Math.min(s + 0.5, 4));
+  const handleZoomOut = () => setScale((s) => Math.max(s - 0.5, 0.5));
+  const handleReset = () => setScale(1);
+
+  return (
+    <div className="space-y-3">
+      <div className={`relative flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-black/50 ${className}`}>
+        
+        {/* Floating Toolbar */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 p-1.5 shadow-xl backdrop-blur-md">
+          <button
+            onClick={handleZoomOut}
+            disabled={scale <= 0.5}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+            title="Zoom Out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <div className="w-[4ch] text-center text-[11px] font-medium text-white/70">
+            {Math.round(scale * 100)}%
+          </div>
+          <button
+            onClick={handleZoomIn}
+            disabled={scale >= 4}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+            title="Zoom In"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <div className="mx-1 h-4 w-px bg-white/20" />
+          <button
+            onClick={handleReset}
+            disabled={scale === 1}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+            title="Reset Zoom"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Image Container */}
+        <div className="flex h-[70vh] min-h-[400px] w-full items-center justify-center overflow-hidden p-4">
+          <img
+            src={fileUrl}
+            alt={title || 'Image file'}
+            style={{ 
+              transform: `scale(${scale})`, 
+              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)' 
+            }}
+            className="max-h-full w-auto max-w-full rounded-lg object-contain shadow-2xl origin-center"
+            loading="lazy"
+            draggable={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function ResourceEmbed({ resource, className = '' }) {
@@ -322,17 +509,7 @@ export default function ResourceEmbed({ resource, className = '' }) {
     if (!src) return null;
 
     return (
-      <div
-        className={`group relative overflow-hidden rounded-xl border border-white/10 bg-black ${className}`}
-      >
-        <img
-          src={src}
-          alt={resource?.title || 'Image resource'}
-          className="w-full object-contain"
-          style={{ maxHeight: '70vh' }}
-          loading="lazy"
-        />
-      </div>
+      <ImageFileViewer fileUrl={src} title={resource?.title} className={className} />
     );
   }
 
@@ -390,7 +567,7 @@ export default function ResourceEmbed({ resource, className = '' }) {
 
     return (
       <article
-        className={`prose prose-invert prose-headings:text-white prose-p:text-gray-300 prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white prose-code:rounded prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-blue-300 prose-pre:border prose-pre:border-white/10 prose-pre:bg-black/40 prose-img:rounded-xl prose-img:border prose-img:border-white/10 max-w-none ${className}`}
+        className={`prose prose-invert prose-headings:text-white prose-p:text-gray-300 prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white prose-code:rounded prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-blue-300 prose-pre:border prose-pre:border-white/10 prose-pre:bg-black/40 prose-img:rounded-xl prose-img:border prose-img:border-white/10 max-w-none whitespace-pre-wrap ${className}`}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
@@ -470,25 +647,149 @@ export default function ResourceEmbed({ resource, className = '' }) {
   if (type === 'file' && fileUrl) {
     const ext = getFileTypeKey(resource, fileUrl);
 
-    // If it's a PDF, embed it in an iframe
-    if (ext === 'pdf') {
-      let pdfSrc = fileUrl;
-      const driveMatch = fileUrl.match(/^\/api\/image\/([^/?#&]+)/);
-      if (driveMatch?.[1]) {
-        pdfSrc = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-      } else if (fileUrl.includes('drive.google.com/file/d/')) {
-        const fileIdMatch = fileUrl.match(/file\/d\/([^/?#&]+)/);
-        if (fileIdMatch?.[1]) {
-          pdfSrc = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-        }
+    // 1. Check if it's a Google Drive URL
+    let driveId = null;
+    const driveMatch = fileUrl.match(/^\/api\/image\/([^/?#&]+)/);
+    if (driveMatch?.[1]) {
+      driveId = driveMatch[1];
+    } else if (fileUrl.includes('drive.google.com/file/d/')) {
+      const fileIdMatch = fileUrl.match(/file\/d\/([^/?#&]+)/);
+      if (fileIdMatch?.[1]) {
+        driveId = fileIdMatch[1];
       }
+    }
 
+    // If it is a Drive URL, Drive handles its own previews for almost everything
+    if (driveId) {
+      const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
       return (
         <div className="space-y-3">
           <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
             <iframe
-              src={pdfSrc}
+              src={previewUrl}
+              title={resource?.title || 'Google Drive Document'}
+              className="h-full w-full border-0 bg-white"
+              loading="lazy"
+              allowFullScreen
+            />
+          </div>
+          <div className="flex justify-end">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open in new tab
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Handle Text files
+    if (ext === 'txt') {
+      return (
+        <TextFileReader fileUrl={fileUrl} title={resource?.title} className={className} />
+      );
+    }
+
+    // 3. Handle PDF files
+    if (ext === 'pdf') {
+      return (
+        <div className="space-y-3">
+          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+            <iframe
+              src={fileUrl}
               title={resource?.title || 'PDF Document'}
+              className="h-full w-full border-0 bg-white"
+              loading="lazy"
+              allowFullScreen
+            />
+          </div>
+          <div className="flex justify-end">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open in new tab
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // 4. Handle Images natively with Zoom
+    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+    if (imageExts.includes(ext)) {
+      return (
+        <ImageFileViewer fileUrl={fileUrl} title={resource?.title} className={className} />
+      );
+    }
+
+    // 5. Handle Videos natively
+    const videoExts = ['mp4', 'webm', 'ogg', 'mov'];
+    if (videoExts.includes(ext)) {
+      return (
+        <div className="space-y-3">
+          <div className={`aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-lg shadow-black/30 ${className}`}>
+            <video controls className="h-full w-full object-contain">
+              <source src={fileUrl} type={`video/${ext === 'mov' ? 'mp4' : ext}`} />
+              Your browser does not support the video element.
+            </video>
+          </div>
+        </div>
+      );
+    }
+
+    // 6. Handle Audio natively
+    const audioExts = ['mp3', 'wav', 'ogg', 'm4a'];
+    if (audioExts.includes(ext)) {
+      return (
+        <div className={`flex flex-col gap-5 rounded-xl border border-white/10 bg-[#0d1117] p-5 shadow-lg ${className}`}>
+          <div className="flex items-center gap-3 text-gray-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
+              <FileDown className="h-5 w-5" />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="truncate text-[14px] font-medium text-white">{resource?.title || 'Audio File'}</p>
+              <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{ext} AUDIO</p>
+            </div>
+          </div>
+          <audio controls className="w-full h-10 outline-none">
+            <source src={fileUrl} type={`audio/${ext === 'm4a' ? 'mp4' : ext}`} />
+            Your browser does not support the audio element.
+          </audio>
+          <div className="flex justify-end pt-2 border-t border-white/5">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-[12px] font-medium text-gray-300 transition-all hover:bg-white/10 hover:text-white"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // 7. Handle Office Documents via Google Docs Viewer
+    // (Note: This requires fileUrl to be a public absolute URL)
+    const officeExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'];
+    if (officeExts.includes(ext) && fileUrl.startsWith('http')) {
+      const gdocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+      return (
+        <div className="space-y-3">
+          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+            <iframe
+              src={gdocsUrl}
+              title={resource?.title || 'Office Document'}
               className="h-full w-full border-0 bg-white"
               loading="lazy"
               allowFullScreen

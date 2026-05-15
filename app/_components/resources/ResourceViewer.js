@@ -158,7 +158,7 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
       )}
 
       {/* ── Main embed / content ── */}
-      <div className="overflow-hidden rounded-2xl border border-white/[0.07]">
+      <div className="w-full">
         <ResourceEmbed resource={resource} />
       </div>
 

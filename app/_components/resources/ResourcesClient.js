@@ -401,7 +401,7 @@ export default function ResourcesClient({
                   <h3 className="mb-6 text-lg font-semibold text-white">
                     Resource Content Preview
                   </h3>
-                  <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-gray-950 min-h-[400px]">
+                  <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-gray-950 min-h-[400px] p-4 sm:p-6 lg:p-8">
                     <ViewTracker resourceId={activeResource.id} source="inline_view" />
                     <ResourceViewer resource={activeResource} hideHeader={true} />
                   </div>
