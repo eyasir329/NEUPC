@@ -22,6 +22,8 @@ import {
   Trash2,
   AtSign,
   Inbox,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   markAsReadAction,
@@ -70,10 +72,10 @@ const SYSTEM_TYPES = ['system', 'achievement', 'info', 'success', 'lesson'];
 function timeAgo(iso) {
   if (!iso) return '';
   const s = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (s < 60) return 'now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d`;
+  if (s < 60) return 'Just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} hrs ago`;
+  if (s < 604800) return `${Math.floor(s / 86400)} days ago`;
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -93,10 +95,23 @@ export default function MemberNotificationsClient({
   const useMock = serverNotifs.length === 0;
   const [notifs, setNotifs] = useState(useMock ? MOCK_NOTIFICATIONS : serverNotifs);
   const [tab, setTab] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
 
   const unreadCount = notifs.filter((n) => !n.is_read).length;
   const filtered = useMemo(() => tabFilter(notifs, tab), [notifs, tab]);
+
+  const ITEMS_PER_PAGE = 7;
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedNotifs = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage]);
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab);
+    setCurrentPage(1);
+  };
 
   const tabs = [
     { value: 'all', label: 'All', icon: Inbox, count: notifs.length },
@@ -123,7 +138,14 @@ export default function MemberNotificationsClient({
   const del = (id) => {
     startTransition(async () => {
       if (!useMock) await deleteNotificationAction(id).catch(() => {});
-      setNotifs((prev) => prev.filter((n) => n.id !== id));
+      setNotifs((prev) => {
+        const remaining = prev.filter((n) => n.id !== id);
+        const newFiltered = tabFilter(remaining, tab);
+        if (currentPage > 1 && newFiltered.length <= (currentPage - 1) * ITEMS_PER_PAGE) {
+          setCurrentPage(currentPage - 1);
+        }
+        return remaining;
+      });
     });
   };
 
@@ -157,50 +179,69 @@ export default function MemberNotificationsClient({
         }
       />
 
-      <TabBar tabs={tabs} value={tab} onChange={setTab} />
+      <TabBar tabs={tabs} value={tab} onChange={handleTabChange} />
 
-      {filtered.length === 0 ? (
-        <GlassCard padding="p-0">
-          <EmptyState
-            icon={BellOff}
-            title="No notifications here"
-            description={
-              tab === 'unread'
-                ? "You're all caught up — nothing unread."
-                : 'New notifications will show up here.'
-            }
-            accent="rose"
-          />
-        </GlassCard>
-      ) : (
-        <GlassCard padding="p-0">
-          <AnimatePresence initial={false}>
-            {filtered.map((n, i) => (
+      <AnimatePresence mode="wait">
+        {filtered.length === 0 ? (
+          <motion.div key="empty" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+            <GlassCard padding="p-0">
+              <EmptyState
+                icon={BellOff}
+                title={tab === 'unread' ? "You're all caught up!" : "No notifications here"}
+                description={
+                  tab === 'unread'
+                    ? "You've read all your notifications."
+                    : 'New notifications will show up here.'
+                }
+                accent="rose"
+                action={
+                  tab !== 'all' && (
+                    <ActionButton tone="ghost" onClick={() => handleTabChange('all')}>
+                      View all notifications
+                    </ActionButton>
+                  )
+                }
+              />
+            </GlassCard>
+          </motion.div>
+        ) : (
+          <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+            <GlassCard padding="p-0">
+              <AnimatePresence initial={false}>
+                {paginatedNotifs.map((n, i) => (
               <motion.div
                 key={n.id}
                 layout
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: 12 }}
+                exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.18, delay: i * 0.02 }}
-                className={`group relative flex items-start gap-3 border-b border-white/[0.04] px-4 py-3 transition-colors last:border-0 hover:bg-white/[0.025] ${
-                  !n.is_read ? 'bg-violet-500/[0.025]' : ''
+                onClick={() => { if (!n.is_read) markRead(n.id); }}
+                tabIndex={!n.is_read ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (!n.is_read && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    markRead(n.id);
+                  }
+                }}
+                className={`group relative flex items-start gap-4 border-b border-white/[0.04] p-4 transition-colors last:border-0 hover:bg-white/[0.03] ${
+                  !n.is_read ? 'bg-violet-500/[0.03] cursor-pointer focus:outline-none focus:bg-white/[0.05]' : ''
                 }`}
               >
-                {!n.is_read && (
-                  <span className="absolute top-1/2 left-1 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(124,131,255,0.7)]" />
-                )}
-
-                <IconChip
-                  icon={cfg(n.notification_type).icon}
-                  accent={cfg(n.notification_type).accent}
-                  size="sm"
-                />
+                <div className="relative shrink-0">
+                  {!n.is_read && (
+                    <span className="absolute -left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(124,131,255,0.8)]" />
+                  )}
+                  <IconChip
+                    icon={cfg(n.notification_type).icon}
+                    accent={cfg(n.notification_type).accent}
+                  />
+                </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <p
-                      className={`text-[13px] leading-snug ${
+                      className={`text-sm leading-snug ${
                         n.is_read
                           ? 'font-medium text-gray-300'
                           : 'font-semibold text-white'
@@ -208,42 +249,72 @@ export default function MemberNotificationsClient({
                     >
                       {n.title}
                     </p>
-                    <span className="shrink-0 font-mono text-[10px] tabular-nums text-gray-500">
+                    <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
                       {timeAgo(n.created_at)}
                     </span>
                   </div>
                   {n.message && (
-                    <p className="mt-0.5 line-clamp-2 text-[11.5px] text-gray-500">
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-400/90 leading-relaxed">
                       {n.message}
                     </p>
                   )}
 
-                  <div className="mt-1.5 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="mt-2.5 flex items-center gap-2 opacity-100 sm:opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                     {!n.is_read && (
                       <button
                         type="button"
-                        onClick={() => markRead(n.id)}
+                        onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
                         disabled={isPending}
-                        className="inline-flex items-center gap-1 rounded border border-white/[0.06] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-gray-300 transition hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50"
+                        aria-label="Mark as read"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-gray-300 transition hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
                       >
-                        <Check className="h-2.5 w-2.5" /> Mark read
+                        <Check className="h-3 w-3" /> Mark read
                       </button>
                     )}
                     <button
                       type="button"
-                      onClick={() => del(n.id)}
+                      onClick={(e) => { e.stopPropagation(); del(n.id); }}
                       disabled={isPending}
-                      className="inline-flex items-center gap-1 rounded border border-white/[0.06] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-gray-400 transition hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
+                      aria-label="Delete notification"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-gray-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500/50 disabled:opacity-50"
                     >
-                      <Trash2 className="h-2.5 w-2.5" /> Delete
+                      <Trash2 className="h-3 w-3" /> Delete
                     </button>
                   </div>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
-        </GlassCard>
-      )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-white/[0.04] p-4">
+              <span className="font-mono text-[10px] tracking-wider text-gray-500 uppercase">
+                Showing <span className="text-gray-300">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> to <span className="text-gray-300">{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)}</span> of <span className="text-gray-300">{filtered.length}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
