@@ -469,6 +469,46 @@ export default function ResourceEmbed({ resource, className = '' }) {
   // ── File ───────────────────────────────────────────────
   if (type === 'file' && fileUrl) {
     const ext = getFileTypeKey(resource, fileUrl);
+
+    // If it's a PDF, embed it in an iframe
+    if (ext === 'pdf') {
+      let pdfSrc = fileUrl;
+      const driveMatch = fileUrl.match(/^\/api\/image\/([^/?#&]+)/);
+      if (driveMatch?.[1]) {
+        pdfSrc = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      } else if (fileUrl.includes('drive.google.com/file/d/')) {
+        const fileIdMatch = fileUrl.match(/file\/d\/([^/?#&]+)/);
+        if (fileIdMatch?.[1]) {
+          pdfSrc = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+        }
+      }
+
+      return (
+        <div className="space-y-3">
+          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+            <iframe
+              src={pdfSrc}
+              title={resource?.title || 'PDF Document'}
+              className="h-full w-full border-0 bg-white"
+              loading="lazy"
+              allowFullScreen
+            />
+          </div>
+          <div className="flex justify-end">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open in new tab
+            </a>
+          </div>
+        </div>
+      );
+    }
+
     const fileName = getFileName(fileUrl);
     const info = FILE_TYPE_INFO[ext] || {
       ...DEFAULT_FILE_INFO,

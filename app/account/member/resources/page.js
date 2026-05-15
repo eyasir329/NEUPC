@@ -49,19 +49,17 @@ export default async function MemberResourcesPage({ searchParams }) {
   const pinnedCount = resources.filter((r) => r.is_pinned).length;
 
   return (
-    <div className="flex h-[calc(100vh-73px)] bg-[#0B0E14] text-[#F8FAFC] font-sans selection:bg-[#A855F7]/30">
-      <ResourcesClient
-        resources={resources}
-        categories={categories}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        bookmarkedIds={bookmarkedIds}
-        canBookmark={Boolean(user?.id)}
-        basePath="/account/member/resources"
-        blogCount={blogCount}
-        roadmapCount={roadmapCount}
-      />
-    </div>
+    <ResourcesClient
+      resources={resources}
+      categories={categories}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      bookmarkedIds={bookmarkedIds}
+      canBookmark={Boolean(user?.id)}
+      basePath="/account/member/resources"
+      blogCount={blogCount}
+      roadmapCount={roadmapCount}
+    />
   );
 }
