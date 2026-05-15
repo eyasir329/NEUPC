@@ -975,21 +975,6 @@ function GroupPanel({
 
       <button
         type="button"
-        onClick={() => setActiveGroupId('__contests')}
-        className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-[12.5px] transition ${
-          activeGroupId === '__contests'
-            ? 'border-violet-500/30 bg-violet-500/10 text-violet-300'
-            : 'border-white/[0.06] bg-white/[0.02] text-gray-300 hover:border-white/[0.1] hover:bg-white/[0.04]'
-        }`}
-      >
-        <span className="inline-flex items-center gap-2">
-          <Trophy className="h-3.5 w-3.5 text-amber-400" /> Contests
-        </span>
-        <span className="text-[10.5px] text-gray-400">{countsByGroup.__contests || 0}</span>
-      </button>
-
-      <button
-        type="button"
         onClick={() => setActiveGroupId(null)}
         className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-[12.5px] transition ${
           activeGroupId === null
@@ -1608,11 +1593,7 @@ export default function DailyActivityClient() {
     const feedEntries =
       todoFilter === 'done'
         ? []
-        : SEED_FEED.filter((it) => 
-            activeGroupId === '__contests' 
-              ? it.category === 'contest' 
-              : (activeGroupId === null && visible[it.category])
-          ).map((it) => ({
+        : SEED_FEED.filter((it) => activeGroupId === null && visible[it.category]).map((it) => ({
             kind: 'feed',
             dateKey: dateKey(it.start),
             sortTime: it.start.toTimeString().slice(0, 5),
@@ -1670,7 +1651,6 @@ export default function DailyActivityClient() {
       counts.__all = (counts.__all || 0) + 1;
       counts[todo.groupId] = (counts[todo.groupId] || 0) + 1;
     });
-    counts.__contests = SEED_FEED.filter((it) => it.category === 'contest' && dateKey(it.start) >= todayKey && dateKey(it.start) <= horizon).length;
     return counts;
   }, [occurrencesAll, completions]);
 
@@ -1754,9 +1734,8 @@ export default function DailyActivityClient() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <ActionButton tone="primary" icon={Plus} onClick={openCreate}>New task</ActionButton>
-                  <ActionButton tone="ghost" icon={CalendarIcon} onClick={() => setActiveTab('tasks')}>View tasks</ActionButton>
-                  <ActionButton tone="ghost" icon={CheckSquare} onClick={() => { setTodoFilter('today'); setActiveTab('tasks'); }}>Today&apos;s tasks</ActionButton>
-                  <ActionButton tone="ghost" icon={Trophy} onClick={() => { setTodoFilter('contests'); setActiveTab('tasks'); }}>Contests</ActionButton>
+                  <ActionButton tone="ghost" icon={CalendarIcon} onClick={() => { setActiveGroupId(null); setActiveTab('tasks'); }}>View tasks</ActionButton>
+                  <ActionButton tone="ghost" icon={CheckSquare} onClick={() => { setActiveGroupId(null); setTodoFilter('today'); setActiveTab('tasks'); }}>Today&apos;s tasks</ActionButton>
                 </div>
               </div>
             </GlassCard>
@@ -1795,7 +1774,12 @@ export default function DailyActivityClient() {
                 <GroupPanel
                   groups={groups}
                   activeGroupId={activeGroupId}
-                  setActiveGroupId={setActiveGroupId}
+                  setActiveGroupId={(id) => {
+                    setActiveGroupId(id);
+                    if (id !== null) {
+                      setTodoFilter('all');
+                    }
+                  }}
                   groupVisible={groupVisible}
                   toggleGroupVisible={toggleGroupVisible}
                   countsByGroup={countsByGroup}
@@ -1814,7 +1798,7 @@ export default function DailyActivityClient() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-sm font-semibold text-gray-200">
-                        {todoFilter === 'contests' || activeGroupId === '__contests' ? 'Contests' : activeGroupId ? groupById[activeGroupId]?.name || 'Tasks' : 'All Tasks'}
+                        {activeGroupId ? groupById[activeGroupId]?.name || 'Tasks' : 'All Tasks'}
                       </h2>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {todoFilter === 'day' ? fmtDayLong(selected) : `${filteredOccurrences.length} item${filteredOccurrences.length !== 1 ? 's' : ''}`}
@@ -1824,33 +1808,35 @@ export default function DailyActivityClient() {
                   </div>
 
                   {/* Filter tabs */}
-                  <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-                    {[
-                      { v: 'today', l: 'Today', icon: CircleDot },
-                      { v: 'upcoming', l: 'Upcoming', icon: CalendarIcon },
-                      { v: 'day', l: 'By day', icon: Sparkles },
-                      { v: 'done', l: 'Completed', icon: CheckCircle2 },
-                      { v: 'all', l: 'All', icon: Filter },
-                      { v: 'contests', l: 'Contests', icon: Trophy },
-                    ].map((t) => {
-                      const TIcon = t.icon;
-                      return (
-                        <button
-                          key={t.v}
-                          type="button"
-                          onClick={() => setTodoFilter(t.v)}
-                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all border ${
-                            todoFilter === t.v
-                              ? 'bg-white/[0.06] text-white shadow-sm border-white/[0.06]'
-                              : 'text-gray-400 border-transparent hover:bg-white/[0.03] hover:text-gray-200'
-                          }`}
-                        >
-                          <TIcon className="h-3 w-3" />
-                          {t.l}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {activeGroupId === null && (
+                    <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                      {[
+                        { v: 'today', l: 'Today', icon: CircleDot },
+                        { v: 'upcoming', l: 'Upcoming', icon: CalendarIcon },
+                        { v: 'contests', l: 'Contests', icon: Trophy },
+                        { v: 'day', l: 'By day', icon: Sparkles },
+                        { v: 'done', l: 'Completed', icon: CheckCircle2 },
+                        { v: 'all', l: 'All', icon: Filter },
+                      ].map((t) => {
+                        const TIcon = t.icon;
+                        return (
+                          <button
+                            key={t.v}
+                            type="button"
+                            onClick={() => setTodoFilter(t.v)}
+                            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all border ${
+                              todoFilter === t.v
+                                ? 'bg-white/[0.06] text-white shadow-sm border-white/[0.06]'
+                                : 'text-gray-400 border-transparent hover:bg-white/[0.03] hover:text-gray-200'
+                            }`}
+                          >
+                            <TIcon className="h-3 w-3" />
+                            {t.l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Day filter back button */}
                   {todoFilter === 'day' && !sameDay(selected, TODAY) && (

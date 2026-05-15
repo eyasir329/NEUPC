@@ -1,9 +1,3 @@
-/**
- * @file Member Notifications Client — redesigned to match the
- *   problem-solving page aesthetic via shared `_ui` primitives.
- * @module MemberNotificationsClient
- */
-
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
@@ -16,7 +10,6 @@ import {
   CheckCircle2,
   Zap,
   BookOpen,
-  MessageSquare,
   Settings,
   Check,
   Trash2,
@@ -24,21 +17,18 @@ import {
   Inbox,
   ChevronLeft,
   ChevronRight,
+  CheckCheck,
 } from 'lucide-react';
 import {
   markAsReadAction,
   markAllAsReadAction,
   deleteNotificationAction,
 } from '@/app/_lib/notification-actions';
-import {
-  PageHeader,
-  GlassCard,
-  TabBar,
-  EmptyState,
-  ActionButton,
-  IconChip,
-} from '../../_components/_ui';
 import { motion, AnimatePresence } from 'framer-motion';
+
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
 
 const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
 
@@ -56,13 +46,13 @@ const MOCK_NOTIFICATIONS = [
 ];
 
 const TYPE_CONFIG = {
-  event:       { icon: Calendar,      accent: 'blue' },
-  mention:     { icon: AtSign,        accent: 'violet' },
-  achievement: { icon: Trophy,        accent: 'amber' },
-  system:      { icon: Zap,           accent: 'cyan' },
-  info:        { icon: AlertCircle,   accent: 'sky' },
-  success:     { icon: CheckCircle2,  accent: 'emerald' },
-  lesson:      { icon: BookOpen,      accent: 'pink' },
+  event:       { icon: Calendar,      color: 'text-blue-400',    bg: 'bg-blue-500/10' },
+  mention:     { icon: AtSign,        color: 'text-violet-400',  bg: 'bg-violet-500/10' },
+  achievement: { icon: Trophy,        color: 'text-amber-400',   bg: 'bg-amber-500/10' },
+  system:      { icon: Zap,           color: 'text-cyan-400',    bg: 'bg-cyan-500/10' },
+  info:        { icon: AlertCircle,   color: 'text-sky-400',     bg: 'bg-sky-500/10' },
+  success:     { icon: CheckCircle2,  color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  lesson:      { icon: BookOpen,      color: 'text-pink-400',    bg: 'bg-pink-500/10' },
 };
 
 const cfg = (t) => TYPE_CONFIG[t] ?? TYPE_CONFIG.system;
@@ -101,8 +91,8 @@ export default function MemberNotificationsClient({
   const unreadCount = notifs.filter((n) => !n.is_read).length;
   const filtered = useMemo(() => tabFilter(notifs, tab), [notifs, tab]);
 
-  const ITEMS_PER_PAGE = 7;
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const ITEMS_PER_PAGE = 8;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedNotifs = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filtered.slice(start, start + ITEMS_PER_PAGE);
@@ -150,171 +140,331 @@ export default function MemberNotificationsClient({
   };
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={Bell}
-        title="Inbox"
-        subtitle={
-          unreadCount > 0
-            ? `${unreadCount} unread · ${notifs.length} total`
-            : 'All caught up'
-        }
-        accent="rose"
-        actions={
-          <>
-            {unreadCount > 0 && (
-              <ActionButton
-                tone="ghost"
-                icon={Check}
-                onClick={markAllRead}
-                disabled={isPending}
-              >
-                Mark all read
-              </ActionButton>
-            )}
-            <ActionButton tone="ghost" icon={Settings}>
-              Preferences
-            </ActionButton>
-          </>
-        }
-      />
-
-      <TabBar tabs={tabs} value={tab} onChange={handleTabChange} />
-
-      <AnimatePresence mode="wait">
-        {filtered.length === 0 ? (
-          <motion.div key="empty" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-            <GlassCard padding="p-0">
-              <EmptyState
-                icon={BellOff}
-                title={tab === 'unread' ? "You're all caught up!" : "No notifications here"}
-                description={
-                  tab === 'unread'
-                    ? "You've read all your notifications."
-                    : 'New notifications will show up here.'
-                }
-                accent="rose"
-                action={
-                  tab !== 'all' && (
-                    <ActionButton tone="ghost" onClick={() => handleTabChange('all')}>
-                      View all notifications
-                    </ActionButton>
-                  )
-                }
-              />
-            </GlassCard>
-          </motion.div>
-        ) : (
-          <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-            <GlassCard padding="p-0">
-              <AnimatePresence initial={false}>
-                {paginatedNotifs.map((n, i) => (
-              <motion.div
-                key={n.id}
-                layout
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.18, delay: i * 0.02 }}
-                onClick={() => { if (!n.is_read) markRead(n.id); }}
-                tabIndex={!n.is_read ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (!n.is_read && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    markRead(n.id);
-                  }
-                }}
-                className={`group relative flex items-start gap-4 border-b border-white/[0.04] p-4 transition-colors last:border-0 hover:bg-white/[0.03] ${
-                  !n.is_read ? 'bg-violet-500/[0.03] cursor-pointer focus:outline-none focus:bg-white/[0.05]' : ''
-                }`}
-              >
-                <div className="relative shrink-0">
-                  {!n.is_read && (
-                    <span className="absolute -left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(124,131,255,0.8)]" />
+    <div className="flex min-h-screen text-gray-300 selection:bg-violet-500/30">
+      {/* ── Secondary left nav ───────────────────────────────────────── */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col z-20">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-0.5 mt-2">
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.value;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => handleTabChange(t.value)}
+                  className={cn(
+                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    active
+                      ? 'bg-rose-500/12 font-semibold text-rose-400 shadow-rose-500/10'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
                   )}
-                  <IconChip
-                    icon={cfg(n.notification_type).icon}
-                    accent={cfg(n.notification_type).accent}
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <p
-                      className={`text-sm leading-snug ${
-                        n.is_read
-                          ? 'font-medium text-gray-300'
-                          : 'font-semibold text-white'
-                      }`}
-                    >
-                      {n.title}
-                    </p>
-                    <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
-                      {timeAgo(n.created_at)}
-                    </span>
+                >
+                  {active && (
+                    <motion.div layoutId="activeTabIndicator" className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-rose-500 to-pink-600" />
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
+                    <span className="truncate text-left">{t.label}</span>
                   </div>
-                  {n.message && (
-                    <p className="mt-1 line-clamp-2 text-xs text-gray-400/90 leading-relaxed">
-                      {n.message}
-                    </p>
+                  {t.count !== undefined && t.count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      active ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.06] text-gray-500"
+                    )}>
+                      {t.count}
+                    </span>
                   )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
 
-                  <div className="mt-2.5 flex items-center gap-2 opacity-100 sm:opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                    {!n.is_read && (
+      {/* ── Main content ─────────────────────────────────────────────── */}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-gray-950">
+        {/* Mobile / tablet horizontal tab bar */}
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
+              {tabs.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    onClick={() => handleTabChange(t.value)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      active
+                        ? 'border-rose-500 text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-rose-400' : '')} />
+                    <span className="hidden sm:inline">{t.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full">
+          <div className="mx-auto w-full max-w-7xl">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-inner">
+                  <Bell size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
+                    Inbox
+                    {unreadCount > 0 && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold tracking-wide uppercase">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                        {unreadCount} Unread
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-sm text-gray-400">Stay updated with the latest activities and alerts.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Center content (Notifications List) */}
+              <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 pb-3 border-b border-white/[0.06]">
+                  <p className="text-xs text-gray-500 font-medium">
+                    {filtered.length === 0
+                      ? 'No notifications found'
+                      : `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of ${filtered.length} notification${filtered.length !== 1 ? 's' : ''}`
+                    }
+                  </p>
+                  
+                  {/* Actions for small screens */}
+                  <div className="lg:hidden flex items-center gap-2">
+                    {unreadCount > 0 && (
                       <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
+                        onClick={markAllRead}
                         disabled={isPending}
-                        aria-label="Mark as read"
-                        className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-gray-300 transition hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
+                        className="text-[11px] font-semibold text-gray-400 hover:text-rose-400 transition-colors px-2 py-1 flex items-center gap-1.5"
                       >
-                        <Check className="h-3 w-3" /> Mark read
+                        <CheckCheck size={14} /> Mark all read
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); del(n.id); }}
-                      disabled={isPending}
-                      aria-label="Delete notification"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-gray-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500/50 disabled:opacity-50"
+                  </div>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {filtered.length === 0 ? (
+                    <motion.div
+                      key="empty"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      className="flex flex-col items-center justify-center p-12 bg-white/[0.02] border border-white/[0.08] border-dashed rounded-2xl text-center"
                     >
-                      <Trash2 className="h-3 w-3" /> Delete
+                      <BellOff size={48} className="text-gray-700 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-300 mb-1">
+                        {tab === 'unread' ? "You're all caught up!" : "No notifications here"}
+                      </h3>
+                      <p className="text-sm text-gray-500 max-w-sm mb-6">
+                        {tab === 'unread'
+                          ? "You've read all your notifications."
+                          : 'New notifications will show up here.'}
+                      </p>
+                      {tab !== 'all' && (
+                        <button
+                          onClick={() => handleTabChange('all')}
+                          className="px-5 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-xl text-sm font-semibold text-gray-300 transition-colors shadow-sm active:scale-95"
+                        >
+                          View all notifications
+                        </button>
+                      )}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="list"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.01] overflow-hidden shadow-sm"
+                    >
+                      <AnimatePresence initial={false}>
+                        {paginatedNotifs.map((n, i) => {
+                          const config = cfg(n.notification_type);
+                          const Icon = config.icon;
+                          
+                          return (
+                            <motion.div
+                              layout
+                              key={n.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, height: 0, opacity: 0, transition: { duration: 0.2 } }}
+                              transition={{ duration: 0.2, delay: i * 0.02 }}
+                              onClick={() => { if (!n.is_read) markRead(n.id); }}
+                              className={cn(
+                                "group relative flex items-start gap-4 p-4 border-b border-white/[0.04] transition-all duration-300 last:border-b-0",
+                                n.is_read 
+                                  ? "bg-transparent hover:bg-white/[0.02]" 
+                                  : "bg-rose-500/[0.04] hover:bg-rose-500/[0.06] cursor-pointer"
+                              )}
+                            >
+                              {!n.is_read && (
+                                <div className="absolute top-1/2 left-4 w-2 h-2 -translate-y-1/2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
+                              )}
+                              
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border shadow-inner mt-0.5",
+                                !n.is_read ? "ml-4" : "", // Push right if there's an unread dot
+                                config.bg,
+                                config.color,
+                                "border-white/5"
+                              )}>
+                                <Icon size={18} />
+                              </div>
+
+                              <div className="flex-1 min-w-0 pr-12">
+                                <div className="flex items-start justify-between gap-3 mb-1">
+                                  <p className={cn(
+                                    "text-sm leading-snug truncate",
+                                    n.is_read ? "font-medium text-gray-300" : "font-bold text-gray-100"
+                                  )}>
+                                    {n.title}
+                                  </p>
+                                  <span className="shrink-0 font-mono text-[11px] font-medium text-gray-500">
+                                    {timeAgo(n.created_at)}
+                                  </span>
+                                </div>
+                                
+                                {n.message && (
+                                  <p className={cn(
+                                    "text-[13px] leading-relaxed line-clamp-2",
+                                    n.is_read ? "text-gray-500" : "text-gray-400"
+                                  )}>
+                                    {n.message}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {/* Hover Actions (Absolute on Desktop) */}
+                              <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-gray-950/80 lg:bg-transparent p-1 lg:p-0 rounded-lg backdrop-blur-sm lg:backdrop-blur-none">
+                                {!n.is_read && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
+                                    disabled={isPending}
+                                    title="Mark as read"
+                                    className="p-1.5 rounded-md hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
+                                  >
+                                    <Check size={16} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); del(n.id); }}
+                                  disabled={isPending}
+                                  title="Delete"
+                                  className="p-1.5 rounded-md hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-2">
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-gray-400 border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          >
+                            <ChevronLeft size={14} /> Prev
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }).map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={cn(
+                                  "w-8 h-8 rounded-lg text-xs font-bold transition-colors",
+                                  currentPage === i + 1 
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-inner" 
+                                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                                )}
+                              >
+                                {i + 1}
+                              </button>
+                            ))}
+                          </div>
+
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-gray-400 border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          >
+                            Next <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Right Sidebar - Fixed */}
+              <div className="hidden lg:flex flex-col gap-6 sticky top-6">
+                {/* Actions Box */}
+                <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+                  <h3 className="text-sm font-bold text-gray-200 mb-4">Quick Actions</h3>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={markAllRead}
+                      disabled={isPending || unreadCount === 0}
+                      className={cn(
+                        "w-full flex items-center gap-2 justify-center py-2.5 rounded-xl text-[13px] font-bold transition-all shadow-sm",
+                        unreadCount > 0 
+                          ? "bg-white text-gray-900 hover:bg-gray-200 active:scale-95" 
+                          : "bg-white/[0.03] text-gray-500 border border-white/[0.05] cursor-not-allowed"
+                      )}
+                    >
+                      <CheckCheck size={16} /> Mark All as Read
+                    </button>
+                    
+                    <button className="w-full flex items-center gap-2 justify-center py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 text-[13px] font-bold transition-colors">
+                      <Settings size={16} /> Preferences
                     </button>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-white/[0.04] p-4">
-              <span className="font-mono text-[10px] tracking-wider text-gray-500 uppercase">
-                Showing <span className="text-gray-300">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> to <span className="text-gray-300">{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)}</span> of <span className="text-gray-300">{filtered.length}</span>
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Previous page"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Next page"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                {/* Overview Box */}
+                <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+                  <h3 className="text-sm font-bold text-gray-200 mb-4">Inbox Overview</h3>
+                  <div className="flex flex-col gap-4 text-sm">
+                    <div className="flex justify-between items-center group">
+                      <span className="text-gray-500 font-medium">Unread</span>
+                      <span className="text-rose-400 font-semibold tabular-nums bg-rose-500/10 px-2 py-0.5 rounded-md">{unreadCount}</span>
+                    </div>
+                    <div className="flex justify-between items-center group">
+                      <span className="text-gray-500 font-medium">Total Received</span>
+                      <span className="text-white font-semibold tabular-nums bg-white/[0.06] px-2 py-0.5 rounded-md">{notifs.length}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-            </GlassCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
