@@ -9,9 +9,9 @@ import {
 import BootcampLearningClient from './_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
-  const { bootcampSlug } = await params;
+  const { bootcampId } = await params;
   try {
-    const bootcamp = await getBootcampCurriculumLight(bootcampSlug);
+    const bootcamp = await getBootcampCurriculumLight(bootcampId);
     return { title: `${bootcamp?.title || 'Bootcamp'} | NEUPC` };
   } catch {
     return { title: 'Bootcamp | NEUPC' };
@@ -19,12 +19,12 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BootcampLearningPage({ params }) {
-  const { bootcampSlug } = await params;
+  const { bootcampId } = await params;
   await requireRole('member');
 
   let bootcamp;
   try {
-    bootcamp = await getBootcampCurriculumLight(bootcampSlug);
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
   } catch {
     notFound();
   }

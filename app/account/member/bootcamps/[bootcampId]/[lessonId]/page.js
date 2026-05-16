@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function LessonPage({ params }) {
-  const { bootcampSlug, lessonId } = await params;
+  const { bootcampId, lessonId } = await params;
   const { user } = await requireRole('member');
 
   // Fetch lesson data
@@ -44,10 +44,10 @@ export default async function LessonPage({ params }) {
     notFound();
   }
 
-  // Fetch bootcamp by slug to get the UUID for enrollment/progress checks
+  // Fetch bootcamp by id to get the UUID for enrollment/progress checks
   let bootcamp;
   try {
-    bootcamp = await getBootcampCurriculumLight(bootcampSlug);
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
   } catch {
     notFound();
   }
@@ -64,7 +64,7 @@ export default async function LessonPage({ params }) {
   if (!lesson.is_free_preview) {
     const enrollmentCheck = await checkEnrollment(bootcamp.id);
     if (!enrollmentCheck.enrolled) {
-      redirect(`/bootcamps/${bootcampSlug}`);
+      redirect(`/bootcamps/${bootcampId}`);
     }
   }
 
