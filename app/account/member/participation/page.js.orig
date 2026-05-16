@@ -12,7 +12,6 @@ import {
   getUserContestParticipations,
   getUserCertificates,
   getAllDiscussionThreads,
-  getMemberAchievements,
 } from '@/app/_lib/data-service';
 import MemberParticipationClient from './_components/MemberParticipationClient';
 
@@ -21,13 +20,12 @@ export const metadata = { title: 'Participation | Member | NEUPC' };
 export default async function MemberParticipationPage() {
   const { user } = await requireRole('member');
 
-  const [registrations, contestParticipations, certificates, allThreads, memberAchievements] =
+  const [registrations, contestParticipations, certificates, allThreads] =
     await Promise.all([
       getUserEventRegistrations(user.id).catch(() => []),
       getUserContestParticipations(user.id).catch(() => []),
       getUserCertificates(user.id).catch(() => []),
       getAllDiscussionThreads(200, 0).catch(() => []),
-      getMemberAchievements(user.id).catch(() => []),
     ]);
 
   const tempRegistrations = [
@@ -147,53 +145,6 @@ export default async function MemberParticipationPage() {
     },
   ];
 
-  const tempMemberAchievements = [
-    {
-      id: 'temp-ach-1',
-      achievements: {
-        id: 'ach-1',
-        title: 'ICPC Dhaka Regional 2024',
-        contest_name: 'ICPC Dhaka Regional',
-        result: 'Champion',
-        year: 2024,
-        category: 'ICPC',
-        description: 'Ranked #1 among 120 teams.',
-        achievement_date: '2024-12-10T00:00:00.000Z',
-        is_team: true,
-        team_name: 'NEUPC Alpha',
-      },
-    },
-    {
-      id: 'temp-ach-2',
-      achievements: {
-        id: 'ach-2',
-        title: 'National IUPC 2025',
-        contest_name: 'IUPC 2025',
-        result: 'Runner-up',
-        year: 2025,
-        category: 'IUPC',
-        description: 'Placed 2nd nationally with team score 540.',
-        achievement_date: '2025-02-22T00:00:00.000Z',
-        is_team: true,
-        team_name: 'NEUPC Sigma',
-      },
-    },
-    {
-      id: 'temp-ach-3',
-      achievements: {
-        id: 'ach-3',
-        title: 'Codeforces Div.2 #997',
-        contest_name: 'Codeforces Round',
-        result: 'Top 10',
-        year: 2025,
-        category: 'Contest',
-        description: 'Solo performance with global rank 8.',
-        achievement_date: '2025-03-04T00:00:00.000Z',
-        is_team: false,
-      },
-    },
-  ];
-
   const displayRegistrations = registrations.length
     ? registrations
     : tempRegistrations;
@@ -204,20 +155,18 @@ export default async function MemberParticipationPage() {
     ? certificates
     : tempCertificates;
   const displayThreads = allThreads.length ? allThreads : tempThreads;
-  const displayMemberAchievements = memberAchievements.length
-    ? memberAchievements
-    : tempMemberAchievements;
 
   const myThreads = displayThreads.filter((t) => t.author_id === user.id);
 
   return (
-    <MemberParticipationClient
-      registrations={displayRegistrations}
-      contestParticipations={displayContestParticipations}
-      certificates={displayCertificates}
-      myThreads={myThreads}
-      memberAchievements={displayMemberAchievements}
-      userId={user.id}
-    />
+    <div className="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12">
+      <MemberParticipationClient
+        registrations={displayRegistrations}
+        contestParticipations={displayContestParticipations}
+        certificates={displayCertificates}
+        myThreads={myThreads}
+        userId={user.id}
+      />
+    </div>
   );
 }

@@ -1,332 +1,588 @@
-/**
- * @file Member Events Client — restyled with shared `_ui` primitives
- *   to mirror the problem-solving page design language.
- * @module MemberEventsClient
- */
-
 'use client';
 
-import { useState, useMemo, useTransition, useEffect } from 'react';
+import React, { useState, useMemo, useTransition, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
-  MapPin,
-  Users,
+  CheckCircle,
+  Ticket,
+  CalendarCheck,
+  CalendarX,
+  ChevronRight,
+  ChevronLeft,
   Clock,
-  CalendarDays,
+  MapPin,
   CheckCircle2,
   XCircle,
-  Ticket,
   Loader2,
   X,
-  ChevronRight,
-  Trophy,
-  GraduationCap,
-  Mic,
-  Code2,
   Sparkles,
+  FileText,
 } from 'lucide-react';
-import {
-  registerForEventAction,
-  cancelEventRegistrationAction,
-} from '@/app/_lib/member-events-actions';
-import {
-  PageHeader,
-  GlassCard,
-  StatCard,
-  TabBar,
-  EmptyState,
-  Pill,
-  GradientBar,
-} from '../../_components/_ui';
-import { motion, AnimatePresence } from 'framer-motion';
+import { registerForEventAction } from '@/app/_lib/member-events-actions';
 
-const now = new Date();
-const d = (daysOffset, h = 10) => {
-  const t = new Date(now);
-  t.setDate(t.getDate() + daysOffset);
-  t.setHours(h, 0, 0, 0);
-  return t.toISOString();
-};
-
-const MOCK_EVENTS = [
-  { id: 'ev-1', title: 'React 19 & Server Components Deep-dive', description: 'Hands-on with concurrent rendering, Suspense boundaries, and the new server-component model. Bring a laptop with Node 20.', kind: 'Workshop', tone: 'violet', icon: Code2, start_date: d(2, 14), duration: '3h', location: 'Lab 301 · CSE Building', host: 'Shafin Rahman', max_participants: 30, registration_count: 24, registered: false },
-  { id: 'ev-2', title: 'Inter-University Hackathon 2026', description: '24-hour hackathon · teams of 2-4 · BDT 50,000 prize pool. Sponsored by Brain Station 23.', kind: 'Hackathon', tone: 'amber', icon: Trophy, start_date: d(8, 9), duration: '24h', location: 'Main Auditorium', host: 'NEUPC Board', max_participants: 80, registration_count: 67, registered: true },
-  { id: 'ev-3', title: 'Git, GitHub & CI/CD Mastery', description: 'From branching strategies to GitHub Actions pipelines. Live demo of deploying a Next.js app to Vercel.', kind: 'Seminar', tone: 'blue', icon: Mic, start_date: d(14, 14), duration: '2h', location: 'Online · Zoom', host: 'Raisa Hossain', max_participants: 100, registration_count: 63, registered: false },
-  { id: 'ev-4', title: 'CTF Competition · Season 3', description: 'Capture-the-Flag cybersecurity challenge. Beginner-friendly tracks · prizes for top 3 teams.', kind: 'Contest', tone: 'rose', icon: Trophy, start_date: d(21, 13), duration: '6h', location: 'CSE Building · Room 408', host: 'Security SIG', max_participants: 50, registration_count: 50, registered: false },
-  { id: 'ev-5', title: 'AI/ML for Competitive Programmers', description: 'Use ML to find patterns in problem datasets. Practical PyTorch session.', kind: 'Workshop', tone: 'emerald', icon: Sparkles, start_date: d(27, 11), duration: '4h', location: 'Lab 405', host: 'Tanvir Ahmed', max_participants: 40, registration_count: 18, registered: true },
-  { id: 'ev-6', title: 'Spring Bootcamp Cohort 5', description: 'Six-week structured program covering full-stack JavaScript, system design, and behavioural interviews.', kind: 'Bootcamp', tone: 'cyan', icon: GraduationCap, start_date: d(35, 10), duration: '6 weeks', location: 'Hybrid', host: 'Mehedi Hasan', max_participants: 60, registration_count: 42, registered: false },
-];
-
-const MOCK_PAST_EVENTS = [
-  { id: 'pev-1', title: 'Python Bootcamp · Cohort 4', kind: 'Bootcamp', tone: 'cyan', start_date: d(-30), attended: true },
-  { id: 'pev-2', title: 'Open Source Contribution Day', kind: 'Workshop', tone: 'violet', start_date: d(-45), attended: true },
-  { id: 'pev-3', title: 'UI/UX Design Fundamentals', kind: 'Seminar', tone: 'blue', start_date: d(-60), attended: false },
-  { id: 'pev-4', title: 'NEUPC Monthly Contest #26', kind: 'Contest', tone: 'rose', start_date: d(-75), attended: true },
-  { id: 'pev-5', title: 'Resume & LinkedIn Workshop', kind: 'Workshop', tone: 'amber', start_date: d(-90), attended: true },
-];
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
 
 function fmtDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
-const fmtMonth = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-const fmtDay = (iso) => new Date(iso).getDate();
-const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+const fmtTime = (iso) =>
+  iso
+    ? new Date(iso).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
 const isPast = (iso) => (iso ? new Date(iso) < new Date() : false);
 
-function RSVPButton({ event, registered, onDone }) {
-  const [pending, startTransition] = useTransition();
-  const isFull =
-    event.max_participants &&
-    event.registration_count >= event.max_participants &&
-    !registered;
-
-  const register = () =>
-    startTransition(async () => {
-      const res = await registerForEventAction(event.id);
-      onDone(res.error ? { type: 'error', text: res.error } : { type: 'success', text: `Registered for "${event.title}"!` });
-    });
-
-  if (registered) {
-    return (
-      <Pill tone="emerald" icon={CheckCircle2}>
-        Registered
-      </Pill>
-    );
-  }
-  if (isFull) {
-    return <Pill tone="gray">Full</Pill>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={register}
-      disabled={pending}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold text-blue-300 transition hover:border-blue-500/50 hover:bg-blue-500/20 disabled:opacity-50"
-    >
-      {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ticket className="h-3 w-3" />}
-      Register
-    </button>
-  );
-}
-
-function EventCard({ event, onFlash, delay = 0 }) {
-  const Icon = event.icon ?? Calendar;
-  const filled = event.max_participants
-    ? Math.min(100, Math.round((event.registration_count / event.max_participants) * 100))
-    : 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
-      className="group flex flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
-    >
-      <div className="flex items-start gap-3 border-b border-white/[0.05] p-4">
-        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-          <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
-            {fmtMonth(event.start_date)}
-          </span>
-          <span className="font-mono text-xl font-bold text-white tabular-nums leading-none">
-            {fmtDay(event.start_date)}
-          </span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <Pill tone={event.tone} icon={Icon}>
-              {event.kind}
-            </Pill>
-          </div>
-          <h3 className="text-sm font-semibold text-white leading-snug group-hover:text-blue-300">
-            {event.title}
-          </h3>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <p className="line-clamp-2 text-[12px] leading-relaxed text-gray-400">
-          {event.description}
-        </p>
-
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3 w-3" /> {fmtTime(event.start_date)}
-            {event.duration ? ` · ${event.duration}` : ''}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="h-3 w-3" /> {event.location}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Users className="h-3 w-3" /> {event.host}
-          </span>
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/[0.05] pt-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
-              <span>
-                {event.registration_count}/{event.max_participants ?? '∞'} attending
-              </span>
-              <span className="font-mono tabular-nums">{filled}%</span>
-            </div>
-            {event.max_participants && (
-              <GradientBar
-                value={filled}
-                tone={filled >= 90 ? 'rose' : filled >= 70 ? 'amber' : 'blue'}
-                height="h-1"
-              />
-            )}
-          </div>
-          <RSVPButton event={event} registered={event.registered} onDone={onFlash} />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+const STATS_CONFIG = [
+  {
+    id: 'upcoming',
+    title: 'Upcoming',
+    subtext: 'Next scheduled',
+    icon: Calendar,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+  },
+  {
+    id: 'registered',
+    title: 'Registered',
+    subtext: 'Your seat saved',
+    icon: CheckCircle,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    id: 'open',
+    title: 'Open Slots',
+    subtext: 'Available now',
+    icon: Ticket,
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10',
+  },
+  {
+    id: 'attended',
+    title: 'Attended',
+    subtext: 'Past timeline',
+    icon: CalendarCheck,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+  },
+];
 
 function Flash({ msg, onClose }) {
   const isErr = msg.type === 'error';
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${
+      initial={{ opacity: 0, y: -20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      className={`fixed top-6 right-6 z-50 flex items-center gap-3 rounded-2xl border px-5 py-4 text-sm shadow-2xl backdrop-blur-xl ${
         isErr
-          ? 'border-rose-500/25 bg-rose-500/10 text-rose-300'
-          : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+          ? 'border-rose-500/30 bg-rose-950/80 text-rose-200'
+          : 'border-emerald-500/30 bg-emerald-950/80 text-emerald-200'
       }`}
     >
-      {isErr ? <XCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
-      <span className="flex-1">{msg.text}</span>
-      <button onClick={onClose} type="button">
-        <X className="h-3.5 w-3.5 opacity-60 hover:opacity-100" />
+      {isErr ? (
+        <XCircle className="h-5 w-5 shrink-0 text-rose-400" />
+      ) : (
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+      )}
+      <span className="flex-1 font-semibold tracking-wide">{msg.text}</span>
+      <button onClick={onClose} type="button" className="ml-2 hover:scale-110 transition-transform">
+        <X className="h-4 w-4 opacity-70 hover:opacity-100" />
       </button>
     </motion.div>
   );
 }
 
+const MainContent = ({ activeTab, events, stats, onEventClick }) => {
+  const filteredEvents =
+    activeTab === 'Upcoming'
+      ? events.filter((e) => e.isUpcoming)
+      : events.filter((e) => e.category === activeTab);
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full">
+      <div className="mx-auto w-full max-w-7xl">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
+              <Calendar size={28} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
+                Events
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Live
+                </span>
+              </h1>
+              <p className="text-sm text-gray-400">Discover and register for upcoming member activities.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Center content (Event List) */}
+          <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
+            {/* Results count */}
+            <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 pb-3 border-b border-white/[0.06]">
+              <p className="text-xs text-gray-500 font-medium">
+                {filteredEvents.length === 0
+                  ? `No events found in ${activeTab}`
+                  : `Showing ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`
+                }
+              </p>
+            </div>
+
+            <AnimatePresence mode="popLayout">
+              {filteredEvents.length > 0 ? (
+                <motion.div
+                  key="list"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col gap-3"
+                >
+                  {filteredEvents.map((event, index) => {
+                    const dateObj = new Date(event.start_date || new Date());
+                    const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                    const day = dateObj.toLocaleDateString('en-US', { day: 'numeric' });
+                    
+                    return (
+                      <motion.div
+                        key={event.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05, ease: 'easeOut' }}
+                        onClick={() => onEventClick(event.id)}
+                        className="group bg-white/[0.03] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.14] rounded-2xl p-5 flex flex-col sm:flex-row gap-5 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md relative overflow-hidden"
+                      >
+                        {event.status === 'Registration Open' && (
+                           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50"></div>
+                        )}
+                        
+                        {/* Left Date Block */}
+                        <div className="hidden sm:flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-gray-900/50 border border-white/5 shadow-inner shrink-0 group-hover:border-violet-500/40 transition-all z-10">
+                          <span className="text-[9px] uppercase font-bold text-violet-400 tracking-widest leading-none mb-1">{month}</span>
+                          <span className="text-xl font-bold text-white leading-none">{day}</span>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 z-10 flex flex-col justify-center">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-300 font-bold text-[10px] tracking-wider uppercase">
+                              {event.type}
+                            </span>
+                            {event.status === 'Registration Open' && (
+                              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[10px] tracking-wider uppercase">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Open
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-base font-semibold text-gray-200 group-hover:text-violet-400 transition-colors line-clamp-2 mb-1 leading-snug">
+                            {event.title}
+                          </h3>
+                          <div className="text-xs text-gray-500 flex items-center gap-4 font-medium mt-2">
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={13} className="text-gray-600" /> {event.time}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <MapPin size={13} className="text-gray-600" /> <span className="truncate max-w-[150px]">{event.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex sm:flex-col sm:items-end justify-between items-center sm:justify-center gap-4 text-xs font-medium text-gray-500 sm:ml-4 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/[0.06] w-full sm:w-auto">
+                          <span className="px-2.5 py-1 rounded-md border border-white/[0.08] bg-white/[0.03] text-gray-400 font-semibold tracking-wide">
+                            {event.status}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center justify-center p-12 bg-white/[0.02] border border-white/[0.08] border-dashed rounded-2xl text-center"
+                >
+                  <CalendarX size={48} className="text-gray-700 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-300 mb-1">No {activeTab} events</h3>
+                  <p className="text-sm text-gray-500 max-w-sm">
+                    There are currently no events registered for this category. Check back later!
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right Sidebar - Fixed */}
+          <div className="hidden lg:flex flex-col gap-6 sticky top-6">
+            {/* Overview Stats */}
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 hover:border-white/[0.1] transition-all">
+              <h3 className="text-sm font-semibold text-gray-200 mb-4">Overview</h3>
+              <div className="flex flex-col gap-4 text-sm">
+                {stats.map((stat) => (
+                  <div key={stat.id} className="flex justify-between items-center group">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center ${stat.bg}`}>
+                        <stat.icon size={12} className={stat.color} />
+                      </div>
+                      <span className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors">{stat.title}</span>
+                    </div>
+                    <span className="text-white font-semibold tabular-nums">{stat.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Upcoming Next Event */}
+            <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-violet-500/10 to-fuchsia-500/5 p-5 relative overflow-hidden hover:border-white/[0.1] transition-all group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none group-hover:bg-violet-500/20 transition-colors"></div>
+              <h3 className="text-sm font-semibold text-gray-200 mb-2 relative z-10 flex items-center gap-2">
+                <Sparkles size={14} className="text-violet-400" /> What&apos;s next?
+              </h3>
+              <p className="text-xs text-gray-400 mb-4 relative z-10 leading-relaxed">
+                Stay updated with the latest events and member networking opportunities.
+              </p>
+              <div className="px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-lg text-center relative z-10 group-hover:bg-white/[0.05] transition-colors">
+                 <span className="text-xs font-semibold text-violet-300 block">
+                   {stats.find((s) => s.id === 'upcoming')?.count || 0} events
+                 </span>
+                 <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Scheduled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EventDetail = ({ event, onBack, onFlash }) => {
+  const [pending, startTransition] = useTransition();
+
+  const handleAction = () => {
+    if (event.category === 'Past events') return;
+    if (event.status === 'Registered') return;
+
+    startTransition(async () => {
+      const res = await registerForEventAction(event.id);
+      if (res.error) {
+        onFlash({ type: 'error', text: res.error });
+      } else {
+        onFlash({ type: 'success', text: `Registered for "${event.title}"!` });
+      }
+    });
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar h-full">
+      <div className="mx-auto w-full max-w-5xl flex flex-col gap-6 lg:gap-8 pb-12">
+        <button
+          onClick={onBack}
+          className="w-max flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] rounded-lg text-xs font-semibold text-gray-300 hover:text-white transition-all shadow-sm active:scale-95"
+        >
+          <ChevronLeft size={16} /> Back to Events
+        </button>
+
+        {/* Hero Header */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div className="flex items-start gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner shrink-0 mt-1">
+              <Calendar size={32} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/[0.08] text-gray-300 text-[10px] uppercase font-bold tracking-wider">
+                  {event.type}
+                </span>
+                {event.status === 'Registration Open' && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Registration Open
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight mb-4 leading-snug">
+                {event.title}
+              </h1>
+              
+              <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400 font-medium">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-gray-500" />
+                  {event.date}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-gray-500" />
+                  {event.time}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} className="text-gray-500" />
+                  {event.location}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="shrink-0 flex flex-col gap-2 w-full md:w-auto">
+            <button
+              onClick={handleAction}
+              disabled={pending}
+              className="w-full md:w-48 py-3 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-600/20 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {pending ? (
+                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+              ) : event.category === 'Past events' ? (
+                'View Past Event'
+              ) : event.status === 'Registered' ? (
+                'Registered ✓'
+              ) : (
+                'Register Now'
+              )}
+            </button>
+            <div className="text-center text-xs text-gray-500 font-medium mt-1">
+              {event.status === 'Registered' ? 'You have a confirmed ticket' : 'Secure your spot today'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            {/* About Card */}
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+              <h3 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
+                <FileText size={16} className="text-violet-400" /> About Event
+              </h3>
+              <p className="text-gray-300 text-[15px] leading-relaxed whitespace-pre-wrap">
+                {event.description}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            {/* Details Info */}
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+              <h3 className="text-sm font-bold text-gray-200 mb-4">Event Details</h3>
+              <div className="flex flex-col gap-4 text-sm">
+                <div className="flex justify-between items-center py-2 border-b border-white/[0.06]">
+                  <span className="text-gray-500 font-medium">Status</span>
+                  <span className="text-gray-200 font-semibold">{event.status}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-white/[0.06]">
+                  <span className="text-gray-500 font-medium">Category</span>
+                  <span className="text-gray-200 font-semibold">{event.type}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-500 font-medium">Access</span>
+                  <span className="text-emerald-400 font-semibold">Members Only</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MemberEventsClient({ events: serverEvents, myRegistrations }) {
-  const useMock = !serverEvents || serverEvents.length === 0;
-  const [tab, setTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('Upcoming');
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [flash, setFlash] = useState(null);
 
   useEffect(() => {
     if (!flash) return;
-    const id = setTimeout(() => setFlash(null), 4000);
+    const id = setTimeout(() => setFlash(null), 5000);
     return () => clearTimeout(id);
   }, [flash]);
 
   const allEvents = useMemo(() => {
-    if (useMock) return MOCK_EVENTS;
     const regMap = {};
     for (const r of myRegistrations || []) {
       if (r.event_id) regMap[r.event_id] = r.status !== 'cancelled';
     }
-    return serverEvents.map((e) => ({
-      ...e,
-      tone: 'violet',
-      icon: Calendar,
-      kind: e.category || e.kind || 'Event',
-      registered: !!regMap[e.id],
-    }));
-  }, [serverEvents, myRegistrations, useMock]);
 
-  const pastEvents = useMock ? MOCK_PAST_EVENTS : allEvents.filter((e) => isPast(e.start_date));
-  const upcoming = allEvents.filter((e) => !isPast(e.start_date));
-  const registered = upcoming.filter((e) => e.registered);
-  const available = upcoming.filter((e) => !e.registered);
+    return (serverEvents || []).map((e) => {
+      const isEventPast = isPast(e.start_date);
+      const isReg = !!regMap[e.id];
+
+      let category = '';
+      let status = '';
+
+      if (isEventPast) {
+        category = 'Past events';
+        status = isReg ? 'Attended' : 'Missed';
+      } else if (isReg) {
+        category = 'Registered';
+        status = 'Registered';
+      } else {
+        category = 'Open events';
+        status = 'Registration Open';
+      }
+
+      return {
+        ...e,
+        type: e.category || e.kind || 'Event',
+        status,
+        category,
+        date: fmtDate(e.start_date),
+        time: fmtTime(e.start_date),
+        location: e.location || 'Virtual',
+        isUpcoming: !isEventPast,
+      };
+    });
+  }, [serverEvents, myRegistrations]);
+
+  const stats = STATS_CONFIG.map((stat) => {
+    let count = 0;
+    if (stat.id === 'upcoming') count = allEvents.filter((e) => e.isUpcoming).length;
+    else if (stat.id === 'registered') count = allEvents.filter((e) => e.category === 'Registered').length;
+    else if (stat.id === 'open') count = allEvents.filter((e) => e.category === 'Open events').length;
+    else if (stat.id === 'attended') count = allEvents.filter((e) => e.category === 'Past events').length;
+    return { ...stat, count };
+  });
 
   const tabs = [
-    { value: 'all', label: 'All upcoming', icon: Calendar, count: upcoming.length },
-    { value: 'registered', label: 'Registered', icon: CheckCircle2, count: registered.length },
-    { value: 'available', label: 'Open', icon: Ticket, count: available.length },
-    { value: 'past', label: 'Past', icon: CalendarDays, count: pastEvents.length },
+    { id: 'Upcoming', label: 'All Events', icon: Calendar, count: stats.find((s) => s.id === 'upcoming')?.count || 0 },
+    { id: 'Registered', label: 'Registered', icon: CheckCircle, count: stats.find((s) => s.id === 'registered')?.count || 0 },
+    { id: 'Open events', label: 'Open Slots', icon: Ticket, count: stats.find((s) => s.id === 'open')?.count || 0 },
+    { id: 'Past events', label: 'Past Events', icon: CalendarCheck, count: stats.find((s) => s.id === 'attended')?.count || 0 },
   ];
 
-  const display =
-    tab === 'all' ? upcoming :
-    tab === 'registered' ? registered :
-    tab === 'available' ? available :
-    [];
+  const selectedEvent = selectedEventId ? allEvents.find((e) => e.id === selectedEventId) : null;
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={Calendar}
-        title="Events"
-        subtitle="Workshops, contests, hackathons, and bootcamps you can join"
-        accent="blue"
-      />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Calendar} label="Upcoming" value={upcoming.length} sublabel="Open events" accent="blue" delay={0} />
-        <StatCard icon={CheckCircle2} label="Registered" value={registered.length} sublabel="Your seat saved" accent="emerald" delay={0.05} />
-        <StatCard icon={Ticket} label="Open Slots" value={available.length} sublabel="Available now" accent="violet" delay={0.1} />
-        <StatCard icon={CalendarDays} label="Attended" value={pastEvents.filter((e) => e.attended).length} sublabel="Past events" accent="amber" delay={0.15} />
-      </div>
-
+    <div className="flex min-h-screen text-gray-300 selection:bg-violet-500/30">
       <AnimatePresence>
         {flash && <Flash msg={flash} onClose={() => setFlash(null)} />}
       </AnimatePresence>
 
-      <TabBar tabs={tabs} value={tab} onChange={setTab} />
-
-      {tab !== 'past' &&
-        (display.length === 0 ? (
-          <GlassCard padding="p-0">
-            <EmptyState
-              icon={CalendarDays}
-              title="No events to show"
-              description="Try switching tabs or check back later."
-              accent="blue"
-            />
-          </GlassCard>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {display.map((event, i) => (
-              <EventCard key={event.id} event={event} onFlash={setFlash} delay={i * 0.04} />
-            ))}
+      {/* ── Secondary left nav ───────────────────────────────────────── */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-0.5">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSelectedEventId(null);
+                  }}
+                  className={cn(
+                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    active
+                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                  )}
+                >
+                  {active && (
+                    <motion.div layoutId="activeTabIndicator" className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
+                    <span className="truncate text-left">{tab.label}</span>
+                  </div>
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      active ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-500"
+                    )}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        ))}
+        </nav>
+      </aside>
 
-      {tab === 'past' && (
-        <GlassCard padding="p-0">
-          {pastEvents.length === 0 ? (
-            <EmptyState icon={CalendarDays} title="No past events" accent="gray" />
-          ) : (
-            pastEvents.map((e, i) => (
+      {/* ── Main content ─────────────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile / tablet horizontal tab bar */}
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setSelectedEventId(null);
+                    }}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      active
+                        ? 'border-violet-500 text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        <main className="flex-1 overflow-hidden relative">
+          <AnimatePresence mode="wait">
+            {selectedEvent ? (
               <motion.div
-                key={e.id}
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: i * 0.03 }}
-                className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] ${
-                  i < pastEvents.length - 1 ? 'border-b border-white/[0.04]' : ''
-                }`}
+                key="detail"
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0 flex flex-col"
               >
-                {e.attended ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                ) : (
-                  <XCircle className="h-4 w-4 shrink-0 text-gray-600" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-200">{e.title}</p>
-                  <p className="mt-0.5 text-[11px] text-gray-500">
-                    {fmtDate(e.start_date)} · {e.kind}
-                  </p>
-                </div>
-                <Pill tone={e.tone}>{e.kind}</Pill>
-                <Pill tone={e.attended ? 'emerald' : 'gray'}>
-                  {e.attended ? 'Attended' : 'Missed'}
-                </Pill>
-                <ChevronRight className="h-4 w-4 shrink-0 text-gray-600" />
+                <EventDetail
+                  event={selectedEvent}
+                  onBack={() => setSelectedEventId(null)}
+                  onFlash={setFlash}
+                />
               </motion.div>
-            ))
-          )}
-        </GlassCard>
-      )}
+            ) : (
+              <motion.div
+                key="main"
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0 flex flex-col"
+              >
+                <MainContent
+                  activeTab={activeTab}
+                  events={allEvents}
+                  stats={stats}
+                  onEventClick={setSelectedEventId}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
   );
 }

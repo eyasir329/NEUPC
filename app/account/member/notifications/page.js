@@ -23,12 +23,10 @@ export default async function MemberNotificationsPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12">
-      <MemberNotificationsClient
-        notifications={notifications}
-        unreadCount={unreadCount}
-        userId={user.id}
-      />
-    </div>
+    <MemberNotificationsClient
+      notifications={notifications}
+      unreadCount={unreadCount}
+      userId={user.id}
+    />
   );
 }

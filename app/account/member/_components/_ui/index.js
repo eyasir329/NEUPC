@@ -113,9 +113,9 @@ export function GlassCard({
   href,
   ...rest
 }) {
-  const base = `rounded-xl border border-white/[0.06] bg-white/[0.02] ${padding} ${
+  const base = `rounded-2xl border border-white/[0.08] bg-gray-900 ${padding} ${
     hover
-      ? 'transition-all hover:border-white/[0.1] hover:bg-white/[0.04]'
+      ? 'transition-all hover:bg-white/[0.02] hover:border-white/[0.12]'
       : ''
   } ${className}`;
 

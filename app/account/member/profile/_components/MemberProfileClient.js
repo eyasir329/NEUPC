@@ -1,33 +1,21 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Check,
-  X,
-  Loader2,
-  ExternalLink,
-  ChevronRight,
-  Trophy,
-  Award,
-  Users,
-  Settings,
-  ChevronDown,
-  Search,
-  Pencil,
-  Code2,
-  Globe,
-  User,
-  Activity,
-  Sparkles,
-  GraduationCap,
-  IdCard,
-  BookOpen,
-  Hash,
+  Check, X, Loader2, ExternalLink, ChevronRight, Trophy, Award, Users,
+  Settings, ChevronDown, Search, Pencil, Code2, Globe, User, Activity,
+  Sparkles, GraduationCap, IdCard, BookOpen, Hash
 } from 'lucide-react';
 import { updateMemberProfileAction } from '@/app/_lib/member-profile-actions';
-import { PageHeader, ActionButton } from '../../_components/_ui';
+import Link from "next/link";
+import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard } from '../../_components/_ui';
 
-// ─── Platform registry ────────────────────────────────────────────────────────
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
+
+// ... PLATFORMS ...
 const HANDLE_PLATFORMS = [
   { id: 'codeforces',        name: 'Codeforces',     short: 'CF', color: '#ef4444', profileUrl: (h) => `https://codeforces.com/profile/${h}`,              logo: 'https://codeforces.org/s/0/favicon-96x96.png',   category: 'cp' },
   { id: 'atcoder',           name: 'AtCoder',         short: 'AC', color: '#38bdf8', profileUrl: (h) => `https://atcoder.jp/users/${h}`,                    logo: 'https://img.atcoder.jp/assets/atcoder.png',       category: 'cp' },
@@ -57,7 +45,6 @@ const TABS = [
   { id: 'activity', label: 'Activity', icon: Activity },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getHandleValue(profile, platform) {
   if (!profile) return null;
   if (platform.id === 'github')   return profile.github   ?? null;
@@ -72,50 +59,6 @@ function getDisplayHandle(platform, handle) {
   return platform.isUrl ? (handle.split('/').filter(Boolean).pop() ?? handle) : handle;
 }
 
-// ─── Pill ─────────────────────────────────────────────────────────────────────
-function Pill({ children, tone = 'default', dot = false }) {
-  const tones = {
-    default: 'bg-white/[0.06] border-white/[0.10] text-white/50',
-    accent:  'bg-[rgba(124,131,255,0.12)] border-[rgba(124,131,255,0.20)] text-[#aab0ff]',
-    success: 'bg-[rgba(74,222,128,0.12)]  border-[rgba(74,222,128,0.20)]  text-[#86efac]',
-    warning: 'bg-[rgba(251,191,36,0.12)]  border-[rgba(251,191,36,0.20)]  text-[#fcd34d]',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${tones[tone]} whitespace-nowrap`}>
-      {dot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-      {children}
-    </span>
-  );
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-function ProfileAvatar({ user, size = 72 }) {
-  const isImage = user.avatar_url?.startsWith('/api/image/');
-  const initials =
-    user.avatar_url && user.avatar_url.length <= 3
-      ? user.avatar_url
-      : (user.full_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? 'M');
-
-  if (isImage) {
-    return (
-      <img src={user.avatar_url} alt={user.full_name}
-        style={{ width: size, height: size }}
-        className="rounded-full object-cover ring-2 ring-black/40 shrink-0" />
-    );
-  }
-  return (
-    <div style={{
-      width: size, height: size,
-      fontSize: Math.round(size * 0.36),
-      background: 'linear-gradient(135deg, #4ade80, #22a360)',
-      color: '#03200f',
-    }} className="rounded-full shrink-0 flex items-center justify-center font-bold ring-2 ring-black/40">
-      {initials}
-    </div>
-  );
-}
-
-// ─── Platform logo ────────────────────────────────────────────────────────────
 function PlatformLogo({ platform, size = 16 }) {
   const [failed, setFailed] = useState(false);
   if (!platform.logo || failed) {
@@ -129,96 +72,18 @@ function PlatformLogo({ platform, size = 16 }) {
   );
 }
 
-// ─── Tag ─────────────────────────────────────────────────────────────────────
-function Tag({ children, tone = 'default' }) {
-  const tones = {
-    default: 'bg-white/[0.05] border-white/[0.07] text-white/50',
-    blue:    'bg-[rgba(96,165,250,0.10)]  border-[rgba(96,165,250,0.18)]  text-[#93c5fd]',
-    violet:  'bg-[rgba(167,139,250,0.10)] border-[rgba(167,139,250,0.18)] text-[#c4b5fd]',
-  };
-  return (
-    <span className={`text-[11.5px] border px-2.5 py-0.5 rounded-full ${tones[tone]}`}>
-      {children}
-    </span>
-  );
-}
-
-// ─── Tab nav (desktop sidebar item) ───────────────────────────────────────────
-function TabSideItem({ tab, active, onClick }) {
-  const Icon = tab.icon;
-  return (
-    <button
-      onClick={() => onClick(tab.id)}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-        active
-          ? 'bg-white/[0.07] text-white'
-          : 'text-white/40 hover:bg-white/[0.04] hover:text-white/70'
-      }`}
-    >
-      <Icon className={`size-[15px] shrink-0 ${active ? 'text-white/70' : 'text-white/30'}`} />
-      <span className="flex-1 truncate">{tab.label}</span>
-      {active && <ChevronRight className="size-3.5 text-white/30" />}
-    </button>
-  );
-}
-
-// ─── Tab nav (mobile pill) ────────────────────────────────────────────────────
-function TabMobilePill({ tab, active, onClick }) {
-  const Icon = tab.icon;
-  return (
-    <button
-      onClick={() => onClick(tab.id)}
-      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap transition-colors ${
-        active
-          ? 'border-white/20 bg-white/[0.09] text-white'
-          : 'border-white/[0.07] bg-transparent text-white/35 hover:border-white/15 hover:text-white/65'
-      }`}
-    >
-      <Icon className="size-3.5 shrink-0" />
-      {tab.label}
-    </button>
-  );
-}
-
-// ─── Section card wrapper ─────────────────────────────────────────────────────
-function Card({ title, icon: Icon, action, children, padded = true }) {
-  return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-      {(title || action) && (
-        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.05]">
-          <div className="flex items-center gap-2 min-w-0">
-            {Icon && <Icon className="w-4 h-4 text-white/25 shrink-0" />}
-            <p className="text-[13px] font-semibold text-white/75 truncate">{title}</p>
-          </div>
-          {action}
-        </div>
-      )}
-      <div className={padded ? 'px-5 py-4' : ''}>{children}</div>
-    </div>
-  );
-}
-
-function EditButton({ onClick, label = 'Edit' }) {
-  return (
-    <button onClick={onClick}
-      className="shrink-0 flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/35 transition hover:bg-white/[0.07] hover:text-white/65">
-      <Pencil className="w-3 h-3" /> {label}
-    </button>
-  );
-}
-
-// ─── Handle row (view) ────────────────────────────────────────────────────────
 function HandleRow({ platform, handle }) {
   const url     = handle ? platform.profileUrl(handle) : null;
   const display = getDisplayHandle(platform, handle);
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors ${
+    <div className={cn(
+      "flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors",
       handle
-        ? 'border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.045] hover:border-white/[0.12]'
-        : 'border-white/[0.04] bg-transparent opacity-30'
-    }`}>
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg"
+        ? 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1]'
+        : 'border-white/[0.04] bg-transparent opacity-40'
+    )}>
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg shadow-inner"
         style={{
           background: handle ? `${platform.color}15` : 'rgba(255,255,255,0.04)',
           border: `1px solid ${handle ? platform.color + '30' : 'rgba(255,255,255,0.06)'}`,
@@ -227,7 +92,7 @@ function HandleRow({ platform, handle }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-[11.5px] font-medium leading-none mb-0.5 ${handle ? 'text-white/60' : 'text-white/25'}`}>
+        <p className={cn("text-[11.5px] font-medium leading-none mb-0.5", handle ? 'text-gray-200' : 'text-gray-500')}>
           {platform.name}
         </p>
         {handle ? (
@@ -239,7 +104,7 @@ function HandleRow({ platform, handle }) {
             <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-60" />
           </a>
         ) : (
-          <p className="text-[10.5px] text-white/18 leading-none">Not linked</p>
+          <p className="text-[10.5px] text-gray-600 leading-none">Not linked</p>
         )}
       </div>
 
@@ -253,7 +118,6 @@ function HandleRow({ platform, handle }) {
   );
 }
 
-// ─── Handle edit row ──────────────────────────────────────────────────────────
 function HandleEditRow({ platform, handle }) {
   const fieldName =
     platform.id === 'github'   ? 'github'   :
@@ -266,32 +130,31 @@ function HandleEditRow({ platform, handle }) {
 
   return (
     <div className="flex items-center gap-2.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg"
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg shadow-inner"
         style={{ background: `${platform.color}15`, border: `1px solid ${platform.color}30` }}>
         <PlatformLogo platform={platform} />
       </div>
       <div className="flex-1 min-w-0">
-        <label className="block text-[10px] font-medium text-white/30 mb-1">{platform.name}</label>
+        <label className="block text-[10px] font-medium text-gray-400 mb-1">{platform.name}</label>
         <input
           name={fieldName}
           defaultValue={handle ?? ''}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 font-mono text-[12px] text-white placeholder-white/15 outline-none focus:border-white/25 focus:bg-white/[0.05] transition"
+          className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 font-mono text-[12px] text-white placeholder-white/15 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-violet-500/50 transition"
         />
       </div>
     </div>
   );
 }
 
-// ─── Form primitives ──────────────────────────────────────────────────────────
 function FormField({ label, name, defaultValue, placeholder, hint, textarea }) {
-  const cls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13px] text-white placeholder-white/20 outline-none focus:border-white/25 focus:bg-white/[0.05] transition';
+  const cls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-[13px] text-white placeholder-white/20 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-violet-500/50 transition';
   return (
     <div>
-      <label className="block mb-1.5 text-[10.5px] font-semibold tracking-[0.1em] uppercase text-white/35">
+      <label className="block mb-1.5 text-[10.5px] font-semibold tracking-[0.1em] uppercase text-gray-400">
         {label}
-        {hint && <span className="ml-1.5 normal-case tracking-normal text-white/20 font-normal">{hint}</span>}
+        {hint && <span className="ml-1.5 normal-case tracking-normal text-gray-500 font-normal">{hint}</span>}
       </label>
       {textarea
         ? <textarea name={name} defaultValue={defaultValue} placeholder={placeholder} rows={3} className={`${cls} resize-none`} />
@@ -302,13 +165,12 @@ function FormField({ label, name, defaultValue, placeholder, hint, textarea }) {
 
 function FormAlert({ error, success }) {
   if (error)
-    return <p className="rounded-xl border border-red-400/25 bg-red-400/[0.07] px-4 py-3 text-[12.5px] text-red-400">{error}</p>;
+    return <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12.5px] text-red-400 shadow-inner">{error}</p>;
   if (success)
-    return <p className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-4 py-3 text-[12.5px] text-emerald-400">Profile saved.</p>;
+    return <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-[12.5px] text-emerald-400 shadow-inner">Profile saved.</p>;
   return null;
 }
 
-// ─── Edit form ────────────────────────────────────────────────────────────────
 function EditProfileForm({ profile, onDone }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError]     = useState(null);
@@ -334,7 +196,7 @@ function EditProfileForm({ profile, onDone }) {
       <FormField label="Bio" name="bio" defaultValue={profile?.bio ?? ''} placeholder="Tell the club about yourself…" textarea />
 
       <div>
-        <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-3">Social &amp; Dev</p>
+        <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-gray-400 mb-3">Social &amp; Dev</p>
         <div className="space-y-3">
           {SOC_PLATFORMS.map(p => (
             <HandleEditRow key={p.id} platform={p} handle={getHandleValue(profile, p)} />
@@ -344,12 +206,12 @@ function EditProfileForm({ profile, onDone }) {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-white/25">Competitive Programming</p>
+          <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-gray-400">Competitive Programming</p>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/25 pointer-events-none" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
             <input value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Filter…"
-              className="w-28 rounded-lg border border-white/[0.08] bg-white/[0.03] pl-7 pr-2.5 py-1.5 text-[11.5px] text-white placeholder-white/20 outline-none focus:border-white/20 transition" />
+              className="w-28 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-7 pr-2.5 py-1.5 text-[11.5px] text-white placeholder-gray-500 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] transition" />
           </div>
         </div>
         {filtered.length > 0 ? (
@@ -359,7 +221,7 @@ function EditProfileForm({ profile, onDone }) {
             ))}
           </div>
         ) : (
-          <p className="text-center py-8 text-[12px] text-white/25">No platforms match &ldquo;{query}&rdquo;</p>
+          <p className="text-center py-8 text-[12px] text-gray-500">No platforms match &ldquo;{query}&rdquo;</p>
         )}
       </div>
 
@@ -372,12 +234,12 @@ function EditProfileForm({ profile, onDone }) {
 
       <div className="flex items-center gap-2 pt-1">
         <button type="submit" disabled={isPending}
-          className="flex items-center gap-2 rounded-xl bg-white/[0.09] border border-white/[0.10] px-5 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-white/[0.14] disabled:opacity-40">
+          className="flex items-center gap-2 rounded-xl bg-violet-500/20 border border-violet-500/30 px-5 py-2.5 text-[12.5px] font-semibold text-violet-300 transition hover:bg-violet-500/30 disabled:opacity-40">
           {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
           Save changes
         </button>
         <button type="button" onClick={onDone} disabled={isPending}
-          className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-5 py-2.5 text-[12.5px] text-white/40 transition hover:bg-white/[0.04] hover:text-white/60 disabled:opacity-40">
+          className="flex items-center gap-2 rounded-xl border border-white/[0.08] px-5 py-2.5 text-[12.5px] font-semibold text-gray-300 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-40">
           <X className="size-4" /> Cancel
         </button>
       </div>
@@ -385,40 +247,22 @@ function EditProfileForm({ profile, onDone }) {
   );
 }
 
-// ─── Stat tile ────────────────────────────────────────────────────────────────
-function StatTile({ icon: Icon, label, value, accent }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3.5 py-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.07]"
-        style={{ background: accent ? `${accent}12` : 'rgba(255,255,255,0.03)' }}>
-        <Icon className="w-4 h-4" style={{ color: accent ?? 'rgba(255,255,255,0.4)' }} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.08em] text-white/30 font-medium">{label}</p>
-        <p className="text-[14px] font-semibold text-white/85 font-mono tabular-nums truncate">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Info row (membership facts) ──────────────────────────────────────────────
 function InfoRow({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-start gap-3 border-b border-white/[0.05] py-3 last:border-0">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04]">
-        <Icon className="size-3.5 text-white/35" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="mb-0.5 text-[10.5px] text-white/30">{label}</p>
-        <div className="text-[13px] text-white/65 truncate">
-          {value ?? <span className="italic text-white/20">Not set</span>}
+    <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] py-3.5 last:border-0 group">
+      <div className="flex items-center gap-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <Icon className="size-4 text-gray-400 group-hover:text-gray-300 transition-colors" />
         </div>
+        <p className="text-[13px] font-medium text-gray-400 group-hover:text-gray-300 transition-colors">{label}</p>
+      </div>
+      <div className="text-[13px] font-medium text-white truncate max-w-[200px]">
+        {value ?? <span className="italic text-gray-600 font-normal">Not set</span>}
       </div>
     </div>
   );
 }
 
-// ─── Handles tab content ──────────────────────────────────────────────────────
 function HandlesTab({ cpHandles, socialHandles, onEdit }) {
   const [showAll, setShowAll] = useState(false);
   const [query, setQuery]     = useState('');
@@ -429,169 +273,267 @@ function HandlesTab({ cpHandles, socialHandles, onEdit }) {
     : cpHandles;
   const visible     = (showAll || query.trim()) ? filteredCp : filteredCp.slice(0, 8);
   const hiddenCount = filteredCp.length - visible.length;
-  const pct         = cpHandles.length > 0 ? Math.round((connected.length / cpHandles.length) * 100) : 0;
 
   return (
-    <div className="space-y-4">
-      <Card
-        title="Social & Dev"
-        icon={Globe}
-        action={<EditButton onClick={onEdit} />}
-        padded={false}
-      >
-        <div className="p-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {socialHandles.map(({ platform, handle }) => (
-            <HandleRow key={platform.id} platform={platform} handle={handle} />
-          ))}
-        </div>
-      </Card>
+    <StaggerList>
+      <div className="space-y-6">
+        <GlassCard padding="p-0">
+          <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <SectionHeader icon={Globe} title="Social & Dev" subtitle="Your social media and development profiles" accent="blue" />
+            <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">Edit</ActionButton>
+          </div>
+          <div className="p-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {socialHandles.map(({ platform, handle }) => (
+              <HandleRow key={platform.id} platform={platform} handle={handle} />
+            ))}
+          </div>
+        </GlassCard>
 
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-white/[0.05]">
-          <Code2 className="w-4 h-4 text-white/25 shrink-0" />
-          <div className="flex-1 min-w-[180px]">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[13px] font-semibold text-white/75">Competitive handles</p>
-              <span className="text-[11px] font-mono text-white/30 ml-2 shrink-0">{connected.length}/{cpHandles.length}</span>
-            </div>
-            <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${pct}%`,
-                  background: connected.length === 0 ? 'transparent'
-                    : pct >= 70 ? 'linear-gradient(90deg,#4ade80,#22d3ee)'
-                    : pct >= 30 ? 'linear-gradient(90deg,#fbbf24,#4ade80)'
-                    : 'linear-gradient(90deg,#fb923c,#fbbf24)',
-                }} />
+        <GlassCard padding="p-0">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-white/[0.06]">
+            <SectionHeader icon={Code2} title="Competitive Handles" subtitle="Your programming platform identities" accent="emerald" />
+            <div className="flex items-center gap-4">
+              <div className="w-32">
+                <div className="flex justify-between text-[10px] font-medium text-gray-400 mb-1.5">
+                  <span>Linked</span>
+                  <span className="text-white">{connected.length}/{cpHandles.length}</span>
+                </div>
+                <GradientBar value={connected.length} max={cpHandles.length} tone="emerald" />
+              </div>
+              <div className="relative shrink-0 hidden sm:block">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input value={query} onChange={e => setQuery(e.target.value)}
+                  placeholder="Filter…"
+                  className="w-36 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 py-1.5 text-[12px] text-white placeholder-gray-500 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] transition" />
+              </div>
+              <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">Edit</ActionButton>
             </div>
           </div>
-          <div className="relative shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/25 pointer-events-none" />
-            <input value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Filter…"
-              className="w-32 rounded-lg border border-white/[0.08] bg-white/[0.03] pl-7 pr-2.5 py-1.5 text-[11.5px] text-white placeholder-white/20 outline-none focus:border-white/20 transition" />
+          <div className="p-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {visible.length > 0 ? visible.map(({ platform, handle }) => (
+              <HandleRow key={platform.id} platform={platform} handle={handle} />
+            )) : (
+              <EmptyState icon={Search} title="No handles found" description={`Could not find any handles matching "${query}".`} />
+            )}
           </div>
-          <EditButton onClick={onEdit} />
-        </div>
-        <div className="p-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.length > 0 ? visible.map(({ platform, handle }) => (
-            <HandleRow key={platform.id} platform={platform} handle={handle} />
-          )) : (
-            <p className="col-span-full text-center py-6 text-[12px] text-white/25">No platforms match &ldquo;{query}&rdquo;</p>
+          {!query.trim() && (hiddenCount > 0 || showAll) && (
+            <div className="border-t border-white/[0.06] px-5 py-3.5 bg-white/[0.01]">
+              <button onClick={() => setShowAll(v => !v)}
+                className="flex w-full items-center justify-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-200 transition-colors">
+                {showAll ? 'Show less' : `Show ${hiddenCount} more handles`}
+                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", showAll ? "rotate-180" : "")} />
+              </button>
+            </div>
           )}
-        </div>
-        {!query.trim() && (hiddenCount > 0 || showAll) && (
-          <div className="border-t border-white/[0.04] px-4 py-3">
-            <button onClick={() => setShowAll(v => !v)}
-              className="flex w-full items-center justify-center gap-1.5 text-[11.5px] text-white/30 hover:text-white/55 transition-colors">
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAll ? 'rotate-180' : ''}`} />
-              {showAll ? 'Show less' : `Show ${hiddenCount} more`}
-            </button>
-          </div>
-        )}
+        </GlassCard>
       </div>
-    </div>
+    </StaggerList>
   );
 }
 
-// ─── Overview tab ─────────────────────────────────────────────────────────────
 function OverviewTab({ memberProfile, connectedCount, totalHandles, onEdit }) {
   const skills    = memberProfile?.skills    ?? [];
   const interests = memberProfile?.interests ?? [];
   const approved  = memberProfile?.approved === true;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={IdCard}        label="Student ID" value={memberProfile?.student_id ?? '—'} accent="#7c83ff" />
-        <StatTile icon={GraduationCap} label="CGPA"       value={memberProfile?.cgpa ?? '—'}       accent="#4ade80" />
-        <StatTile icon={Hash}          label="Handles"    value={`${connectedCount}/${totalHandles}`} accent="#22d3ee" />
-        <StatTile icon={BookOpen}      label="Semester"   value={memberProfile?.semester ?? '—'}   accent="#fbbf24" />
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={IdCard}
+          label="Student ID"
+          value={memberProfile?.student_id ?? '—'}
+          accent="violet"
+          delay={0.05}
+        />
+        <StatCard
+          icon={GraduationCap}
+          label="CGPA"
+          value={memberProfile?.cgpa ?? '—'}
+          accent="emerald"
+          delay={0.1}
+        />
+        <StatCard
+          icon={Hash}
+          label="Linked Handles"
+          value={`${connectedCount}/${totalHandles}`}
+          accent="cyan"
+          delay={0.15}
+        />
+        <StatCard
+          icon={BookOpen}
+          label="Current Semester"
+          value={memberProfile?.semester ?? '—'}
+          accent="amber"
+          delay={0.2}
+        />
       </div>
 
-      <Card title="About" icon={User} action={<EditButton onClick={onEdit} />}>
-        {memberProfile?.bio ? (
-          <p className="text-[13px] text-white/55 leading-relaxed whitespace-pre-line">{memberProfile.bio}</p>
-        ) : (
-          <p className="text-[12.5px] italic text-white/20">No bio yet. Add one to introduce yourself.</p>
-        )}
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Membership" icon={GraduationCap} padded={false}>
-          <div className="px-5">
-            <InfoRow icon={Check}         label="Status"     value={<Pill tone={approved ? 'success' : 'warning'} dot>{approved ? 'Active' : 'Pending'}</Pill>} />
-            <InfoRow icon={IdCard}        label="Student ID" value={memberProfile?.student_id} />
-            <InfoRow icon={BookOpen}      label="Department" value={memberProfile?.department} />
-            <InfoRow icon={Hash}          label="Session"    value={memberProfile?.session} />
-            <InfoRow icon={GraduationCap} label="Semester"   value={memberProfile?.semester} />
-            {memberProfile?.cgpa != null && <InfoRow icon={Sparkles} label="CGPA" value={String(memberProfile.cgpa)} />}
-          </div>
-        </Card>
-
-        <Card title="Skills & interests" icon={Sparkles} action={<EditButton onClick={onEdit} />}>
-          {skills.length === 0 && interests.length === 0 ? (
-            <p className="text-[12.5px] text-white/20 italic">No skills or interests listed yet.</p>
+      <GlassCard padding="p-0">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Professional Bio"
+            subtitle="A brief introduction about your background and goals"
+            accent="fuchsia"
+          />
+          <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">
+            Edit
+          </ActionButton>
+        </div>
+        <div className="p-5">
+          {memberProfile?.bio ? (
+            <p className="text-[13px] leading-relaxed text-gray-300 whitespace-pre-line">
+              {memberProfile.bio}
+            </p>
           ) : (
-            <div className="space-y-3">
-              {skills.length > 0 && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-white/30 mb-1.5">Skills</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {skills.map(s => <Tag key={s} tone="blue">{s}</Tag>)}
-                  </div>
-                </div>
-              )}
-              {interests.length > 0 && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-white/30 mb-1.5">Interests</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {interests.map(s => <Tag key={s} tone="violet">{s}</Tag>)}
-                  </div>
-                </div>
-              )}
-            </div>
+            <p className="text-[13px] italic text-gray-500">
+              No bio yet. Add one to introduce yourself to the community.
+            </p>
           )}
-        </Card>
+        </div>
+      </GlassCard>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <GlassCard padding="p-0">
+          <div className="border-b border-white/[0.06] px-5 py-4">
+            <SectionHeader
+              icon={GraduationCap}
+              title="Membership Details"
+              subtitle="Your academic and club affiliation info"
+              accent="indigo"
+            />
+          </div>
+          <div className="px-5 py-2">
+            <InfoRow
+              icon={Check}
+              label="Status"
+              value={
+                <Pill tone={approved ? 'emerald' : 'amber'} icon={approved ? Check : null}>
+                  {approved ? 'Active Member' : 'Pending Approval'}
+                </Pill>
+              }
+            />
+            <InfoRow icon={IdCard} label="Student ID" value={memberProfile?.student_id} />
+            <InfoRow icon={BookOpen} label="Department" value={memberProfile?.department} />
+            <InfoRow icon={Hash} label="Session" value={memberProfile?.session} />
+            <InfoRow icon={GraduationCap} label="Semester" value={memberProfile?.semester} />
+            {memberProfile?.cgpa != null && (
+              <InfoRow icon={Sparkles} label="CGPA" value={String(memberProfile.cgpa)} />
+            )}
+          </div>
+        </GlassCard>
+
+        <GlassCard padding="p-0">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+            <SectionHeader
+              icon={Sparkles}
+              title="Skills & Interests"
+              subtitle="Technical expertise and areas of interest"
+              accent="sky"
+            />
+            <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">
+              Edit
+            </ActionButton>
+          </div>
+          <div className="p-5">
+            {skills.length === 0 && interests.length === 0 ? (
+              <EmptyState
+                icon={Sparkles}
+                title="No skills added"
+                description="Showcase your tech stack and interests by updating your profile."
+              />
+            ) : (
+              <div className="space-y-6">
+                {skills.length > 0 && (
+                  <div>
+                    <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Technical Skills
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {skills.map((s) => (
+                        <Pill key={s} tone="blue">
+                          {s}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {interests.length > 0 && (
+                  <div>
+                    <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Areas of Interest
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {interests.map((s) => (
+                        <Pill key={s} tone="violet">
+                          {s}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </GlassCard>
       </div>
     </div>
   );
 }
 
-// ─── Activity tab ─────────────────────────────────────────────────────────────
 function ActivityTab() {
   const links = [
-    { icon: Trophy,   label: 'Achievements',     desc: 'Awards, contest wins, milestones',     href: '/account/member/achievements' },
-    { icon: Award,    label: 'Certificates',     desc: 'Earned certificates and credentials',  href: '/account/member/certificates' },
-    { icon: Users,    label: 'Participation',    desc: 'Events, contests, bootcamps joined',   href: '/account/member/participation' },
-    { icon: Settings, label: 'Account & avatar', desc: 'Personal info, security, appearance',  href: '/account/member/settings' },
+    { icon: Trophy,   label: 'Achievements',     desc: 'Awards, contest wins, milestones',     href: '/account/member/achievements', tone: 'amber' },
+    { icon: Award,    label: 'Certificates',     desc: 'Earned certificates and credentials',  href: '/account/member/certificates', tone: 'blue' },
+    { icon: Users,    label: 'Participation',    desc: 'Events, contests, bootcamps joined',   href: '/account/member/participation', tone: 'emerald' },
+    { icon: Settings, label: 'Account Settings', desc: 'Personal info, security, appearance',  href: '/account/member/settings', tone: 'gray' },
   ];
 
   return (
-    <Card title="Activity & links" icon={Activity} padded={false}>
-      <div className="divide-y divide-white/[0.04]">
-        {links.map(({ icon: Icon, label, desc, href }) => (
-          <a key={href} href={href}
-            className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.03] group">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
-              <Icon className="w-4 h-4 text-white/40 group-hover:text-white/70 transition-colors" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-white/70 group-hover:text-white transition-colors">{label}</p>
-              <p className="text-[11.5px] text-white/30 truncate">{desc}</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/25 group-hover:text-white/50 transition-colors shrink-0" />
-          </a>
-        ))}
-      </div>
-    </Card>
+    <StaggerList>
+      <GlassCard padding="p-0">
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <SectionHeader icon={Activity} title="Activity & Quick Links" subtitle="Navigate to other parts of your profile" accent="violet" />
+        </div>
+        <div className="divide-y divide-white/[0.04] p-2">
+          {links.map(({ icon: Icon, label, desc, href, tone }) => (
+            <Link key={href} href={href} className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors hover:bg-white/[0.04] group">
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-${tone}-500/10 border border-${tone}-500/20 shadow-inner group-hover:scale-105 transition-transform`}>
+                <Icon className={`size-5 text-${tone}-400`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-gray-200 group-hover:text-white transition-colors">{label}</p>
+                <p className="text-[12px] text-gray-500 truncate">{desc}</p>
+              </div>
+              <ChevronRight className="size-4 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
+            </Link>
+          ))}
+        </div>
+      </GlassCard>
+    </StaggerList>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function MemberProfileClient({ user, memberProfile }) {
   const [editing, setEditing] = useState(false);
-  const [tab, setTab]         = useState('overview');
+
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      if (p && TABS.some((t) => t.id === p)) return p;
+    }
+    return 'overview';
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    setTab(tabId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
 
   const approved = memberProfile?.approved === true;
 
@@ -601,116 +543,188 @@ export default function MemberProfileClient({ user, memberProfile }) {
   const connectedCount = allHandles.filter(h => h.handle).length;
 
   return (
-    <div className="space-y-5 w-full max-w-[1600px] mx-auto">
+    <div className="flex h-full min-h-screen bg-black text-gray-300 selection:bg-violet-500/30">
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
+        <div className="flex h-14 shrink-0 items-center px-5 border-b border-white/[0.06]">
+          <span className="text-[14px] font-bold tracking-widest text-white/90">
+            PROFILE
+          </span>
+        </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-0.5">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleTabChange(t.id)}
+                  className={cn(
+                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    active
+                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                  )}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="activeTabIndicator"
+                      className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600"
+                    />
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
+                    <span className="truncate text-left">{t.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
 
-      <PageHeader
-        icon={User}
-        title="Profile"
-        subtitle="Your public NEUPC identity, handles, and bio"
-        accent="violet"
-        actions={
-          !editing && (
-            <ActionButton tone="primary" icon={Pencil} onClick={() => setEditing(true)}>
-              Edit profile
-            </ActionButton>
-          )
-        }
-      />
-
-      {/* Hero */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-        <div className="h-24 relative" style={{
-          background: 'radial-gradient(ellipse at 80% 50%, rgba(124,131,255,0.20) 0%, transparent 65%), radial-gradient(ellipse at 20% 50%, rgba(74,222,128,0.10) 0%, transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-        }}>
-          {!editing && (
-            <button onClick={() => setEditing(true)}
-              className="absolute top-4 right-4 flex items-center gap-1.5 rounded-xl border border-white/[0.12] bg-black/25 backdrop-blur-sm px-3.5 py-2 text-[12px] font-medium text-white/65 transition hover:bg-black/35 hover:text-white">
-              <Pencil className="w-3.5 h-3.5" />
-              Edit profile
-            </button>
-          )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex flex-1 min-w-0 items-center gap-0.5 overflow-x-auto">
+              {TABS.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => handleTabChange(t.id)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      active
+                        ? 'border-violet-500 text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
+                    <span className="hidden sm:inline">{t.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
 
-        <div className="px-6 pb-5">
-          <div className="flex flex-wrap items-end gap-4" style={{ marginTop: '-36px' }}>
-            <div className="rounded-full ring-[3px] ring-[#0d0e11] shrink-0">
-              <ProfileAvatar user={user} size={72} />
-            </div>
-            <div className="pb-1 min-w-0 flex-1">
-              <h2 className="text-[20px] font-semibold text-white tracking-tight leading-tight truncate">
-                {user.full_name}
-              </h2>
-              <p className="text-[12px] text-white/35 mt-0.5 mb-2 truncate">
-                {user.email}
-                {memberProfile?.session && <> · Session {memberProfile.session}</>}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Pill tone="accent" dot>Member{memberProfile?.semester ? ` · ${memberProfile.semester}` : ''}</Pill>
-                <Pill tone={approved ? 'success' : 'warning'} dot>{approved ? 'Active' : 'Pending approval'}</Pill>
-                {memberProfile?.department && <Pill>{memberProfile.department}</Pill>}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full relative">
+          <div className="mx-auto w-full max-w-5xl space-y-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start justify-between">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
+                  <User size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5">Profile</h1>
+                  <p className="text-sm text-gray-400">Your public NEUPC identity, handles, and bio</p>
+                </div>
               </div>
             </div>
+
+            <GlassCard padding="p-0" className="overflow-hidden">
+              <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+              <div
+                className="h-28 relative"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 80% 50%, rgba(124,131,255,0.15) 0%, transparent 70%), radial-gradient(ellipse at 20% 50%, rgba(74,222,128,0.08) 0%, transparent 70%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+                }}
+              >
+                {!editing && (
+                  <div className="absolute top-4 right-4">
+                    <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+                      Edit profile
+                    </ActionButton>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 pb-6">
+                <div className="flex flex-wrap items-end gap-5" style={{ marginTop: '-42px' }}>
+                  <div className="rounded-full ring-8 ring-gray-950 shrink-0 bg-gray-950 shadow-2xl">
+                    <Avatar user={user} size="xl" src={user.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null} name={user.full_name} />
+                  </div>
+                  <div className="pb-1 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h2 className="text-[24px] font-bold text-white tracking-tight leading-tight truncate">
+                        {user.full_name}
+                      </h2>
+                      {approved && (
+                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[13px] text-gray-400 mb-3 truncate">
+                      {user.email}
+                      {memberProfile?.session && <> · Session {memberProfile.session}</>}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Pill tone="violet" icon={User}>
+                        Member{memberProfile?.semester ? ` · ${memberProfile.semester}` : ''}
+                      </Pill>
+                      {!approved && (
+                        <Pill tone="amber" icon={AlertTriangle}>
+                          Pending Approval
+                        </Pill>
+                      )}
+                      {memberProfile?.department && <Pill tone="gray">{memberProfile.department}</Pill>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            {editing && (
+              <GlassCard>
+                <div className="flex items-center justify-between pb-5 border-b border-white/[0.06] mb-5">
+                  <SectionHeader icon={Pencil} title="Edit Profile" subtitle="Bio, handles, skills & interests" accent="violet" />
+                  <button
+                    onClick={() => setEditing(false)}
+                    className="flex items-center justify-center size-8 rounded-lg border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] transition"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <EditProfileForm profile={memberProfile} onDone={() => setEditing(false)} />
+              </GlassCard>
+            )}
+
+            {!editing && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className="w-full"
+                >
+                  {tab === 'overview' && (
+                    <OverviewTab
+                      memberProfile={memberProfile}
+                      connectedCount={connectedCount}
+                      totalHandles={allHandles.length}
+                      onEdit={() => setEditing(true)}
+                    />
+                  )}
+                  {tab === 'handles' && (
+                    <HandlesTab
+                      cpHandles={cpHandles}
+                      socialHandles={socialHandles}
+                      onEdit={() => setEditing(true)}
+                    />
+                  )}
+                  {tab === 'activity' && <ActivityTab />}
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
-        </div>
+        </main>
       </div>
-
-      {/* Edit overlay */}
-      {editing && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.05]">
-            <div>
-              <p className="text-[13px] font-semibold text-white/80">Edit profile</p>
-              <p className="mt-0.5 text-[11.5px] text-white/30">Bio · handles · skills &amp; interests</p>
-            </div>
-            <button onClick={() => setEditing(false)}
-              className="flex items-center justify-center size-8 rounded-lg border border-white/[0.07] text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition">
-              <X className="size-4" />
-            </button>
-          </div>
-          <div className="px-6 py-6">
-            <EditProfileForm profile={memberProfile} onDone={() => setEditing(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* Tab nav + content */}
-      {!editing && (
-        <>
-          {/* Mobile pills */}
-          <div className="lg:hidden -mx-1 overflow-x-auto scrollbar-none">
-            <div className="flex gap-2 px-1 py-1">
-              {TABS.map(t => (
-                <TabMobilePill key={t.id} tab={t} active={tab === t.id} onClick={setTab} />
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:gap-8">
-            {/* Desktop sidebar */}
-            <aside className="hidden lg:block">
-              <nav className="sticky top-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-2 space-y-0.5">
-                {TABS.map(t => (
-                  <TabSideItem key={t.id} tab={t} active={tab === t.id} onClick={setTab} />
-                ))}
-              </nav>
-            </aside>
-
-            {/* Content */}
-            <div className="min-w-0">
-              {tab === 'overview' && (
-                <OverviewTab
-                  memberProfile={memberProfile}
-                  connectedCount={connectedCount}
-                  totalHandles={allHandles.length}
-                  onEdit={() => setEditing(true)}
-                />
-              )}
-              {tab === 'handles'  && <HandlesTab cpHandles={cpHandles} socialHandles={socialHandles} onEdit={() => setEditing(true)} />}
-              {tab === 'activity' && <ActivityTab />}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

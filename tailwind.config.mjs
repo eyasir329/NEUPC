@@ -142,6 +142,10 @@ const config = {
           '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
           '50%': { opacity: '0.8', transform: 'scale(1.05)' },
         },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
       },
 
       animation: {
@@ -154,6 +158,7 @@ const config = {
         'scale-in': 'scale-in 0.5s ease-out both',
         float: 'float 3s ease-in-out infinite',
         'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
+        shimmer: 'shimmer 8s linear infinite',
       },
     },
   },

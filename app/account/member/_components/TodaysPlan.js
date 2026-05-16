@@ -1,40 +1,15 @@
-/**
- * @file Today's Plan — small actionable agenda derived from the user's
- *   open registrations, replies, and learning streak.
- *   Items can be checked off (local UI state).
- * @module TodaysPlan
- */
-
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import {
-  Sparkles,
-  Check,
-  ArrowRight,
-  Code2,
-  MessageSquare,
-  Calendar,
-  BookOpen,
-  Trophy,
-  Flame,
-} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { GlassCard, SectionHeader, IconChip, Pill } from './_ui';
-
-const ICON = {
-  practice: Code2,
-  reply: MessageSquare,
-  event: Calendar,
-  lesson: BookOpen,
-  contest: Trophy,
-  streak: Flame,
-};
+import { Target, CheckCircle2, Circle } from 'lucide-react';
 
 export default function TodaysPlan({ items = [] }) {
   const [checked, setChecked] = useState(new Set());
-  const toggle = (id) => {
+  
+  const toggle = (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setChecked((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -44,73 +19,59 @@ export default function TodaysPlan({ items = [] }) {
 
   const completedCount = items.filter((i) => checked.has(i.id)).length;
 
-  return (
-    <GlassCard padding="p-5">
-      <SectionHeader
-        icon={Sparkles}
-        title="Today's Plan"
-        subtitle={`${completedCount} of ${items.length} done · resets at midnight`}
-        accent="cyan"
-        action={<Pill tone="cyan">{items.length} tasks</Pill>}
-      />
+  const handleContainerClick = (href) => {
+    if (href) {
+      window.location.href = href;
+    }
+  };
 
-      <div className="space-y-1.5">
-        {items.map((item, i) => {
-          const Icon = ICON[item.type] ?? Sparkles;
-          const isDone = checked.has(item.id);
+  return (
+    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
+      <div className="flex items-start justify-between mb-8 pb-4 border-b border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 rounded-2xl shrink-0">
+             <Target className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Today's Plan</h3>
+            <p className="text-xs text-zinc-500 mt-1">{completedCount} of {items.length} done &middot; resets at midnight</p>
+          </div>
+        </div>
+        <span className="px-2 py-1 rounded-lg text-[9px] font-bold bg-white/5 border border-white/10 text-zinc-500 uppercase tracking-widest mt-1 shrink-0">
+          {items.length} tasks
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {items.map((task, i) => {
+          const isDone = checked.has(task.id);
           return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.04 }}
-              className={`group flex items-center gap-3 rounded-lg border p-2.5 transition-all ${
-                isDone
-                  ? 'border-emerald-500/15 bg-emerald-500/[0.04]'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              key={task.id} 
+              onClick={() => handleContainerClick(task.href)}
+              className={`group flex items-start gap-3 p-4 rounded-2xl transition-colors cursor-pointer border ${
+                isDone 
+                  ? 'bg-emerald-500/10 border-emerald-500/30' 
+                  : 'bg-white/5 border-white/10 hover:border-emerald-500/30 hover:bg-emerald-500/5'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => toggle(item.id)}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                  isDone
-                    ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
-                    : 'border-white/[0.12] bg-white/[0.03] text-transparent hover:border-emerald-500/30 hover:text-emerald-300/40'
-                }`}
-                aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
+              <button 
+                onClick={(e) => toggle(task.id, e)}
+                className={`mt-0.5 transition-colors shrink-0 ${isDone ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-emerald-400'}`}
               >
-                <Check className="h-3 w-3" strokeWidth={3} />
+                {isDone ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
               </button>
-
-              <IconChip icon={Icon} accent={item.accent} size="sm" />
-
-              <div className="min-w-0 flex-1">
-                <p
-                  className={`truncate text-[12.5px] font-medium ${
-                    isDone ? 'text-gray-500 line-through' : 'text-white'
-                  }`}
-                >
-                  {item.title}
-                </p>
-                <p className="truncate text-[10.5px] text-gray-500">
-                  {item.subtitle}
-                </p>
+              <div>
+                <h4 className={`text-sm font-bold mb-1 transition-colors leading-tight ${isDone ? 'text-zinc-400 line-through' : 'text-zinc-100 group-hover:text-emerald-400'}`}>
+                  {task.title}
+                </h4>
+                <p className="text-xs text-zinc-500 font-medium leading-tight">{task.subtitle}</p>
               </div>
-
-              {item.href && (
-                <Link
-                  href={item.href}
-                  className="shrink-0 rounded-md p-1.5 text-gray-600 opacity-0 transition group-hover:opacity-100 hover:bg-white/[0.05] hover:text-white"
-                  aria-label="Open"
-                >
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              )}
             </motion.div>
           );
         })}
       </div>
-    </GlassCard>
+    </div>
   );
 }

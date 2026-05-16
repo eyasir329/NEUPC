@@ -90,7 +90,7 @@ function formatDate(dateStr) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function ResourceViewer({ resource }) {
+export default function ResourceViewer({ resource, hideHeader = false }) {
   if (!resource) return null;
 
   const type = resource.resource_type;
@@ -108,37 +108,41 @@ export default function ResourceViewer({ resource }) {
     <section className="space-y-4" aria-label="Resource details">
 
       {/* ── Meta row: type + category + date + tags ── */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-[11px] font-semibold ${cfg.color}`}>
-          <TypeIcon className="h-3 w-3" />
-          {typeLabel}
-        </span>
-
-        {resource.category?.name && (
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-[11px] text-white/50">
-            <FolderOpen className="h-3 w-3 text-white/25" />
-            {resource.category.name}
+      {!hideHeader && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-[11px] font-semibold ${cfg.color}`}>
+            <TypeIcon className="h-3 w-3" />
+            {typeLabel}
           </span>
-        )}
 
-        {resource.is_pinned && (
-          <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/80">
-            <Pin className="h-3 w-3" /> Pinned
-          </span>
-        )}
+          {resource.category?.name && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-[11px] text-white/50">
+              <FolderOpen className="h-3 w-3 text-white/25" />
+              {resource.category.name}
+            </span>
+          )}
 
-        {date && (
-          <time dateTime={resource.published_at || resource.created_at} className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25">
-            <Calendar className="h-3 w-3" />
-            {date}
-          </time>
-        )}
-      </div>
+          {resource.is_pinned && (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/80">
+              <Pin className="h-3 w-3" /> Pinned
+            </span>
+          )}
+
+          {date && (
+            <time dateTime={resource.published_at || resource.created_at} className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25">
+              <Calendar className="h-3 w-3" />
+              {date}
+            </time>
+          )}
+        </div>
+      )}
 
       {/* ── Title ── */}
-      <h1 className="text-[18px] font-bold leading-snug tracking-tight text-white sm:text-[22px]">
-        {resource.title}
-      </h1>
+      {!hideHeader && (
+        <h1 className="text-[18px] font-bold leading-snug tracking-tight text-white sm:text-[22px]">
+          {resource.title}
+        </h1>
+      )}
 
       {/* ── Thumbnail (for non-visual types that have one) ── */}
       {showThumbnail && (
@@ -154,12 +158,12 @@ export default function ResourceViewer({ resource }) {
       )}
 
       {/* ── Main embed / content ── */}
-      <div className="overflow-hidden rounded-2xl border border-white/[0.07]">
+      <div className="w-full">
         <ResourceEmbed resource={resource} />
       </div>
 
       {/* ── Description ── */}
-      {resource.description && (
+      {!hideHeader && resource.description && (
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
           <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
             Description
@@ -171,7 +175,7 @@ export default function ResourceViewer({ resource }) {
       )}
 
       {/* ── Tags ── */}
-      {tags.length > 0 && (
+      {!hideHeader && tags.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           <Tag className="h-3 w-3 text-white/20" />
           {tags.map((tag) => (

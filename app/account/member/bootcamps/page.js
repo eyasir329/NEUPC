@@ -45,13 +45,10 @@ export default async function MemberBootcampsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#080b11] px-4 pt-6 pb-12 sm:px-6 sm:pt-8 lg:px-8 xl:px-12 2xl:px-16">
-      <div className="mx-auto max-w-7xl">
-        <MemberBootcampsClient
-          bootcamps={allBootcamps}
-          enrollmentMap={enrollmentMap}
-        />
-      </div>
-    </div>
+    <MemberBootcampsClient
+      user={user}
+      bootcamps={allBootcamps}
+      enrollmentMap={enrollmentMap}
+    />
   );
 }
