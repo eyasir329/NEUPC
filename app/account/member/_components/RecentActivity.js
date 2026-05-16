@@ -1,86 +1,92 @@
-/**
- * @file Recent activity feed — chronological timeline of the member's
- *   last few actions. Caps at 4 items with a "View all" affordance.
- * @module MemberRecentActivity
- */
-
 'use client';
 
 import {
   Calendar,
   CheckCircle,
+  CheckCircle2,
   Award,
   MessageSquare,
   BookOpen,
   FileText,
   Activity,
   ArrowRight,
+  Trophy
 } from 'lucide-react';
-import { GlassCard, SectionHeader, IconChip, ActionButton } from './_ui';
-import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 const ICON_MAP = {
-  Calendar,
-  CheckCircle,
-  Award,
-  MessageSquare,
-  BookOpen,
-  FileText,
+  Calendar: Calendar,
+  CheckCircle: CheckCircle2,
+  CheckCircle2: CheckCircle2,
+  Award: Trophy,
+  Trophy: Trophy,
+  MessageSquare: MessageSquare,
+  BookOpen: BookOpen,
+  FileText: FileText,
+};
+
+const TONE_TO_TW = {
+  emerald: { text: 'text-emerald-400', border: 'border-emerald-500/30' },
+  blue: { text: 'text-blue-400', border: 'border-blue-500/30' },
+  amber: { text: 'text-amber-400', border: 'border-amber-500/30' },
+  violet: { text: 'text-violet-400', border: 'border-violet-500/30' },
+  cyan: { text: 'text-cyan-400', border: 'border-cyan-500/30' },
+  pink: { text: 'text-pink-400', border: 'border-pink-500/30' },
+  rose: { text: 'text-rose-400', border: 'border-rose-500/30' },
 };
 
 const MAX_ITEMS = 4;
 
-export default function RecentActivity({ recentActivities }) {
+export default function RecentActivity({ recentActivities = [] }) {
   const visible = recentActivities.slice(0, MAX_ITEMS);
   const extra = recentActivities.length - visible.length;
 
   return (
-    <GlassCard padding="p-5">
-      <SectionHeader
-        icon={Activity}
-        title="Recent Activity"
-        subtitle="Your latest actions"
-        accent="emerald"
-        action={
-          extra > 0 && (
-            <ActionButton
-              tone="ghost"
-              icon={ArrowRight}
-              href="/account/member/participation"
-            >
-              All {recentActivities.length}
-            </ActionButton>
-          )
-        }
-      />
-      <div className="relative space-y-1">
-        {/* Vertical timeline line — aligned with IconChip size="sm" centre (p-1.5 + h-3.5 ≈ 13px from row left at p-2) */}
-        <div className="absolute top-3 bottom-3 left-[21px] w-px bg-white/[0.06]" />
+    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 rounded-2xl shrink-0">
+             <Activity className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Recent Activity</h3>
+            <p className="text-xs text-zinc-500 mt-1">Your latest actions</p>
+          </div>
+        </div>
+        {extra > 0 && (
+          <Link 
+            href="/account/member/participation" 
+            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 transition-colors shrink-0"
+          >
+            All {recentActivities.length} <ArrowRight className="w-4 h-4" />
+          </Link>
+        )}
+      </div>
+
+      <div className="relative border-l border-white/10 ml-6 space-y-8 pb-2 mt-4">
         {visible.map((activity, i) => {
           const Icon = ICON_MAP[activity.icon] ?? Activity;
+          const toneConfig = TONE_TO_TW[activity.tone] || TONE_TO_TW.emerald;
+          
           return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.25, delay: i * 0.04 }}
-              className="relative flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-white/[0.02]"
-            >
-              <div className="relative z-10">
-                <IconChip icon={Icon} accent={activity.tone} size="sm" />
+            <div key={i} className="relative pl-8 group cursor-pointer">
+              {/* Timeline Dot */}
+              <div className={`absolute -left-[17px] top-0 w-8 h-8 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border ${toneConfig.border} flex items-center justify-center shadow-lg shadow-black/40 group-hover:scale-110 transition-transform`}>
+                <Icon className={`w-4 h-4 ${toneConfig.text}`} />
               </div>
-              <div className="min-w-0 flex-1 pt-0.5">
-                <p className="text-xs leading-relaxed text-gray-200">
+              
+              <div className="pt-1">
+                <h4 className="text-sm font-bold text-zinc-100 leading-tight mb-1 group-hover:text-indigo-400 transition-colors">
                   {activity.action}
-                </p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                </h4>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
                   {activity.time}
                 </p>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
-    </GlassCard>
+    </div>
   );
 }

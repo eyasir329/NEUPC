@@ -23,8 +23,9 @@ import MemberStatsGrid from './MemberStatsGrid';
 import UpcomingEventsSection from './UpcomingEventsSection';
 import RecentActivity from './RecentActivity';
 import LearningProgress from './LearningProgress';
+import VideoWatchTime from './VideoWatchTime';
 import AchievementsSection from './AchievementsSection';
-import ContinueLearningCard from './ContinueLearningCard';
+
 import NextContestCountdown from './NextContestCountdown';
 import NotificationsPreview from './NotificationsPreview';
 import ProfileCompletenessNudge from './ProfileCompletenessNudge';
@@ -291,32 +292,33 @@ export default function MemberDashboardClient({ session }) {
 
       <MemberStatsGrid stats={stats} />
 
-      <div className="grid gap-5 lg:grid-cols-3 lg:items-stretch">
-        <div className="flex flex-col gap-5 lg:col-span-2">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative mt-8">
+        <div className="xl:col-span-8 flex flex-col gap-8">
           <NextContestCountdown contest={nextContest} />
-          <ContinueLearningCard resume={resume} />
-          <div className="flex flex-1 flex-col">
-            <DailyPracticeCard
-              problem={dailyProblem}
-              todaySolved={todaySolved}
-              dailyGoal={dailyGoal}
-              weekActivity={last7}
-              streak={stats.streakDays}
-            />
-          </div>
+          <DailyPracticeCard
+            problem={dailyProblem}
+            todaySolved={todaySolved}
+            dailyGoal={dailyGoal}
+            weekActivity={last7}
+            streak={stats.streakDays}
+          />
+          <UpcomingEventsSection upcomingEvents={upcomingEvents} />
+          <VideoWatchTime roadmaps={roadmaps} />
         </div>
-        <div className="flex flex-col gap-5">
-          <TodaysPlan items={todaysPlan} />
-          <NotificationsPreview items={notifications} />
-          <RecentActivity recentActivities={recentActivities} />
+
+        <div className="xl:col-span-4 flex flex-col gap-8">
+          <div className="sticky top-8 flex flex-col gap-8">
+            <TodaysPlan items={todaysPlan} />
+            <NotificationsPreview items={notifications} />
+            <RecentActivity recentActivities={recentActivities} />
+          </div>
         </div>
       </div>
 
-      <UpcomingEventsSection upcomingEvents={upcomingEvents} />
-
-      <LearningProgress roadmaps={roadmaps} />
-
-      <AchievementsSection achievements={achievements} />
+      <div className="mt-8 flex flex-col gap-8">
+        <LearningProgress roadmaps={roadmaps} />
+        <AchievementsSection achievements={achievements} />
+      </div>
     </PageShell>
   );
 }

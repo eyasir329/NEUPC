@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Bell,
@@ -30,7 +31,11 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Activity,
+  Code2,
+  Pencil,
 } from 'lucide-react';
+
 import { useRouter } from 'next/navigation';
 import { updateMemberInfoAction } from '@/app/_lib/member-profile-actions';
 import {
@@ -38,8 +43,22 @@ import {
   removeAvatarAction,
 } from '@/app/_lib/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions';
-import { PageHeader } from '../../_components/_ui';
+import {
+  ActionButton,
+  GlassCard,
+  SectionHeader,
+  Pill,
+  Avatar,
+  StaggerList,
+  GradientBar,
+  EmptyState,
+} from '../../_components/_ui';
 import { Settings as SettingsIcon } from 'lucide-react';
+
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
+
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
 const SECTIONS = [
@@ -53,100 +72,19 @@ const SECTIONS = [
 
 // ─── Status meta ───────────────────────────────────────────────────────────────
 const STATUS_META = {
-  active: {
-    label: 'Active',
-    color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  },
-  pending: {
-    label: 'Pending',
-    color: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-  },
-  suspended: {
-    label: 'Suspended',
-    color: 'text-red-400 bg-red-400/10 border-red-400/20',
-  },
-  banned: {
-    label: 'Banned',
-    color: 'text-red-500 bg-red-500/10 border-red-500/20',
-  },
-  locked: {
-    label: 'Locked',
-    color: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
-  },
-  rejected: {
-    label: 'Rejected',
-    color: 'text-red-400 bg-red-400/10 border-red-400/20',
-  },
+  active: { label: 'Active Member', tone: 'emerald' },
+  pending: { label: 'Pending Approval', tone: 'amber' },
+  suspended: { label: 'Account Restricted', tone: 'rose' },
+  rejected: { label: 'Application Rejected', tone: 'rose' },
 };
 
-// ─── Sidebar item (desktop) ───────────────────────────────────────────────────
-function SideItem({ section, active, onClick }) {
-  const Icon = section.icon;
-  const isDanger = section.id === 'danger';
-  return (
-    <button
-      onClick={() => onClick(section.id)}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-        active
-          ? 'bg-white/[0.07] text-white'
-          : isDanger
-            ? 'text-red-400/60 hover:bg-red-400/[0.06] hover:text-red-400'
-            : 'text-white/40 hover:bg-white/[0.04] hover:text-white/70'
-      }`}
-    >
-      <Icon
-        className={`size-[15px] shrink-0 ${
-          active
-            ? 'text-white/70'
-            : isDanger
-              ? 'text-red-400/50'
-              : 'text-white/30'
-        }`}
-      />
-      <span className="flex-1 truncate">{section.label}</span>
-      {active && <ChevronRight className="size-3.5 text-white/30" />}
-    </button>
-  );
-}
 
-// ─── Mobile tab pill ──────────────────────────────────────────────────────────
-function MobileTab({ section, active, onClick }) {
-  const Icon = section.icon;
-  const isDanger = section.id === 'danger';
-  return (
-    <button
-      onClick={() => onClick(section.id)}
-      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap transition-colors ${
-        active
-          ? 'border-white/20 bg-white/[0.09] text-white'
-          : isDanger
-            ? 'border-red-400/15 bg-transparent text-red-400/55 hover:border-red-400/25 hover:text-red-400'
-            : 'border-white/[0.07] bg-transparent text-white/35 hover:border-white/15 hover:text-white/65'
-      }`}
-    >
-      <Icon className="size-3.5 shrink-0" />
-      {section.label}
-    </button>
-  );
-}
-
-// ─── Section heading ───────────────────────────────────────────────────────────
-function SectionHead({ title, description }) {
-  return (
-    <div className="mb-6">
-      <h2 className="text-[15px] font-semibold text-white/90">{title}</h2>
-      {description && (
-        <p className="mt-1 text-xs text-white/35">{description}</p>
-      )}
-    </div>
-  );
-}
 
 // ─── Field block ───────────────────────────────────────────────────────────────
 function Field({ label, children }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-medium tracking-wider text-white/40 uppercase">
+      <label className="text-[11px] font-semibold tracking-widest text-white/30 uppercase">
         {label}
       </label>
       {children}
@@ -154,20 +92,32 @@ function Field({ label, children }) {
   );
 }
 
-// ─── Read-only info row ────────────────────────────────────────────────────────
+// ─── Simple Input ──────────────────────────────────────────────────────────────
+function Input({ className = '', ...props }) {
+  return (
+    <input
+      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] text-white placeholder-white/20 outline-none focus:border-white/20 focus:bg-white/[0.06] transition ${className}`}
+      {...props}
+    />
+  );
+}
+
+// ─── Info row ──────────────────────────────────────────────────────────────────
 function InfoRow({ icon: Icon, label, value, badge }) {
   return (
-    <div className="flex items-start gap-3 border-b border-white/[0.05] py-3 last:border-0">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
-        <Icon className="size-3.5 text-white/35" />
+    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-3.5 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="flex size-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
+          <Icon className="size-3.5 text-white/35" />
+        </div>
+        <p className="text-[12.5px] text-white/60">{label}</p>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="mb-0.5 text-[10.5px] text-white/30">{label}</p>
-        <p className="truncate text-[13px] text-white/65">
+      <div className="flex items-center gap-3">
+        {badge}
+        <p className="text-[13px] font-medium text-white/80">
           {value || <span className="text-white/20 italic">Not set</span>}
         </p>
       </div>
-      {badge && <div className="shrink-0 self-center">{badge}</div>}
     </div>
   );
 }
@@ -175,27 +125,23 @@ function InfoRow({ icon: Icon, label, value, badge }) {
 // ─── Toggle row ────────────────────────────────────────────────────────────────
 function ToggleRow({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between gap-6 border-b border-white/[0.05] py-3.5 last:border-0">
-      <div className="min-w-0">
-        <p className="text-[13px] font-medium text-white/65">{label}</p>
+    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-4 last:border-0">
+      <div className="flex-1">
+        <p className="text-[13px] font-medium text-white/80">{label}</p>
         {description && (
-          <p className="mt-0.5 text-[11.5px] text-white/30">{description}</p>
+          <p className="text-[11.5px] text-white/30">{description}</p>
         )}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        aria-checked={checked}
-        role="switch"
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ${
-          checked
-            ? 'border-indigo-500 bg-indigo-500'
-            : 'border-white/15 bg-white/8'
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+          checked ? 'bg-indigo-500' : 'bg-white/[0.08]'
         }`}
       >
         <span
-          className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-            checked ? 'translate-x-4' : 'translate-x-0'
+          className={`inline-block size-3.5 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-5' : 'translate-x-1'
           }`}
         />
       </button>
@@ -203,25 +149,24 @@ function ToggleRow({ label, description, checked, onChange }) {
   );
 }
 
-// ─── Radio group ──────────────────────────────────────────────────────────────
-function RadioGroup({ label, options, value, onChange }) {
+// ─── Radio group ───────────────────────────────────────────────────────────────
+function RadioGroup({ label, value, onChange, options }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.05] py-3.5 last:border-0">
-      <span className="text-[13px] font-medium text-white/65">{label}</span>
-      <div className="flex overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] p-0.5">
-        {options.map((o) => (
+    <div className="border-b border-white/[0.04] py-4 last:border-0">
+      <p className="mb-3 text-[13px] font-semibold text-white/75">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
           <button
-            key={o.value}
-            onClick={() => onChange(o.value)}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium transition-colors sm:px-3 ${
-              value === o.value
-                ? 'bg-white/[0.08] text-white'
-                : 'text-white/30 hover:text-white/55'
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[12px] font-medium transition-all ${
+              value === opt.value
+                ? 'border-indigo-500/30 bg-indigo-500/8 text-indigo-300'
+                : 'border-white/[0.07] bg-white/[0.02] text-white/40 hover:bg-white/[0.05] hover:text-white/65'
             }`}
           >
-            {o.icon && <o.icon className="size-3.5" />}
-            <span className="hidden sm:inline">{o.label}</span>
-            <span className="sm:hidden">{o.label.slice(0, 3)}</span>
+            {opt.icon && <opt.icon className="size-3.5" />}
+            {opt.label}
           </button>
         ))}
       </div>
@@ -229,35 +174,6 @@ function RadioGroup({ label, options, value, onChange }) {
   );
 }
 
-// ─── Input ────────────────────────────────────────────────────────────────────
-function Input({
-  name,
-  defaultValue,
-  placeholder,
-  readOnly,
-  prefix,
-  type = 'text',
-}) {
-  return (
-    <div className="flex overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] transition-colors focus-within:border-white/20">
-      {prefix && (
-        <span className="flex items-center border-r border-white/8 bg-white/[0.03] px-3 font-mono text-[11.5px] text-white/25 select-none">
-          {prefix}
-        </span>
-      )}
-      <input
-        name={name}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        type={type}
-        className={`flex-1 bg-transparent px-3.5 py-2.5 text-[13px] text-white placeholder-white/20 outline-none ${
-          readOnly ? 'cursor-not-allowed text-white/25' : ''
-        }`}
-      />
-    </div>
-  );
-}
 
 // ─── Avatar Crop Modal ────────────────────────────────────────────────────────
 function AvatarCropModal({ src, onApply, onCancel }) {
@@ -453,16 +369,6 @@ function AvatarUploader({ user }) {
   const [pendingRef, setPendingRef] = useState(null); // input element ref for reset
   const isImage = user.avatar_url?.startsWith('/api/image/');
 
-  const initials =
-    user.avatar_url && user.avatar_url.length <= 3
-      ? user.avatar_url
-      : (user.full_name
-          ?.split(' ')
-          .map((w) => w[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase() ?? 'M');
-
   function handleFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -522,7 +428,7 @@ function AvatarUploader({ user }) {
   }
 
   return (
-    <>
+    <div className="space-y-4">
       {cropSrc && (
         <AvatarCropModal
           src={cropSrc}
@@ -531,116 +437,55 @@ function AvatarUploader({ user }) {
         />
       )}
 
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-          {/* ── large avatar preview ── */}
-          <div className="group relative shrink-0">
-            {isImage ? (
-              <img
-                src={user.avatar_url}
-                alt={user.full_name}
-                className="size-24 rounded-full object-cover shadow-lg ring-2 ring-white/10"
-              />
+      <div className="flex flex-col items-center gap-6 sm:flex-row">
+        <div className="relative shrink-0">
+          <Avatar user={user} size="xl" src={isImage ? user.avatar_url : null} name={user.full_name} />
+          <label className="absolute -bottom-1 -right-1 flex size-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-gray-900 text-white shadow-xl transition-transform hover:scale-110">
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <div
-                className="flex size-24 items-center justify-center rounded-full text-2xl font-bold shadow-lg ring-2 ring-white/10"
-                style={{
-                  background: 'linear-gradient(135deg,#4ade80,#22a360)',
-                  color: '#03200f',
-                }}
-              >
-                {initials}
-              </div>
+              <Camera className="size-4" />
             )}
-            {/* hover overlay — quick upload */}
-            <label className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-full bg-black/60 opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100">
-              {uploading ? (
-                <Loader2 className="size-5 animate-spin text-white" />
-              ) : (
-                <Camera className="size-5 text-white" />
-              )}
-              <span className="text-[9px] font-medium tracking-wide text-white/80">
-                {uploading ? 'Uploading…' : 'Change'}
-              </span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                disabled={uploading}
-                onChange={handleFileChange}
-              />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
+
+        <div className="flex-1 text-center sm:text-left">
+          <p className="text-[14px] font-semibold text-white">Profile Photo</p>
+          <p className="mb-4 text-[12px] text-gray-500">
+            Square image recommended. JPEG, PNG, WebP or GIF. Max 5 MB.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-[12px] font-bold text-violet-300 transition hover:bg-violet-500/20">
+              {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              {uploading ? 'Uploading...' : 'Upload new'}
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleFileChange} />
             </label>
-
-            {/* uploading ring */}
-            {uploading && (
-              <span className="pointer-events-none absolute inset-0 animate-pulse rounded-full ring-2 ring-indigo-500/50" />
+            {isImage && (
+              <ActionButton icon={Move} onClick={handleRelocate} tone="ghost">
+                Reposition
+              </ActionButton>
+            )}
+            {isImage && (
+              <ActionButton icon={Trash2} onClick={handleRemove} tone="danger" disabled={removing}>
+                {removing ? 'Removing...' : 'Remove'}
+              </ActionButton>
             )}
           </div>
-
-          {/* ── right column ── */}
-          <div className="w-full flex-1">
-            <p className="mb-0.5 text-[13px] font-semibold text-white/80">
-              Profile photo
+          {error && (
+            <p className="mt-3 text-[11px] text-rose-400 flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5" /> {error}
             </p>
-            <p className="mb-4 text-[11.5px] text-white/30">
-              Square image recommended · JPEG, PNG, WebP, GIF · Max 5 MB
-            </p>
-
-            {/* action buttons */}
-            <div className="flex flex-wrap gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-[12px] font-medium text-indigo-300 transition hover:border-indigo-500/50 hover:bg-indigo-500/20 disabled:opacity-40">
-                {uploading ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Upload className="size-3.5" />
-                )}
-                {uploading ? 'Uploading…' : 'Upload photo'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  disabled={uploading}
-                  onChange={handleFileChange}
-                />
-              </label>
-
-              {isImage && (
-                <button
-                  type="button"
-                  onClick={handleRelocate}
-                  disabled={uploading}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/50 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-40"
-                >
-                  <Move className="size-3.5" /> Crop &amp; reposition
-                </button>
-              )}
-
-              {isImage && (
-                <button
-                  type="button"
-                  onClick={handleRemove}
-                  disabled={removing}
-                  className="flex items-center gap-1.5 rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3.5 py-2 text-[12px] font-medium text-red-400/70 transition hover:border-red-500/25 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                >
-                  {removing ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-3.5" />
-                  )}
-                  {removing ? 'Removing…' : 'Remove'}
-                </button>
-              )}
-            </div>
-
-            {error && (
-              <p className="mt-3 flex items-center gap-1.5 text-[11.5px] text-red-400">
-                <AlertTriangle className="size-3.5 shrink-0" /> {error}
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -650,7 +495,7 @@ function AccountSection({ user }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const statusMeta = STATUS_META[user.account_status] ?? STATUS_META.pending;
+  const meta = STATUS_META[user.account_status] ?? STATUS_META.pending;
 
   async function handleSubmit(formData) {
     setError(null);
@@ -670,185 +515,115 @@ function AccountSection({ user }) {
   }
 
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Account"
-        description="Your account status, personal details, and contact information"
-      />
-
-      {/* Status card */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-        <p className="mb-4 text-[11px] font-semibold tracking-widest text-white/30 uppercase">
-          Account status
-        </p>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusMeta.color}`}
-            >
-              {statusMeta.label}
-            </span>
-            {user.email_verified && (
-              <span className="flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/8 px-2.5 py-0.5 text-[11px] text-emerald-400">
-                <BadgeCheck className="size-3" /> Email verified
-              </span>
-            )}
-            {user.phone_verified && (
-              <span className="flex items-center gap-1 rounded-full border border-sky-400/20 bg-sky-400/8 px-2.5 py-0.5 text-[11px] text-sky-400">
-                <Phone className="size-3" /> Phone verified
-              </span>
-            )}
-          </div>
-          <div className="text-right text-[11.5px] text-white/25">
-            {user.created_at && (
-              <p>
-                Member since{' '}
-                {new Date(user.created_at).toLocaleDateString('en-US', {
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </p>
-            )}
-            {user.last_login && (
-              <p>
-                Last login{' '}
-                {new Date(user.last_login).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            )}
-          </div>
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Account Status"
+            subtitle="Your current membership standing and history"
+            accent="violet"
+          />
         </div>
-        {user.status_reason && (
-          <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-white/30">
-            <Info className="mt-0.5 size-3.5 shrink-0" />
-            {user.status_reason}
-          </p>
-        )}
-      </div>
-
-      {/* Avatar */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
-        <div className="border-b border-white/[0.05] px-5 py-4">
-          <p className="text-[13px] font-semibold text-white/75">Avatar</p>
-          <p className="mt-0.5 text-[11.5px] text-white/30">
-            Your photo shown across the platform
-          </p>
-        </div>
-        <div className="px-5 py-4">
-          <AvatarUploader user={user} />
-        </div>
-      </div>
-
-      {/* Personal info */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
-        <div className="flex items-center justify-between border-b border-white/[0.05] px-5 py-4">
-          <div>
-            <p className="text-[13px] font-semibold text-white/75">
-              Personal information
-            </p>
-            <p className="mt-0.5 text-[11.5px] text-white/30">
-              Update your display name and contact details
-            </p>
+        <div className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Pill tone={meta.tone} icon={Shield}>{meta.label}</Pill>
+              {user.email_verified && <Pill tone="emerald" icon={BadgeCheck}>Verified Email</Pill>}
+              {user.phone_verified && <Pill tone="sky" icon={Phone}>Verified Phone</Pill>}
+            </div>
+            <div className="text-right text-[11px] text-gray-500 font-medium">
+              {user.created_at && (
+                <p>Joined {new Date(user.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+              )}
+              {user.last_login && (
+                <p>Last active {new Date(user.last_login).toLocaleDateString()}</p>
+              )}
+            </div>
           </div>
-          {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/35 transition hover:bg-white/[0.07] hover:text-white/65"
-            >
-              Edit
-            </button>
+          {user.status_reason && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-white/[0.02] p-3 border border-white/[0.04]">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-gray-400" />
+              <p className="text-[12px] text-gray-400">{user.status_reason}</p>
+            </div>
           )}
         </div>
-        <div className="px-5 py-4">
+      </GlassCard>
+
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Camera}
+            title="Profile Picture"
+            subtitle="Update your photo shown across the community"
+            accent="blue"
+          />
+        </div>
+        <div className="p-5">
+          <AvatarUploader user={user} />
+        </div>
+      </GlassCard>
+
+      <GlassCard padding="p-0">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Personal Details"
+            subtitle="Update your basic profile information"
+            accent="indigo"
+          />
+          {!editing && (
+            <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+              Edit
+            </ActionButton>
+          )}
+        </div>
+        <div className="p-5">
           {editing ? (
-            <form action={handleSubmit} className="space-y-4">
+            <form action={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Full name">
-                  <Input
-                    name="full_name"
-                    defaultValue={user.full_name}
-                    placeholder="Your name"
-                  />
+                <Field label="Display Name">
+                  <Input name="full_name" defaultValue={user.full_name} placeholder="e.g. John Doe" />
                 </Field>
-                <Field label="Phone">
-                  <Input
-                    name="phone"
-                    defaultValue={user.phone ?? ''}
-                    placeholder="+880 1XXX XXXXXX"
-                    type="tel"
-                  />
+                <Field label="Phone Number">
+                  <Input name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1XXX XXXXXX" type="tel" />
                 </Field>
               </div>
-              <Field label="Email · read-only (OAuth)">
-                <Input defaultValue={user.email} readOnly />
+              <Field label="Email Address (Linked via OAuth)">
+                <Input defaultValue={user.email} readOnly className="opacity-60" />
               </Field>
 
               {error && (
-                <p className="rounded-xl border border-red-400/20 bg-red-400/8 px-4 py-2.5 text-[12.5px] text-red-400">
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-400">
                   {error}
-                </p>
+                </div>
               )}
               {success && (
-                <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-4 py-2.5 text-[12.5px] text-emerald-400">
-                  Saved successfully.
-                </p>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-400/10 px-4 py-3 text-[12.5px] text-emerald-400">
+                  Profile updated successfully.
+                </div>
               )}
 
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="flex items-center gap-2 rounded-xl bg-white/[0.08] px-4 py-2.5 text-[12.5px] font-medium text-white transition hover:bg-white/[0.13] disabled:opacity-50"
-                >
-                  {isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Check className="size-4" />
-                  )}
-                  Save changes
+              <div className="flex items-center gap-2">
+                <button type="submit" disabled={isPending} className="flex items-center gap-2 rounded-xl bg-violet-500/20 border border-violet-500/30 px-5 py-2.5 text-[12.5px] font-bold text-violet-300 transition hover:bg-violet-500/30">
+                  {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  Save Changes
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing(false)}
-                  className="flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-[12px] text-white/40 transition hover:bg-white/[0.07] hover:text-white/65"
-                >
-                  <X className="size-4" /> Cancel
-                </button>
+                <ActionButton icon={X} onClick={() => setEditing(false)} tone="ghost">
+                  Cancel
+                </ActionButton>
               </div>
             </form>
           ) : (
-            <>
-              <InfoRow icon={User} label="Full name" value={user.full_name} />
-              <InfoRow
-                icon={Mail}
-                label="Email"
-                value={user.email}
-                badge={
-                  user.email_verified ? (
-                    <span className="flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/8 px-2 py-0.5 text-[10px] text-emerald-400">
-                      <BadgeCheck className="size-3" /> Verified
-                    </span>
-                  ) : null
-                }
-              />
-              <InfoRow icon={Phone} label="Phone" value={user.phone || null} />
-              <InfoRow
-                icon={Globe}
-                label="Auth provider"
-                value={
-                  user.provider
-                    ? user.provider.charAt(0).toUpperCase() +
-                      user.provider.slice(1)
-                    : 'Email / password'
-                }
-              />
-            </>
+            <div className="space-y-1">
+              <InfoRow icon={User} label="Full Name" value={user.full_name} />
+              <InfoRow icon={Mail} label="Email Address" value={user.email} />
+              <InfoRow icon={Phone} label="Phone Number" value={user.phone || "Not set"} />
+              <InfoRow icon={Globe} label="Auth Provider" value={user.provider?.toUpperCase() || "Password"} />
+            </div>
           )}
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }
@@ -862,21 +637,17 @@ function NotificationsSection() {
   const [weeklyDigest, setWeeklyDigest] = useState(true);
 
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Notifications"
-        description="Choose which updates you want to receive"
-      />
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
-        <div className="border-b border-white/[0.05] px-5 py-4">
-          <p className="text-[13px] font-semibold text-white/75">
-            Email &amp; push
-          </p>
-          <p className="mt-0.5 text-[11.5px] text-white/30">
-            Preferences saved locally for this session
-          </p>
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Bell}
+            title="Notification Preferences"
+            subtitle="Choose which updates you want to receive via email"
+            accent="blue"
+          />
         </div>
-        <div className="px-5">
+        <div className="px-5 pb-2">
           <ToggleRow
             label="Event reminders"
             description="Notify before registered events start"
@@ -908,12 +679,13 @@ function NotificationsSection() {
             onChange={setWeeklyDigest}
           />
         </div>
-        <p className="flex items-start gap-2 border-t border-white/[0.04] px-5 py-3.5 text-[11px] text-white/25">
-          <Info className="mt-px size-3 shrink-0" />
-          Email delivery is managed at the club level. These preferences are
-          saved in your browser session.
-        </p>
-      </div>
+        <div className="flex items-start gap-2 border-t border-white/[0.04] px-5 py-4 bg-white/[0.01]">
+          <Info className="mt-0.5 size-3.5 shrink-0 text-gray-500" />
+          <p className="text-[11px] leading-relaxed text-gray-500">
+            Email delivery is managed at the club level. These preferences are currently saved in your browser session for this visit.
+          </p>
+        </div>
+      </GlassCard>
     </div>
   );
 }
@@ -922,28 +694,29 @@ function NotificationsSection() {
 function AppearanceSection() {
   const [theme, setTheme] = useState('dark');
   const [density, setDensity] = useState('comfortable');
-  const [accent, setAccent] = useState('indigo');
+  const [accent, setAccent] = useState('violet');
 
   const ACCENTS = [
-    { value: 'indigo', label: 'Indigo', color: 'bg-indigo-500' },
+    { value: 'blue', label: 'Blue', color: 'bg-blue-500' },
     { value: 'violet', label: 'Violet', color: 'bg-violet-500' },
-    { value: 'cyan', label: 'Cyan', color: 'bg-cyan-500' },
+    { value: 'emerald', label: 'Emerald', color: 'bg-emerald-500' },
     { value: 'amber', label: 'Amber', color: 'bg-amber-500' },
   ];
 
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Appearance"
-        description="Customize the look and feel of your workspace"
-      />
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
-        <div className="border-b border-white/[0.05] px-5 py-4">
-          <p className="text-[13px] font-semibold text-white/75">Interface</p>
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Palette}
+            title="Interface Appearance"
+            subtitle="Customize the visual experience of your dashboard"
+            accent="violet"
+          />
         </div>
-        <div className="px-5">
+        <div className="px-5 py-2">
           <RadioGroup
-            label="Theme"
+            label="Color Theme"
             value={theme}
             onChange={setTheme}
             options={[
@@ -953,7 +726,7 @@ function AppearanceSection() {
             ]}
           />
           <RadioGroup
-            label="Density"
+            label="Layout Density"
             value={density}
             onChange={setDensity}
             options={[
@@ -961,30 +734,32 @@ function AppearanceSection() {
               { value: 'compact', label: 'Compact' },
             ]}
           />
-        </div>
-        <div className="border-t border-white/[0.04] px-5 py-4">
-          <p className="mb-3 text-[13px] font-medium text-white/65">
-            Accent color
-          </p>
-          <div className="flex gap-3">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.value}
-                onClick={() => setAccent(a.value)}
-                title={a.label}
-                className={`relative flex size-8 items-center justify-center rounded-full ${a.color} transition-transform hover:scale-110 ${accent === a.value ? 'ring-2 ring-white/40 ring-offset-2 ring-offset-gray-950' : ''}`}
-              >
-                {accent === a.value && (
-                  <Check className="size-3.5 text-white" strokeWidth={3} />
-                )}
-              </button>
-            ))}
+          
+          <div className="py-4 last:border-0 border-b border-white/[0.04]">
+            <p className="mb-3 text-[13px] font-semibold text-gray-200">Accent Color</p>
+            <div className="flex gap-4">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.value}
+                  onClick={() => setAccent(a.value)}
+                  className={`relative flex size-9 items-center justify-center rounded-xl transition-all hover:scale-110 ${
+                    accent === a.value 
+                      ? 'ring-2 ring-white/40 ring-offset-4 ring-offset-gray-950' 
+                      : 'hover:ring-1 hover:ring-white/20'
+                  } ${a.color}`}
+                >
+                  {accent === a.value && (
+                    <Check className="size-4 text-white" strokeWidth={3} />
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] text-gray-500">
+              Appearance settings are stored locally. Full persistence is coming in a future update.
+            </p>
           </div>
-          <p className="mt-3 text-[11px] text-white/25">
-            Appearance settings are not persisted yet — coming soon.
-          </p>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }
@@ -992,66 +767,63 @@ function AppearanceSection() {
 // ─── Section: Security ────────────────────────────────────────────────────────
 function SecuritySection({ user }) {
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Security"
-        description="Authentication method and account security"
-      />
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
-              <KeyRound className="size-4 text-white/35" />
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Shield}
+            title="Account Security"
+            subtitle="Manage your authentication methods and access"
+            accent="indigo"
+          />
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-indigo-400">
+                <KeyRound className="size-5" />
+              </div>
+              <div>
+                <p className="text-[14px] font-medium text-white">Authentication Method</p>
+                <p className="text-[12px] text-gray-500">
+                  {user.provider
+                    ? `Managed by ${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} OAuth`
+                    : 'Email & password authentication'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[13px] font-medium text-white/70">
-                Authentication
-              </p>
-              <p className="text-[11.5px] text-white/30">
-                {user.provider
-                  ? `Managed by ${user.provider} OAuth — no password required`
-                  : 'Email & password authentication'}
-              </p>
-            </div>
+            {user.provider && (
+              <Pill tone="blue" icon={Globe}>OAuth Enabled</Pill>
+            )}
           </div>
-          {user.provider && (
-            <span className="rounded-full border border-sky-400/20 bg-sky-400/8 px-2.5 py-0.5 text-[10.5px] font-semibold text-sky-400">
-              OAuth
-            </span>
+
+          {user.suspension_expires_at && (
+            <div className="flex items-start gap-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-400" />
+              <div>
+                <p className="text-[14px] font-bold text-rose-400">Account Restricted</p>
+                <p className="text-[12px] text-rose-400/70">
+                  Temporary suspension active until {new Date(user.suspension_expires_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
           )}
-        </div>
 
-        {user.suspension_expires_at && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.05] p-5 text-amber-400">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
-            <div>
-              <p className="text-[13px] font-semibold text-amber-400">
-                Account temporarily suspended
-              </p>
-              <p className="mt-0.5 text-[11.5px] text-amber-400/60">
-                Suspension lifts on{' '}
-                {new Date(user.suspension_expires_at).toLocaleDateString(
-                  'en-US',
-                  {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  }
-                )}
-              </p>
-            </div>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <SectionHeader
+              icon={Activity}
+              title="Active Sessions"
+              subtitle="Device and browser sessions currently logged in"
+              accent="gray"
+            />
+            <EmptyState
+              icon={Monitor}
+              title="Session management coming soon"
+              description="You will be able to view and manage your active devices here."
+            />
           </div>
-        )}
-
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-          <p className="mb-1 text-[13px] font-medium text-white/70">
-            Active sessions
-          </p>
-          <p className="text-[11.5px] text-white/30">
-            Session management coming soon.
-          </p>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }
@@ -1059,54 +831,45 @@ function SecuritySection({ user }) {
 // ─── Section: Connected accounts ──────────────────────────────────────────────
 function ConnectedSection({ user }) {
   const platforms = [
-    { label: 'Google', key: 'google', connected: user.provider === 'google' },
-    { label: 'GitHub', key: 'github', connected: user.provider === 'github' },
-    {
-      label: 'Facebook',
-      key: 'facebook',
-      connected: user.provider === 'facebook',
-    },
+    { label: 'Google', key: 'google', icon: Globe, connected: user.provider === 'google' },
+    { label: 'GitHub', key: 'github', icon: Code2, connected: user.provider === 'github' },
+    { label: 'Facebook', key: 'facebook', icon: Globe, connected: user.provider === 'facebook' },
   ];
+  
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Connected accounts"
-        description="OAuth providers linked to your NEUPC account"
-      />
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02]">
-        {platforms.map((p, i) => (
-          <div
-            key={p.key}
-            className={`flex items-center justify-between gap-4 px-5 py-4 ${
-              i < platforms.length - 1 ? 'border-b border-white/[0.04]' : ''
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
-                <Globe className="size-4 text-white/30" />
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Globe}
+            title="Connected Accounts"
+            subtitle="OAuth providers linked to your NEUPC identity"
+            accent="sky"
+          />
+        </div>
+        <div className="divide-y divide-white/[0.04]">
+          {platforms.map((p) => (
+            <div key={p.key} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.01] transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-gray-400">
+                  <p.icon className="size-5" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-medium text-white">{p.label}</p>
+                  <p className="text-[12px] text-gray-500">
+                    {p.connected ? 'Currently used for login' : 'Not linked to this account'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] font-medium text-white/70">
-                  {p.label}
-                </p>
-                <p className="text-[11.5px] text-white/30">
-                  {p.connected ? 'Primary auth provider' : 'Not connected'}
-                </p>
-              </div>
+              {p.connected ? (
+                <Pill tone="emerald" icon={Check}>Connected</Pill>
+              ) : (
+                <ActionButton tone="ghost">Connect</ActionButton>
+              )}
             </div>
-            {p.connected ? (
-              <span className="flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/8 px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-400">
-                <Check className="size-3" /> Connected
-              </span>
-            ) : (
-              <button className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/35 transition hover:bg-white/[0.07] hover:text-white/65">
-                {' '}
-                Connect
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </GlassCard>
     </div>
   );
 }
@@ -1114,54 +877,62 @@ function ConnectedSection({ user }) {
 // ─── Section: Danger zone ─────────────────────────────────────────────────────
 function DangerSection() {
   return (
-    <div className="space-y-8">
-      <SectionHead
-        title="Danger zone"
-        description="Irreversible or sensitive account actions"
-      />
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[13px] font-semibold text-white/70">Sign out</p>
-            <p className="mt-0.5 text-[11.5px] text-white/30">
-              End your session on this device. Your data stays safe.
-            </p>
-          </div>
-          <form action={signOutAction} className="self-start sm:self-auto">
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-xl border border-red-400/25 bg-red-400/8 px-4 py-2 text-[12.5px] font-medium text-red-400 transition hover:bg-red-400/15 hover:text-red-300"
-            >
-              <LogOut className="size-4" /> Sign out
-            </button>
-          </form>
+    <div className="space-y-6">
+      <GlassCard padding="p-0" className="border-rose-500/20 bg-rose-500/[0.02]">
+        <div className="border-b border-rose-500/10 px-5 py-4">
+          <SectionHeader
+            icon={AlertTriangle}
+            title="Danger Zone"
+            subtitle="Irreversible or highly sensitive account actions"
+            accent="rose"
+          />
         </div>
+        <div className="p-5 space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+            <div>
+              <p className="text-[14px] font-semibold text-white">Sign Out</p>
+              <p className="text-[12px] text-gray-500">End your current session on this device</p>
+            </div>
+            <form action={signOutAction}>
+              <button type="submit" className="flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white/[0.1]">
+                <LogOut className="size-4" /> Sign out
+              </button>
+            </form>
+          </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[13px] font-semibold text-red-400/70">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-rose-500/20 bg-rose-500/10">
+            <div>
+              <p className="text-[14px] font-bold text-rose-400">Delete Account</p>
+              <p className="text-[12px] text-rose-400/70">Permanently remove all your data and access</p>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[12.5px] font-bold text-white transition hover:bg-rose-600 shadow-lg shadow-rose-500/20">
               Delete account
-            </p>
-            <p className="mt-0.5 text-[11.5px] text-red-400/40">
-              Permanently remove your account and all associated data. This
-              cannot be undone.
-            </p>
+            </button>
           </div>
-          <button
-            disabled
-            className="w-full cursor-not-allowed rounded-xl border border-red-400/20 bg-red-400/5 px-4 py-2 text-[12.5px] font-medium text-red-400/40 sm:w-auto"
-          >
-            Delete
-          </button>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function MemberSettingsClient({ user }) {
-  const [active, setActive] = useState('account');
+  const [active, setActive] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      if (p && SECTIONS.some((t) => t.id === p)) return p;
+    }
+    return 'account';
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    setActive(tabId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
 
   const content = {
     account: <AccountSection user={user} />,
@@ -1173,44 +944,112 @@ export default function MemberSettingsClient({ user }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-5">
-      <PageHeader
-        icon={SettingsIcon}
-        title="Settings"
-        subtitle="Manage your account, preferences, and security"
-        accent="gray"
-      />
+    <div className="flex h-full min-h-screen bg-black text-gray-300 selection:bg-violet-500/30">
+      {/* Sidebar Navigation */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
+        <div className="flex h-14 shrink-0 items-center px-5 border-b border-white/[0.06]">
+          <span className="text-[14px] font-bold tracking-widest text-white/90">
+            SETTINGS
+          </span>
+        </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-0.5">
+            {SECTIONS.map((s) => {
+              const Icon = s.icon;
+              const isActive = active === s.id;
+              const isDanger = s.id === 'danger';
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => handleTabChange(s.id)}
+                  className={cn(
+                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    isActive
+                      ? isDanger
+                        ? 'bg-red-500/12 font-semibold text-red-400 shadow-red-500/10'
+                        : 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
+                      : isDanger
+                      ? 'text-red-400/60 hover:bg-red-400/[0.06] hover:text-red-400'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                  )}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabIndicator"
+                      className={cn(
+                        'absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full',
+                        isDanger ? 'bg-gradient-to-b from-red-500 to-rose-600' : 'bg-gradient-to-b from-violet-500 to-purple-600'
+                      )}
+                    />
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
+                    <span className="truncate text-left">{s.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
 
-      {/* Mobile: horizontal scrollable tab bar */}
-      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
-        {SECTIONS.map((s) => (
-          <MobileTab
-            key={s.id}
-            section={s}
-            active={active === s.id}
-            onClick={setActive}
-          />
-        ))}
-      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile sticky tabs */}
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex flex-1 min-w-0 items-center gap-0.5 overflow-x-auto">
+              {SECTIONS.map((s) => {
+                const Icon = s.icon;
+                const isActive = active === s.id;
+                const isDanger = s.id === 'danger';
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => handleTabChange(s.id)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      isActive
+                        ? isDanger ? 'border-red-500 text-white' : 'border-violet-500 text-white'
+                        : isDanger ? 'border-transparent text-red-400/60 hover:text-red-400' : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', isActive ? (isDanger ? 'text-red-400' : 'text-violet-400') : '')} />
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
 
-      {/* sm+: two-column layout */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        {/* Sticky sidebar nav — hidden on mobile */}
-        <aside className="hidden w-[176px] shrink-0 sm:sticky sm:top-[70px] sm:block">
-          <nav className="flex flex-col gap-0.5">
-            {SECTIONS.map((s) => (
-              <SideItem
-                key={s.id}
-                section={s}
-                active={active === s.id}
-                onClick={setActive}
-              />
-            ))}
-          </nav>
-        </aside>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full relative">
+          <div className="mx-auto w-full max-w-5xl space-y-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start justify-between">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
+                  <SettingsIcon size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5">Settings</h1>
+                  <p className="text-sm text-gray-400">Manage your account, preferences, and security</p>
+                </div>
+              </div>
+            </div>
 
-        {/* Content panel */}
-        <div className="min-w-0 flex-1 max-w-4xl">{content[active]}</div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="w-full"
+              >
+                {content[active]}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
       </div>
     </div>
   );

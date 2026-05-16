@@ -1,75 +1,65 @@
-/**
- * @file Member header banner — greeting, level pill, XP progress, and
- *   activity streak in the redesigned dashboard aesthetic.
- * @module MemberHeader
- */
-
 'use client';
 
-import { Flame, Trophy, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Pill, GradientBar, Avatar } from './_ui';
+import { Medal, Flame, Trophy } from 'lucide-react';
 
 export default function MemberHeader({ firstName, userLevel, streakDays = 0 }) {
   const xpPct = Math.round((userLevel.xp / userLevel.nextLevelXp) * 100);
-  const rankPct = Math.round(
-    (1 - (userLevel.rank - 1) / userLevel.totalMembers) * 100
-  );
+  const rankPct = Math.max(1, Math.round((userLevel.rank / userLevel.totalMembers) * 100)); // Top X%
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6"
-    >
-      <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
-
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar name={firstName} size="lg" />
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium tracking-wide text-gray-400 uppercase">
-              Welcome back
-            </div>
-            <h1 className="mt-0.5 text-2xl font-bold text-white sm:text-3xl">
-              {firstName}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Pill tone="violet" icon={Trophy}>
-                {userLevel.level}
-              </Pill>
-              <Pill tone="blue" icon={TrendingUp}>
-                #{userLevel.rank} of {userLevel.totalMembers}
-              </Pill>
-              <Pill tone="orange" icon={Flame}>
-                {streakDays}-day streak
-              </Pill>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 lg:w-[340px]">
-          <div className="mb-1.5 flex items-center justify-between text-[11px]">
-            <span className="text-gray-400">
-              Progress to{' '}
-              <span className="text-amber-300">{userLevel.title}</span>
-            </span>
-            <span className="font-mono tabular-nums text-white/80">
-              {userLevel.xp.toLocaleString()} /{' '}
-              {userLevel.nextLevelXp.toLocaleString()} XP
-            </span>
-          </div>
-          <GradientBar value={xpPct} tone="amber" />
-          <div className="mt-1.5 flex items-center justify-between text-[10px] text-gray-500">
-            <span>{xpPct}% complete</span>
-            <span className="text-orange-300/80">
-              Top {100 - rankPct}% of members
-            </span>
+    <div className="bg-zinc-900/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-bl-full -translate-y-1/2 translate-x-1/2 border-l border-b border-white/10"></div>
+      
+      <div className="flex items-center gap-5 relative z-10">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl font-bold rounded-2xl shrink-0"
+        >
+          {firstName.substring(0, 2).toUpperCase()}
+        </motion.div>
+        <div>
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Welcome back</p>
+          <h1 className="text-3xl font-light text-zinc-100 mb-2">{firstName}</h1>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default">
+              <Medal className="w-3.5 h-3.5" />
+              {userLevel.level}
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 text-zinc-400 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default">
+              <Trophy className="w-3.5 h-3.5" />
+              #{userLevel.rank} of {userLevel.totalMembers}
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default">
+              <Flame className="w-3.5 h-3.5" />
+              {streakDays}-day streak
+            </motion.div>
           </div>
         </div>
       </div>
-    </motion.div>
+
+      <div className="w-full md:w-80 relative z-10 bg-white/5 p-4 border border-white/10 rounded-2xl">
+        <div className="flex items-center justify-between text-sm mb-3">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Progress to <span className="text-indigo-400">{userLevel.title}</span></span>
+          <span className="text-zinc-100 font-mono text-xs font-medium">{userLevel.xp.toLocaleString()} <span className="text-zinc-500">/ {userLevel.nextLevelXp.toLocaleString()} XP</span></span>
+        </div>
+        <div className="h-1.5 w-full bg-white/10 rounded-lg overflow-hidden mb-2">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${xpPct}%` }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="h-full bg-indigo-500 rounded-lg"
+          ></motion.div>
+        </div>
+        <div className="flex items-center justify-between text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+          <span>{xpPct}% complete</span>
+          <span>Top {rankPct}% of members</span>
+        </div>
+      </div>
+    </div>
   );
 }

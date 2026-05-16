@@ -1,162 +1,8 @@
-/**
- * @file Daily practice — recommended problem of the day with one-click jump.
- *   Hero: circular goal ring + streak/remaining stats.
- *   Body: featured recommended problem (primary CTA).
- *   Footer: compact 7-day activity strip with goal line.
- * @module DailyPracticeCard
- */
-
 'use client';
 
-import {
-  Target,
-  Code2,
-  Tag,
-  TrendingUp,
-  Clock,
-  Flame,
-  CheckCircle2,
-  Sparkles,
-} from 'lucide-react';
+import { Target, Star, Flame, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { GlassCard, SectionHeader, Pill, ActionButton } from './_ui';
-
-const DIFFICULTY_TONE = {
-  Easy: 'emerald',
-  Medium: 'amber',
-  Hard: 'rose',
-  Expert: 'violet',
-};
-
-function GoalRing({ value, max, met }) {
-  const size = 92;
-  const stroke = 8;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const pct = Math.min(1, value / max);
-  const dash = c * pct;
-  const ringColor = met ? '#34d399' : '#22d3ee';
-
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={ringColor}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c - dash }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-          style={{
-            filter: `drop-shadow(0 0 6px ${ringColor}66)`,
-          }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        {met ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-        ) : (
-          <span className="text-[10px] font-medium tracking-wide text-gray-500 uppercase">
-            Goal
-          </span>
-        )}
-        <span className="font-mono text-base font-bold tabular-nums text-white">
-          {value}
-          <span className="text-gray-500">/{max}</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ActivityStrip({ data, goal }) {
-  const max = Math.max(...data, goal, 1);
-  const today = new Date().getDay();
-  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const labels = Array.from({ length: data.length }, (_, i) => {
-    const idx = (today - (data.length - 1 - i) + 7) % 7;
-    return dayLabels[idx];
-  });
-  const total = data.reduce((a, b) => a + b, 0);
-  const avg = (total / data.length).toFixed(1);
-  const goalPct = (goal / max) * 100;
-
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-      <div className="mb-2 flex items-center justify-between text-[10px]">
-        <span className="font-medium tracking-wider text-gray-500 uppercase">
-          Last 7 days
-        </span>
-        <div className="flex items-center gap-2.5 font-mono tabular-nums text-gray-400">
-          <span>
-            <span className="text-white">{total}</span> solved
-          </span>
-          <span className="text-gray-600">·</span>
-          <span>
-            avg <span className="text-white">{avg}</span>
-          </span>
-        </div>
-      </div>
-      <div className="relative">
-        <div
-          className="pointer-events-none absolute right-0 left-0 z-10 border-t border-dashed border-emerald-400/25"
-          style={{ bottom: `calc(${goalPct}% + 14px)` }}
-          aria-hidden
-        />
-        <div className="flex h-16 items-end gap-1">
-          {data.map((v, i) => {
-            const isToday = i === data.length - 1;
-            const hit = v >= goal;
-            const tone = isToday
-              ? hit
-                ? 'bg-gradient-to-t from-emerald-500/80 to-emerald-300/90'
-                : 'bg-gradient-to-t from-cyan-500/80 to-cyan-300/90'
-              : hit
-                ? 'bg-emerald-500/40'
-                : 'bg-white/[0.08]';
-            return (
-              <div
-                key={i}
-                className="flex h-full flex-1 flex-col items-center justify-end gap-1"
-              >
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${(v / max) * 100}%` }}
-                  transition={{ delay: i * 0.04, duration: 0.4, ease: 'easeOut' }}
-                  className={`w-full rounded-sm ${tone} ${
-                    isToday ? 'ring-1 ring-white/40' : ''
-                  }`}
-                  style={{ minHeight: v > 0 ? '4px' : '2px' }}
-                  title={`${v} problems`}
-                />
-                <span
-                  className={`text-[9px] ${
-                    isToday ? 'font-bold text-white' : 'text-gray-600'
-                  }`}
-                >
-                  {labels[i]}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 export default function DailyPracticeCard({
   problem,
@@ -167,128 +13,168 @@ export default function DailyPracticeCard({
 }) {
   const goalMet = todaySolved >= dailyGoal;
   const remaining = Math.max(0, dailyGoal - todaySolved);
-  const tone = DIFFICULTY_TONE[problem?.difficulty] ?? 'blue';
+  const data = [
+    { name: 'Completed', value: Math.min(todaySolved, dailyGoal) },
+    { name: 'Remaining', value: remaining },
+  ];
+  const COLORS = ['#6366f1', '#27272a'];
+
+  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const today = new Date().getDay();
+  const weekData = Array.from({ length: 7 }, (_, i) => {
+    const idx = (today - (6 - i) + 7) % 7;
+    const value = weekActivity[i] || 0;
+    return { level: Math.min(value, 5), value, dayLabel: days[idx] };
+  });
+
+  const getHeatmapColor = (level, isToday) => {
+    if (isToday) return 'bg-indigo-500 border-indigo-400 shadow-lg shadow-black/40';
+    switch (level) {
+      case 0: return 'bg-white/10 border-white/10';
+      case 1: return 'bg-emerald-200 border-emerald-300';
+      case 2: return 'bg-emerald-300 border-emerald-400';
+      case 3: return 'bg-emerald-400 border-emerald-500';
+      case 4: return 'bg-emerald-500 border-emerald-600';
+      case 5: return 'bg-emerald-600 border-emerald-700';
+      default: return 'bg-white/10 border-white/10';
+    }
+  };
+
+  const totalWeek = weekData.reduce((acc, curr) => acc + curr.value, 0);
+  const avgWeek = (totalWeek / 7).toFixed(1);
 
   return (
-    <GlassCard padding="p-5" className="flex h-full flex-col">
-      <SectionHeader
-        icon={Target}
-        title="Daily Practice"
-        subtitle={
-          goalMet
-            ? "Today's goal smashed — bonus XP unlocked"
-            : `${remaining} more ${remaining === 1 ? 'problem' : 'problems'} to hit today's goal`
-        }
-        accent={goalMet ? 'emerald' : 'cyan'}
-        action={
-          goalMet ? (
-            <Pill tone="emerald" icon={Sparkles}>
-              +50 XP
-            </Pill>
-          ) : null
-        }
-      />
-
-      {/* Hero: ring + stats */}
-      <div className="mb-4 flex items-center gap-4 rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent p-4">
-        <GoalRing value={todaySolved} max={dailyGoal} met={goalMet} />
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
-          <div>
-            <div className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-              <Flame className="h-3 w-3 text-orange-400" />
-              Streak
+    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
+      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8">
+        
+        {/* Daily Practice */}
+        <div className="flex flex-col h-full lg:border-r lg:border-white/10 lg:pr-8">
+          <div className="flex items-center gap-2 mb-1">
+            <Target className="w-5 h-5 text-blue-500" />
+            <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Daily Practice</h3>
+          </div>
+          <p className="text-xs text-zinc-500 mb-6 font-medium">
+            {goalMet ? "Today's goal smashed!" : `${remaining} more to hit today's goal`}
+          </p>
+          
+          <div className="flex-1 flex flex-col items-center justify-center relative min-h-[220px]">
+            <div className="w-full h-[200px] absolute inset-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={85}
+                    startAngle={90}
+                    endAngle={-270}
+                    dataKey="value"
+                    stroke="none"
+                    cornerRadius={0}
+                  >
+                    {data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="mt-0.5 font-mono text-lg font-bold tabular-nums text-white">
-              {streak}
-              <span className="ml-0.5 text-[10px] font-medium text-gray-500">
-                days
+            
+            <div className="flex flex-col items-center justify-center relative z-10 pointer-events-none">
+              <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                {goalMet ? 'Done' : 'Goal'}
+              </span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-4xl font-light text-zinc-100">{todaySolved}</span>
+                <span className="text-zinc-500 font-medium text-sm">/ {dailyGoal}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between w-full mt-4 bg-white/5 rounded-2xl p-3 border border-white/10">
+            <div>
+              <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase mb-1 flex items-center gap-1.5">
+                <Flame className="w-3 h-3 text-amber-500" />
+                Streak
+              </p>
+              <span className="text-zinc-100 font-bold text-lg">{streak} <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">days</span></span>
+            </div>
+            <div className="w-px h-8 bg-white/10"></div>
+            <div className="text-right">
+              <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase mb-1">
+                {goalMet ? 'Status' : 'Remaining'}
+              </p>
+              <span className={`${goalMet ? 'text-emerald-400' : 'text-indigo-400'} font-bold text-lg`}>
+                {goalMet ? 'Done' : remaining} {!goalMet && <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">to go</span>}
               </span>
             </div>
           </div>
-          <div>
-            <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-              {goalMet ? 'Status' : 'Remaining'}
+        </div>
+
+        <div className="flex flex-col gap-6">
+          {/* Today's Pick */}
+          {problem && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Star className="w-4 h-4 text-blue-500 fill-blue-500" />
+                  <h3 className="text-xs font-bold text-zinc-100 uppercase tracking-widest">Today's Pick</h3>
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                    problem.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                    problem.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                    'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  }`}>{problem.difficulty}</span>
+                  <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest bg-white/10 text-zinc-400 border border-white/10">{problem.platform}</span>
+                </div>
+              </div>
+              
+              <div className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <a href={problem.href} target="_blank" rel="noreferrer" className="text-base font-bold text-zinc-100 mb-2 group-hover:text-indigo-400 transition-colors cursor-pointer block">
+                    {problem.title}
+                  </a>
+                  <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-zinc-500">
+                    {problem.tags.slice(0, 3).map(tag => (
+                      <span key={tag} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-lg bg-zinc-600"></span> {tag}
+                      </span>
+                    ))}
+                    <span className="mx-1 text-zinc-600">|</span>
+                    <span className="text-zinc-400">✓ {problem.solvedBy.toLocaleString()} solved</span>
+                    <span className="mx-1 text-zinc-600">|</span>
+                    <span className="text-zinc-400 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~{problem.estTime} min</span>
+                  </div>
+                </div>
+                
+                <a href={problem.href} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900/50 backdrop-blur-xl border border-white/10 hover:bg-white/5 text-zinc-100 text-xs font-bold uppercase tracking-widest rounded-2xl transition-colors shrink-0 shadow-lg shadow-black/40 text-center">
+                  <span className="text-indigo-400 font-mono text-sm leading-none">{'</>'}</span> Solve
+                </a>
+              </div>
             </div>
-            <div
-              className={`mt-0.5 font-mono text-lg font-bold tabular-nums ${
-                goalMet ? 'text-emerald-400' : 'text-cyan-400'
-              }`}
-            >
-              {goalMet ? 'Done' : remaining}
-              {!goalMet && (
-                <span className="ml-0.5 text-[10px] font-medium text-gray-500">
-                  to go
-                </span>
-              )}
+          )}
+
+          {/* Heatmap */}
+          <div className="mt-2 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Last 7 Days</h4>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                <span className="text-zinc-100 text-xs">{totalWeek}</span> solved <span className="mx-1 text-zinc-500">&bull;</span> avg <span className="text-zinc-100 text-xs">{avgWeek}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-3">
+              {weekData.map((day, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className={`w-full h-8 rounded-2xl border ${getHeatmapColor(day.level, i === 6)} transition-all hover:scale-105 cursor-pointer`} title={`${day.value} solved`}></div>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${i === 6 ? 'text-indigo-400' : 'text-zinc-500'}`}>{day.dayLabel}</span>
+                </div>
+              ))}
             </div>
           </div>
+
         </div>
       </div>
-
-      {/* Recommended problem — primary action */}
-      {problem && (
-        <motion.a
-          href={problem.href}
-          target="_blank"
-          rel="noreferrer"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="group relative mb-4 block overflow-hidden rounded-xl border border-white/[0.08] bg-gradient-to-br from-cyan-500/[0.06] via-white/[0.02] to-transparent p-4 transition-all hover:border-cyan-400/30 hover:from-cyan-500/[0.1]"
-        >
-          <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-cyan-500/10 blur-3xl transition-opacity group-hover:bg-cyan-400/20" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-cyan-400 uppercase">
-                  <Sparkles className="h-3 w-3" />
-                  Today's Pick
-                </span>
-                <Pill tone={tone}>{problem.difficulty}</Pill>
-                <Pill tone="gray">{problem.platform}</Pill>
-              </div>
-              <h4 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-cyan-50">
-                {problem.title}
-              </h4>
-              <div className="mt-2 flex flex-wrap items-center gap-1">
-                {problem.tags.slice(0, 4).map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-1 rounded-md border border-white/[0.06] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-gray-400"
-                  >
-                    <Tag className="h-2.5 w-2.5 opacity-50" />
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-2.5 flex items-center gap-3 text-[10.5px] text-gray-500">
-                <span className="inline-flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  {problem.solvedBy.toLocaleString()} solved
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  ~{problem.estTime} min
-                </span>
-              </div>
-            </div>
-            <ActionButton
-              tone="primary"
-              icon={Code2}
-              className="shrink-0 self-start group-hover:border-cyan-400/50 group-hover:bg-cyan-500/20"
-            >
-              Solve
-            </ActionButton>
-          </div>
-        </motion.a>
-      )}
-
-      {/* Activity strip */}
-      {weekActivity.length > 0 && (
-        <div className="mt-auto">
-          <ActivityStrip data={weekActivity} goal={dailyGoal} />
-        </div>
-      )}
-    </GlassCard>
+    </div>
   );
 }

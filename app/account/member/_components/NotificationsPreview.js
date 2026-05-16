@@ -1,41 +1,9 @@
-/**
- * @file Notifications preview — top 3 unread items inline on dashboard.
- * @module NotificationsPreview
- */
-
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
-import {
-  Bell,
-  ArrowRight,
-  Check,
-  Calendar,
-  Trophy,
-  AtSign,
-  Zap,
-  BookOpen,
-  AlertCircle,
-} from 'lucide-react';
+import Link from 'next/link';
+import { Bell, ArrowRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  GlassCard,
-  SectionHeader,
-  ActionButton,
-  EmptyState,
-  IconChip,
-} from './_ui';
-
-const TYPE_CFG = {
-  event: { icon: Calendar, accent: 'blue' },
-  mention: { icon: AtSign, accent: 'violet' },
-  achievement: { icon: Trophy, accent: 'amber' },
-  system: { icon: Zap, accent: 'cyan' },
-  lesson: { icon: BookOpen, accent: 'pink' },
-};
-
-const cfg = (t) => TYPE_CFG[t] ?? { icon: AlertCircle, accent: 'gray' };
 
 function ago(iso) {
   const s = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -56,104 +24,70 @@ export default function NotificationsPreview({ items = [] }) {
   const unreadCount = list.filter((n) => !n.is_read).length;
 
   return (
-    <GlassCard padding="p-5">
-      <SectionHeader
-        icon={Bell}
-        title="Inbox"
-        subtitle={
-          unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'
-        }
-        accent="rose"
-        action={
-          <div className="flex items-center gap-1.5">
-            {unreadCount > 0 && (
-              <ActionButton tone="ghost" icon={Check} onClick={markAll}>
-                Mark all
-              </ActionButton>
-            )}
-            <ActionButton
-              tone="primary"
-              icon={ArrowRight}
-              href="/account/member/notifications"
-            >
-              Open
-            </ActionButton>
+    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 rounded-2xl shrink-0">
+             <Bell className="w-6 h-6" />
           </div>
-        }
-      />
-
-      {visible.length === 0 ? (
-        <EmptyState
-          icon={Bell}
-          title="Nothing new"
-          description="You're all caught up."
-          accent="rose"
-        />
-      ) : (
-        <div className="-mx-2 space-y-0.5">
-          <AnimatePresence initial={false}>
-            {visible.map((n, i) => {
-              const c = cfg(n.notification_type);
-              return (
-                <motion.div
-                  key={n.id}
-                  layout
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2, delay: i * 0.04 }}
-                  className={`group relative flex items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.03] ${
-                    !n.is_read ? '' : 'opacity-70'
-                  }`}
-                >
-                  {!n.is_read && (
-                    <span className="absolute top-1/2 left-0 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(124,131,255,0.7)]" />
-                  )}
-                  <IconChip icon={c.icon} accent={c.accent} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`truncate text-[12.5px] leading-snug ${
-                        n.is_read ? 'text-gray-400' : 'font-medium text-white'
-                      }`}
-                    >
-                      {n.title}
-                    </p>
-                    <p className="line-clamp-1 text-[10.5px] text-gray-500">
-                      {n.message}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <span className="font-mono text-[10px] tabular-nums text-gray-500">
-                      {ago(n.created_at)}
-                    </span>
-                    {!n.is_read && (
-                      <button
-                        type="button"
-                        onClick={() => markOne(n.id)}
-                        title="Mark read"
-                        className="rounded p-1 text-gray-600 opacity-0 transition group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-300"
-                      >
-                        <Check className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-
-          {list.length > 3 && (
-            <div className="mt-2 border-t border-white/[0.04] pt-2">
-              <Link
-                href="/account/member/notifications"
-                className="block text-center text-[11px] text-gray-500 transition hover:text-gray-300"
-              >
-                View {list.length - 3} more →
-              </Link>
-            </div>
-          )}
+          <div>
+            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Inbox</h3>
+            <p className="text-xs text-zinc-500 mt-1">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
+          </div>
         </div>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button onClick={markAll} className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 px-3 py-1.5 transition-colors shrink-0">
+              <Check className="w-3.5 h-3.5" /> Mark all
+            </button>
+          )}
+          <Link href="/account/member/notifications" className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 px-3 py-1.5 transition-colors shrink-0">
+            <ArrowRight className="w-3.5 h-3.5" /> Open
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <AnimatePresence initial={false}>
+          {visible.length === 0 ? (
+            <div className="text-center py-8">
+              <Bell className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Nothing new</p>
+            </div>
+          ) : (
+            visible.map((notif) => (
+              <motion.div 
+                layout
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={notif.id} 
+                onClick={() => markOne(notif.id)}
+                className={`group relative flex items-start gap-4 cursor-pointer pb-4 border-b border-white/5 last:border-0 last:pb-0 ${notif.is_read ? 'opacity-60' : ''}`}
+              >
+                {!notif.is_read && (
+                  <div className="absolute -left-3 top-1.5 w-1.5 h-1.5 rounded-lg bg-indigo-500"></div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-baseline justify-between gap-4 mb-1">
+                    <h4 className={`text-sm font-bold leading-tight group-hover:text-indigo-400 transition-colors pr-8 relative ${notif.is_read ? 'text-zinc-400' : 'text-zinc-100'}`}>
+                      <span dangerouslySetInnerHTML={{ __html: notif.title.replace(/'([^']+)'/g, "<span class='text-indigo-400'>'$1'</span>") }} />
+                    </h4>
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest shrink-0">{ago(notif.created_at)}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{notif.message}</p>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </div>
+      
+      {list.length > 3 && (
+        <Link href="/account/member/notifications" className="block w-full mt-6 text-center text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 transition-colors py-2">
+          View {list.length - 3} more &rarr;
+        </Link>
       )}
-    </GlassCard>
+    </div>
   );
 }
