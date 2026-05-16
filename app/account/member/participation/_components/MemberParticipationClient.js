@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   PageHeader, StatCard, GlassCard, SectionHeader, GradientBar,
-  EmptyState, Pill, TabBar, ActionButton
+  EmptyState, Pill, TabBar, ActionButton, PageShell
 } from '../../_components/_ui';
 import { useScrollLock } from '@/app/_lib/hooks';
 
@@ -565,58 +565,20 @@ export default function MemberParticipationClient({
 
   const isEmpty = !registrations.length && !memberAchievements.length && !certificates.length && !myThreads.length;
 
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon, count: tabCounts[t.id] }));
+
   return (
-    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-0.5">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              const count = tabCounts[tab.id];
-              return (
-                <button key={tab.id} onClick={() => handleTabChange(tab.id)} className={cn('group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30', active ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10' : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200')}>
-                  {active && <motion.div layoutId="activeTabIndicator" className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />}
-                  <div className="flex items-center gap-3"><Icon className="h-[17px] w-[17px] shrink-0 transition-colors" /><span className="truncate text-left">{tab.label}</span></div>
-                  {count > 0 && <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-semibold", active ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-500")}>{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <div className="flex flex-col gap-8">
+          <div className="w-full max-w-7xl flex flex-col gap-8">
+            <PageHeader
+              icon={Activity}
+              title="My Activity"
+              subtitle="A complete record of your participation and achievements"
+              accent="violet"
+            />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button key={tab.id} onClick={() => handleTabChange(tab.id)} className={cn('flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors', active ? 'border-violet-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300')}>
-                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full">
-          <div className="mx-auto w-full max-w-7xl flex flex-col gap-8">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
-                  <Activity size={28} />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5">My Activity</h1>
-                  <p className="text-sm text-gray-400">A complete record of your participation and achievements</p>
-                </div>
-              </div>
-            </div>
+            <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
@@ -676,8 +638,7 @@ export default function MemberParticipationClient({
               </div>
             </div>
           </div>
-        </main>
       </div>
-    </div>
+    </PageShell>
   );
 }

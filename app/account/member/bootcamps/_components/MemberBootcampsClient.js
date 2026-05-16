@@ -12,6 +12,7 @@ import {
 import { enrollUser } from '@/app/_lib/bootcamp-actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { PageShell, TabBar } from '../../_components/_ui';
 
 function cn(...c) { return c.filter(Boolean).join(' '); }
 
@@ -976,74 +977,22 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
     }
   };
 
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+
   return (
-    <div className="flex min-h-screen text-gray-300 selection:bg-violet-500/30 bg-[#080b11]">
-      {/* Desktop secondary nav */}
-      <aside className="hidden xl:flex xl:flex-col w-[220px] shrink-0 border-r border-white/[0.06] bg-[#0a0e15]">
-        <nav className="flex-1 p-3 space-y-0.5">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  'group relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
-                  active
-                    ? 'bg-violet-500/10 text-violet-300'
-                    : 'text-gray-400 hover:bg-white/[0.04] hover:text-white'
-                )}
-              >
-                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r bg-violet-400" />}
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile/tablet tab bar */}
-        <div className="xl:hidden sticky top-14 z-20 border-b border-white/[0.06] bg-[#080b11]/95 backdrop-blur-xl">
-          <nav className="flex items-center gap-1 px-3 sm:px-5 overflow-x-auto">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    'shrink-0 flex items-center gap-1.5 border-b-2 py-3 px-2 text-[13px] font-medium transition-colors',
-                    active ? 'border-violet-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                  )}
-                >
-                  <Icon className={cn('h-4 w-4', active && 'text-violet-400')} />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-10 pb-16">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.18 }}
-              className="mx-auto w-full max-w-6xl"
-            >
-              {renderTab()}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
-    </div>
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.18 }}
+        >
+          {renderTab()}
+        </motion.div>
+      </AnimatePresence>
+    </PageShell>
   );
 }
