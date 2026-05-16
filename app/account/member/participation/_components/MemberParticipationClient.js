@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays,
   Trophy,
@@ -20,8 +21,15 @@ import {
   Check,
   MapPin,
   Activity,
+  Calendar,
+  Ticket,
+  CalendarCheck,
 } from 'lucide-react';
-import { PageHeader } from '../../_components/_ui';
+
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -666,6 +674,41 @@ const TABS = [
   { id: 'discussions', label: 'Discussions', icon: MessageSquare },
 ];
 
+const STATS_CONFIG = [
+  {
+    id: 'events',
+    title: 'Events',
+    subtext: 'Attended',
+    icon: CalendarDays,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+  },
+  {
+    id: 'contests',
+    title: 'Contests',
+    subtext: 'Joined',
+    icon: Trophy,
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10',
+  },
+  {
+    id: 'certificates',
+    title: 'Certificates',
+    subtext: 'Verified',
+    icon: Award,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    id: 'discussions',
+    title: 'Threads',
+    subtext: 'Authored',
+    icon: MessageSquare,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+  },
+];
+
 export default function MemberParticipationClient({
   registrations = [],
   contestParticipations = [],
@@ -702,110 +745,196 @@ export default function MemberParticipationClient({
     !certificates.length &&
     !myThreads.length;
 
+  const displayStats = STATS_CONFIG.map((stat) => {
+    return { ...stat, count: stats[stat.id] || 0 };
+  });
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        icon={Activity}
-        title="Participation"
-        subtitle="A complete record of everything you've done at NEUPC"
-        accent="cyan"
-      />
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatCard label="Events attended" value={stats.events} sub="since joining" />
-        <StatCard label="Contests joined" value={stats.contests} sub={stats.contests === 0 ? undefined : `${Math.round((contestParticipations.filter(c=>c.rank!=null).length/Math.max(stats.contests,1))*100)}% ranked`} />
-        <StatCard label="Certificates" value={stats.certificates} sub="all verified" />
-        <StatCard label="Threads authored" value={stats.discussions} />
-      </div>
-
-      {/* Best rank callout */}
-      {stats.topRank != null && (
-        <div
-          className="flex items-center gap-3 rounded-[12px] border p-4"
-          style={{
-            background: 'rgba(251,191,36,0.05)',
-            borderColor: 'rgba(251,191,36,0.20)',
-          }}
-        >
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border text-[#fcd34d]"
-            style={{ background: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.2)' }}
-          >
-            <Medal size={20} strokeWidth={1.6} />
+    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
+      {/* ── Secondary left nav ───────────────────────────────────────── */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-0.5">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              const count = tabCounts[tab.id];
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    active
+                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
+                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                  )}
+                >
+                  {active && (
+                    <motion.div layoutId="activeTabIndicator" className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
+                    <span className="truncate text-left">{tab.label}</span>
+                  </div>
+                  {count !== undefined && count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      active ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-500"
+                    )}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <p className="text-[12.5px] font-medium text-[#fcd34d]">Best Contest Rank</p>
-            <p className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-white/90">
-              #{stats.topRank}
-            </p>
+        </nav>
+      </aside>
+
+      {/* ── Main content ─────────────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile / tablet horizontal tab bar */}
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+          <div className="flex items-center gap-2 px-4 sm:px-6">
+            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
+                      active
+                        ? 'border-violet-500 text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div
-        className="flex gap-0.5 border-b"
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-      >
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const count = tabCounts[tab.id];
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`-mb-px inline-flex shrink-0 items-center gap-2 border-b-[1.5px] px-3.5 pb-[11px] pt-[10px] text-[12.5px] font-medium transition-colors duration-150 ${
-                active
-                  ? 'border-[#7c83ff] text-white/90'
-                  : 'border-transparent text-white/35 hover:text-white/70'
-              }`}
-            >
-              <Icon size={14} strokeWidth={1.6} />
-              {tab.label}
-              {count > 0 && (
-                <span
-                  className={`rounded-full px-[6px] py-0.5 text-[10.5px] font-medium tabular-nums ${
-                    active
-                      ? 'bg-[rgba(124,131,255,0.20)] text-[#aab0ff]'
-                      : 'bg-[#181a1f] text-white/30'
-                  }`}
-                >
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full">
+          <div className="mx-auto w-full max-w-7xl flex flex-col gap-8">
+            
+            {/* Header Block */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-inner">
+                  <Activity size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
+                    Participation
+                  </h1>
+                  <p className="text-sm text-gray-400">A complete record of everything you've done at NEUPC</p>
+                </div>
+              </div>
+            </div>
 
-      {/* Tab panel */}
-      <div
-        className="rounded-[12px] border p-[18px]"
-        style={{ background: '#121317', borderColor: 'rgba(255,255,255,0.06)' }}
-      >
-        {isEmpty ? (
-          <EmptyState
-            icon={TrendingUp}
-            title="Start your journey!"
-            subtitle="Join events and contests to build your participation profile."
-          />
-        ) : (
-          <>
-            {activeTab === 'timeline' && (
-              <Timeline
-                registrations={registrations}
-                contestParticipations={contestParticipations}
-                myThreads={myThreads}
-              />
-            )}
-            {activeTab === 'events' && <EventsTab registrations={registrations} />}
-            {activeTab === 'contests' && <ContestsTab contestParticipations={contestParticipations} />}
-            {activeTab === 'certificates' && <CertificatesTab certificates={certificates} />}
-            {activeTab === 'discussions' && <DiscussionsTab myThreads={myThreads} />}
-          </>
-        )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Center Content Panel */}
+              <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-2">
+                      <h3 className="flex items-center gap-2 text-base font-semibold text-white">
+                        {(() => {
+                          const activeItem = TABS.find((t) => t.id === activeTab);
+                          const ActiveIcon = activeItem?.icon;
+                          return ActiveIcon ? <ActiveIcon className="h-5 w-5 text-violet-400" /> : null;
+                        })()}
+                        {TABS.find((t) => t.id === activeTab)?.label}
+                      </h3>
+                      {tabCounts[activeTab] > 0 && (
+                        <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+                          {tabCounts[activeTab]} Items
+                        </span>
+                      )}
+                    </div>
+                    
+                    {isEmpty ? (
+                      <EmptyState
+                        icon={TrendingUp}
+                        title="Start your journey!"
+                        subtitle="Join events and contests to build your participation profile."
+                      />
+                    ) : (
+                      <>
+                        {activeTab === 'timeline' && (
+                          <Timeline
+                            registrations={registrations}
+                            contestParticipations={contestParticipations}
+                            myThreads={myThreads}
+                          />
+                        )}
+                        {activeTab === 'events' && <EventsTab registrations={registrations} />}
+                        {activeTab === 'contests' && <ContestsTab contestParticipations={contestParticipations} />}
+                        {activeTab === 'certificates' && <CertificatesTab certificates={certificates} />}
+                        {activeTab === 'discussions' && <DiscussionsTab myThreads={myThreads} />}
+                      </>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Right Sidebar - Sticky Overview */}
+              <div className="hidden lg:flex flex-col gap-6 sticky top-6">
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 hover:border-white/[0.1] transition-all">
+                  <h3 className="text-sm font-semibold text-gray-200 mb-4">Overview</h3>
+                  <div className="flex flex-col gap-4 text-sm">
+                    {displayStats.map((stat) => (
+                      <div key={stat.id} className="flex justify-between items-center group">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center ${stat.bg}`}>
+                            <stat.icon size={12} className={stat.color} />
+                          </div>
+                          <span className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors">{stat.title}</span>
+                        </div>
+                        <span className="text-white font-semibold tabular-nums">{stat.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Best rank callout */}
+                {stats.topRank != null && (
+                  <div className="rounded-xl border border-[rgba(251,191,36,0.20)] bg-[rgba(251,191,36,0.05)] p-5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-colors"></div>
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border text-[#fcd34d]"
+                        style={{ background: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.2)' }}
+                      >
+                        <Medal size={24} strokeWidth={1.6} />
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-semibold tracking-wide uppercase text-[#fcd34d]">Best Contest Rank</p>
+                        <p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-white/90">
+                          #{stats.topRank}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
