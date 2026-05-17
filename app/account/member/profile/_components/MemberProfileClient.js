@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { updateMemberProfileAction } from '@/app/_lib/member-profile-actions';
 import Link from "next/link";
-import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard } from '../../_components/_ui';
+import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard, PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -542,189 +542,125 @@ export default function MemberProfileClient({ user, memberProfile }) {
   const socialHandles = allHandles.filter(h => h.platform.category === 'social');
   const connectedCount = allHandles.filter(h => h.handle).length;
 
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+
   return (
-    <div className="flex h-full min-h-screen bg-black text-gray-300 selection:bg-violet-500/30">
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <div className="flex h-14 shrink-0 items-center px-5 border-b border-white/[0.06]">
-          <span className="text-[14px] font-bold tracking-widest text-white/90">
-            PROFILE
-          </span>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-0.5">
-            {TABS.map((t) => {
-              const Icon = t.icon;
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleTabChange(t.id)}
-                  className={cn(
-                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-                    active
-                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  {active && (
-                    <motion.div
-                      layoutId="activeTabIndicator"
-                      className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600"
-                    />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
-                    <span className="truncate text-left">{t.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex flex-1 min-w-0 items-center gap-0.5 overflow-x-auto">
-              {TABS.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => handleTabChange(t.id)}
-                    className={cn(
-                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
-                      active
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-gray-500 hover:text-gray-300'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
-                    <span className="hidden sm:inline">{t.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full relative">
-          <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-start justify-between">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
-                  <User size={28} />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5">Profile</h1>
-                  <p className="text-sm text-gray-400">Your public NEUPC identity, handles, and bio</p>
-                </div>
-              </div>
+      {/* ── Identity card ── */}
+      <GlassCard padding="p-0" className="overflow-hidden">
+        {/* top accent bar */}
+        <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+        {/* banner */}
+        <div
+          className="relative h-32"
+          style={{
+            background:
+              'radial-gradient(ellipse at 75% 50%, rgba(124,58,237,0.18) 0%, transparent 65%), radial-gradient(ellipse at 20% 60%, rgba(56,189,248,0.1) 0%, transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+          }}
+        >
+          {!editing && (
+            <div className="absolute top-4 right-4">
+              <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+                Edit profile
+              </ActionButton>
             </div>
-
-            <GlassCard padding="p-0" className="overflow-hidden">
-              <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
-              <div
-                className="h-28 relative"
-                style={{
-                  background:
-                    'radial-gradient(ellipse at 80% 50%, rgba(124,131,255,0.15) 0%, transparent 70%), radial-gradient(ellipse at 20% 50%, rgba(74,222,128,0.08) 0%, transparent 70%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-                }}
-              >
-                {!editing && (
-                  <div className="absolute top-4 right-4">
-                    <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
-                      Edit profile
-                    </ActionButton>
-                  </div>
+          )}
+        </div>
+        {/* identity row */}
+        <div className="px-6 pb-6">
+          <div className="flex flex-wrap items-end gap-4" style={{ marginTop: '-44px' }}>
+            <div className="rounded-full ring-[6px] ring-gray-900 shrink-0 shadow-xl">
+              <Avatar user={user} size="xl" src={user.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null} name={user.full_name} />
+            </div>
+            <div className="pb-1 min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold text-white tracking-tight leading-tight">
+                  {user.full_name}
+                </h2>
+                {approved ? (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Active</span>
+                ) : (
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 uppercase tracking-widest">Pending</span>
                 )}
               </div>
-
-              <div className="px-6 pb-6">
-                <div className="flex flex-wrap items-end gap-5" style={{ marginTop: '-42px' }}>
-                  <div className="rounded-full ring-8 ring-gray-950 shrink-0 bg-gray-950 shadow-2xl">
-                    <Avatar user={user} size="xl" src={user.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null} name={user.full_name} />
-                  </div>
-                  <div className="pb-1 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h2 className="text-[24px] font-bold text-white tracking-tight leading-tight truncate">
-                        {user.full_name}
-                      </h2>
-                      {approved && (
-                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[13px] text-gray-400 mb-3 truncate">
-                      {user.email}
-                      {memberProfile?.session && <> · Session {memberProfile.session}</>}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Pill tone="violet" icon={User}>
-                        Member{memberProfile?.semester ? ` · ${memberProfile.semester}` : ''}
-                      </Pill>
-                      {!approved && (
-                        <Pill tone="amber" icon={AlertTriangle}>
-                          Pending Approval
-                        </Pill>
-                      )}
-                      {memberProfile?.department && <Pill tone="gray">{memberProfile.department}</Pill>}
-                    </div>
-                  </div>
-                </div>
+              <p className="text-[12px] text-gray-500 mb-2.5 truncate">
+                {user.email}{memberProfile?.session && <> · Session {memberProfile.session}</>}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <Pill tone="violet" icon={User}>
+                  Member{memberProfile?.semester ? ` · ${memberProfile.semester}` : ''}
+                </Pill>
+                {memberProfile?.department && <Pill tone="gray">{memberProfile.department}</Pill>}
               </div>
-            </GlassCard>
-
-            {editing && (
-              <GlassCard>
-                <div className="flex items-center justify-between pb-5 border-b border-white/[0.06] mb-5">
-                  <SectionHeader icon={Pencil} title="Edit Profile" subtitle="Bio, handles, skills & interests" accent="violet" />
-                  <button
-                    onClick={() => setEditing(false)}
-                    className="flex items-center justify-center size-8 rounded-lg border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] transition"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-                <EditProfileForm profile={memberProfile} onDone={() => setEditing(false)} />
-              </GlassCard>
-            )}
-
-            {!editing && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tab}
-                  initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full"
-                >
-                  {tab === 'overview' && (
-                    <OverviewTab
-                      memberProfile={memberProfile}
-                      connectedCount={connectedCount}
-                      totalHandles={allHandles.length}
-                      onEdit={() => setEditing(true)}
-                    />
-                  )}
-                  {tab === 'handles' && (
-                    <HandlesTab
-                      cpHandles={cpHandles}
-                      socialHandles={socialHandles}
-                      onEdit={() => setEditing(true)}
-                    />
-                  )}
-                  {tab === 'activity' && <ActivityTab />}
-                </motion.div>
-              </AnimatePresence>
-            )}
+            </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </GlassCard>
+
+      {/* ── Edit form (replaces tab content) ── */}
+      <AnimatePresence mode="wait" initial={false}>
+        {editing ? (
+          <motion.div
+            key="edit"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <GlassCard>
+              <div className="flex items-center justify-between pb-5 border-b border-white/[0.06] mb-5">
+                <SectionHeader icon={Pencil} title="Edit Profile" subtitle="Bio, handles, skills & interests" accent="violet" />
+                <button
+                  onClick={() => setEditing(false)}
+                  className="flex items-center justify-center size-8 rounded-lg border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <EditProfileForm profile={memberProfile} onDone={() => setEditing(false)} />
+            </GlassCard>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tabs"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-6"
+          >
+            <TabBar tabs={uiTabs} value={tab} onChange={handleTabChange} />
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {tab === 'overview' && (
+                  <OverviewTab
+                    memberProfile={memberProfile}
+                    connectedCount={connectedCount}
+                    totalHandles={allHandles.length}
+                    onEdit={() => setEditing(true)}
+                  />
+                )}
+                {tab === 'handles' && (
+                  <HandlesTab
+                    cpHandles={cpHandles}
+                    socialHandles={socialHandles}
+                    onEdit={() => setEditing(true)}
+                  />
+                )}
+                {tab === 'activity' && <ActivityTab />}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </PageShell>
   );
 }

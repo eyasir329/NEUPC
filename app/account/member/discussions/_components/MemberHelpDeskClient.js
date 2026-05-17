@@ -1,7 +1,7 @@
 'use client';
-// UI aligned with platform glass-card design language (problem-solving page tokens)
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { PageShell, TabBar as UiTabBar, PageHeader } from '../../_components/_ui';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   MessageSquare,
@@ -286,148 +286,61 @@ export default function MemberHelpDeskClient({
   const totalPages = Math.max(1, Math.ceil(filteredThreads.length / PAGE_SIZE));
   const paginatedThreads = filteredThreads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const tabCounts = {
+    All: threads.length,
+    Help: threads.filter(t => t.tags.some(tag => tag.text === "Help")).length,
+    Discussion: threads.filter(t => t.tags.some(tag => tag.text === "Discussion")).length,
+    Announcements: threads.filter(t => t.tags.some(tag => tag.text === "Announce")).length,
+    'Feature Requests': threads.filter(t => t.tags.some(tag => tag.text === "Feature Request")).length,
+  };
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon, count: tabCounts[t.id] }));
+
   return (
-    <div className="flex min-h-screen text-gray-300 selection:bg-violet-500/30">
-      {/* ── Secondary left nav ───────────────────────────────────────── */}
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="mb-6 px-3">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-violet-400" />
-              Help Desk
-            </h2>
-          </div>
-          <div className="space-y-0.5">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              
-              let count = undefined;
-              if (tab.id === 'All') count = threads.length;
-              else if (tab.id === 'Help') count = threads.filter(t => t.tags.some(tag => tag.text === "Help")).length;
-              else if (tab.id === 'Discussion') count = threads.filter(t => t.tags.some(tag => tag.text === "Discussion")).length;
-              else if (tab.id === 'Announcements') count = threads.filter(t => t.tags.some(tag => tag.text === "Announce")).length;
-              else if (tab.id === 'Feature Requests') count = threads.filter(t => t.tags.some(tag => tag.text === "Feature Request")).length;
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); setSelectedThreadId(null); setIsCreatingThread(false); resetPage(); }}
-                  className={cn(
-                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-                    active
-                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  {active && (
-                    <div className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-[17px] w-[17px] shrink-0" />
-                    <span className="truncate text-left">{tab.label}</span>
-                  </div>
-                  {count !== undefined && count > 0 && (
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
-                      active ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-500"
-                    )}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
-
-      {/* ── Main content ─────────────────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile / tablet horizontal tab bar */}
-        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setSelectedThreadId(null); setIsCreatingThread(false); resetPage(); }}
-                    className={cn(
-                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
-                      active
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-gray-500 hover:text-gray-300'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-            <button
-              onClick={() => setIsCreatingThread(true)}
-              className="shrink-0 mb-px flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold transition-colors shadow-md"
-            >
-              <Plus size={14} />
-              <span className="hidden xs:inline">New</span>
-            </button>
-          </div>
-        </div>
-
-        <main className="flex-1 p-4 pb-10 sm:p-5 lg:p-6">
-          <div className="mx-auto w-full max-w-7xl">
-            {/* Page Header */}
-            {!isCreatingThread && !selectedThreadId && (
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
-                    <MessageSquare size={28} />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
-                      Help Desk
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Live
-                      </span>
-                    </h1>
-                    <p className="text-sm text-gray-400">Join the conversation. {threads.length} active threads right now.</p>
-                  </div>
-                </div>
-
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+        {!isCreatingThread && !selectedThreadId && (
+          <>
+            <PageHeader
+              icon={MessageSquare}
+              title="Help Desk"
+              subtitle={`Join the conversation. ${threads.length} active threads right now.`}
+              accent="violet"
+              actions={
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={searchQuery}
                       onChange={(e) => { setSearchQuery(e.target.value); resetPage(); }}
-                      placeholder="Search discussions..." 
+                      placeholder="Search discussions..."
                       className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-gray-200 placeholder:text-gray-500 transition-all shadow-sm"
                     />
                   </div>
-                  <button onClick={() => setIsCreatingThread(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all shadow-lg shadow-violet-600/20 text-sm focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-[#0d1117]">
+                  <button onClick={() => setIsCreatingThread(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all shadow-lg shadow-violet-600/20 text-sm">
                     <Plus size={18} />
                     New thread
                   </button>
                 </div>
-              </div>
-            )}
+              }
+            />
+            <UiTabBar
+              tabs={uiTabs}
+              value={activeTab}
+              onChange={(id) => { setActiveTab(id); setSelectedThreadId(null); setIsCreatingThread(false); resetPage(); }}
+            />
+          </>
+        )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               {/* Center content */}
               <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div
                     key={isCreatingThread ? 'create' : selectedThreadId ? `thread-${selectedThreadId}` : 'list'}
-                    initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="w-full"
                   >
                     {isCreatingThread ? (
@@ -707,10 +620,7 @@ export default function MemberHelpDeskClient({
                 </div>
               </div>
             </div>
-          </div>
-        </main>
-</div>
-    </div>
+    </PageShell>
   );
 }
 

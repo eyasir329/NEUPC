@@ -41,6 +41,7 @@ import {
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
 import ProblemDetailModal from './ProblemDetailModal';
+import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
 // =====================================================================
 // Constants & helpers
@@ -1590,15 +1591,15 @@ function RatingLineChart({ ratingHistory }) {
           ))}
         </div>
       </div>
-      <div className="relative z-10 h-72 w-full">
+      <div className="relative z-10 w-full" style={{ aspectRatio: '16/5', minHeight: 200 }}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
           height="100%"
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid meet"
           className="drop-shadow-sm"
         >
-          {/* y-axis grid */}
+          {/* y-axis grid + labels */}
           {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
             const y = PAD.t + p * innerH;
             const val = Math.round(maxR - p * (maxR - minR));
@@ -1613,47 +1614,78 @@ function RatingLineChart({ ratingHistory }) {
                   strokeDasharray="4 4"
                 />
                 <text
-                  x={PAD.l - 12}
+                  x={PAD.l - 8}
                   y={y + 4}
                   fill="#71717a"
-                  fontSize="10"
+                  fontSize="11"
                   fontWeight="600"
                   textAnchor="end"
-                  className="font-mono tracking-wider"
                 >
                   {val}
                 </text>
               </g>
             );
           })}
+          {/* x-axis date labels */}
+          {(() => {
+            const tickCount = 5;
+            return Array.from({ length: tickCount }, (_, i) => {
+              const t = minTime + (i / (tickCount - 1)) * (maxTime - minTime);
+              const x = xOf(t);
+              const label = new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+              return (
+                <text
+                  key={i}
+                  x={x}
+                  y={H - 4}
+                  fill="#52525b"
+                  fontSize="10"
+                  fontWeight="500"
+                  textAnchor="middle"
+                >
+                  {label}
+                </text>
+              );
+            });
+          })()}
+          {/* x-axis baseline */}
+          <line
+            x1={PAD.l}
+            x2={W - PAD.r}
+            y1={PAD.t + innerH}
+            y2={PAD.t + innerH}
+            stroke="rgba(255,255,255,0.06)"
+          />
           {platforms.map((p) => {
             const arr = grouped.get(p);
             if (!arr || arr.length < 1) return null;
-            const path = arr
-              .map(
-                (pt, i) =>
-                  `${i === 0 ? 'M' : 'L'} ${xOf(pt.date)} ${yOf(pt.rating)}`
-              )
-              .join(' ');
+            const pts = arr.map((pt) => ({ x: xOf(pt.date), y: yOf(pt.rating) }));
+            const path = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+            const color = colors[p] || '#94a3b8';
+            // area fill path
+            const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD.t + innerH} L ${pts[0].x} ${PAD.t + innerH} Z`;
             return (
               <g key={p}>
+                {/* subtle area fill */}
+                <path d={areaPath} fill={color} opacity={0.06} />
                 <path
                   d={path}
                   fill="none"
-                  stroke={colors[p] || '#94a3b8'}
-                  strokeWidth="2.5"
-                  className="drop-shadow-md"
+                  stroke={color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 {arr.map((pt, i) => (
                   <circle
                     key={i}
                     cx={xOf(pt.date)}
                     cy={yOf(pt.rating)}
-                    r="4"
+                    r="3.5"
                     fill="#18181b"
-                    stroke={colors[p] || '#94a3b8'}
+                    stroke={color}
                     strokeWidth="2"
-                    className="hover:r-5 cursor-pointer transition-all"
+                    className="cursor-pointer"
                   />
                 ))}
               </g>
@@ -2735,162 +2767,48 @@ export default function ProblemSolvingClient({ userId }) {
     }
   };
 
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+
   return (
-    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
-      {/* ── Secondary left nav ───────────────────────────────────────── */}
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        {/* Section header */}
-        {/* <div className="border-b border-white/[0.06] px-4 py-[14px]">
-          <p className="text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
-            Problem Solving
-          </p>
-        </div> */}
-
-        {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* <p className="mb-0.5 px-3 pt-3 pb-1 text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
-            Dashboard
-          </p> */}
-          <div className="space-y-0.5">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    'group/nav relative flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-                    active
-                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  {active && (
-                    <div className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
-                  )}
-                  <Icon className="h-[17px] w-[17px] shrink-0" />
-                  <span className="flex-1 truncate text-left">{tab.label}</span>
-                  {tab.id === 'recommended' && (
-                    <span className="relative flex h-1.5 w-1.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* Sync status + actions */}
-        <div className="shrink-0 space-y-1.5 border-t border-white/[0.06] px-3 py-3">
-          <div className="flex items-center gap-2 px-3 py-1.5">
-            <span className="relative flex h-2 w-2 shrink-0">
-              {syncing && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              )}
-              <span
-                className={cn(
-                  'relative inline-flex h-2 w-2 rounded-full',
-                  syncing ? 'bg-emerald-400' : 'bg-emerald-500/70'
-                )}
-              />
-            </span>
-            <span className="text-[12px] text-gray-500">
-              {syncing ? 'Syncing…' : 'Synced'}
-            </span>
-          </div>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="group/nav flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200 disabled:opacity-50"
-          >
-            <RefreshCw
-              className={cn(
-                'h-[17px] w-[17px] shrink-0',
-                syncing
-                  ? 'animate-spin'
-                  : 'transition-transform duration-300 group-hover/nav:rotate-180'
-              )}
-            />
-            Sync Now
-          </button>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="group/nav flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
-          >
-            <Settings className="h-[17px] w-[17px] shrink-0" />
-            Settings
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main content ─────────────────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile / tablet horizontal tab bar (visible below xl) */}
-        <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center justify-between gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className={cn(
-                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
-                      active
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-gray-500 hover:text-gray-300'
-                    )}
-                  >
-                    <Icon
-                      className={cn('h-4 w-4', active ? 'text-violet-400' : '')}
-                    />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="flex shrink-0 items-center gap-1.5 py-2">
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
-                aria-label="Sync"
-              >
-                <RefreshCw
-                  className={cn('h-4 w-4', syncing && 'animate-spin')}
-                />
-              </button>
-              <button
-                onClick={() => setSettingsOpen(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200"
-                aria-label="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <main className="flex-1 p-4 pb-10 sm:p-5 lg:p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -15, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto w-full max-w-7xl space-y-8"
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <PageHeader
+        icon={RefreshCw}
+        title="Problem Solving"
+        subtitle="Track your progress, contests, and recommendations"
+        accent="violet"
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
+              aria-label="Sync"
             >
-              {renderTab()}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+              <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+            </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200"
+              aria-label="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
+        }
+      />
+      <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 15, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -15, scale: 0.98 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full space-y-8"
+        >
+          {renderTab()}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Toast */}
       <AnimatePresence>
@@ -2921,6 +2839,6 @@ export default function ProblemSolvingClient({ userId }) {
           onClose={() => setSettingsOpen(false)}
         />
       </AnimatePresence>
-    </div>
+    </PageShell>
   );
 }

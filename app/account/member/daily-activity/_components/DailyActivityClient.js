@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityViz } from './ActivityViz';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare,
   Plus,
-  House,
   Settings,
   Trash2,
   Pencil,
@@ -25,7 +23,6 @@ import {
   Sparkles,
   CircleDot,
   CheckCircle2,
-  Circle,
   X,
   Repeat,
   Folder,
@@ -40,6 +37,9 @@ import {
     Pill,
     ActionButton,
     EmptyState,
+    PageShell,
+    TabBar,
+    PageHeader,
   } from '../../_components/_ui';
 
 // ───────────────────────── Constants ─────────────────────────
@@ -250,7 +250,6 @@ const SEED_FEED = [
 ];
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: House },
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
 ];
@@ -1407,7 +1406,7 @@ export default function DailyActivityClient() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('tasks');
 
   function toggleGroupVisible(gid) {
     setGroupVisible((v) => ({ ...v, [gid]: v[gid] === false ? true : false }));
@@ -1654,98 +1653,11 @@ export default function DailyActivityClient() {
     return counts;
   }, [occurrencesAll, completions]);
 
-  // Header stats.
-  const stats = useMemo(() => {
-    const todayKey = dateKey(TODAY);
-    const todaysOcc = occurrencesAll.filter(({ dateKey: k }) => k === todayKey);
-    const open = todaysOcc.filter(({ todo, dateKey: k }) => !completions[todo.id]?.[k]).length;
-    const doneToday = todaysOcc.filter(
-      ({ todo, dateKey: k }) => completions[todo.id]?.[k],
-    ).length;
-    const upcomingContests = SEED_FEED.filter(
-      (i) => i.category === 'contest' && i.start >= TODAY,
-    ).length;
-    const upcomingEvents = SEED_FEED.filter(
-      (i) => i.category === 'event' && i.start >= TODAY,
-    ).length;
-    return { open, doneToday, upcomingContests, upcomingEvents };
-  }, [occurrencesAll, completions]);
-
   const groupById = useMemo(() => Object.fromEntries(groups.map((g) => [g.id, g])), [groups]);
 
   const renderTab = () => {
     switch(activeTab) {
-      case 'overview': {
-        const todayKeyLocal = dateKey(TODAY);
-        const upcomingOcc = occurrencesAll
-          .filter(({ dateKey: k }) => k >= todayKeyLocal)
-          .filter(({ todo }) => groupVisible[todo.groupId] !== false);
-        const todayOcc = upcomingOcc.filter(({ dateKey: k }) => k === todayKeyLocal);
-        const doneToday = todayOcc.filter(({ todo, dateKey: k }) => !!completions[todo.id]?.[k]).length;
-        const openToday = todayOcc.length - doneToday;
-        const next7 = upcomingOcc.filter(({ dateKey: k }) => k <= addDaysKey(todayKeyLocal, 7)).length;
-        const highPriority = upcomingOcc.filter(({ todo }) => todo.priority === 'high').length;
-
-        const STAT_CARDS = [
-          { label: 'Open today', value: openToday, accent: 'violet', icon: CircleDot, sub: 'tasks remaining' },
-          { label: 'Done today', value: doneToday, accent: 'emerald', icon: CheckCircle2, sub: 'completed' },
-          { label: 'Next 7 days', value: next7, accent: 'blue', icon: CalendarIcon, sub: 'upcoming tasks' },
-          { label: 'High priority', value: highPriority, accent: 'rose', icon: Flag, sub: 'need attention' },
-          { label: 'Contests', value: stats.upcomingContests, accent: 'amber', icon: Trophy, sub: 'upcoming' },
-          { label: 'Events', value: stats.upcomingEvents, accent: 'cyan', icon: Sparkles, sub: 'upcoming' },
-        ];
-
-        const accentChip = {
-          violet: 'border-violet-500/20 bg-violet-500/10 text-violet-400',
-          emerald: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
-          blue: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
-          rose: 'border-rose-500/20 bg-rose-500/10 text-rose-400',
-          amber: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
-          cyan: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-400',
-        };
-
-        return (
-          <div className="flex flex-col gap-6 w-full">
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-              {STAT_CARDS.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <div key={s.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-2">
-                    <div className={`inline-flex w-fit rounded-lg border p-2 ${accentChip[s.accent]}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-white">{s.value}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{s.label}</div>
-                      <div className="text-[10px] text-gray-600 mt-0.5">{s.sub}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick actions row */}
-            <GlassCard padding="p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-200">Quick Actions</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Jump to your most common tasks</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <ActionButton tone="primary" icon={Plus} onClick={openCreate}>New task</ActionButton>
-                  <ActionButton tone="ghost" icon={CalendarIcon} onClick={() => { setActiveGroupId(null); setActiveTab('tasks'); }}>View tasks</ActionButton>
-                  <ActionButton tone="ghost" icon={CheckSquare} onClick={() => { setActiveGroupId(null); setTodoFilter('today'); setActiveTab('tasks'); }}>Today&apos;s tasks</ActionButton>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Activity chart */}
-            <ActivityViz />
-          </div>
-        );
-      }
-        case 'tasks': {
+      case 'tasks': {
           // Group filtered occurrences by date for display.
           const todayKey2 = dateKey(TODAY);
           const grouped = [];
@@ -1950,77 +1862,29 @@ export default function DailyActivityClient() {
     return null;
   };
 
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+
   return (
-    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-0.5">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group/nav relative flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-                    active
-                      ? 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  }`}
-                >
-                  {active && (
-                    <div className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-500 to-purple-600" />
-                  )}
-                  <Icon className="h-[17px] w-[17px] shrink-0" />
-                  <span className="flex-1 truncate text-left">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center justify-between gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors ${
-                      active
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 ${active ? 'text-violet-400' : ''}`} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        <main className="flex-1 p-4 pb-10 sm:p-5 lg:p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -15, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto w-full max-w-7xl space-y-8"
-            >
-              {renderTab()}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <PageHeader
+        icon={CalendarIcon}
+        title="Daily Activity"
+        subtitle="Your tasks, schedule, and daily goals"
+        accent="blue"
+      />
+      <TabBar tabs={uiTabs} value={activeTab} onChange={setActiveTab} />
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          className="space-y-6"
+        >
+          {renderTab()}
+        </motion.div>
+      </AnimatePresence>
 
       <TodoEditor
         open={editorOpen}
@@ -2036,6 +1900,6 @@ export default function DailyActivityClient() {
         onClose={() => setPendingDelete(null)}
         onConfirm={confirmDelete}
       />
-    </div>
+    </PageShell>
   );
 }

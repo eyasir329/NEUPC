@@ -29,7 +29,7 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { signOutAction } from '@/app/_lib/actions';
-import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils';
 import { ROLE_THEMES, ROLE_LABELS } from './roleTheme';
 
 const ROLE_DESCRIPTIONS = {
@@ -74,7 +74,7 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
             : 'min-h-9 gap-3 px-3 py-2',
           isActive
             ? cn('font-semibold', theme.active)
-            : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+            : 'text-gray-400 hover:bg-[#131B2C] hover:text-gray-200'
         )}
       >
         {isActive && (
@@ -167,7 +167,7 @@ function RoleOptionsList({ userRoles, activeRole, onPick }) {
               'focus-visible:ring-2 focus-visible:ring-white/30',
               isCurrent
                 ? rt.active
-                : 'text-gray-300 hover:bg-white/[0.04] hover:text-gray-100'
+                : 'text-gray-300 hover:bg-[#131B2C] hover:text-gray-100'
             )}
           >
             {isCurrent && (
@@ -263,7 +263,7 @@ function RoleMenuPanel({ context, refs, floatingStyles, getFloatingProps, childr
           {...getFloatingProps()}
           className="z-100 w-52 outline-none"
         >
-          <div className="animate-in fade-in zoom-in-95 overflow-hidden rounded-xl border border-white/12 bg-gray-900 shadow-2xl duration-150">
+          <div className="animate-in fade-in zoom-in-95 overflow-hidden rounded-xl border border-[#1E293B] bg-[#0B1121] shadow-2xl duration-150">
             <div className="border-b border-white/[0.07] px-3.5 py-2">
               <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                 Switch Role
@@ -408,9 +408,7 @@ export default function AccountSidebar({
   if (hideSidebar) return null;
 
   const theme = ROLE_THEMES[activeRole] || ROLE_THEMES.guest;
-  const avatarSrc = driveImageUrl(session?.avatar_url || session?.image || '');
-  const hasAvatar = avatarSrc && !/^[A-Z?]{1,3}$/.test(avatarSrc);
-  const initials = getInitials(session?.name || 'U');
+
 
   const handleRoleSwitch = (role) => router.push(`/account/${role}`);
   const closeMobileSidebar = () => setSidebarOpen(false);
@@ -421,8 +419,8 @@ export default function AccountSidebar({
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className={cn(
-          'fixed top-3 z-[60] rounded-lg border border-white/10 bg-gray-900/90 p-2 text-gray-300 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-white/25 hover:bg-gray-800 hover:text-white lg:hidden',
-          sidebarOpen ? 'left-[290px]' : 'left-3'
+          'fixed top-3 z-[60] rounded-lg border border-[#1E293B] bg-[#0B1121]/90 p-2 text-gray-300 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-[#334155] hover:bg-[#131B2C] hover:text-white lg:hidden',
+          sidebarOpen ? 'left-[calc(min(280px,85vw)+8px)]' : 'left-3'
         )}
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
@@ -441,10 +439,10 @@ export default function AccountSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-[58] flex flex-col border-r border-white/[0.06] bg-gray-950 transition-all duration-300 ease-out lg:sticky lg:top-0 lg:z-40 lg:h-screen lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-[58] flex flex-col border-r border-[#1E293B] bg-[#0B1121] transition-all duration-300 ease-out lg:sticky lg:top-0 lg:z-40 lg:h-screen lg:translate-x-0',
           collapsed
             ? 'w-[68px]'
-            : 'w-[280px] sm:w-[260px] lg:w-[228px] xl:w-[244px] 2xl:w-[260px]',
+            : 'w-[min(280px,85vw)] lg:w-57 xl:w-61 2xl:w-65',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         role="navigation"
@@ -453,7 +451,7 @@ export default function AccountSidebar({
         {/* Collapse toggle (desktop only) */}
         <button
           onClick={() => setCollapsed((prev) => !prev)}
-          className="absolute top-5 -right-3 z-50 hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-gray-900 text-gray-500 shadow-lg transition-all hover:border-white/20 hover:bg-gray-800 hover:text-gray-300 lg:flex"
+          className="absolute top-5 -right-3 z-50 hidden h-6 w-6 items-center justify-center rounded-full border border-[#1E293B] bg-[#0B1121] text-gray-500 shadow-lg transition-all hover:border-[#334155] hover:bg-[#131B2C] hover:text-gray-300 lg:flex"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
@@ -466,116 +464,31 @@ export default function AccountSidebar({
         {/* ── Brand ────────────────────────────────────────────────────────── */}
         <div
           className={cn(
-            'shrink-0 border-b border-white/[0.06]',
+            'shrink-0 border-b border-[#1E293B]',
             collapsed
-              ? 'flex flex-col items-center gap-2 px-3 py-4'
+              ? 'flex items-center justify-center px-3 py-4'
               : 'flex items-center justify-between px-4 py-[14px]'
           )}
         >
           {collapsed ? (
-            <>
+            <Link href="/" className="transition-opacity hover:opacity-80">
+              <span className="text-[14px] font-bold tracking-tight text-white select-none">
+                N<span className={theme.accentText}>P</span>
+              </span>
+            </Link>
+          ) : (
+            <div>
               <Link href="/" className="transition-opacity hover:opacity-80">
-                <span className="text-[14px] font-bold tracking-tight text-white select-none">
-                  N<span className={theme.accentText}>P</span>
+                <span className="text-[15px] font-bold tracking-tight text-white select-none">
+                  NEU<span className={theme.accentText}>PC</span>
                 </span>
               </Link>
-              <RoleSwitcherCollapsed
-                activeRole={activeRole}
-                userRoles={userRoles}
-                theme={theme}
-                onSwitch={handleRoleSwitch}
-              />
-            </>
-          ) : (
-            <>
-              <div>
-                <Link href="/" className="transition-opacity hover:opacity-80">
-                  <span className="text-[15px] font-bold tracking-tight text-white select-none">
-                    NEU<span className={theme.accentText}>PC</span>
-                  </span>
-                </Link>
-                <p className="mt-0.5 text-[10px] font-medium tracking-widest text-gray-500 uppercase">
-                  {ROLE_LABELS[activeRole] || 'Panel'} Panel
-                </p>
-              </div>
-              <RoleBadge
-                activeRole={activeRole}
-                userRoles={userRoles}
-                theme={theme}
-                onSwitch={handleRoleSwitch}
-              />
-            </>
+              <p className="mt-0.5 text-[10px] font-medium tracking-widest text-gray-500 uppercase">
+                {ROLE_LABELS[activeRole] || 'Panel'} Panel
+              </p>
+            </div>
           )}
         </div>
-
-        {/* ── User identity card ───────────────────────────────────────────── */}
-        {!collapsed && (
-          <Link
-            href={`/account/${activeRole}/profile`}
-            className="shrink-0 border-b border-white/[0.06] px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="relative shrink-0">
-                {hasAvatar ? (
-                  <img
-                    src={avatarSrc}
-                    alt={session?.name || 'User'}
-                    className="h-9 w-9 rounded-full object-cover ring-2 ring-white/10"
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold text-white',
-                      theme.gradient
-                    )}
-                  >
-                    {initials}
-                  </div>
-                )}
-                <div className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-gray-950 bg-emerald-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] leading-5 font-semibold text-gray-100">
-                  {session?.name || 'User'}
-                </p>
-                <p className="flex items-center gap-1.5 text-[11.5px] text-gray-500">
-                  {/* <span
-                    className={cn(
-                      'h-1.5 w-1.5 shrink-0 rounded-full',
-                      theme.dot
-                    )}
-                  /> */}
-                  {ROLE_LABELS[activeRole] || 'Guest'} · Active
-                </p>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* Collapsed: avatar only */}
-        {collapsed && (
-          <div className="flex shrink-0 justify-center border-b border-white/[0.06] py-3">
-            <div className="relative">
-              {hasAvatar ? (
-                <img
-                  src={avatarSrc}
-                  alt={session?.name || 'User'}
-                  className="h-8 w-8 rounded-full object-cover ring-2 ring-white/10"
-                />
-              ) : (
-                <div
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br text-[11px] font-bold text-white',
-                    theme.gradient
-                  )}
-                >
-                  {initials}
-                </div>
-              )}
-              <div className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-gray-950 bg-emerald-400" />
-            </div>
-          </div>
-        )}
 
         {/* ── Navigation ───────────────────────────────────────────────────── */}
         <nav
@@ -600,10 +513,31 @@ export default function AccountSidebar({
         {/* ── Membership upgrade card ──────────────────────────────────────── */}
         {!collapsed && <MembershipCard role={activeRole} />}
 
+        {/* ── Role switcher (above footer) ─────────────────────────────────── */}
+        {userRoles && userRoles.length > 1 && (
+          <div className={cn('shrink-0 border-t border-[#1E293B]', collapsed ? 'flex justify-center px-2 py-3' : 'px-3 py-2')}>
+            {collapsed ? (
+              <RoleSwitcherCollapsed
+                activeRole={activeRole}
+                userRoles={userRoles}
+                theme={theme}
+                onSwitch={handleRoleSwitch}
+              />
+            ) : (
+              <RoleBadge
+                activeRole={activeRole}
+                userRoles={userRoles}
+                theme={theme}
+                onSwitch={handleRoleSwitch}
+              />
+            )}
+          </div>
+        )}
+
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <div
           className={cn(
-            'shrink-0 border-t border-white/[0.06]',
+            'shrink-0 border-t border-[#1E293B]',
             collapsed
               ? 'flex flex-col items-center gap-1 px-2 py-3'
               : 'flex items-center justify-between px-4 py-3'
@@ -613,7 +547,7 @@ export default function AccountSidebar({
             <button
               type="button"
               aria-label="Help"
-              className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12.5px] text-gray-500 transition-colors hover:bg-white/[0.04] hover:text-gray-300"
+              className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12.5px] text-gray-500 transition-colors hover:bg-[#131B2C] hover:text-gray-300"
             >
               <HelpCircle className="h-4 w-4 shrink-0" />
               {!collapsed && <span>Help</span>}
