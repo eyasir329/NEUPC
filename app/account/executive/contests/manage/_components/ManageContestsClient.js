@@ -24,6 +24,7 @@ import {
   execDeleteContestAction,
 } from '@/app/_lib/executive-actions';
 import { useScrollLock } from '@/app/_lib/hooks';
+import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/executive/_components/_ui';
 
 const STATUS_CONFIG = {
   upcoming: {
@@ -310,39 +311,27 @@ export default function ManageContestsClient({ initialContests }) {
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Contest Management</h1>
-          <p className="mt-1 text-gray-400">
-            Organize programming contests for club members
-          </p>
-        </div>
-        <button
-          onClick={() => setModal('create')}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-        >
-          <Plus className="h-4 w-4" /> Create Contest
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Total', value: stats.total, color: 'text-blue-400' },
-          { label: 'Upcoming', value: stats.upcoming, color: 'text-cyan-400' },
-          { label: 'Running', value: stats.running, color: 'text-green-400' },
-          { label: 'Finished', value: stats.finished, color: 'text-gray-400' },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
+    <PageShell>
+      <PageHeader
+        icon={Trophy}
+        title="Contest Management"
+        subtitle="Organize programming contests for club members"
+        accent="amber"
+        actions={
+          <button
+            onClick={() => setModal('create')}
+            className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
           >
-            <p className="text-sm text-gray-400">{s.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+            <Plus className="h-4 w-4" /> Create Contest
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={Trophy} label="Total"    value={stats.total}    accent="blue"   />
+        <StatCard icon={Clock}  label="Upcoming" value={stats.upcoming} accent="cyan"   />
+        <StatCard icon={Users}  label="Running"  value={stats.running}  accent="emerald"/>
+        <StatCard icon={ExternalLink} label="Finished" value={stats.finished} accent="gray" />
       </div>
 
       {/* Filters */}
@@ -502,6 +491,6 @@ export default function ManageContestsClient({ initialContests }) {
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

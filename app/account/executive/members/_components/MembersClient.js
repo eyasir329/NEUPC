@@ -23,6 +23,7 @@ import {
   execApproveJoinRequestAction,
   execRejectJoinRequestAction,
 } from '@/app/_lib/executive-actions';
+import { PageShell, PageHeader, GlassCard, StatCard, TabBar, EmptyState } from '@/app/account/executive/_components/_ui';
 
 function Avatar({ name, size = 'sm' }) {
   const initials =
@@ -170,68 +171,28 @@ export default function MembersClient({
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Members</h1>
-        <p className="mt-1 text-gray-400">
-          Manage join requests and view club members
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Users}
+        title="Members"
+        subtitle="Manage join requests and view club members"
+        accent="emerald"
+      />
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Pending', value: stats.pending, color: 'text-amber-400' },
-          {
-            label: 'Total Members',
-            value: stats.total,
-            color: 'text-blue-400',
-          },
-          {
-            label: 'Sessions',
-            value: stats.sessions,
-            color: 'text-emerald-400',
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
-          >
-            <p className="text-sm text-gray-400">{s.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+        <StatCard icon={UserCheck} label="Pending"       value={stats.pending}  accent="amber"  />
+        <StatCard icon={Users}     label="Total Members" value={stats.total}    accent="blue"   />
+        <StatCard icon={GraduationCap} label="Sessions"  value={stats.sessions} accent="emerald"/>
       </div>
 
-      {/* Tabs */}
-      <div className="flex w-fit rounded-xl border border-white/10 bg-white/5 p-1">
-        {[
-          {
-            key: 'pending',
-            label: 'Pending Approvals',
-            count: requests.length,
-          },
-          {
-            key: 'members',
-            label: 'All Members',
-            count: initialMembers.length,
-          },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${tab === t.key ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'}`}
-          >
-            {t.label}
-            <span
-              className={`rounded-full px-1.5 py-0.5 text-xs ${tab === t.key ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-500'}`}
-            >
-              {t.count}
-            </span>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={[
+          { value: 'pending', label: 'Pending Approvals', count: requests.length },
+          { value: 'members', label: 'All Members',       count: initialMembers.length },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       {/* Pending Tab */}
       {tab === 'pending' && (
@@ -379,6 +340,6 @@ export default function MembersClient({
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

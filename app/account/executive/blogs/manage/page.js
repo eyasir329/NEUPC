@@ -1,30 +1,114 @@
-/**
- * @file Executive blog management — lists all blog posts with author info,
- *   engagement metrics, and publishing status so executives can create,
- *   edit, feature, or remove posts.
- * @module ExecutiveManageBlogsPage
- * @access executive | admin
- */
-
 import { requireRole } from '@/app/_lib/auth-guard';
-import { supabaseAdmin } from '@/app/_lib/supabase';
 import ManageBlogsClient from './_components/ManageBlogsClient';
 
 export const metadata = { title: 'Blog Management | Executive | NEUPC' };
 
+const TEMP_BLOGS = [
+  {
+    id: '1',
+    slug: 'getting-started-competitive-programming',
+    title: 'Getting Started with Competitive Programming',
+    excerpt: 'A complete roadmap for beginners entering the world of competitive programming.',
+    thumbnail: null,
+    category: 'Competitive Programming',
+    tags: ['cp', 'beginner', 'roadmap'],
+    status: 'published',
+    is_featured: true,
+    views: 1240,
+    likes: 87,
+    published_at: '2026-01-10T09:00:00',
+    created_at: '2026-01-08T10:00:00',
+    updated_at: '2026-01-10T09:00:00',
+    author: { id: 'u1', full_name: 'Mehedi Hasan', avatar_url: null },
+  },
+  {
+    id: '2',
+    slug: 'mastering-dynamic-programming',
+    title: 'Mastering Dynamic Programming: From Basics to Advanced',
+    excerpt: 'Learn DP techniques with step-by-step examples from easy to hard problems.',
+    thumbnail: null,
+    category: 'Competitive Programming',
+    tags: ['dp', 'algorithms', 'intermediate'],
+    status: 'published',
+    is_featured: false,
+    views: 980,
+    likes: 64,
+    published_at: '2026-01-25T11:00:00',
+    created_at: '2026-01-22T08:00:00',
+    updated_at: '2026-01-25T11:00:00',
+    author: { id: 'u2', full_name: 'Fatima Rahman', avatar_url: null },
+  },
+  {
+    id: '3',
+    slug: 'nextjs-full-stack-guide',
+    title: 'Building Full-Stack Apps with Next.js 15',
+    excerpt: 'A practical guide to building production-ready apps using the latest Next.js features.',
+    thumbnail: null,
+    category: 'WebDev',
+    tags: ['nextjs', 'react', 'fullstack'],
+    status: 'published',
+    is_featured: true,
+    views: 2150,
+    likes: 143,
+    published_at: '2026-02-05T10:00:00',
+    created_at: '2026-02-03T09:00:00',
+    updated_at: '2026-02-05T10:00:00',
+    author: { id: 'u3', full_name: 'Ahmed Khan', avatar_url: null },
+  },
+  {
+    id: '4',
+    slug: 'intro-to-machine-learning',
+    title: 'Introduction to Machine Learning for Programmers',
+    excerpt: 'Demystifying ML concepts with practical Python examples for competitive programmers.',
+    thumbnail: null,
+    category: 'AI-ML',
+    tags: ['ml', 'python', 'beginner'],
+    status: 'draft',
+    is_featured: false,
+    views: 0,
+    likes: 0,
+    published_at: null,
+    created_at: '2026-02-14T13:00:00',
+    updated_at: '2026-02-16T10:00:00',
+    author: { id: 'u4', full_name: 'Nusrat Jahan', avatar_url: null },
+  },
+  {
+    id: '5',
+    slug: 'graph-theory-essentials',
+    title: 'Graph Theory Essentials for Contest Programmers',
+    excerpt: 'BFS, DFS, shortest paths, and spanning trees explained with contest problems.',
+    thumbnail: null,
+    category: 'Competitive Programming',
+    tags: ['graphs', 'algorithms', 'intermediate'],
+    status: 'published',
+    is_featured: false,
+    views: 760,
+    likes: 52,
+    published_at: '2026-02-20T09:00:00',
+    created_at: '2026-02-18T11:00:00',
+    updated_at: '2026-02-20T09:00:00',
+    author: { id: 'u1', full_name: 'Mehedi Hasan', avatar_url: null },
+  },
+  {
+    id: '6',
+    slug: 'software-engineering-career-tips',
+    title: 'Landing Your First Software Engineering Job',
+    excerpt: 'Interview tips, resume advice, and preparation strategies from NEUPC alumni.',
+    thumbnail: null,
+    category: 'Career',
+    tags: ['career', 'interview', 'jobs'],
+    status: 'archived',
+    is_featured: false,
+    views: 430,
+    likes: 31,
+    published_at: '2025-11-15T10:00:00',
+    created_at: '2025-11-12T09:00:00',
+    updated_at: '2026-01-01T00:00:00',
+    author: { id: 'u5', full_name: 'Rakib Islam', avatar_url: null },
+  },
+];
+
 export default async function ManageBlogsPage() {
   const { user } = await requireRole(['executive', 'admin']);
-
-  const { data: blogs } = await supabaseAdmin
-    .from('blog_posts')
-    .select(
-      `id, slug, title, excerpt, thumbnail, category, tags,
-       status, is_featured, views, likes, published_at,
-       created_at, updated_at,
-       author:users!blog_posts_author_id_fkey(id, full_name, avatar_url)`
-    )
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  return <ManageBlogsClient initialBlogs={blogs || []} userId={user.id} />;
+  return <ManageBlogsClient initialBlogs={TEMP_BLOGS} userId={user.id} />;
 }

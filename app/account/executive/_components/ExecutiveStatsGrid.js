@@ -1,116 +1,53 @@
-/**
- * @file Executive stats grid — responsive card grid showing key
- *   management metrics (members, events, notices, pending tasks).
- * @module ExecutiveStatsGrid
- */
-
 'use client';
 
-import {
-  Calendar,
-  Users,
-  AlertCircle,
-  TrendingUp,
-  Megaphone,
-  BarChart3,
-  ArrowUpRight,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Calendar, Users, AlertCircle, TrendingUp, Megaphone, BarChart3 } from 'lucide-react';
+import { GlassCard, IconChip } from './_ui';
 
-const iconMap = {
-  Calendar: Calendar,
-  Users: Users,
-  AlertCircle: AlertCircle,
-  TrendingUp: TrendingUp,
-  Megaphone: Megaphone,
-  BarChart3: BarChart3,
-};
+const STAT_CONFIGS = [
+  { key: 'totalEvents',           label: 'Total Events',           icon: Calendar,    accent: 'blue',   trend: { dir: 'up', value: '+12%' } },
+  { key: 'activeMembers',         label: 'Active Members',         icon: Users,       accent: 'emerald',trend: { dir: 'up', value: '+8%'  } },
+  { key: 'pendingRegistrations',  label: 'Pending Registrations',  icon: AlertCircle, accent: 'amber',  alert: 'Needs Review'               },
+  { key: 'totalParticipation',    label: 'Total Participation',    icon: TrendingUp,  accent: 'violet', trend: { dir: 'up', value: '+15%' } },
+  { key: 'activeNotices',         label: 'Active Notices',         icon: Megaphone,   accent: 'pink',   alert: 'Live'                       },
+  { key: 'engagementRate',        label: 'Engagement Rate',        icon: BarChart3,   accent: 'cyan',   trend: { dir: 'up', value: '+5%'  }, suffix: '%' },
+];
 
 export default function ExecutiveStatsGrid({ stats }) {
-  const statConfigs = [
-    {
-      label: 'Total Events',
-      value: stats.totalEvents,
-      trend: '+12%',
-      color: 'blue',
-      icon: 'Calendar',
-      shadowColor: 'blue',
-    },
-    {
-      label: 'Active Members',
-      value: stats.activeMembers,
-      trend: '+8%',
-      color: 'green',
-      icon: 'Users',
-      shadowColor: 'green',
-    },
-    {
-      label: 'Pending Registrations',
-      value: stats.pendingRegistrations,
-      trend: 'Needs Review',
-      color: 'amber',
-      icon: 'AlertCircle',
-      shadowColor: 'amber',
-      isTrendAlert: true,
-    },
-    {
-      label: 'Total Participation',
-      value: stats.totalParticipation,
-      trend: '+15%',
-      color: 'purple',
-      icon: 'TrendingUp',
-      shadowColor: 'purple',
-    },
-    {
-      label: 'Active Notices',
-      value: stats.activeNotices,
-      trend: 'Live',
-      color: 'pink',
-      icon: 'Megaphone',
-      shadowColor: 'pink',
-    },
-    {
-      label: 'Engagement Rate',
-      value: `${stats.engagementRate}%`,
-      trend: '+5%',
-      color: 'cyan',
-      icon: 'BarChart3',
-      shadowColor: 'cyan',
-    },
-  ];
-
   return (
     <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-      {statConfigs.map((config, idx) => {
-        const Icon = iconMap[config.icon];
+      {STAT_CONFIGS.map((cfg, i) => {
+        const value = cfg.suffix
+          ? `${stats[cfg.key]}${cfg.suffix}`
+          : stats[cfg.key];
         return (
-          <div
-            key={idx}
-            className={`group cursor-pointer rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-${config.shadowColor}-500/20 sm:p-6`}
+          <motion.div
+            key={cfg.key}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.05 }}
+            className="h-full"
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-400">
-                  {config.label}
-                </p>
-                <p className="mt-2 text-3xl font-bold text-white">
-                  {config.value}
-                </p>
-                <p
-                  className={`mt-1 flex items-center text-xs ${
-                    config.isTrendAlert ? 'text-amber-400' : 'text-green-400'
-                  }`}
-                >
-                  {!config.isTrendAlert && (
-                    <ArrowUpRight className="mr-1 h-3 w-3" />
-                  )}
-                  {config.trend}
-                </p>
+            <GlassCard hover padding="p-4" className="flex h-full flex-col">
+              <div className="flex min-h-9 items-start justify-between gap-3">
+                <IconChip icon={cfg.icon} accent={cfg.accent} />
+                {cfg.trend && (
+                  <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                    ↑ {cfg.trend.value}
+                  </span>
+                )}
+                {cfg.alert && (
+                  <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                    {cfg.alert}
+                  </span>
+                )}
               </div>
-              <Icon
-                className={`h-9 w-9 text-${config.color}-400 opacity-80 transition-transform duration-300 group-hover:scale-110`}
-              />
-            </div>
-          </div>
+              <div className="mt-3">
+                <div className="text-xs text-gray-400">{cfg.label}</div>
+                <div className="mt-0.5 text-2xl font-bold text-white">{value}</div>
+              </div>
+            </GlassCard>
+          </motion.div>
         );
       })}
     </div>

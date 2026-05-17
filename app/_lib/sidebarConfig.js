@@ -262,12 +262,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/executive/events/manage',
           },
           {
-            id: 'registrations',
-            label: 'Registrations',
-            icon: ClipboardCheck,
-            href: '/account/executive/registrations',
-          },
-          {
             id: 'contests',
             label: 'Contest Management',
             icon: Trophy,
