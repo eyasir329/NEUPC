@@ -52,6 +52,9 @@ import {
   StaggerList,
   GradientBar,
   EmptyState,
+  PageShell,
+  TabBar,
+  PageHeader,
 } from '../../_components/_ui';
 import { Settings as SettingsIcon } from 'lucide-react';
 
@@ -943,114 +946,28 @@ export default function MemberSettingsClient({ user }) {
     danger: <DangerSection />,
   };
 
+  const uiTabs = SECTIONS.map((s) => ({ value: s.id, label: s.label, icon: s.icon }));
+
   return (
-    <div className="flex h-full min-h-screen bg-black text-gray-300 selection:bg-violet-500/30">
-      {/* Sidebar Navigation */}
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <div className="flex h-14 shrink-0 items-center px-5 border-b border-white/[0.06]">
-          <span className="text-[14px] font-bold tracking-widest text-white/90">
-            SETTINGS
-          </span>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-0.5">
-            {SECTIONS.map((s) => {
-              const Icon = s.icon;
-              const isActive = active === s.id;
-              const isDanger = s.id === 'danger';
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => handleTabChange(s.id)}
-                  className={cn(
-                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-                    isActive
-                      ? isDanger
-                        ? 'bg-red-500/12 font-semibold text-red-400 shadow-red-500/10'
-                        : 'bg-violet-500/12 font-semibold text-violet-400 shadow-violet-500/10'
-                      : isDanger
-                      ? 'text-red-400/60 hover:bg-red-400/[0.06] hover:text-red-400'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabIndicator"
-                      className={cn(
-                        'absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full',
-                        isDanger ? 'bg-gradient-to-b from-red-500 to-rose-600' : 'bg-gradient-to-b from-violet-500 to-purple-600'
-                      )}
-                    />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
-                    <span className="truncate text-left">{s.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile sticky tabs */}
-        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex flex-1 min-w-0 items-center gap-0.5 overflow-x-auto">
-              {SECTIONS.map((s) => {
-                const Icon = s.icon;
-                const isActive = active === s.id;
-                const isDanger = s.id === 'danger';
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => handleTabChange(s.id)}
-                    className={cn(
-                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
-                      isActive
-                        ? isDanger ? 'border-red-500 text-white' : 'border-violet-500 text-white'
-                        : isDanger ? 'border-transparent text-red-400/60 hover:text-red-400' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4', isActive ? (isDanger ? 'text-red-400' : 'text-violet-400') : '')} />
-                    <span className="hidden sm:inline">{s.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full relative">
-          <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-start justify-between">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
-                  <SettingsIcon size={28} />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5">Settings</h1>
-                  <p className="text-sm text-gray-400">Manage your account, preferences, and security</p>
-                </div>
-              </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="w-full"
-              >
-                {content[active]}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </main>
-      </div>
-    </div>
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <PageHeader
+        icon={SettingsIcon}
+        title="Settings"
+        subtitle="Manage your account, preferences, and security"
+        accent="violet"
+      />
+      <TabBar tabs={uiTabs} value={active} onChange={handleTabChange} />
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={active}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {content[active]}
+        </motion.div>
+      </AnimatePresence>
+    </PageShell>
   );
 }

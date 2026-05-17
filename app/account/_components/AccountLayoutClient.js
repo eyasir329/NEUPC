@@ -155,7 +155,7 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   }, [currentRole, session]);
 
   return (
-    <div className="relative flex min-h-screen bg-linear-to-br from-gray-950 via-gray-900 to-gray-950">
+    <div className="relative flex h-screen overflow-hidden bg-[#0B1121]">
       <AccountSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -169,14 +169,15 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
       />
 
       {/* Main Content Area */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {!hideSidebar && (
           <DashboardTopbar
             activeRole={currentRole}
             notificationCount={SIDEBAR_STATS.notifications}
+            session={session}
           />
         )}
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
       </main>
     </div>
   );

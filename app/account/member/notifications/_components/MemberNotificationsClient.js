@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useRef } from 'react';
 import {
   Bell,
   BellOff,
@@ -25,6 +25,7 @@ import {
   deleteNotificationAction,
 } from '@/app/_lib/notification-actions';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -98,7 +99,9 @@ export default function MemberNotificationsClient({
     return filtered.slice(start, start + ITEMS_PER_PAGE);
   }, [filtered, currentPage]);
 
+  const prevTabRef = useRef(tab);
   const handleTabChange = (newTab) => {
+    prevTabRef.current = tab;
     setTab(newTab);
     setCurrentPage(1);
   };
@@ -112,128 +115,44 @@ export default function MemberNotificationsClient({
   ];
 
   const markRead = (id) => {
-    startTransition(async () => {
-      if (!useMock) await markAsReadAction(id).catch(() => {});
-      setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-    });
+    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    if (!useMock) startTransition(() => markAsReadAction(id).catch(() => {}));
   };
 
   const markAllRead = () => {
-    startTransition(async () => {
-      if (!useMock) await markAllAsReadAction().catch(() => {});
-      setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    });
+    setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    if (!useMock) startTransition(() => markAllAsReadAction().catch(() => {}));
   };
 
   const del = (id) => {
-    startTransition(async () => {
-      if (!useMock) await deleteNotificationAction(id).catch(() => {});
-      setNotifs((prev) => {
-        const remaining = prev.filter((n) => n.id !== id);
-        const newFiltered = tabFilter(remaining, tab);
-        if (currentPage > 1 && newFiltered.length <= (currentPage - 1) * ITEMS_PER_PAGE) {
-          setCurrentPage(currentPage - 1);
-        }
-        return remaining;
-      });
+    setNotifs((prev) => {
+      const remaining = prev.filter((n) => n.id !== id);
+      const newFiltered = tabFilter(remaining, tab);
+      if (currentPage > 1 && newFiltered.length <= (currentPage - 1) * ITEMS_PER_PAGE) {
+        setCurrentPage(currentPage - 1);
+      }
+      return remaining;
     });
+    if (!useMock) startTransition(() => deleteNotificationAction(id).catch(() => {}));
   };
 
   return (
-    <div className="flex min-h-screen text-gray-300 selection:bg-violet-500/30">
-      {/* ── Secondary left nav ───────────────────────────────────────── */}
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col z-20">
-        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-0.5 mt-2">
-            {tabs.map((t) => {
-              const Icon = t.icon;
-              const active = tab === t.value;
-              return (
-                <button
-                  key={t.value}
-                  onClick={() => handleTabChange(t.value)}
-                  className={cn(
-                    'group/nav relative flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-                    active
-                      ? 'bg-rose-500/12 font-semibold text-rose-400 shadow-rose-500/10'
-                      : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  {active && (
-                    <motion.div layoutId="activeTabIndicator" className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-rose-500 to-pink-600" />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-[17px] w-[17px] shrink-0 transition-colors" />
-                    <span className="truncate text-left">{t.label}</span>
-                  </div>
-                  {t.count !== undefined && t.count > 0 && (
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
-                      active ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.06] text-gray-500"
-                    )}>
-                      {t.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </aside>
-
-      {/* ── Main content ─────────────────────────────────────────────── */}
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-gray-950">
-        {/* Mobile / tablet horizontal tab bar */}
-        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
-          <div className="flex items-center gap-2 px-4 sm:px-6">
-            <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
-              {tabs.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.value;
-                return (
-                  <button
-                    key={t.value}
-                    onClick={() => handleTabChange(t.value)}
-                    className={cn(
-                      'flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors',
-                      active
-                        ? 'border-rose-500 text-white'
-                        : 'border-transparent text-gray-500 hover:text-gray-300'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4', active ? 'text-rose-400' : '')} />
-                    <span className="hidden sm:inline">{t.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 xl:p-10 custom-scrollbar h-full">
-          <div className="mx-auto w-full max-w-7xl">
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-inner">
-                  <Bell size={28} />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
-                    Inbox
-                    {unreadCount > 0 && (
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold tracking-wide uppercase">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-                        {unreadCount} Unread
-                      </span>
-                    )}
-                  </h1>
-                  <p className="text-sm text-gray-400">Stay updated with the latest activities and alerts.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          icon={Bell}
+          title="Inbox"
+          subtitle="Stay updated with the latest activities and alerts."
+          accent="rose"
+          meta={unreadCount > 0 ? (
+            <span className="flex items-center gap-1.5 rounded-md border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold tracking-wide uppercase text-rose-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+              {unreadCount} Unread
+            </span>
+          ) : null}
+        />
+        <TabBar tabs={tabs} value={tab} onChange={handleTabChange} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               {/* Center content (Notifications List) */}
               <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 pb-3 border-b border-white/[0.06]">
@@ -258,13 +177,14 @@ export default function MemberNotificationsClient({
                   </div>
                 </div>
 
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout" initial={false}>
                   {filtered.length === 0 ? (
                     <motion.div
-                      key="empty"
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
+                      key={`empty-${tab}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.16 }}
                       className="flex flex-col items-center justify-center p-12 bg-white/[0.02] border border-white/[0.08] border-dashed rounded-2xl text-center"
                     >
                       <BellOff size={48} className="text-gray-700 mb-4" />
@@ -287,43 +207,47 @@ export default function MemberNotificationsClient({
                     </motion.div>
                   ) : (
                     <motion.div
-                      key="list"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.01] overflow-hidden shadow-sm"
+                      key={`list-${tab}-${currentPage}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      className={`flex flex-col rounded-2xl border border-white/[0.06] overflow-hidden shadow-sm ${isPending ? 'pointer-events-none' : ''}`}
                     >
                       <AnimatePresence initial={false}>
-                        {paginatedNotifs.map((n, i) => {
+                        {paginatedNotifs.map((n) => {
                           const config = cfg(n.notification_type);
                           const Icon = config.icon;
-                          
                           return (
                             <motion.div
-                              layout
                               key={n.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, height: 0, opacity: 0, transition: { duration: 0.2 } }}
-                              transition={{ duration: 0.2, delay: i * 0.02 }}
+                              exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+                              transition={{ duration: 0.2, ease: 'easeInOut' }}
+                              style={{ overflow: 'hidden' }}
                               onClick={() => { if (!n.is_read) markRead(n.id); }}
                               className={cn(
-                                "group relative flex items-start gap-4 p-4 border-b border-white/[0.04] transition-all duration-300 last:border-b-0",
-                                n.is_read 
-                                  ? "bg-transparent hover:bg-white/[0.02]" 
-                                  : "bg-rose-500/[0.04] hover:bg-rose-500/[0.06] cursor-pointer"
+                                "group relative flex items-start gap-4 p-4 border-b border-white/[0.04] last:border-b-0 transition-colors duration-200",
+                                n.is_read
+                                  ? "bg-white/[0.01] hover:bg-white/[0.03]"
+                                  : "bg-rose-500/[0.04] hover:bg-rose-500/[0.07] cursor-pointer"
                               )}
                             >
-                              {!n.is_read && (
-                                <div className="absolute top-1/2 left-4 w-2 h-2 -translate-y-1/2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
-                              )}
-                              
+                              <AnimatePresence>
+                                {!n.is_read && (
+                                  <motion.div
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    transition={{ duration: 0.18 }}
+                                    className="absolute top-1/2 left-4 w-2 h-2 -translate-y-1/2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                                  />
+                                )}
+                              </AnimatePresence>
+
                               <div className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border shadow-inner mt-0.5",
-                                !n.is_read ? "ml-4" : "", // Push right if there's an unread dot
-                                config.bg,
-                                config.color,
-                                "border-white/5"
+                                "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border mt-0.5 transition-[margin] duration-200",
+                                !n.is_read ? "ml-4" : "",
+                                config.bg, config.color, "border-white/5"
                               )}>
                                 <Icon size={18} />
                               </div>
@@ -331,8 +255,8 @@ export default function MemberNotificationsClient({
                               <div className="flex-1 min-w-0 pr-12">
                                 <div className="flex items-start justify-between gap-3 mb-1">
                                   <p className={cn(
-                                    "text-sm leading-snug truncate",
-                                    n.is_read ? "font-medium text-gray-300" : "font-bold text-gray-100"
+                                    "text-sm leading-snug truncate transition-colors duration-300",
+                                    n.is_read ? "font-medium text-gray-400" : "font-semibold text-gray-100"
                                   )}>
                                     {n.title}
                                   </p>
@@ -340,38 +264,34 @@ export default function MemberNotificationsClient({
                                     {timeAgo(n.created_at)}
                                   </span>
                                 </div>
-                                
                                 {n.message && (
                                   <p className={cn(
-                                    "text-[13px] leading-relaxed line-clamp-2",
-                                    n.is_read ? "text-gray-500" : "text-gray-400"
+                                    "text-[13px] leading-relaxed line-clamp-2 transition-colors duration-300",
+                                    n.is_read ? "text-gray-600" : "text-gray-400"
                                   )}>
                                     {n.message}
                                   </p>
                                 )}
                               </div>
-                              
-                              {/* Hover Actions (Absolute on Desktop) */}
-                              <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-gray-950/80 lg:bg-transparent p-1 lg:p-0 rounded-lg backdrop-blur-sm lg:backdrop-blur-none">
+
+                              <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 bg-gray-950/90 lg:bg-transparent p-1 lg:p-0 rounded-lg backdrop-blur-sm lg:backdrop-blur-none">
                                 {!n.is_read && (
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
-                                    disabled={isPending}
                                     title="Mark as read"
-                                    className="p-1.5 rounded-md hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
+                                    className="p-1.5 rounded-md hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                                   >
-                                    <Check size={16} />
+                                    <Check size={15} />
                                   </button>
                                 )}
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); del(n.id); }}
-                                  disabled={isPending}
                                   title="Delete"
-                                  className="p-1.5 rounded-md hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 transition-colors disabled:opacity-50"
+                                  className="p-1.5 rounded-md hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 transition-colors"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             </motion.div>
@@ -379,9 +299,8 @@ export default function MemberNotificationsClient({
                         })}
                       </AnimatePresence>
 
-                      {/* Pagination */}
                       {totalPages > 1 && (
-                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-2">
+                        <div className="flex items-center justify-between p-3 border-t border-white/[0.06]">
                           <button
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
@@ -389,7 +308,6 @@ export default function MemberNotificationsClient({
                           >
                             <ChevronLeft size={14} /> Prev
                           </button>
-                          
                           <div className="flex items-center gap-1">
                             {Array.from({ length: totalPages }).map((_, i) => (
                               <button
@@ -397,8 +315,8 @@ export default function MemberNotificationsClient({
                                 onClick={() => setCurrentPage(i + 1)}
                                 className={cn(
                                   "w-8 h-8 rounded-lg text-xs font-bold transition-colors",
-                                  currentPage === i + 1 
-                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-inner" 
+                                  currentPage === i + 1
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                                     : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
                                 )}
                               >
@@ -406,7 +324,6 @@ export default function MemberNotificationsClient({
                               </button>
                             ))}
                           </div>
-
                           <button
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
@@ -462,9 +379,7 @@ export default function MemberNotificationsClient({
                 </div>
               </div>
             </div>
-          </div>
-        </main>
       </div>
-    </div>
+    </PageShell>
   );
 }
