@@ -569,76 +569,28 @@ export default function MemberParticipationClient({
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
-      <div className="flex flex-col gap-8">
-          <div className="w-full max-w-7xl flex flex-col gap-8">
-            <PageHeader
-              icon={Activity}
-              title="My Activity"
-              subtitle="A complete record of your participation and achievements"
-              accent="violet"
-            />
+      <PageHeader
+        icon={Activity}
+        title="My Activity"
+        subtitle="A complete record of your participation and achievements"
+        accent="violet"
+      />
 
-            <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
+      <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-              <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
-                <AnimatePresence mode="wait">
-                  <motion.div key={activeTab} initial={{ opacity: 0, y: 15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -15, scale: 0.98 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 shadow-lg backdrop-blur-xl">
-                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-2">
-                      <h3 className="flex items-center gap-2 text-base font-semibold text-white">
-                        {(() => {
-                          const activeItem = TABS.find((t) => t.id === activeTab);
-                          const ActiveIcon = activeItem?.icon;
-                          return ActiveIcon ? <ActiveIcon className="h-5 w-5 text-violet-400" /> : null;
-                        })()}
-                        {TABS.find((t) => t.id === activeTab)?.label}
-                      </h3>
-                      {tabCounts[activeTab] > 0 && <span className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">{tabCounts[activeTab]} Items</span>}
-                    </div>
-                    {isEmpty ? <EmptyState icon={TrendingUp} title="Start your journey!" description="Join events and contests to build your participation profile." /> : (
-                      <>
-                        {activeTab === 'timeline' && <TimelineTab registrations={registrations} contestParticipations={contestParticipations} myThreads={myThreads} />}
-                        {activeTab === 'events' && <EventsTab registrations={registrations} />}
-                        {activeTab === 'achievements' && <AchievementsTab memberAchievements={memberAchievements} />}
-                        {activeTab === 'certificates' && <CertificatesTab certificates={certificates} />}
-                        {activeTab === 'discussions' && <DiscussionsTab myThreads={myThreads} />}
-                      </>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              <div className="hidden lg:flex flex-col gap-6 sticky top-6">
-                <GlassCard padding="p-5">
-                  <h3 className="text-sm font-semibold text-gray-200 mb-4">Overview</h3>
-                  <div className="flex flex-col gap-4 text-sm">
-                    {STATS_CONFIG.map((stat) => (
-                      <div key={stat.id} className="flex justify-between items-center group">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-${stat.tone}-500/10 border border-${stat.tone}-500/20`}><stat.icon size={14} className={`text-${stat.tone}-400`} /></div>
-                          <span className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors">{stat.title}</span>
-                        </div>
-                        <span className="text-white font-semibold tabular-nums">{stats[stat.id] || 0}</span>
-                      </div>
-                    ))}
-                  </div>
-                </GlassCard>
-                {memberAchievements.length > 0 && (
-                  <div className="rounded-xl border border-[rgba(251,191,36,0.20)] bg-[rgba(251,191,36,0.05)] p-5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-colors"></div>
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border text-[#fcd34d]" style={{ background: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.2)' }}><Medal size={24} strokeWidth={1.6} /></div>
-                      <div>
-                        <p className="text-[12px] font-semibold tracking-wide uppercase text-[#fcd34d]">Top Achievements</p>
-                        <p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-white/90">{memberAchievements.filter((a) => classify(a.achievements?.result || a.result).tone === 'amber').length} Gold</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-      </div>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}>
+          {isEmpty ? <EmptyState icon={TrendingUp} title="Start your journey!" description="Join events and contests to build your participation profile." /> : (
+            <>
+              {activeTab === 'timeline' && <TimelineTab registrations={registrations} contestParticipations={contestParticipations} myThreads={myThreads} />}
+              {activeTab === 'events' && <EventsTab registrations={registrations} />}
+              {activeTab === 'achievements' && <AchievementsTab memberAchievements={memberAchievements} />}
+              {activeTab === 'certificates' && <CertificatesTab certificates={certificates} />}
+              {activeTab === 'discussions' && <DiscussionsTab myThreads={myThreads} />}
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </PageShell>
   );
 }

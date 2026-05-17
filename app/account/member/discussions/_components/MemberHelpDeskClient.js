@@ -297,7 +297,6 @@ export default function MemberHelpDeskClient({
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
-      <div className="w-full max-w-7xl flex flex-col gap-6">
         {!isCreatingThread && !selectedThreadId && (
           <>
             <PageHeader
@@ -335,13 +334,13 @@ export default function MemberHelpDeskClient({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               {/* Center content */}
               <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div
                     key={isCreatingThread ? 'create' : selectedThreadId ? `thread-${selectedThreadId}` : 'list'}
-                    initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="w-full"
                   >
                     {isCreatingThread ? (
@@ -621,7 +620,6 @@ export default function MemberHelpDeskClient({
                 </div>
               </div>
             </div>
-      </div>
     </PageShell>
   );
 }

@@ -12,7 +12,7 @@ import {
 import { enrollUser } from '@/app/_lib/bootcamp-actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import { PageShell, TabBar } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
 function cn(...c) { return c.filter(Boolean).join(' '); }
 
@@ -981,14 +981,15 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <PageHeader icon={BookOpen} title="Bootcamps" subtitle="Your enrolled courses and available learning paths" accent="blue" />
       <TabBar tabs={uiTabs} value={activeTab} onChange={handleTabChange} />
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout">
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.18 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         >
           {renderTab()}
         </motion.div>

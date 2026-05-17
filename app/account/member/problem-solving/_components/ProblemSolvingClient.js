@@ -1591,15 +1591,15 @@ function RatingLineChart({ ratingHistory }) {
           ))}
         </div>
       </div>
-      <div className="relative z-10 h-72 w-full">
+      <div className="relative z-10 w-full" style={{ aspectRatio: '16/5', minHeight: 200 }}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
           height="100%"
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid meet"
           className="drop-shadow-sm"
         >
-          {/* y-axis grid */}
+          {/* y-axis grid + labels */}
           {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
             const y = PAD.t + p * innerH;
             const val = Math.round(maxR - p * (maxR - minR));
@@ -1614,47 +1614,78 @@ function RatingLineChart({ ratingHistory }) {
                   strokeDasharray="4 4"
                 />
                 <text
-                  x={PAD.l - 12}
+                  x={PAD.l - 8}
                   y={y + 4}
                   fill="#71717a"
-                  fontSize="10"
+                  fontSize="11"
                   fontWeight="600"
                   textAnchor="end"
-                  className="font-mono tracking-wider"
                 >
                   {val}
                 </text>
               </g>
             );
           })}
+          {/* x-axis date labels */}
+          {(() => {
+            const tickCount = 5;
+            return Array.from({ length: tickCount }, (_, i) => {
+              const t = minTime + (i / (tickCount - 1)) * (maxTime - minTime);
+              const x = xOf(t);
+              const label = new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+              return (
+                <text
+                  key={i}
+                  x={x}
+                  y={H - 4}
+                  fill="#52525b"
+                  fontSize="10"
+                  fontWeight="500"
+                  textAnchor="middle"
+                >
+                  {label}
+                </text>
+              );
+            });
+          })()}
+          {/* x-axis baseline */}
+          <line
+            x1={PAD.l}
+            x2={W - PAD.r}
+            y1={PAD.t + innerH}
+            y2={PAD.t + innerH}
+            stroke="rgba(255,255,255,0.06)"
+          />
           {platforms.map((p) => {
             const arr = grouped.get(p);
             if (!arr || arr.length < 1) return null;
-            const path = arr
-              .map(
-                (pt, i) =>
-                  `${i === 0 ? 'M' : 'L'} ${xOf(pt.date)} ${yOf(pt.rating)}`
-              )
-              .join(' ');
+            const pts = arr.map((pt) => ({ x: xOf(pt.date), y: yOf(pt.rating) }));
+            const path = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+            const color = colors[p] || '#94a3b8';
+            // area fill path
+            const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD.t + innerH} L ${pts[0].x} ${PAD.t + innerH} Z`;
             return (
               <g key={p}>
+                {/* subtle area fill */}
+                <path d={areaPath} fill={color} opacity={0.06} />
                 <path
                   d={path}
                   fill="none"
-                  stroke={colors[p] || '#94a3b8'}
-                  strokeWidth="2.5"
-                  className="drop-shadow-md"
+                  stroke={color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 {arr.map((pt, i) => (
                   <circle
                     key={i}
                     cx={xOf(pt.date)}
                     cy={yOf(pt.rating)}
-                    r="4"
+                    r="3.5"
                     fill="#18181b"
-                    stroke={colors[p] || '#94a3b8'}
+                    stroke={color}
                     strokeWidth="2"
-                    className="hover:r-5 cursor-pointer transition-all"
+                    className="cursor-pointer"
                   />
                 ))}
               </g>
@@ -2773,7 +2804,7 @@ export default function ProblemSolvingClient({ userId }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -15, scale: 0.98 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-7xl space-y-8"
+          className="w-full space-y-8"
         >
           {renderTab()}
         </motion.div>

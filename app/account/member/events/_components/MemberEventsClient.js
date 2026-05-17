@@ -20,7 +20,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { registerForEventAction } from '@/app/_lib/member-events-actions';
-import { PageShell, TabBar } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -112,27 +112,7 @@ const MainContent = ({ activeTab, events, stats, onEventClick }) => {
 
   return (
     <div className="w-full">
-      <div className="w-full max-w-7xl">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-inner">
-              <Calendar size={28} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight mb-1.5 flex items-center gap-3">
-                Events
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Live
-                </span>
-              </h1>
-              <p className="text-sm text-gray-400">Discover and register for upcoming member activities.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Center content (Event List) */}
           <div className="lg:col-span-2 flex flex-col gap-3 min-w-0">
             {/* Results count */}
@@ -268,7 +248,6 @@ const MainContent = ({ activeTab, events, stats, onEventClick }) => {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 };
@@ -291,8 +270,7 @@ const EventDetail = ({ event, onBack, onFlash }) => {
   };
 
   return (
-    <div className="w-full">
-      <div className="w-full max-w-5xl flex flex-col gap-6 lg:gap-8 pb-12">
+    <div className="flex flex-col gap-6 lg:gap-8 pb-12">
         <button
           onClick={onBack}
           className="w-max flex items-center gap-2 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] rounded-lg text-xs font-semibold text-gray-300 hover:text-white transition-all shadow-sm active:scale-95"
@@ -395,7 +373,6 @@ const EventDetail = ({ event, onBack, onFlash }) => {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 };
@@ -474,14 +451,14 @@ export default function MemberEventsClient({ events: serverEvents, myRegistratio
         {flash && <Flash msg={flash} onClose={() => setFlash(null)} />}
       </AnimatePresence>
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout">
         {selectedEvent ? (
           <motion.div
             key="detail"
-            initial={{ opacity: 0, y: 15, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.98 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           >
             <EventDetail
               event={selectedEvent}
@@ -492,12 +469,12 @@ export default function MemberEventsClient({ events: serverEvents, myRegistratio
         ) : (
           <motion.div
             key="main"
-            initial={{ opacity: 0, y: 15, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.98 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col gap-6"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           >
+            <PageHeader icon={Calendar} title="Events" subtitle="Discover and register for upcoming contests, workshops and bootcamps" accent="blue" />
             <TabBar
               tabs={uiTabs}
               value={activeTab}

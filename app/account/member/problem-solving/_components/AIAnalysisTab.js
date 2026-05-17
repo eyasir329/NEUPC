@@ -122,7 +122,7 @@ export default function AIAnalysisTab() {
   };
 
   return (
-    <div className="flex w-full max-w-6xl mx-auto flex-col gap-6 lg:h-[calc(100vh-220px)] lg:min-h-130 lg:flex-row lg:items-stretch lg:overflow-hidden">
+    <div className="flex w-full flex-col gap-6 lg:h-[calc(100vh-220px)] lg:min-h-130 lg:flex-row lg:items-stretch lg:overflow-hidden">
 
       {/* ── Left: Analysis panels (independently scrollable on desktop) ─ */}
       <motion.div

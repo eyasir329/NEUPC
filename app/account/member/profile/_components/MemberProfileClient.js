@@ -631,7 +631,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
             className="space-y-6"
           >
             <TabBar tabs={uiTabs} value={tab} onChange={handleTabChange} />
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={tab}
                 initial={{ opacity: 0, y: 6 }}
