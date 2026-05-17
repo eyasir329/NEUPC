@@ -1152,7 +1152,7 @@ function ContestSummary({ contests }) {
   const avgPercentileColors = getRankPercentileColor(stats.avgPercentile);
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8">
       <div className="rounded-xl bg-white/3 p-3 text-center ring-1 ring-white/4 transition-all duration-200 hover:bg-white/5">
         <div className="text-xl font-bold text-white tabular-nums">
           {stats.total}

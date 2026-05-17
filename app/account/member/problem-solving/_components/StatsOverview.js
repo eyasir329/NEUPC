@@ -588,7 +588,7 @@ export default function StatsOverview({ statistics, badges = [], onTagClick }) {
   return (
     <div className="space-y-6">
       {/* Compact Stats Row - 4 essential metrics */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 2xl:grid-cols-6">
         <CompactStatCard
           icon={Trophy}
           label="Problems Solved"

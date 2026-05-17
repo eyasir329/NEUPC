@@ -33,20 +33,17 @@ export async function getNotificationsAction() {
 export async function markAsReadAction(notificationId) {
   const userId = await getAuthUserId();
   await markNotificationAsRead(notificationId, userId);
-  revalidatePath('/account/member/notifications');
   return { success: true };
 }
 
 export async function markAllAsReadAction() {
   const userId = await getAuthUserId();
   await markAllNotificationsAsRead(userId);
-  revalidatePath('/account/member/notifications');
   return { success: true };
 }
 
 export async function deleteNotificationAction(notificationId) {
   const userId = await getAuthUserId();
   await deleteNotification(notificationId, userId);
-  revalidatePath('/account/member/notifications');
   return { success: true };
 }

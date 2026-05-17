@@ -11,8 +11,9 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { auth } from '@/app/_lib/auth';
+import { uploadToDrive } from './gdrive';
+import { extractDriveFileId } from './utils';
 import {
-  extractDriveFileId,
   getFileMetadata,
   canAccessFile,
 } from './bootcamp-video';
@@ -77,6 +78,37 @@ function generateSlug(title) {
     .trim();
 }
 
+const ALLOWED_BOOTCAMP_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const MAX_BOOTCAMP_IMAGE_SIZE = 5 * 1024 * 1024;
+
+/**
+ * Recompute and persist total_lessons / total_duration on a bootcamp
+ * by aggregating across its courses → modules → lessons.
+ */
+async function recomputeBootcampTotals(bootcampId) {
+  if (!bootcampId) return;
+  try {
+    const { data: lessons } = await supabaseAdmin
+      .from('lessons')
+      .select('duration, modules!inner(course_id, courses!inner(bootcamp_id))')
+      .eq('modules.courses.bootcamp_id', bootcampId);
+
+    const total_lessons = lessons?.length || 0;
+    const total_duration = (lessons || []).reduce(
+      (sum, l) => sum + (parseInt(l.duration) || 0),
+      0
+    );
+
+    await supabaseAdmin
+      .from('bootcamps')
+      .update({ total_lessons, total_duration })
+      .eq('id', bootcampId);
+  } catch {
+    // Non-fatal: stale totals are cosmetic, don't break the parent op
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOTCAMP ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,12 +121,7 @@ export async function getAdminBootcamps() {
 
   const { data, error } = await supabaseAdmin
     .from('bootcamps')
-    .select(
-      `
-      *,
-      users:created_by (id, full_name, avatar_url)
-    `
-    )
+    .select('*, users:created_by (id, full_name, avatar_url)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -155,9 +182,93 @@ export async function getMemberBootcamps() {
 }
 
 /**
+ * Upload a bootcamp thumbnail image before the bootcamp exists.
+ */
+export async function uploadBootcampThumbnailAction(formData) {
+  const adminId = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  if (!ALLOWED_BOOTCAMP_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, or WebP.' };
+  }
+
+  if (file.size > MAX_BOOTCAMP_IMAGE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${MAX_BOOTCAMP_IMAGE_SIZE / (1024 * 1024)}MB`,
+    };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `bootcamp_${adminId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'bootcamp-thumbnails'
+    );
+
+    return { success: true, url };
+  } catch (error) {
+    console.error('Bootcamp thumbnail upload error:', error);
+    return { error: error.message || 'Failed to upload image.' };
+  }
+}
+
+/**
+ * Upload an image for a lesson content block.
+ */
+export async function uploadLessonImageAction(formData) {
+  const adminId = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  if (!ALLOWED_BOOTCAMP_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, or WebP.' };
+  }
+
+  if (file.size > MAX_BOOTCAMP_IMAGE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${MAX_BOOTCAMP_IMAGE_SIZE / (1024 * 1024)}MB`,
+    };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `lesson_img_${adminId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'lesson-images'
+    );
+
+    return { success: true, url };
+  } catch (error) {
+    console.error('Lesson image upload error:', error);
+    return { error: error.message || 'Failed to upload image.' };
+  }
+}
+
+/**
  * Get a single bootcamp by ID or slug with full curriculum.
+ * Authenticated only. Non-admins see only published bootcamps.
  */
 export async function getBootcampWithCurriculum(idOrSlug) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       idOrSlug
@@ -171,7 +282,7 @@ export async function getBootcampWithCurriculum(idOrSlug) {
         modules (
           id, title, description, order_index, is_published, total_lessons, total_duration,
           lessons (
-            id, title, description, video_source, duration, order_index, 
+            id, title, description, content, video_source, video_id, video_url, duration, order_index, 
             is_free_preview, is_published
           )
         )
@@ -184,7 +295,79 @@ export async function getBootcampWithCurriculum(idOrSlug) {
 
   if (error) throw error;
 
+  // Non-admins cannot read draft/archived bootcamps via this action
+  if (data && data.status !== 'published') {
+    const { data: u } = await supabaseAdmin
+      .from('users').select('id').eq('email', session.user.email).single();
+    let isAdmin = false;
+    if (u) {
+      const { data: roles } = await supabaseAdmin
+        .from('user_roles').select('roles(name)').eq('user_id', u.id);
+      isAdmin = roles?.some((r) => r.roles?.name === 'admin');
+    }
+    if (!isAdmin) throw new Error('Not found');
+  }
+
   // Sort nested items by order_index
+  if (data?.courses) {
+    data.courses.sort((a, b) => a.order_index - b.order_index);
+    data.courses.forEach((course) => {
+      course.modules?.sort((a, b) => a.order_index - b.order_index);
+      course.modules?.forEach((module) => {
+        module.lessons?.sort((a, b) => a.order_index - b.order_index);
+      });
+    });
+  }
+
+  return data;
+}
+
+/**
+ * Lightweight variant: same shape as getBootcampWithCurriculum but
+ * excludes the heavy `content` JSON on lessons. Use for sidebars/listings.
+ */
+export async function getBootcampCurriculumLight(idOrSlug) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      idOrSlug
+    );
+
+  const query = supabaseAdmin.from('bootcamps').select(`
+      *,
+      users:created_by (id, full_name, avatar_url),
+      courses (
+        id, title, description, order_index, is_published, total_lessons, total_duration,
+        modules (
+          id, title, description, order_index, is_published, total_lessons, total_duration,
+          lessons (
+            id, title, description, video_source, video_id, duration, order_index,
+            is_free_preview, is_published
+          )
+        )
+      )
+    `);
+
+  const { data, error } = isUuid
+    ? await query.eq('id', idOrSlug).single()
+    : await query.eq('slug', idOrSlug).single();
+
+  if (error) throw error;
+
+  if (data && data.status !== 'published') {
+    const { data: u } = await supabaseAdmin
+      .from('users').select('id').eq('email', session.user.email).single();
+    let isAdmin = false;
+    if (u) {
+      const { data: roles } = await supabaseAdmin
+        .from('user_roles').select('roles(name)').eq('user_id', u.id);
+      isAdmin = roles?.some((r) => r.roles?.name === 'admin');
+    }
+    if (!isAdmin) throw new Error('Not found');
+  }
+
   if (data?.courses) {
     data.courses.sort((a, b) => a.order_index - b.order_index);
     data.courses.forEach((course) => {
@@ -235,15 +418,26 @@ export async function createBootcamp(formData) {
     created_by: userId,
   };
 
-  const { data, error } = await supabaseAdmin
+  let { data, error } = await supabaseAdmin
     .from('bootcamps')
     .insert(bootcampData)
     .select()
     .single();
 
+  // Retry once on slug unique-constraint conflict (race between check + insert)
+  if (error && error.code === '23505') {
+    bootcampData.slug = `${bootcampData.slug}-${Date.now()}`;
+    ({ data, error } = await supabaseAdmin
+      .from('bootcamps')
+      .insert(bootcampData)
+      .select()
+      .single());
+  }
+
   if (error) throw error;
 
   revalidatePath('/account/admin/bootcamps');
+  revalidatePath(`/bootcamps/${data.slug}`);
 
   return data;
 }
@@ -259,6 +453,9 @@ export async function updateBootcamp(id, formData) {
     'title',
     'slug',
     'description',
+    'subtitle',
+    'category',
+    'difficulty',
     'thumbnail',
     'price',
     'status',
@@ -270,19 +467,20 @@ export async function updateBootcamp(id, formData) {
   ];
 
   for (const field of fields) {
+    if (!formData.has(field)) continue;
     const value = formData.get(field);
-    if (value !== null && value !== undefined) {
-      if (field === 'price') {
-        updates[field] = parseFloat(value) || 0;
-      } else if (field === 'max_students') {
-        updates[field] = value ? parseInt(value) : null;
-      } else if (field === 'is_featured') {
-        updates[field] = value === 'true';
-      } else if (field === 'start_date' || field === 'end_date') {
-        updates[field] = value || null;
-      } else {
-        updates[field] = value;
-      }
+    if (field === 'price') {
+      updates[field] = parseFloat(value) || 0;
+    } else if (field === 'max_students') {
+      updates[field] = value ? parseInt(value) : null;
+    } else if (field === 'is_featured') {
+      updates[field] = value === 'true';
+    } else if (field === 'start_date' || field === 'end_date') {
+      updates[field] = value || null;
+    } else if (field === 'description' || field === 'batch_info' || field === 'thumbnail' || field === 'subtitle' || field === 'category' || field === 'difficulty') {
+      updates[field] = value === '' ? null : value;
+    } else {
+      updates[field] = value;
     }
   }
 
@@ -297,6 +495,7 @@ export async function updateBootcamp(id, formData) {
 
   revalidatePath('/account/admin/bootcamps');
   revalidatePath(`/account/admin/bootcamps/${id}`);
+  revalidatePath(`/bootcamps/${data.slug}`);
 
   return data;
 }
@@ -423,6 +622,7 @@ export async function deleteCourse(courseId) {
   if (error) throw error;
 
   if (course?.bootcamp_id) {
+    await recomputeBootcampTotals(course.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
   }
 
@@ -552,6 +752,7 @@ export async function deleteModule(moduleId) {
   if (error) throw error;
 
   if (module?.courses?.bootcamp_id) {
+    await recomputeBootcampTotals(module.courses.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
   }
 
@@ -659,6 +860,7 @@ export async function createLesson(moduleId, data) {
     .single();
 
   if (module?.courses?.bootcamp_id) {
+    await recomputeBootcampTotals(module.courses.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
   }
 
@@ -726,7 +928,13 @@ export async function updateLesson(lessonId, data) {
     .single();
 
   if (module?.courses?.bootcamp_id) {
-    revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    const bootcampId = module.courses.bootcamp_id;
+    // Duration may have changed → refresh totals
+    if ('duration' in updates) {
+      await recomputeBootcampTotals(bootcampId);
+    }
+    revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+    revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
   }
 
   return lesson;
@@ -753,6 +961,7 @@ export async function deleteLesson(lessonId) {
   if (error) throw error;
 
   if (lesson?.modules?.courses?.bootcamp_id) {
+    await recomputeBootcampTotals(lesson.modules.courses.bootcamp_id);
     revalidatePath(
       `/account/admin/bootcamps/${lesson.modules.courses.bootcamp_id}`
     );
@@ -797,6 +1006,9 @@ export async function reorderLessons(moduleId, lessonIds) {
  * Get a single lesson with full details.
  */
 export async function getLesson(lessonId) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
   const { data, error } = await supabaseAdmin
     .from('lessons')
     .select(
@@ -822,6 +1034,7 @@ export async function getLesson(lessonId) {
  * Validate a Google Drive video ID and return metadata.
  */
 export async function validateDriveVideo(videoId) {
+  await requireAdmin();
   try {
     const fileId = extractDriveFileId(videoId);
     if (!fileId) {
@@ -1092,9 +1305,49 @@ export async function updateLessonProgress(lessonId, progressData) {
 
 /**
  * Mark a lesson as completed.
+ * Preserves existing watch_time/last_position; only flips completion flag.
  */
 export async function markLessonComplete(lessonId) {
-  return updateLessonProgress(lessonId, { is_completed: true });
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  const { data: lesson } = await supabaseAdmin
+    .from('lessons')
+    .select('module_id, modules(course_id, courses(bootcamp_id))')
+    .eq('id', lessonId)
+    .single();
+
+  if (!lesson?.modules?.courses?.bootcamp_id) {
+    throw new Error('Lesson not found');
+  }
+  const bootcampId = lesson.modules.courses.bootcamp_id;
+
+  const { data: existing } = await supabaseAdmin
+    .from('user_progress')
+    .select('watch_time, last_position')
+    .eq('user_id', userId)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  const { data, error } = await supabaseAdmin
+    .from('user_progress')
+    .upsert(
+      {
+        user_id: userId,
+        lesson_id: lessonId,
+        bootcamp_id: bootcampId,
+        watch_time: existing?.watch_time ?? 0,
+        last_position: existing?.last_position ?? 0,
+        is_completed: true,
+        completed_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,lesson_id' }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 /**
@@ -1104,14 +1357,27 @@ export async function markLessonIncomplete(lessonId) {
   const userId = await getCurrentUserId();
   if (!userId) throw new Error('Not authenticated');
 
+  const { data: lesson } = await supabaseAdmin
+    .from('lessons')
+    .select('module_id, modules(course_id, courses(bootcamp_id))')
+    .eq('id', lessonId)
+    .single();
+  if (!lesson?.modules?.courses?.bootcamp_id) {
+    throw new Error('Lesson not found');
+  }
+
   const { error } = await supabaseAdmin
     .from('user_progress')
-    .update({
-      is_completed: false,
-      completed_at: null,
-    })
-    .eq('user_id', userId)
-    .eq('lesson_id', lessonId);
+    .upsert(
+      {
+        user_id: userId,
+        lesson_id: lessonId,
+        bootcamp_id: lesson.modules.courses.bootcamp_id,
+        is_completed: false,
+        completed_at: null,
+      },
+      { onConflict: 'user_id,lesson_id' }
+    );
 
   if (error) throw error;
   return { success: true };
@@ -1167,11 +1433,15 @@ export async function searchUsersForEnrollment(bootcampId, query) {
 
   if (!query || query.length < 2) return [];
 
-  // Search users by email or name
+  // Sanitize: strip PostgREST filter syntax chars to prevent injection via .or()
+  const safe = String(query).replace(/[,()*%\\]/g, '').slice(0, 100);
+  if (!safe) return [];
+  const pattern = `%${safe}%`;
+
   const { data: users, error } = await supabaseAdmin
     .from('users')
     .select('id, full_name, email, avatar_url')
-    .or(`email.ilike.%${query}%,full_name.ilike.%${query}%`)
+    .or(`email.ilike.${pattern},full_name.ilike.${pattern}`)
     .limit(10);
 
   if (error) throw error;
@@ -1399,9 +1669,15 @@ export async function exportEnrollmentsCSV(bootcampId) {
     `${e.progress_percent}%`,
   ]);
 
+  // Escape CSV: prefix formula-trigger chars with single quote, escape internal quotes
+  const escapeCell = (cell) => {
+    let s = cell == null ? '' : String(cell);
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const csv = [
     headers.join(','),
-    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ...rows.map((row) => row.map(escapeCell).join(',')),
   ].join('\n');
 
   return {

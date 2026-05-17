@@ -1,28 +1,19 @@
-/**
- * @file Lesson page — displays video player, content, and progress tracking
- *   for enrolled members.
- * @module LessonPage
- * @access member (enrolled)
- */
-
 import { notFound, redirect } from 'next/navigation';
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getBootcampWithCurriculum,
+  getBootcampCurriculumLight,
   getLesson,
   checkEnrollment,
   getBootcampProgress,
   updateEnrollmentAccess,
 } from '@/app/_lib/bootcamp-actions';
-import LessonViewClient from './_components/LessonViewClient';
+import BootcampLearningClient from '../_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
   const { lessonId } = await params;
   try {
     const lesson = await getLesson(lessonId);
-    return {
-      title: `${lesson?.title || 'Lesson'} | NEUPC`,
-    };
+    return { title: `${lesson?.title || 'Lesson'} | NEUPC` };
   } catch {
     return { title: 'Lesson | NEUPC' };
   }
@@ -30,58 +21,43 @@ export async function generateMetadata({ params }) {
 
 export default async function LessonPage({ params }) {
   const { bootcampId, lessonId } = await params;
-  const { user } = await requireRole('member');
+  await requireRole('member');
 
-  // Fetch lesson data
+  let bootcamp;
+  try {
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
+  } catch {
+    notFound();
+  }
+  if (!bootcamp) notFound();
+
+  // Verify lesson exists and belongs to this bootcamp
   let lesson;
   try {
     lesson = await getLesson(lessonId);
   } catch {
     notFound();
   }
+  if (!lesson) notFound();
 
-  if (!lesson) {
-    notFound();
-  }
-
-  // Verify lesson belongs to the bootcamp
   const lessonBootcampId = lesson.modules?.courses?.bootcamps?.id;
-  if (lessonBootcampId && lessonBootcampId !== bootcampId) {
-    // Redirect to correct URL
-    redirect(`/account/member/bootcamps/${lessonBootcampId}/${lessonId}`);
-  }
+  if (lessonBootcampId && lessonBootcampId !== bootcamp.id) notFound();
 
-  // Check enrollment (unless it's a free preview)
   if (!lesson.is_free_preview) {
-    const enrollmentCheck = await checkEnrollment(bootcampId);
-    if (!enrollmentCheck.enrolled) {
-      redirect(`/bootcamps/${bootcampId}`);
-    }
+    const enrollmentCheck = await checkEnrollment(bootcamp.id);
+    if (!enrollmentCheck.enrolled) redirect(`/bootcamps/${bootcampId}`);
   }
 
-  // Fetch bootcamp for curriculum sidebar
-  let bootcamp;
-  try {
-    bootcamp = await getBootcampWithCurriculum(bootcampId);
-  } catch {
-    notFound();
-  }
+  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
-  // Update last accessed
-  await updateEnrollmentAccess(bootcampId).catch(() => {});
+  const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
 
-  // Get user's progress
-  const progressData = await getBootcampProgress(bootcampId).catch(() => ({
-    progress: [],
-    lessonProgress: {},
-  }));
-
+  // Render the same SPA shell with the lesson pre-selected
   return (
-    <LessonViewClient
+    <BootcampLearningClient
       bootcamp={bootcamp}
-      lesson={lesson}
-      lessonProgress={progressData.lessonProgress}
-      userProgress={progressData.lessonProgress[lessonId] || null}
+      lessonProgress={lessonProgress}
+      initialLessonId={lessonId}
     />
   );
 }

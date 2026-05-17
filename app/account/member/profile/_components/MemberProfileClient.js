@@ -1,731 +1,666 @@
-/**
- * @file Member profile client — editable profile form displaying
- *   personal info, student details, competitive handles, and linked
- *   social accounts.
- * @module MemberProfileClient
- */
-
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User,
-  Mail,
-  Phone,
-  GraduationCap,
-  BookOpen,
-  Code2,
-  Globe,
-  Github,
-  Linkedin,
-  Trophy,
-  Pencil,
-  Check,
-  X,
-  Loader2,
-  Layers,
-  Tag,
-  FileText,
-  BadgeCheck,
-  Upload,
-  Trash2,
-  Camera,
+  Check, X, Loader2, ExternalLink, ChevronRight, Trophy, Award, Users,
+  Settings, ChevronDown, Search, Pencil, Code2, Globe, User, Activity,
+  Sparkles, GraduationCap, IdCard, BookOpen, Hash
 } from 'lucide-react';
-import {
-  updateMemberInfoAction,
-  updateMemberProfileAction,
-} from '@/app/_lib/member-profile-actions';
-import {
-  uploadAvatarAction,
-  removeAvatarAction,
-} from '@/app/_lib/avatar-actions';
+import { updateMemberProfileAction } from '@/app/_lib/member-profile-actions';
+import Link from "next/link";
+import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard, PageShell, TabBar, PageHeader } from '../../_components/_ui';
 
-// ─── Field Row ─────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, label, value, mono = false }) {
-  return (
-    <div className="flex items-start gap-3 border-b border-white/5 py-3 last:border-0">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/4">
-        <Icon className="size-3.5 text-white/40" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="mb-0.5 text-[10px] tracking-wider text-white/30 uppercase">
-          {label}
-        </p>
-        <p
-          className={`text-sm wrap-break-word text-white/70 ${mono ? 'font-mono' : ''}`}
-        >
-          {value || <span className="text-white/25 italic">Not set</span>}
-        </p>
-      </div>
-    </div>
-  );
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
 }
 
-// ─── Handle Chip ────────────────────────────────────────────────────────────
-function HandleChip({ label, value, href }) {
-  if (!value) return null;
-  const inner = (
-    <span className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/60 transition hover:border-white/16 hover:bg-white/8 hover:text-white/80">
-      <Code2 className="size-3 shrink-0" />
-      <span className="font-medium text-white/40">{label}:</span> {value}
-    </span>
-  );
-  return href ? (
-    <a href={href} target="_blank" rel="noreferrer">
-      {inner}
-    </a>
-  ) : (
-    inner
-  );
+// ... PLATFORMS ...
+const HANDLE_PLATFORMS = [
+  { id: 'codeforces',        name: 'Codeforces',     short: 'CF', color: '#ef4444', profileUrl: (h) => `https://codeforces.com/profile/${h}`,              logo: 'https://codeforces.org/s/0/favicon-96x96.png',   category: 'cp' },
+  { id: 'atcoder',           name: 'AtCoder',         short: 'AC', color: '#38bdf8', profileUrl: (h) => `https://atcoder.jp/users/${h}`,                    logo: 'https://img.atcoder.jp/assets/atcoder.png',       category: 'cp' },
+  { id: 'leetcode',          name: 'LeetCode',        short: 'LC', color: '#fbbf24', profileUrl: (h) => `https://leetcode.com/${h}`,                        logo: 'https://assets.leetcode.com/static_assets/public/icons/favicon-96x96.png', category: 'cp' },
+  { id: 'codechef',          name: 'CodeChef',        short: 'CC', color: '#fb923c', profileUrl: (h) => `https://www.codechef.com/users/${h}`,              logo: 'https://www.codechef.com/misc/favicon.ico',       category: 'cp' },
+  { id: 'hackerrank',        name: 'HackerRank',      short: 'HR', color: '#4ade80', profileUrl: (h) => `https://www.hackerrank.com/profile/${h}`,          logo: 'https://www.hackerrank.com/wp-content/uploads/2020/05/hackerrank_cursor_favicon_480px-150x150.png', category: 'cp' },
+  { id: 'spoj',              name: 'SPOJ',            short: 'SP', color: '#a3e635', profileUrl: (h) => `https://www.spoj.com/users/${h}`,                  logo: 'https://www.spoj.com/favicon.ico',                category: 'cp' },
+  { id: 'cses',              name: 'CSES',            short: 'CS', color: '#818cf8', profileUrl: (h) => `https://cses.fi/user/${h}`,                        logo: 'https://cses.fi/favicon.ico',                     category: 'cp' },
+  { id: 'vjudge',            name: 'VJudge',          short: 'VJ', color: '#2dd4bf', profileUrl: (h) => `https://vjudge.net/user/${h}`,                     logo: 'https://vjudge.net/favicon.ico',                  category: 'cp' },
+  { id: 'toph',              name: 'Toph',            short: 'TP', color: '#34d399', profileUrl: (h) => `https://toph.co/u/${h}`,                           logo: 'https://toph.co/images/favicon.png',              category: 'cp' },
+  { id: 'lightoj',           name: 'LightOJ',         short: 'LJ', color: '#22d3ee', profileUrl: (h) => `https://lightoj.com/user/${h}`,                    logo: 'https://static.lightoj.com/assets/loj-logo-inverted.png', category: 'cp' },
+  { id: 'uva',               name: 'UVA',             short: 'UV', color: '#a78bfa', profileUrl: (h) => `https://uhunt.onlinejudge.org/id/${h}`,            logo: 'https://onlinejudge.org/favicon.ico',             category: 'cp' },
+  { id: 'beecrowd',          name: 'Beecrowd',        short: 'BC', color: '#fde68a', profileUrl: (h) => `https://judge.beecrowd.com/en/profile/${h}`,       logo: 'https://www.beecrowd.com.br/favicon.ico',         category: 'cp' },
+  { id: 'facebookhackercup', name: 'Meta Hacker Cup', short: 'MH', color: '#60a5fa', profileUrl: (h) => `https://www.facebook.com/codingcompetitions/hacker-cup/`, logo: 'https://www.facebook.com/favicon.ico', category: 'cp' },
+  { id: 'github',   name: 'GitHub',      short: 'GH', color: '#e2e8f0', profileUrl: (h) => `https://github.com/${h}`,  logo: 'https://github.com/favicon.ico',       category: 'social' },
+  { id: 'linkedin', name: 'LinkedIn',    short: 'LI', color: '#3b82f6', profileUrl: (h) => `https://linkedin.com/in/${h}`,   logo: 'https://www.linkedin.com/favicon.ico', category: 'social' },
+  { id: 'facebook', name: 'Facebook',    short: 'FB', color: '#60a5fa', profileUrl: (h) => `https://facebook.com/${h}`,        logo: 'https://www.facebook.com/favicon.ico', category: 'social' },
+  { id: 'x_handle', name: 'X (Twitter)', short: 'X',  color: '#e2e8f0', profileUrl: (h) => `https://x.com/${h}`,      logo: 'https://abs.twimg.com/favicons/twitter.3.ico', category: 'social' },
+];
+
+const CP_PLATFORMS  = HANDLE_PLATFORMS.filter(p => p.category === 'cp');
+const SOC_PLATFORMS = HANDLE_PLATFORMS.filter(p => p.category === 'social');
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: User },
+  { id: 'handles',  label: 'Handles',  icon: Code2 },
+  { id: 'activity', label: 'Activity', icon: Activity },
+];
+
+function getHandleValue(profile, platform) {
+  if (!profile) return null;
+  if (platform.id === 'github')   return profile.github   ?? null;
+  if (platform.id === 'linkedin') return profile.linkedin ?? null;
+  if (platform.id === 'facebook') return profile.facebook ?? null;
+  if (platform.id === 'x_handle') return profile.x_handle ?? null;
+  return profile[`${platform.id}_handle`] ?? null;
 }
 
-// ─── Section Card ────────────────────────────────────────────────────────────
-function SectionCard({ title, icon: Icon, children }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/3">
-      <div className="flex items-center gap-2.5 border-b border-white/6 px-5 py-3.5">
-        <Icon className="size-4 text-white/40" />
-        <h3 className="text-sm font-semibold text-white/70">{title}</h3>
-      </div>
-      <div className="px-5 py-1">{children}</div>
-    </div>
-  );
+function getDisplayHandle(platform, handle) {
+  if (!handle) return null;
+  return platform.isUrl ? (handle.split('/').filter(Boolean).pop() ?? handle) : handle;
 }
 
-// ─── Tags display ────────────────────────────────────────────────────────────
-function TagList({ items, color = 'bg-white/6 text-white/50 border-white/8' }) {
-  if (!items?.length)
-    return <span className="text-sm text-white/25 italic">None listed</span>;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((item) => (
-        <span
-          key={item}
-          className={`rounded-full border px-2.5 py-0.5 text-xs ${color}`}
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─── Edit Account Form ───────────────────────────────────────────────────────
-function EditAccountForm({ user, onDone }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-
-  async function handleSubmit(formData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await updateMemberInfoAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        setSuccess(true);
-        setTimeout(onDone, 800);
-      }
-    });
+function PlatformLogo({ platform, size = 16 }) {
+  const [failed, setFailed] = useState(false);
+  if (!platform.logo || failed) {
+    return <span className="text-[9px] font-bold leading-none" style={{ color: platform.color }}>{platform.short}</span>;
   }
-
   return (
-    <form action={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/50">
-            Full Name
-          </label>
-          <input
-            name="full_name"
-            defaultValue={user.full_name}
-            required
-            className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/50">
-            Phone
-          </label>
-          <input
-            name="phone"
-            defaultValue={user.phone ?? ''}
-            placeholder="+880…"
-            className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-          />
-        </div>
-      </div>
-
-      {error && (
-        <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-sm text-red-400">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm text-emerald-400">
-          Account info updated successfully!
-        </p>
-      )}
-
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/16 disabled:opacity-50"
-        >
-          {isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Check className="size-4" />
-          )}
-          Save Changes
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2 text-sm text-white/50 transition hover:bg-white/6"
-        >
-          <X className="size-4" />
-          Cancel
-        </button>
-      </div>
-    </form>
+    <img src={platform.logo} alt={platform.name}
+      style={{ width: size, height: size }}
+      className="rounded-sm object-contain"
+      onError={() => setFailed(true)} />
   );
 }
 
-// ─── Edit Profile Form ───────────────────────────────────────────────────────
-function EditProfileForm({ profile, onDone }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-
-  async function handleSubmit(formData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await updateMemberProfileAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        setSuccess(true);
-        setTimeout(onDone, 800);
-      }
-    });
-  }
-
-  const field = (name, label, placeholder = '', defaultVal = '') => (
-    <div>
-      <label className="mb-1.5 block text-xs font-medium text-white/50">
-        {label}
-      </label>
-      <input
-        name={name}
-        defaultValue={defaultVal}
-        placeholder={placeholder}
-        className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-      />
-    </div>
-  );
+function HandleRow({ platform, handle }) {
+  const url     = handle ? platform.profileUrl(handle) : null;
+  const display = getDisplayHandle(platform, handle);
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-white/50">
-          Bio
-        </label>
-        <textarea
-          name="bio"
-          defaultValue={profile?.bio ?? ''}
-          placeholder="Tell us about yourself…"
-          rows={3}
-          className="w-full resize-none rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
+    <div className={cn(
+      "flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors",
+      handle
+        ? 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1]'
+        : 'border-white/[0.04] bg-transparent opacity-40'
+    )}>
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg shadow-inner"
+        style={{
+          background: handle ? `${platform.color}15` : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${handle ? platform.color + '30' : 'rgba(255,255,255,0.06)'}`,
+        }}>
+        <PlatformLogo platform={platform} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-[11.5px] font-medium leading-none mb-0.5", handle ? 'text-gray-200' : 'text-gray-500')}>
+          {platform.name}
+        </p>
+        {handle ? (
+          <a href={url} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-[11px] leading-none hover:underline underline-offset-2"
+            style={{ color: platform.color + 'bb' }}
+            onClick={e => e.stopPropagation()}>
+            <span className="truncate max-w-[140px]">{display}</span>
+            <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-60" />
+          </a>
+        ) : (
+          <p className="text-[10.5px] text-gray-600 leading-none">Not linked</p>
+        )}
+      </div>
+
+      {handle && (
+        <div className="shrink-0 size-5 flex items-center justify-center rounded-full"
+          style={{ background: platform.color + '18', border: `1px solid ${platform.color}35` }}>
+          <Check className="w-2.5 h-2.5" style={{ color: platform.color }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HandleEditRow({ platform, handle }) {
+  const fieldName =
+    platform.id === 'github'   ? 'github'   :
+    platform.id === 'linkedin' ? 'linkedin' :
+    platform.id === 'facebook' ? 'facebook' :
+    platform.id === 'x_handle' ? 'x_handle' :
+    `${platform.id}_handle`;
+
+  const placeholder = `${platform.short.toLowerCase()}_username`;
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg shadow-inner"
+        style={{ background: `${platform.color}15`, border: `1px solid ${platform.color}30` }}>
+        <PlatformLogo platform={platform} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <label className="block text-[10px] font-medium text-gray-400 mb-1">{platform.name}</label>
+        <input
+          name={fieldName}
+          defaultValue={handle ?? ''}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 font-mono text-[12px] text-white placeholder-white/15 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-violet-500/50 transition"
         />
       </div>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {field('github', 'GitHub Username', 'username', profile?.github ?? '')}
-        {field(
-          'linkedin',
-          'LinkedIn URL',
-          'https://linkedin.com/in/…',
-          profile?.linkedin ?? ''
-        )}
-        {field(
-          'codeforces_handle',
-          'Codeforces Handle',
-          'handle',
-          profile?.codeforces_handle ?? ''
-        )}
-        {field(
-          'vjudge_handle',
-          'VJudge Handle',
-          'handle',
-          profile?.vjudge_handle ?? ''
-        )}
-        {field(
-          'atcoder_handle',
-          'AtCoder Handle',
-          'handle',
-          profile?.atcoder_handle ?? ''
-        )}
-        {field(
-          'leetcode_handle',
-          'LeetCode Handle',
-          'handle',
-          profile?.leetcode_handle ?? ''
+function FormField({ label, name, defaultValue, placeholder, hint, textarea }) {
+  const cls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-[13px] text-white placeholder-white/20 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-violet-500/50 transition';
+  return (
+    <div>
+      <label className="block mb-1.5 text-[10.5px] font-semibold tracking-[0.1em] uppercase text-gray-400">
+        {label}
+        {hint && <span className="ml-1.5 normal-case tracking-normal text-gray-500 font-normal">{hint}</span>}
+      </label>
+      {textarea
+        ? <textarea name={name} defaultValue={defaultValue} placeholder={placeholder} rows={3} className={`${cls} resize-none`} />
+        : <input    name={name} defaultValue={defaultValue} placeholder={placeholder} className={cls} />}
+    </div>
+  );
+}
+
+function FormAlert({ error, success }) {
+  if (error)
+    return <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12.5px] text-red-400 shadow-inner">{error}</p>;
+  if (success)
+    return <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-[12.5px] text-emerald-400 shadow-inner">Profile saved.</p>;
+  return null;
+}
+
+function EditProfileForm({ profile, onDone }) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError]     = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [query, setQuery]     = useState('');
+
+  const filtered = query.trim()
+    ? CP_PLATFORMS.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+    : CP_PLATFORMS;
+
+  function handleSubmit(formData) {
+    setError(null);
+    setSuccess(false);
+    startTransition(async () => {
+      const result = await updateMemberProfileAction(formData);
+      if (result?.error) setError(result.error);
+      else { setSuccess(true); setTimeout(onDone, 1200); }
+    });
+  }
+
+  return (
+    <form action={handleSubmit} className="space-y-8">
+      <FormField label="Bio" name="bio" defaultValue={profile?.bio ?? ''} placeholder="Tell the club about yourself…" textarea />
+
+      <div>
+        <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-gray-400 mb-3">Social &amp; Dev</p>
+        <div className="space-y-3">
+          {SOC_PLATFORMS.map(p => (
+            <HandleEditRow key={p.id} platform={p} handle={getHandleValue(profile, p)} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-gray-400">Competitive Programming</p>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
+            <input value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Filter…"
+              className="w-28 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-7 pr-2.5 py-1.5 text-[11.5px] text-white placeholder-gray-500 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] transition" />
+          </div>
+        </div>
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {filtered.map(p => (
+              <HandleEditRow key={p.id} platform={p} handle={getHandleValue(profile, p)} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center py-8 text-[12px] text-gray-500">No platforms match &ldquo;{query}&rdquo;</p>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/50">
-            Skills <span className="text-white/25">(comma-separated)</span>
-          </label>
-          <input
-            name="skills"
-            defaultValue={(profile?.skills ?? []).join(', ')}
-            placeholder="C++, Python, Data Structures…"
-            className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/50">
-            Interests <span className="text-white/25">(comma-separated)</span>
-          </label>
-          <input
-            name="interests"
-            defaultValue={(profile?.interests ?? []).join(', ')}
-            placeholder="Competitive Programming, ML…"
-            className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-          />
-        </div>
+        <FormField label="Skills"    name="skills"    defaultValue={(profile?.skills    ?? []).join(', ')} placeholder="C++, Python, Algorithms…" hint="(comma-separated)" />
+        <FormField label="Interests" name="interests" defaultValue={(profile?.interests ?? []).join(', ')} placeholder="CP, ML, Open Source…"      hint="(comma-separated)" />
       </div>
 
-      {error && (
-        <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-sm text-red-400">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm text-emerald-400">
-          Profile updated successfully!
-        </p>
-      )}
+      <FormAlert error={error} success={success} />
 
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/16 disabled:opacity-50"
-        >
-          {isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Check className="size-4" />
-          )}
-          Save Profile
+      <div className="flex items-center gap-2 pt-1">
+        <button type="submit" disabled={isPending}
+          className="flex items-center gap-2 rounded-xl bg-violet-500/20 border border-violet-500/30 px-5 py-2.5 text-[12.5px] font-semibold text-violet-300 transition hover:bg-violet-500/30 disabled:opacity-40">
+          {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+          Save changes
         </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2 text-sm text-white/50 transition hover:bg-white/6"
-        >
-          <X className="size-4" />
-          Cancel
+        <button type="button" onClick={onDone} disabled={isPending}
+          className="flex items-center gap-2 rounded-xl border border-white/[0.08] px-5 py-2.5 text-[12.5px] font-semibold text-gray-300 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-40">
+          <X className="size-4" /> Cancel
         </button>
       </div>
     </form>
   );
 }
 
-// ─── Avatar Upload Widget ────────────────────────────────────────────────────
-function AvatarUploader({ user }) {
-  const [uploading, setUploading] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [error, setError] = useState(null);
-  const isImage = user.avatar_url?.startsWith('/api/image/');
-
-  async function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError(null);
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.set('file', file);
-      const result = await uploadAvatarAction(fd);
-      if (result?.error) setError(result.error);
-    } catch {
-      setError('Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  }
-
-  async function handleRemove() {
-    setError(null);
-    setRemoving(true);
-    try {
-      const result = await removeAvatarAction();
-      if (result?.error) setError(result.error);
-    } catch {
-      setError('Failed to remove avatar.');
-    } finally {
-      setRemoving(false);
-    }
-  }
-
+function InfoRow({ icon: Icon, label, value }) {
   return (
-    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-      {/* avatar with overlay */}
-      <div className="group relative shrink-0">
-        {isImage ? (
-          <img
-            src={user.avatar_url}
-            alt={user.full_name}
-            className="size-20 rounded-full object-cover ring-2 ring-white/10"
-          />
-        ) : (
-          <div className="flex size-20 items-center justify-center rounded-full border border-white/10 bg-white/8 text-2xl font-bold text-white/60">
-            {user.avatar_url && user.avatar_url.length <= 3
-              ? user.avatar_url
-              : user.full_name?.charAt(0)?.toUpperCase() ?? 'M'}
-          </div>
-        )}
-        <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition group-hover:opacity-100">
-          {uploading ? (
-            <Loader2 className="size-5 animate-spin text-white" />
-          ) : (
-            <Camera className="size-5 text-white" />
-          )}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleFileChange}
-          />
-        </label>
+    <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] py-3.5 last:border-0 group">
+      <div className="flex items-center gap-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <Icon className="size-4 text-gray-400 group-hover:text-gray-300 transition-colors" />
+        </div>
+        <p className="text-[13px] font-medium text-gray-400 group-hover:text-gray-300 transition-colors">{label}</p>
       </div>
-
-      <div className="flex flex-col items-center gap-1.5 sm:items-start">
-        <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/8 hover:text-white/80">
-          {uploading ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <Upload className="size-3" />
-          )}
-          {uploading ? 'Uploading…' : 'Upload new avatar'}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleFileChange}
-          />
-        </label>
-        {isImage && (
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={removing}
-            className="flex items-center gap-1.5 rounded-lg border border-red-400/15 bg-red-400/5 px-3 py-1.5 text-xs text-red-400/70 transition hover:bg-red-400/10 hover:text-red-400 disabled:opacity-50"
-          >
-            {removing ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Trash2 className="size-3" />
-            )}
-            {removing ? 'Removing…' : 'Remove avatar'}
-          </button>
-        )}
-        <p className="text-[10px] text-white/25">
-          JPEG, PNG, WebP, or GIF · Max 5 MB
-        </p>
-        {error && (
-          <p className="text-[11px] text-red-400">{error}</p>
-        )}
+      <div className="text-[13px] font-medium text-white truncate max-w-[200px]">
+        {value ?? <span className="italic text-gray-600 font-normal">Not set</span>}
       </div>
     </div>
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-export default function MemberProfileClient({ user, memberProfile }) {
-  const [editingAccount, setEditingAccount] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(false);
+function HandlesTab({ cpHandles, socialHandles, onEdit }) {
+  const [showAll, setShowAll] = useState(false);
+  const [query, setQuery]     = useState('');
 
-  const approved = memberProfile?.approved === true;
-  const isImage = user.avatar_url?.startsWith('/api/image/');
+  const connected   = cpHandles.filter(h => h.handle);
+  const filteredCp  = query.trim()
+    ? cpHandles.filter(h => h.platform.name.toLowerCase().includes(query.toLowerCase()))
+    : cpHandles;
+  const visible     = (showAll || query.trim()) ? filteredCp : filteredCp.slice(0, 8);
+  const hiddenCount = filteredCp.length - visible.length;
+
+  return (
+    <StaggerList>
+      <div className="space-y-6">
+        <GlassCard padding="p-0">
+          <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <SectionHeader icon={Globe} title="Social & Dev" subtitle="Your social media and development profiles" accent="blue" />
+            <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">Edit</ActionButton>
+          </div>
+          <div className="p-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {socialHandles.map(({ platform, handle }) => (
+              <HandleRow key={platform.id} platform={platform} handle={handle} />
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard padding="p-0">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-white/[0.06]">
+            <SectionHeader icon={Code2} title="Competitive Handles" subtitle="Your programming platform identities" accent="emerald" />
+            <div className="flex items-center gap-4">
+              <div className="w-32">
+                <div className="flex justify-between text-[10px] font-medium text-gray-400 mb-1.5">
+                  <span>Linked</span>
+                  <span className="text-white">{connected.length}/{cpHandles.length}</span>
+                </div>
+                <GradientBar value={connected.length} max={cpHandles.length} tone="emerald" />
+              </div>
+              <div className="relative shrink-0 hidden sm:block">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input value={query} onChange={e => setQuery(e.target.value)}
+                  placeholder="Filter…"
+                  className="w-36 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-8 pr-3 py-1.5 text-[12px] text-white placeholder-gray-500 outline-none focus:border-violet-500/50 focus:bg-white/[0.04] transition" />
+              </div>
+              <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">Edit</ActionButton>
+            </div>
+          </div>
+          <div className="p-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {visible.length > 0 ? visible.map(({ platform, handle }) => (
+              <HandleRow key={platform.id} platform={platform} handle={handle} />
+            )) : (
+              <EmptyState icon={Search} title="No handles found" description={`Could not find any handles matching "${query}".`} />
+            )}
+          </div>
+          {!query.trim() && (hiddenCount > 0 || showAll) && (
+            <div className="border-t border-white/[0.06] px-5 py-3.5 bg-white/[0.01]">
+              <button onClick={() => setShowAll(v => !v)}
+                className="flex w-full items-center justify-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-200 transition-colors">
+                {showAll ? 'Show less' : `Show ${hiddenCount} more handles`}
+                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", showAll ? "rotate-180" : "")} />
+              </button>
+            </div>
+          )}
+        </GlassCard>
+      </div>
+    </StaggerList>
+  );
+}
+
+function OverviewTab({ memberProfile, connectedCount, totalHandles, onEdit }) {
+  const skills    = memberProfile?.skills    ?? [];
+  const interests = memberProfile?.interests ?? [];
+  const approved  = memberProfile?.approved === true;
 
   return (
     <div className="space-y-6">
-      {/* page header */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            My Profile
-          </h1>
-          <p className="text-sm text-white/40">
-            Manage your personal information and competitive programming handles
-          </p>
-        </div>
-        {approved && (
-          <span className="flex items-center gap-1.5 self-start rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-400 sm:self-auto">
-            <BadgeCheck className="size-3.5" />
-            Approved Member
-          </span>
-        )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={IdCard}
+          label="Student ID"
+          value={memberProfile?.student_id ?? '—'}
+          accent="violet"
+          delay={0.05}
+        />
+        <StatCard
+          icon={GraduationCap}
+          label="CGPA"
+          value={memberProfile?.cgpa ?? '—'}
+          accent="emerald"
+          delay={0.1}
+        />
+        <StatCard
+          icon={Hash}
+          label="Linked Handles"
+          value={`${connectedCount}/${totalHandles}`}
+          accent="cyan"
+          delay={0.15}
+        />
+        <StatCard
+          icon={BookOpen}
+          label="Current Semester"
+          value={memberProfile?.semester ?? '—'}
+          accent="amber"
+          delay={0.2}
+        />
       </div>
 
-      {/* avatar + name hero */}
-      <div className="flex items-center gap-4 rounded-2xl border border-white/8 bg-white/3 p-5">
-        {isImage ? (
-          <img
-            src={user.avatar_url}
-            alt={user.full_name}
-            className="size-16 shrink-0 rounded-full object-cover ring-2 ring-white/10"
+      <GlassCard padding="p-0">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Professional Bio"
+            subtitle="A brief introduction about your background and goals"
+            accent="fuchsia"
           />
-        ) : (
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/8 text-xl font-bold text-white/60">
-            {user.avatar_url && user.avatar_url.length <= 3
-              ? user.avatar_url
-              : user.full_name?.charAt(0)?.toUpperCase() ?? 'M'}
-          </div>
-        )}
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold text-white">
-            {user.full_name}
-          </h2>
-          <p className="truncate text-sm text-white/40">{user.email}</p>
-          {memberProfile && (
-            <p className="mt-0.5 text-xs text-white/30">
-              {memberProfile.department} · Session {memberProfile.session}
+          <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">
+            Edit
+          </ActionButton>
+        </div>
+        <div className="p-5">
+          {memberProfile?.bio ? (
+            <p className="text-[13px] leading-relaxed text-gray-300 whitespace-pre-line">
+              {memberProfile.bio}
+            </p>
+          ) : (
+            <p className="text-[13px] italic text-gray-500">
+              No bio yet. Add one to introduce yourself to the community.
             </p>
           )}
         </div>
-      </div>
+      </GlassCard>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* ── Account Info ── */}
-        <SectionCard title="Account Information" icon={User}>
-          {editingAccount ? (
-            <div className="py-4">
-              <EditAccountForm
-                user={user}
-                onDone={() => setEditingAccount(false)}
-              />
-            </div>
-          ) : (
-            <>
-              <InfoRow icon={User} label="Full Name" value={user.full_name} />
-              <InfoRow icon={Mail} label="Email" value={user.email} />
-              <InfoRow icon={Phone} label="Phone" value={user.phone} />
-              <div className="border-t border-white/5 py-4">
-                <p className="mb-3 text-[10px] tracking-wider text-white/30 uppercase">
-                  Avatar
-                </p>
-                <AvatarUploader user={user} />
-              </div>
-              <div className="flex justify-end py-3">
-                <button
-                  onClick={() => setEditingAccount(true)}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-white/50 transition hover:bg-white/8 hover:text-white/80"
-                >
-                  <Pencil className="size-3" />
-                  Edit
-                </button>
-              </div>
-            </>
-          )}
-        </SectionCard>
-
-        {/* ── Academic Info ── */}
-        <SectionCard title="Academic Information" icon={GraduationCap}>
-          {memberProfile ? (
-            <>
-              <InfoRow
-                icon={BookOpen}
-                label="Student ID"
-                value={memberProfile.student_id}
-                mono
-              />
-              <InfoRow
-                icon={GraduationCap}
-                label="Department"
-                value={memberProfile.department}
-              />
-              <InfoRow
-                icon={Layers}
-                label="Session"
-                value={memberProfile.session}
-              />
-              <InfoRow
-                icon={BookOpen}
-                label="Semester"
-                value={memberProfile.semester}
-              />
-              {memberProfile.cgpa != null && (
-                <InfoRow
-                  icon={Trophy}
-                  label="CGPA"
-                  value={String(memberProfile.cgpa)}
-                />
-              )}
-            </>
-          ) : (
-            <p className="py-6 text-center text-sm text-white/30 italic">
-              No academic profile found.
-            </p>
-          )}
-        </SectionCard>
-      </div>
-
-      {/* ── Bio & Interests & Skills ── */}
-      <SectionCard title="Bio & Interests" icon={FileText}>
-        {editingProfile ? (
-          <div className="py-4">
-            <EditProfileForm
-              profile={memberProfile}
-              onDone={() => setEditingProfile(false)}
+        <GlassCard padding="p-0">
+          <div className="border-b border-white/[0.06] px-5 py-4">
+            <SectionHeader
+              icon={GraduationCap}
+              title="Membership Details"
+              subtitle="Your academic and club affiliation info"
+              accent="indigo"
             />
           </div>
-        ) : (
-          <div className="space-y-5 py-4">
-            <div>
-              <p className="mb-2 text-xs tracking-wider text-white/30 uppercase">
-                Bio
-              </p>
-              {memberProfile?.bio ? (
-                <p className="text-sm leading-relaxed text-white/60">
-                  {memberProfile.bio}
-                </p>
-              ) : (
-                <p className="text-sm text-white/25 italic">No bio set</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-xs tracking-wider text-white/30 uppercase">
-                  <Tag className="size-3" /> Skills
-                </p>
-                <TagList
-                  items={memberProfile?.skills}
-                  color="bg-blue-400/10 text-blue-400/80 border-blue-400/20"
-                />
-              </div>
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-xs tracking-wider text-white/30 uppercase">
-                  <Tag className="size-3" /> Interests
-                </p>
-                <TagList
-                  items={memberProfile?.interests}
-                  color="bg-violet-400/10 text-violet-400/80 border-violet-400/20"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setEditingProfile(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-white/50 transition hover:bg-white/8 hover:text-white/80"
-              >
-                <Pencil className="size-3" />
-                Edit
-              </button>
-            </div>
+          <div className="px-5 py-2">
+            <InfoRow
+              icon={Check}
+              label="Status"
+              value={
+                <Pill tone={approved ? 'emerald' : 'amber'} icon={approved ? Check : null}>
+                  {approved ? 'Active Member' : 'Pending Approval'}
+                </Pill>
+              }
+            />
+            <InfoRow icon={IdCard} label="Student ID" value={memberProfile?.student_id} />
+            <InfoRow icon={BookOpen} label="Department" value={memberProfile?.department} />
+            <InfoRow icon={Hash} label="Session" value={memberProfile?.session} />
+            <InfoRow icon={GraduationCap} label="Semester" value={memberProfile?.semester} />
+            {memberProfile?.cgpa != null && (
+              <InfoRow icon={Sparkles} label="CGPA" value={String(memberProfile.cgpa)} />
+            )}
           </div>
-        )}
-      </SectionCard>
+        </GlassCard>
 
-      {/* ── Competitive Programming Handles ── */}
-      <SectionCard title="Competitive Programming Handles" icon={Code2}>
-        {editingProfile ? null : (
-          <div className="space-y-3 py-4">
-            <div className="flex flex-wrap gap-2">
-              <HandleChip
-                label="Codeforces"
-                value={memberProfile?.codeforces_handle}
-                href={
-                  memberProfile?.codeforces_handle
-                    ? `https://codeforces.com/profile/${memberProfile.codeforces_handle}`
-                    : undefined
-                }
-              />
-              <HandleChip
-                label="VJudge"
-                value={memberProfile?.vjudge_handle}
-                href={
-                  memberProfile?.vjudge_handle
-                    ? `https://vjudge.net/user/${memberProfile.vjudge_handle}`
-                    : undefined
-                }
-              />
-              <HandleChip
-                label="AtCoder"
-                value={memberProfile?.atcoder_handle}
-                href={
-                  memberProfile?.atcoder_handle
-                    ? `https://atcoder.jp/users/${memberProfile.atcoder_handle}`
-                    : undefined
-                }
-              />
-              <HandleChip
-                label="LeetCode"
-                value={memberProfile?.leetcode_handle}
-                href={
-                  memberProfile?.leetcode_handle
-                    ? `https://leetcode.com/${memberProfile.leetcode_handle}`
-                    : undefined
-                }
-              />
-              <HandleChip
-                label="GitHub"
-                value={memberProfile?.github}
-                href={
-                  memberProfile?.github
-                    ? `https://github.com/${memberProfile.github}`
-                    : undefined
-                }
-              />
-              <HandleChip
-                label="LinkedIn"
-                value={
-                  memberProfile?.linkedin
-                    ? memberProfile.linkedin.split('/').filter(Boolean).pop()
-                    : null
-                }
-                href={memberProfile?.linkedin ?? undefined}
-              />
-            </div>
-            {!memberProfile?.codeforces_handle &&
-              !memberProfile?.vjudge_handle &&
-              !memberProfile?.atcoder_handle &&
-              !memberProfile?.leetcode_handle &&
-              !memberProfile?.github &&
-              !memberProfile?.linkedin && (
-                <p className="text-sm text-white/25 italic">
-                  No handles set yet.
-                </p>
-              )}
-            <div className="flex justify-end pt-1">
-              <button
-                onClick={() => setEditingProfile(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-white/50 transition hover:bg-white/8 hover:text-white/80"
-              >
-                <Pencil className="size-3" />
-                Edit Handles
-              </button>
-            </div>
+        <GlassCard padding="p-0">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+            <SectionHeader
+              icon={Sparkles}
+              title="Skills & Interests"
+              subtitle="Technical expertise and areas of interest"
+              accent="sky"
+            />
+            <ActionButton icon={Pencil} onClick={onEdit} tone="ghost">
+              Edit
+            </ActionButton>
           </div>
-        )}
-        {editingProfile && (
-          <p className="py-4 text-center text-xs text-white/30 italic">
-            Use the Bio & Interests edit form above to update your handles.
-          </p>
-        )}
-      </SectionCard>
+          <div className="p-5">
+            {skills.length === 0 && interests.length === 0 ? (
+              <EmptyState
+                icon={Sparkles}
+                title="No skills added"
+                description="Showcase your tech stack and interests by updating your profile."
+              />
+            ) : (
+              <div className="space-y-6">
+                {skills.length > 0 && (
+                  <div>
+                    <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Technical Skills
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {skills.map((s) => (
+                        <Pill key={s} tone="blue">
+                          {s}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {interests.length > 0 && (
+                  <div>
+                    <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Areas of Interest
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {interests.map((s) => (
+                        <Pill key={s} tone="violet">
+                          {s}
+                        </Pill>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      </div>
     </div>
+  );
+}
+
+function ActivityTab() {
+  const links = [
+    { icon: Trophy,   label: 'Achievements',     desc: 'Awards, contest wins, milestones',     href: '/account/member/achievements', tone: 'amber' },
+    { icon: Award,    label: 'Certificates',     desc: 'Earned certificates and credentials',  href: '/account/member/certificates', tone: 'blue' },
+    { icon: Users,    label: 'Participation',    desc: 'Events, contests, bootcamps joined',   href: '/account/member/participation', tone: 'emerald' },
+    { icon: Settings, label: 'Account Settings', desc: 'Personal info, security, appearance',  href: '/account/member/settings', tone: 'gray' },
+  ];
+
+  return (
+    <StaggerList>
+      <GlassCard padding="p-0">
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <SectionHeader icon={Activity} title="Activity & Quick Links" subtitle="Navigate to other parts of your profile" accent="violet" />
+        </div>
+        <div className="divide-y divide-white/[0.04] p-2">
+          {links.map(({ icon: Icon, label, desc, href, tone }) => (
+            <Link key={href} href={href} className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors hover:bg-white/[0.04] group">
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-${tone}-500/10 border border-${tone}-500/20 shadow-inner group-hover:scale-105 transition-transform`}>
+                <Icon className={`size-5 text-${tone}-400`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-gray-200 group-hover:text-white transition-colors">{label}</p>
+                <p className="text-[12px] text-gray-500 truncate">{desc}</p>
+              </div>
+              <ChevronRight className="size-4 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
+            </Link>
+          ))}
+        </div>
+      </GlassCard>
+    </StaggerList>
+  );
+}
+
+export default function MemberProfileClient({ user, memberProfile }) {
+  const [editing, setEditing] = useState(false);
+
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      if (p && TABS.some((t) => t.id === p)) return p;
+    }
+    return 'overview';
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    setTab(tabId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
+
+  const approved = memberProfile?.approved === true;
+
+  const allHandles    = HANDLE_PLATFORMS.map(p => ({ platform: p, handle: getHandleValue(memberProfile, p) }));
+  const cpHandles     = allHandles.filter(h => h.platform.category === 'cp');
+  const socialHandles = allHandles.filter(h => h.platform.category === 'social');
+  const connectedCount = allHandles.filter(h => h.handle).length;
+
+  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+
+  return (
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+
+      {/* ── Identity card ── */}
+      <GlassCard padding="p-0" className="overflow-hidden">
+        {/* top accent bar */}
+        <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+        {/* banner */}
+        <div
+          className="relative h-32"
+          style={{
+            background:
+              'radial-gradient(ellipse at 75% 50%, rgba(124,58,237,0.18) 0%, transparent 65%), radial-gradient(ellipse at 20% 60%, rgba(56,189,248,0.1) 0%, transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+          }}
+        >
+          {!editing && (
+            <div className="absolute top-4 right-4">
+              <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+                Edit profile
+              </ActionButton>
+            </div>
+          )}
+        </div>
+        {/* identity row */}
+        <div className="px-6 pb-6">
+          <div className="flex flex-wrap items-end gap-4" style={{ marginTop: '-44px' }}>
+            <div className="rounded-full ring-[6px] ring-gray-900 shrink-0 shadow-xl">
+              <Avatar user={user} size="xl" src={user.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null} name={user.full_name} />
+            </div>
+            <div className="pb-1 min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold text-white tracking-tight leading-tight">
+                  {user.full_name}
+                </h2>
+                {approved ? (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Active</span>
+                ) : (
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 uppercase tracking-widest">Pending</span>
+                )}
+              </div>
+              <p className="text-[12px] text-gray-500 mb-2.5 truncate">
+                {user.email}{memberProfile?.session && <> · Session {memberProfile.session}</>}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <Pill tone="violet" icon={User}>
+                  Member{memberProfile?.semester ? ` · ${memberProfile.semester}` : ''}
+                </Pill>
+                {memberProfile?.department && <Pill tone="gray">{memberProfile.department}</Pill>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* ── Edit form (replaces tab content) ── */}
+      <AnimatePresence mode="wait" initial={false}>
+        {editing ? (
+          <motion.div
+            key="edit"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <GlassCard>
+              <div className="flex items-center justify-between pb-5 border-b border-white/[0.06] mb-5">
+                <SectionHeader icon={Pencil} title="Edit Profile" subtitle="Bio, handles, skills & interests" accent="violet" />
+                <button
+                  onClick={() => setEditing(false)}
+                  className="flex items-center justify-center size-8 rounded-lg border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.04] transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <EditProfileForm profile={memberProfile} onDone={() => setEditing(false)} />
+            </GlassCard>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tabs"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-6"
+          >
+            <TabBar tabs={uiTabs} value={tab} onChange={handleTabChange} />
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {tab === 'overview' && (
+                  <OverviewTab
+                    memberProfile={memberProfile}
+                    connectedCount={connectedCount}
+                    totalHandles={allHandles.length}
+                    onEdit={() => setEditing(true)}
+                  />
+                )}
+                {tab === 'handles' && (
+                  <HandlesTab
+                    cpHandles={cpHandles}
+                    socialHandles={socialHandles}
+                    onEdit={() => setEditing(true)}
+                  />
+                )}
+                {tab === 'activity' && <ActivityTab />}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </PageShell>
   );
 }

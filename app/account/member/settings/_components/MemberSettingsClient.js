@@ -1,108 +1,150 @@
-/**
- * @file Member settings client — account preferences and
- *   configuration controls (notification toggles, display options,
- *   privacy settings).
- * @module MemberSettingsClient
- */
-
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Settings,
-  Shield,
+  User,
   Bell,
-  Eye,
-  EyeOff,
   Lock,
   Mail,
   Phone,
   Check,
   X,
   Loader2,
-  User,
   BadgeCheck,
   AlertTriangle,
   Info,
   LogOut,
-  Palette,
-  Moon,
   Globe,
   KeyRound,
+  Shield,
+  Palette,
+  ExternalLink,
+  ChevronRight,
+  Moon,
+  Sun,
+  Monitor,
+  Camera,
+  Upload,
+  Trash2,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Activity,
+  Code2,
+  Pencil,
 } from 'lucide-react';
-import { updateMemberInfoAction } from '@/app/_lib/member-profile-actions';
-import { signOutAction } from '@/app/_lib/actions';
 
-// ─── Section Card ─────────────────────────────────────────────────────────────
-function SectionCard({ title, icon: Icon, description, children }) {
+import { useRouter } from 'next/navigation';
+import { updateMemberInfoAction } from '@/app/_lib/member-profile-actions';
+import {
+  uploadAvatarAction,
+  removeAvatarAction,
+} from '@/app/_lib/avatar-actions';
+import { signOutAction } from '@/app/_lib/actions';
+import {
+  ActionButton,
+  GlassCard,
+  SectionHeader,
+  Pill,
+  Avatar,
+  StaggerList,
+  GradientBar,
+  EmptyState,
+  PageShell,
+  TabBar,
+  PageHeader,
+} from '../../_components/_ui';
+import { Settings as SettingsIcon } from 'lucide-react';
+
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
+
+
+// ─── Sidebar nav items ─────────────────────────────────────────────────────────
+const SECTIONS = [
+  { id: 'account', label: 'Account', icon: User },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'security', label: 'Security', icon: Lock },
+  { id: 'connected', label: 'Connected accounts', icon: ExternalLink },
+  { id: 'danger', label: 'Danger zone', icon: AlertTriangle },
+];
+
+// ─── Status meta ───────────────────────────────────────────────────────────────
+const STATUS_META = {
+  active: { label: 'Active Member', tone: 'emerald' },
+  pending: { label: 'Pending Approval', tone: 'amber' },
+  suspended: { label: 'Account Restricted', tone: 'rose' },
+  rejected: { label: 'Application Rejected', tone: 'rose' },
+};
+
+
+
+// ─── Field block ───────────────────────────────────────────────────────────────
+function Field({ label, children }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/3">
-      <div className="flex items-start gap-3 border-b border-white/6 px-5 py-4">
-        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/5">
-          <Icon className="size-4 text-white/40" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white/80">{title}</h3>
-          {description && (
-            <p className="mt-0.5 text-xs text-white/35">{description}</p>
-          )}
-        </div>
-      </div>
-      <div className="p-5">{children}</div>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[11px] font-semibold tracking-widest text-white/30 uppercase">
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-const STATUS_META = {
-  active: {
-    label: 'Active',
-    color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  },
-  pending: {
-    label: 'Pending',
-    color: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-  },
-  suspended: {
-    label: 'Suspended',
-    color: 'text-red-400 bg-red-400/10 border-red-400/20',
-  },
-  banned: {
-    label: 'Banned',
-    color: 'text-red-500 bg-red-500/10 border-red-500/20',
-  },
-  locked: {
-    label: 'Locked',
-    color: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
-  },
-  rejected: {
-    label: 'Rejected',
-    color: 'text-red-400 bg-red-400/10 border-red-400/20',
-  },
-};
+// ─── Simple Input ──────────────────────────────────────────────────────────────
+function Input({ className = '', ...props }) {
+  return (
+    <input
+      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] text-white placeholder-white/20 outline-none focus:border-white/20 focus:bg-white/[0.06] transition ${className}`}
+      {...props}
+    />
+  );
+}
 
-// ─── Toggle Row ───────────────────────────────────────────────────────────────
+// ─── Info row ──────────────────────────────────────────────────────────────────
+function InfoRow({ icon: Icon, label, value, badge }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-3.5 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="flex size-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
+          <Icon className="size-3.5 text-white/35" />
+        </div>
+        <p className="text-[12.5px] text-white/60">{label}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        {badge}
+        <p className="text-[13px] font-medium text-white/80">
+          {value || <span className="text-white/20 italic">Not set</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Toggle row ────────────────────────────────────────────────────────────────
 function ToggleRow({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/5 py-3 last:border-0">
-      <div>
-        <p className="text-sm font-medium text-white/70">{label}</p>
+    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-4 last:border-0">
+      <div className="flex-1">
+        <p className="text-[13px] font-medium text-white/80">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-white/35">{description}</p>
+          <p className="text-[11.5px] text-white/30">{description}</p>
         )}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ${
-          checked
-            ? 'border-emerald-500 bg-emerald-500'
-            : 'border-white/20 bg-white/8'
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+          checked ? 'bg-indigo-500' : 'bg-white/[0.08]'
         }`}
       >
         <span
-          className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-            checked ? 'translate-x-4' : 'translate-x-0'
+          className={`inline-block size-3.5 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-5' : 'translate-x-1'
           }`}
         />
       </button>
@@ -110,34 +152,366 @@ function ToggleRow({ label, description, checked, onChange }) {
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-export default function MemberSettingsClient({ user }) {
-  // Account update form state
-  const [editingInfo, setEditingInfo] = useState(false);
+// ─── Radio group ───────────────────────────────────────────────────────────────
+function RadioGroup({ label, value, onChange, options }) {
+  return (
+    <div className="border-b border-white/[0.04] py-4 last:border-0">
+      <p className="mb-3 text-[13px] font-semibold text-white/75">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[12px] font-medium transition-all ${
+              value === opt.value
+                ? 'border-indigo-500/30 bg-indigo-500/8 text-indigo-300'
+                : 'border-white/[0.07] bg-white/[0.02] text-white/40 hover:bg-white/[0.05] hover:text-white/65'
+            }`}
+          >
+            {opt.icon && <opt.icon className="size-3.5" />}
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Avatar Crop Modal ────────────────────────────────────────────────────────
+function AvatarCropModal({ src, onApply, onCancel }) {
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const dragging = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const SIZE = 280; // output square px
+
+  // draw whenever offset/zoom changes
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    const naturalMin = Math.min(img.naturalWidth, img.naturalHeight);
+    const baseScale = SIZE / naturalMin;
+    const scale = baseScale * zoom;
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    const cx = SIZE / 2 + offset.x - w / 2;
+    const cy = SIZE / 2 + offset.y - h / 2;
+
+    // clip to circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, cx, cy, w, h);
+    ctx.restore();
+
+    // ring
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }, [offset, zoom]);
+
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+  // pointer events for drag
+  function onPointerDown(e) {
+    dragging.current = true;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e) {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+  }
+  function onPointerUp() {
+    dragging.current = false;
+  }
+
+  function reset() {
+    setOffset({ x: 0, y: 0 });
+    setZoom(1);
+  }
+
+  function apply() {
+    const canvas = canvasRef.current;
+    canvas.toBlob((blob) => {
+      onApply(new File([blob], 'avatar.png', { type: 'image/png' }));
+    }, 'image/png');
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div className="w-full overflow-hidden rounded-t-3xl border border-white/[0.08] bg-[#0d0d0d] shadow-2xl sm:max-w-[360px] sm:rounded-2xl">
+        {/* header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div>
+            <p className="text-[14px] font-semibold text-white/90">
+              Crop &amp; position
+            </p>
+            <p className="mt-0.5 text-[11px] text-white/30">
+              Drag to reposition · pinch or scroll to zoom
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex size-7 items-center justify-center rounded-full bg-white/[0.06] text-white/40 transition hover:bg-white/10 hover:text-white/70"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+
+        {/* hidden img for drawing */}
+        <img
+          ref={imgRef}
+          src={src}
+          onLoad={draw}
+          className="hidden"
+          alt=""
+          crossOrigin="anonymous"
+        />
+
+        {/* canvas — full width with dark surround */}
+        <div className="relative mx-5 mb-4 flex justify-center">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={SIZE}
+              height={SIZE}
+              className="cursor-grab touch-none rounded-full ring-1 ring-white/10 active:cursor-grabbing"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+            />
+            {/* corner hint */}
+            <span className="absolute -bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-1 text-[10px] text-white/20">
+              <Move className="size-3" /> drag
+            </span>
+          </div>
+        </div>
+
+        {/* zoom */}
+        <div className="mx-5 mt-7 mb-1 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/35 transition hover:bg-white/10 hover:text-white/70"
+          >
+            <ZoomOut className="size-3.5" />
+          </button>
+          <div className="relative h-1 flex-1 rounded-full bg-white/[0.08]">
+            <div
+              className="absolute top-0 left-0 h-1 rounded-full bg-indigo-500/70 transition-all"
+              style={{ width: `${((zoom - 0.5) / 2.5) * 100}%` }}
+            />
+            <input
+              type="range"
+              min={0.5}
+              max={3}
+              step={0.01}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="absolute inset-0 h-1 w-full cursor-pointer opacity-0"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/35 transition hover:bg-white/10 hover:text-white/70"
+          >
+            <ZoomIn className="size-3.5" />
+          </button>
+        </div>
+        <p className="mb-4 text-center text-[10px] text-white/20">
+          {Math.round(zoom * 100)}%
+        </p>
+
+        {/* actions */}
+        <div className="flex gap-2 border-t border-white/[0.06] px-5 py-4">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5 text-[12px] text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
+          >
+            <RotateCcw className="size-3.5" /> Reset
+          </button>
+          <button
+            type="button"
+            onClick={apply}
+            className="flex-1 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-[12px] font-semibold text-white transition hover:bg-indigo-500 active:bg-indigo-700"
+          >
+            Apply crop
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Avatar Uploader ──────────────────────────────────────────────────────────
+function AvatarUploader({ user }) {
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null); // data URL → show modal
+  const [pendingRef, setPendingRef] = useState(null); // input element ref for reset
+  const isImage = user.avatar_url?.startsWith('/api/image/');
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setPendingRef(e.target);
+    const reader = new FileReader();
+    reader.onload = (ev) => setCropSrc(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // "Relocate" — reload existing avatar into crop modal
+  function handleRelocate() {
+    setError(null);
+    setCropSrc(user.avatar_url);
+  }
+
+  async function handleCropApply(file) {
+    setCropSrc(null);
+    if (pendingRef) {
+      pendingRef.value = '';
+      setPendingRef(null);
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const result = await uploadAvatarAction(fd);
+      if (result?.error) setError(result.error);
+      else router.refresh();
+    } catch {
+      setError('Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleCropCancel() {
+    setCropSrc(null);
+    if (pendingRef) {
+      pendingRef.value = '';
+      setPendingRef(null);
+    }
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setRemoving(true);
+    try {
+      const result = await removeAvatarAction();
+      if (result?.error) setError(result.error);
+      else router.refresh();
+    } catch {
+      setError('Failed to remove.');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {cropSrc && (
+        <AvatarCropModal
+          src={cropSrc}
+          onApply={handleCropApply}
+          onCancel={handleCropCancel}
+        />
+      )}
+
+      <div className="flex flex-col items-center gap-6 sm:flex-row">
+        <div className="relative shrink-0">
+          <Avatar user={user} size="xl" src={isImage ? user.avatar_url : null} name={user.full_name} />
+          <label className="absolute -bottom-1 -right-1 flex size-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-gray-900 text-white shadow-xl transition-transform hover:scale-110">
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Camera className="size-4" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
+
+        <div className="flex-1 text-center sm:text-left">
+          <p className="text-[14px] font-semibold text-white">Profile Photo</p>
+          <p className="mb-4 text-[12px] text-gray-500">
+            Square image recommended. JPEG, PNG, WebP or GIF. Max 5 MB.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-[12px] font-bold text-violet-300 transition hover:bg-violet-500/20">
+              {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              {uploading ? 'Uploading...' : 'Upload new'}
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleFileChange} />
+            </label>
+            {isImage && (
+              <ActionButton icon={Move} onClick={handleRelocate} tone="ghost">
+                Reposition
+              </ActionButton>
+            )}
+            {isImage && (
+              <ActionButton icon={Trash2} onClick={handleRemove} tone="danger" disabled={removing}>
+                {removing ? 'Removing...' : 'Remove'}
+              </ActionButton>
+            )}
+          </div>
+          {error && (
+            <p className="mt-3 text-[11px] text-rose-400 flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5" /> {error}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Section: Account ─────────────────────────────────────────────────────────
+function AccountSection({ user }) {
+  const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState(null);
-  const [formSuccess, setFormSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const meta = STATUS_META[user.account_status] ?? STATUS_META.pending;
 
-  // Notification preferences (stored in localStorage, UI only)
-  const [notifEventReminders, setNotifEventReminders] = useState(true);
-  const [notifNotices, setNotifNotices] = useState(true);
-  const [notifAchievements, setNotifAchievements] = useState(true);
-  const [notifDiscussions, setNotifDiscussions] = useState(false);
-
-  const statusMeta = STATUS_META[user.account_status] ?? STATUS_META.pending;
-
-  async function handleInfoSubmit(formData) {
-    setFormError(null);
-    setFormSuccess(false);
+  async function handleSubmit(formData) {
+    setError(null);
+    setSuccess(false);
     startTransition(async () => {
       const result = await updateMemberInfoAction(formData);
       if (result?.error) {
-        setFormError(result.error);
+        setError(result.error);
       } else {
-        setFormSuccess(true);
+        setSuccess(true);
         setTimeout(() => {
-          setFormSuccess(false);
-          setEditingInfo(false);
+          setSuccess(false);
+          setEditing(false);
         }, 1200);
       }
     });
@@ -145,303 +519,455 @@ export default function MemberSettingsClient({ user }) {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Settings</h1>
-        <p className="text-sm text-white/40">
-          Manage your account preferences and security
-        </p>
-      </div>
-
-      {/* ── Account Status ── */}
-      <SectionCard
-        title="Account Status"
-        icon={Shield}
-        description="Your current account standing and verification info"
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusMeta.color}`}
-              >
-                {statusMeta.label}
-              </span>
-              {user.email_verified && (
-                <span className="flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-xs text-emerald-400">
-                  <BadgeCheck className="size-3" />
-                  Email Verified
-                </span>
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Account Status"
+            subtitle="Your current membership standing and history"
+            accent="violet"
+          />
+        </div>
+        <div className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Pill tone={meta.tone} icon={Shield}>{meta.label}</Pill>
+              {user.email_verified && <Pill tone="emerald" icon={BadgeCheck}>Verified Email</Pill>}
+              {user.phone_verified && <Pill tone="sky" icon={Phone}>Verified Phone</Pill>}
+            </div>
+            <div className="text-right text-[11px] text-gray-500 font-medium">
+              {user.created_at && (
+                <p>Joined {new Date(user.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
               )}
-              {user.phone_verified && (
-                <span className="flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-2.5 py-0.5 text-xs text-blue-400">
-                  <Phone className="size-3" />
-                  Phone Verified
-                </span>
+              {user.last_login && (
+                <p>Last active {new Date(user.last_login).toLocaleDateString()}</p>
               )}
             </div>
-            {user.status_reason && (
-              <p className="flex items-start gap-1.5 text-xs text-white/40">
-                <Info className="mt-0.5 size-3.5 shrink-0" />
-                {user.status_reason}
-              </p>
-            )}
           </div>
+          {user.status_reason && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-white/[0.02] p-3 border border-white/[0.04]">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-gray-400" />
+              <p className="text-[12px] text-gray-400">{user.status_reason}</p>
+            </div>
+          )}
+        </div>
+      </GlassCard>
 
-          <div className="text-xs text-white/30">
-            <p>
-              Member since{' '}
-              {user.created_at
-                ? new Date(user.created_at).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                : '—'}
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Camera}
+            title="Profile Picture"
+            subtitle="Update your photo shown across the community"
+            accent="blue"
+          />
+        </div>
+        <div className="p-5">
+          <AvatarUploader user={user} />
+        </div>
+      </GlassCard>
+
+      <GlassCard padding="p-0">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={User}
+            title="Personal Details"
+            subtitle="Update your basic profile information"
+            accent="indigo"
+          />
+          {!editing && (
+            <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+              Edit
+            </ActionButton>
+          )}
+        </div>
+        <div className="p-5">
+          {editing ? (
+            <form action={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Display Name">
+                  <Input name="full_name" defaultValue={user.full_name} placeholder="e.g. John Doe" />
+                </Field>
+                <Field label="Phone Number">
+                  <Input name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1XXX XXXXXX" type="tel" />
+                </Field>
+              </div>
+              <Field label="Email Address (Linked via OAuth)">
+                <Input defaultValue={user.email} readOnly className="opacity-60" />
+              </Field>
+
+              {error && (
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-400">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-400/10 px-4 py-3 text-[12.5px] text-emerald-400">
+                  Profile updated successfully.
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button type="submit" disabled={isPending} className="flex items-center gap-2 rounded-xl bg-violet-500/20 border border-violet-500/30 px-5 py-2.5 text-[12.5px] font-bold text-violet-300 transition hover:bg-violet-500/30">
+                  {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  Save Changes
+                </button>
+                <ActionButton icon={X} onClick={() => setEditing(false)} tone="ghost">
+                  Cancel
+                </ActionButton>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-1">
+              <InfoRow icon={User} label="Full Name" value={user.full_name} />
+              <InfoRow icon={Mail} label="Email Address" value={user.email} />
+              <InfoRow icon={Phone} label="Phone Number" value={user.phone || "Not set"} />
+              <InfoRow icon={Globe} label="Auth Provider" value={user.provider?.toUpperCase() || "Password"} />
+            </div>
+          )}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+// ─── Section: Notifications ───────────────────────────────────────────────────
+function NotificationsSection() {
+  const [eventReminders, setEventReminders] = useState(true);
+  const [notices, setNotices] = useState(true);
+  const [achievements, setAchievements] = useState(true);
+  const [discussions, setDiscussions] = useState(false);
+  const [weeklyDigest, setWeeklyDigest] = useState(true);
+
+  return (
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Bell}
+            title="Notification Preferences"
+            subtitle="Choose which updates you want to receive via email"
+            accent="blue"
+          />
+        </div>
+        <div className="px-5 pb-2">
+          <ToggleRow
+            label="Event reminders"
+            description="Notify before registered events start"
+            checked={eventReminders}
+            onChange={setEventReminders}
+          />
+          <ToggleRow
+            label="New notices"
+            description="Important club announcements"
+            checked={notices}
+            onChange={setNotices}
+          />
+          <ToggleRow
+            label="Achievement updates"
+            description="When you earn new badges or milestones"
+            checked={achievements}
+            onChange={setAchievements}
+          />
+          <ToggleRow
+            label="Discussion replies"
+            description="When someone replies to your threads"
+            checked={discussions}
+            onChange={setDiscussions}
+          />
+          <ToggleRow
+            label="Weekly digest"
+            description="A summary of your activity every Monday"
+            checked={weeklyDigest}
+            onChange={setWeeklyDigest}
+          />
+        </div>
+        <div className="flex items-start gap-2 border-t border-white/[0.04] px-5 py-4 bg-white/[0.01]">
+          <Info className="mt-0.5 size-3.5 shrink-0 text-gray-500" />
+          <p className="text-[11px] leading-relaxed text-gray-500">
+            Email delivery is managed at the club level. These preferences are currently saved in your browser session for this visit.
+          </p>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+// ─── Section: Appearance ──────────────────────────────────────────────────────
+function AppearanceSection() {
+  const [theme, setTheme] = useState('dark');
+  const [density, setDensity] = useState('comfortable');
+  const [accent, setAccent] = useState('violet');
+
+  const ACCENTS = [
+    { value: 'blue', label: 'Blue', color: 'bg-blue-500' },
+    { value: 'violet', label: 'Violet', color: 'bg-violet-500' },
+    { value: 'emerald', label: 'Emerald', color: 'bg-emerald-500' },
+    { value: 'amber', label: 'Amber', color: 'bg-amber-500' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Palette}
+            title="Interface Appearance"
+            subtitle="Customize the visual experience of your dashboard"
+            accent="violet"
+          />
+        </div>
+        <div className="px-5 py-2">
+          <RadioGroup
+            label="Color Theme"
+            value={theme}
+            onChange={setTheme}
+            options={[
+              { value: 'dark', label: 'Dark', icon: Moon },
+              { value: 'light', label: 'Light', icon: Sun },
+              { value: 'system', label: 'System', icon: Monitor },
+            ]}
+          />
+          <RadioGroup
+            label="Layout Density"
+            value={density}
+            onChange={setDensity}
+            options={[
+              { value: 'comfortable', label: 'Comfortable' },
+              { value: 'compact', label: 'Compact' },
+            ]}
+          />
+          
+          <div className="py-4 last:border-0 border-b border-white/[0.04]">
+            <p className="mb-3 text-[13px] font-semibold text-gray-200">Accent Color</p>
+            <div className="flex gap-4">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.value}
+                  onClick={() => setAccent(a.value)}
+                  className={`relative flex size-9 items-center justify-center rounded-xl transition-all hover:scale-110 ${
+                    accent === a.value 
+                      ? 'ring-2 ring-white/40 ring-offset-4 ring-offset-gray-950' 
+                      : 'hover:ring-1 hover:ring-white/20'
+                  } ${a.color}`}
+                >
+                  {accent === a.value && (
+                    <Check className="size-4 text-white" strokeWidth={3} />
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] text-gray-500">
+              Appearance settings are stored locally. Full persistence is coming in a future update.
             </p>
-            {user.last_login && (
-              <p>
-                Last login:{' '}
-                {new Date(user.last_login).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            )}
           </div>
         </div>
-      </SectionCard>
+      </GlassCard>
+    </div>
+  );
+}
 
-      {/* ── Personal Info ── */}
-      <SectionCard
-        title="Personal Information"
-        icon={User}
-        description="Update your display name and contact details"
-      >
-        {editingInfo ? (
-          <form action={handleInfoSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-white/50">
-                  Full Name
-                </label>
-                <input
-                  name="full_name"
-                  defaultValue={user.full_name}
-                  required
-                  className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-                />
+// ─── Section: Security ────────────────────────────────────────────────────────
+function SecuritySection({ user }) {
+  return (
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Shield}
+            title="Account Security"
+            subtitle="Manage your authentication methods and access"
+            accent="indigo"
+          />
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-indigo-400">
+                <KeyRound className="size-5" />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-white/50">
-                  Phone
-                </label>
-                <input
-                  name="phone"
-                  defaultValue={user.phone ?? ''}
-                  placeholder="+880…"
-                  className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-white/50">
-                Email{' '}
-                <span className="text-white/25">
-                  (read-only — managed by OAuth)
-                </span>
-              </label>
-              <input
-                value={user.email}
-                readOnly
-                className="w-full cursor-not-allowed rounded-xl border border-white/6 bg-white/2 px-3.5 py-2.5 text-sm text-white/30 outline-none"
-              />
-            </div>
-
-            {formError && (
-              <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-sm text-red-400">
-                {formError}
-              </p>
-            )}
-            {formSuccess && (
-              <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm text-emerald-400">
-                Personal information updated!
-              </p>
-            )}
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/16 disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Check className="size-4" />
-                )}
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingInfo(false)}
-                className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2.5 text-sm text-white/50 transition hover:bg-white/6"
-              >
-                <X className="size-4" />
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-1">
-            {[
-              { icon: User, label: 'Name', value: user.full_name },
-              { icon: Mail, label: 'Email', value: user.email },
-              { icon: Phone, label: 'Phone', value: user.phone || '—' },
-              {
-                icon: Globe,
-                label: 'Auth Provider',
-                value: user.provider
-                  ? user.provider.charAt(0).toUpperCase() +
-                    user.provider.slice(1)
-                  : 'Email',
-              },
-            ].map(({ icon: Icon, label, value }) => (
-              <div
-                key={label}
-                className="flex items-center gap-3 border-b border-white/5 py-2.5 last:border-0"
-              >
-                <Icon className="size-4 shrink-0 text-white/30" />
-                <span className="w-24 shrink-0 text-xs text-white/35">
-                  {label}
-                </span>
-                <span className="truncate text-sm text-white/65">{value}</span>
-              </div>
-            ))}
-            <div className="flex justify-end pt-3">
-              <button
-                onClick={() => setEditingInfo(true)}
-                className="rounded-xl border border-white/8 bg-white/3 px-4 py-2 text-xs font-medium text-white/50 transition hover:bg-white/8 hover:text-white/80"
-              >
-                Edit Information
-              </button>
-            </div>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ── Notification Preferences ── */}
-      <SectionCard
-        title="Notification Preferences"
-        icon={Bell}
-        description="Choose what updates you want to receive"
-      >
-        <ToggleRow
-          label="Event Reminders"
-          description="Get notified before registered events start"
-          checked={notifEventReminders}
-          onChange={setNotifEventReminders}
-        />
-        <ToggleRow
-          label="New Notices"
-          description="Receive alerts for important club notices"
-          checked={notifNotices}
-          onChange={setNotifNotices}
-        />
-        <ToggleRow
-          label="Achievement Updates"
-          description="Notifications when you earn new achievements"
-          checked={notifAchievements}
-          onChange={setNotifAchievements}
-        />
-        <ToggleRow
-          label="Discussion Replies"
-          description="Notify when someone replies to your threads"
-          checked={notifDiscussions}
-          onChange={setNotifDiscussions}
-        />
-        <p className="mt-3 rounded-xl border border-white/6 bg-white/2 px-3 py-2 text-[11px] text-white/25">
-          <Info className="mr-1 mb-0.5 inline size-3" />
-          Notification delivery via email is managed at the club level. These
-          preferences are saved locally.
-        </p>
-      </SectionCard>
-
-      {/* ── Security ── */}
-      <SectionCard
-        title="Security"
-        icon={Lock}
-        description="Authentication and account security settings"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 p-3.5">
-            <div className="flex items-center gap-3">
-              <KeyRound className="size-4 text-white/35" />
-              <div>
-                <p className="text-sm text-white/65">
-                  Password / Authentication
-                </p>
-                <p className="text-xs text-white/30">
+                <p className="text-[14px] font-medium text-white">Authentication Method</p>
+                <p className="text-[12px] text-gray-500">
                   {user.provider
-                    ? `Managed by ${user.provider} OAuth — no password required`
+                    ? `Managed by ${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} OAuth`
                     : 'Email & password authentication'}
                 </p>
               </div>
             </div>
             {user.provider && (
-              <span className="rounded-full border border-blue-400/20 bg-blue-400/10 px-2 py-0.5 text-[10px] text-blue-400">
-                OAuth
-              </span>
+              <Pill tone="blue" icon={Globe}>OAuth Enabled</Pill>
             )}
           </div>
 
           {user.suspension_expires_at && (
-            <div className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3.5">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+            <div className="flex items-start gap-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-400" />
               <div>
-                <p className="text-sm font-medium text-amber-400">
-                  Account Temporarily Suspended
-                </p>
-                <p className="text-xs text-amber-400/60">
-                  Suspension lifts on{' '}
-                  {new Date(user.suspension_expires_at).toLocaleDateString(
-                    'en-US',
-                    { month: 'long', day: 'numeric', year: 'numeric' }
-                  )}
+                <p className="text-[14px] font-bold text-rose-400">Account Restricted</p>
+                <p className="text-[12px] text-rose-400/70">
+                  Temporary suspension active until {new Date(user.suspension_expires_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
           )}
-        </div>
-      </SectionCard>
 
-      {/* ── Danger Zone ── */}
-      <div className="overflow-hidden rounded-2xl border border-red-400/20 bg-red-400/4">
-        <div className="flex items-center gap-2.5 border-b border-red-400/12 px-5 py-4">
-          <AlertTriangle className="size-4 text-red-400/70" />
-          <h3 className="text-sm font-semibold text-red-400/80">Sign Out</h3>
-        </div>
-        <div className="flex items-center justify-between gap-4 p-5">
-          <div>
-            <p className="text-sm text-white/50">
-              Sign out of your account on this device.
-            </p>
-            <p className="mt-0.5 text-xs text-white/30">
-              Your data is always safe on our servers.
-            </p>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <SectionHeader
+              icon={Activity}
+              title="Active Sessions"
+              subtitle="Device and browser sessions currently logged in"
+              accent="gray"
+            />
+            <EmptyState
+              icon={Monitor}
+              title="Session management coming soon"
+              description="You will be able to view and manage your active devices here."
+            />
           </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-400/18 hover:text-red-300"
-            >
-              <LogOut className="size-4" />
-              Sign Out
-            </button>
-          </form>
         </div>
-      </div>
+      </GlassCard>
     </div>
+  );
+}
+
+// ─── Section: Connected accounts ──────────────────────────────────────────────
+function ConnectedSection({ user }) {
+  const platforms = [
+    { label: 'Google', key: 'google', icon: Globe, connected: user.provider === 'google' },
+    { label: 'GitHub', key: 'github', icon: Code2, connected: user.provider === 'github' },
+    { label: 'Facebook', key: 'facebook', icon: Globe, connected: user.provider === 'facebook' },
+  ];
+  
+  return (
+    <div className="space-y-6">
+      <GlassCard padding="p-0">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <SectionHeader
+            icon={Globe}
+            title="Connected Accounts"
+            subtitle="OAuth providers linked to your NEUPC identity"
+            accent="sky"
+          />
+        </div>
+        <div className="divide-y divide-white/[0.04]">
+          {platforms.map((p) => (
+            <div key={p.key} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.01] transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-gray-400">
+                  <p.icon className="size-5" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-medium text-white">{p.label}</p>
+                  <p className="text-[12px] text-gray-500">
+                    {p.connected ? 'Currently used for login' : 'Not linked to this account'}
+                  </p>
+                </div>
+              </div>
+              {p.connected ? (
+                <Pill tone="emerald" icon={Check}>Connected</Pill>
+              ) : (
+                <ActionButton tone="ghost">Connect</ActionButton>
+              )}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+// ─── Section: Danger zone ─────────────────────────────────────────────────────
+function DangerSection() {
+  return (
+    <div className="space-y-6">
+      <GlassCard padding="p-0" className="border-rose-500/20 bg-rose-500/[0.02]">
+        <div className="border-b border-rose-500/10 px-5 py-4">
+          <SectionHeader
+            icon={AlertTriangle}
+            title="Danger Zone"
+            subtitle="Irreversible or highly sensitive account actions"
+            accent="rose"
+          />
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+            <div>
+              <p className="text-[14px] font-semibold text-white">Sign Out</p>
+              <p className="text-[12px] text-gray-500">End your current session on this device</p>
+            </div>
+            <form action={signOutAction}>
+              <button type="submit" className="flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white/[0.1]">
+                <LogOut className="size-4" /> Sign out
+              </button>
+            </form>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-rose-500/20 bg-rose-500/10">
+            <div>
+              <p className="text-[14px] font-bold text-rose-400">Delete Account</p>
+              <p className="text-[12px] text-rose-400/70">Permanently remove all your data and access</p>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[12.5px] font-bold text-white transition hover:bg-rose-600 shadow-lg shadow-rose-500/20">
+              Delete account
+            </button>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+
+export default function MemberSettingsClient({ user }) {
+  const [active, setActive] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      if (p && SECTIONS.some((t) => t.id === p)) return p;
+    }
+    return 'account';
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    setActive(tabId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
+
+  const content = {
+    account: <AccountSection user={user} />,
+    notifications: <NotificationsSection />,
+    appearance: <AppearanceSection />,
+    security: <SecuritySection user={user} />,
+    connected: <ConnectedSection user={user} />,
+    danger: <DangerSection />,
+  };
+
+  const uiTabs = SECTIONS.map((s) => ({ value: s.id, label: s.label, icon: s.icon }));
+
+  return (
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      <PageHeader
+        icon={SettingsIcon}
+        title="Settings"
+        subtitle="Manage your account, preferences, and security"
+        accent="violet"
+      />
+      <TabBar tabs={uiTabs} value={active} onChange={handleTabChange} />
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={active}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {content[active]}
+        </motion.div>
+      </AnimatePresence>
+    </PageShell>
   );
 }

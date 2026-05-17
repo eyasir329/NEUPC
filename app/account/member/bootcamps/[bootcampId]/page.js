@@ -1,27 +1,18 @@
-/**
- * @file Bootcamp learning page — displays curriculum with video player
- *   and progress tracking for enrolled members.
- * @module BootcampLearningPage
- * @access member (enrolled)
- */
-
 import { notFound, redirect } from 'next/navigation';
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getBootcampWithCurriculum,
+  getBootcampCurriculumLight,
   checkEnrollment,
-  getBootcampProgress,
   updateEnrollmentAccess,
+  getBootcampProgress,
 } from '@/app/_lib/bootcamp-actions';
 import BootcampLearningClient from './_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
   const { bootcampId } = await params;
   try {
-    const bootcamp = await getBootcampWithCurriculum(bootcampId);
-    return {
-      title: `${bootcamp?.title || 'Bootcamp'} | Learning | NEUPC`,
-    };
+    const bootcamp = await getBootcampCurriculumLight(bootcampId);
+    return { title: `${bootcamp?.title || 'Bootcamp'} | NEUPC` };
   } catch {
     return { title: 'Bootcamp | NEUPC' };
   }
@@ -29,43 +20,25 @@ export async function generateMetadata({ params }) {
 
 export default async function BootcampLearningPage({ params }) {
   const { bootcampId } = await params;
-  const { user } = await requireRole('member');
+  await requireRole('member');
 
-  // Fetch bootcamp data
   let bootcamp;
   try {
-    bootcamp = await getBootcampWithCurriculum(bootcampId);
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
   } catch {
     notFound();
   }
 
-  if (!bootcamp) {
-    notFound();
-  }
+  if (!bootcamp) notFound();
 
-  // Check enrollment
-  const enrollmentCheck = await checkEnrollment(bootcampId);
-
+  const enrollmentCheck = await checkEnrollment(bootcamp.id);
   if (!enrollmentCheck.enrolled) {
-    // Redirect to public bootcamp page if not enrolled
-    redirect(`/bootcamps/${bootcamp.slug || bootcampId}`);
+    redirect(`/account/member/bootcamps`);
   }
 
-  // Update last accessed timestamp
-  await updateEnrollmentAccess(bootcampId).catch(() => {});
+  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
-  // Get user's progress
-  const progressData = await getBootcampProgress(bootcampId).catch(() => ({
-    progress: [],
-    lessonProgress: {},
-  }));
+  const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
 
-  return (
-    <BootcampLearningClient
-      bootcamp={bootcamp}
-      enrollment={enrollmentCheck.enrollment}
-      lessonProgress={progressData.lessonProgress}
-      initialLessonId={null}
-    />
-  );
+  return <BootcampLearningClient bootcamp={bootcamp} lessonProgress={lessonProgress} />;
 }

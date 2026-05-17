@@ -58,6 +58,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'robohash.org',
       },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'image.thum.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 's.wordpress.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+      },
     ],
   },
 
@@ -132,7 +148,7 @@ const nextConfig = {
 
   // ── Server External Packages ────────────────────────────────────────────
   // Keep heavy server-only packages out of the client bundle
-  serverExternalPackages: ['nodemailer', 'sanitize-html'],
+  serverExternalPackages: ['nodemailer', 'sanitize-html', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg'],
 
   // ── Experimental ──────────────────────────────────────────────────────────
   experimental: {

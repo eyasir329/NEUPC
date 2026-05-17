@@ -20,31 +20,21 @@ import { Readable } from 'stream';
 
 let _driveClient = null;
 
-/**
- * Get or create the Google Drive client using Service Account credentials.
- * Uses write scope for uploads.
- */
 function getDriveClient() {
   if (_driveClient) return _driveClient;
 
-  const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const serviceKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const clientId = process.env.GDRIVE_CLIENT_ID;
+  const clientSecret = process.env.GDRIVE_CLIENT_SECRET;
+  const refreshToken = process.env.GDRIVE_REFRESH_TOKEN;
 
-  if (!serviceEmail || !serviceKey) {
+  if (!clientId || !clientSecret || !refreshToken) {
     throw new Error(
-      'Missing Google Service Account credentials. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_KEY in env.'
+      'Missing Google Drive credentials. Set GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET, and GDRIVE_REFRESH_TOKEN in env.'
     );
   }
 
-  const privateKey = serviceKey.replace(/\\n/g, '\n');
-
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: serviceEmail,
-      private_key: privateKey,
-    },
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
-  });
+  const auth = new google.auth.OAuth2(clientId, clientSecret);
+  auth.setCredentials({ refresh_token: refreshToken });
 
   _driveClient = google.drive({ version: 'v3', auth });
   return _driveClient;
@@ -59,10 +49,16 @@ function getDriveClient() {
 async function getRootFolderId() {
   const drive = getDriveClient();
   const folderName = 'NEUPC_Bootcamps';
+  const parentId = process.env.GDRIVE_FOLDER_ID;
 
-  // Search for existing folder
+  const safeName = escapeDriveQuery(folderName);
+  const safeParent = parentId ? escapeDriveQuery(parentId) : null;
+  const q = safeParent
+    ? `name='${safeName}' and '${safeParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
+    : `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+
   const response = await drive.files.list({
-    q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    q,
     fields: 'files(id, name)',
     spaces: 'drive',
   });
@@ -71,11 +67,11 @@ async function getRootFolderId() {
     return response.data.files[0].id;
   }
 
-  // Create root folder if it doesn't exist
   const folder = await drive.files.create({
     requestBody: {
       name: folderName,
       mimeType: 'application/vnd.google-apps.folder',
+      ...(parentId ? { parents: [parentId] } : {}),
     },
     fields: 'id',
   });
@@ -90,12 +86,18 @@ async function getRootFolderId() {
  * @param {string} folderName - Folder name to create/find
  * @returns {Promise<string>} - Folder ID
  */
+function escapeDriveQuery(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 async function getOrCreateFolder(parentId, folderName) {
   const drive = getDriveClient();
+  const safeName = escapeDriveQuery(folderName);
+  const safeParent = escapeDriveQuery(parentId);
 
   // Search for existing folder
   const response = await drive.files.list({
-    q: `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    q: `name='${safeName}' and '${safeParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     fields: 'files(id, name)',
     spaces: 'drive',
   });
@@ -159,8 +161,15 @@ export async function uploadThumbnail(
       fields: 'id, name, size',
     });
 
+    const fileId = response.data.id;
+
+    await drive.permissions.create({
+      fileId,
+      requestBody: { role: 'reader', type: 'anyone' },
+    });
+
     return {
-      fileId: response.data.id,
+      fileId,
       filename: response.data.name,
       size: parseInt(response.data.size, 10),
     };
@@ -330,8 +339,10 @@ export function isValidThumbnailType(mimeType) {
  * @returns {boolean}
  */
 export function isValidVideoType(mimeType) {
-  const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-  return validTypes.includes(mimeType);
+  if (!mimeType) return false;
+  const base = mimeType.split(';')[0].trim().toLowerCase();
+  // Accept any video/* MIME type; incompatible formats are transcoded on playback
+  return base.startsWith('video/') || base === 'application/x-matroska';
 }
 
 /**

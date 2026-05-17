@@ -24,33 +24,31 @@ export default async function MemberBootcampsPage() {
   // Fetch user's enrollments
   const enrollments = await getMyEnrollments().catch(() => []);
 
-  // Create a map of bootcamp enrollment data
+  // Fetch progress for all enrolled bootcamps in parallel
+  const valid = enrollments.filter((e) => e.bootcamps?.id);
+  const progressList = await Promise.all(
+    valid.map((e) =>
+      getBootcampProgress(e.bootcamps.id).catch(() => ({ lessonProgress: {} }))
+    )
+  );
   const enrollmentMap = {};
-  for (const enrollment of enrollments) {
-    if (enrollment.bootcamps?.id) {
-      enrollmentMap[enrollment.bootcamps.id] = enrollment;
-
-      // Fetch progress data for enrolled bootcamps
-      try {
-        const progress = await getBootcampProgress(enrollment.bootcamps.id);
-        const completedCount = Object.values(
-          progress.lessonProgress || {}
-        ).filter((p) => p.is_completed).length;
-        enrollmentMap[enrollment.bootcamps.id].completed_lessons =
-          completedCount;
-        enrollmentMap[enrollment.bootcamps.id].progressData = progress;
-      } catch {
-        // Ignore errors for individual progress fetches
-      }
-    }
-  }
+  valid.forEach((enrollment, idx) => {
+    const progress = progressList[idx];
+    const completedCount = Object.values(progress.lessonProgress || {}).filter(
+      (p) => p.is_completed
+    ).length;
+    enrollmentMap[enrollment.bootcamps.id] = {
+      ...enrollment,
+      completed_lessons: completedCount,
+      progressData: progress,
+    };
+  });
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <MemberBootcampsClient
-        bootcamps={allBootcamps}
-        enrollmentMap={enrollmentMap}
-      />
-    </div>
+    <MemberBootcampsClient
+      user={user}
+      bootcamps={allBootcamps}
+      enrollmentMap={enrollmentMap}
+    />
   );
 }

@@ -1,9 +1,3 @@
-/**
- * @file Bootcamp management client — admin interface for listing,
- *   filtering, creating, and managing bootcamps.
- * @module AdminBootcampManagementClient
- */
-
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -11,681 +5,373 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   GraduationCap,
-  Star,
+  Plus,
   Search,
-  PlusCircle,
-  Eye,
-  Users,
-  Clock,
-  BookOpen,
-  Layers,
+  Terminal,
   LayoutGrid,
   LayoutList,
-  ArrowUpDown,
+  TrendingUp,
+  Users,
+  Zap,
+  BookOpen,
   ChevronDown,
-  ChevronRight,
-  Edit3,
-  Trash2,
-  ExternalLink,
-  MoreVertical,
-  Calendar,
-  DollarSign,
-  CheckCircle2,
-  FileEdit,
-  Archive,
-  Loader2,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
 import BootcampCard from './BootcampCard';
 import BootcampFormModal from './BootcampFormModal';
-import {
-  getStatusConfig,
-  BOOTCAMP_STATUSES,
-  SORT_OPTIONS,
-  sortBootcamps,
-  formatDate,
-  formatRelativeDate,
-  formatDuration,
-  formatPrice,
-} from './bootcampConfig';
-import {
-  deleteBootcamp,
-  toggleBootcampFeatured,
-} from '@/app/_lib/bootcamp-actions';
+import BootcampTableRow from './BootcampTableRow';
+import { sortBootcamps, SORT_OPTIONS } from './bootcampConfig';
+import { deleteBootcamp, toggleBootcampFeatured } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  colorClass,
-  sub,
-  accentGradient,
-}) {
-  return (
-    <div className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/6 bg-[#161b22] px-4 py-3.5 transition-all hover:border-white/10 hover:bg-[#1c2128]">
-      {accentGradient && (
-        <div
-          className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 ${accentGradient}`}
-        />
-      )}
-      <div
-        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="relative min-w-0">
-        <p className="font-mono text-lg leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate font-mono text-[10px] text-gray-600">
-          {label}
-        </p>
-        {sub && (
-          <p className="mt-0.5 truncate font-mono text-[9px] text-amber-500/70">
-            {sub}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
-function EmptyState({ tab, onCreateClick }) {
-  const msgs = {
-    all: {
-      icon: GraduationCap,
-      title: 'No bootcamps yet',
-      sub: 'Create your first bootcamp to get started.',
-    },
-    draft: {
-      icon: FileEdit,
-      title: 'No draft bootcamps',
-      sub: 'Drafts appear here when saved unpublished.',
-    },
-    published: { icon: CheckCircle2, title: 'No published bootcamps', sub: '' },
-    archived: { icon: Archive, title: 'No archived bootcamps', sub: '' },
-    featured: {
-      icon: Star,
-      title: 'No featured bootcamps',
-      sub: 'Star a bootcamp to feature it on the homepage.',
-    },
-  };
-  const { icon: Icon, title, sub } = msgs[tab] ?? msgs.all;
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
-      <Icon className="mb-4 h-12 w-12 text-gray-700" />
-      <p className="text-sm font-semibold text-gray-400">{title}</p>
-      {sub && <p className="mt-1 text-xs text-gray-600">{sub}</p>}
-      {tab === 'all' && (
-        <button
-          onClick={onCreateClick}
-          className="mt-5 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-500"
-        >
-          <PlusCircle className="h-3.5 w-3.5" /> New Bootcamp
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ─── Tab Button ───────────────────────────────────────────────────────────────
-
-function TabButton({ active, onClick, children, count }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-            active ? 'bg-white/15 text-white' : 'bg-white/6 text-gray-600'
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-// ─── Main Client ──────────────────────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All Tracks', color: 'text-gray-300' },
+  { value: 'published', label: 'Published', color: 'text-emerald-400' },
+  { value: 'draft', label: 'Draft', color: 'text-amber-400' },
+  { value: 'archived', label: 'Archived', color: 'text-gray-500' },
+];
 
 export default function BootcampManagementClient({ initialBootcamps }) {
   const router = useRouter();
   const [bootcamps, setBootcamps] = useState(initialBootcamps ?? []);
-  const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
-  const [formModal, setFormModal] = useState(null); // null | { mode, bootcamp? }
-  const [sortBy, setSortBy] = useState('newest');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortKey, setSortKey] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
-  const [sortOpen, setSortOpen] = useState(false);
+  const [formModal, setFormModal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Sync local state when server re-renders
+  // Track locally-deleted IDs so router.refresh re-syncing initial data
+  // does not re-introduce them (until server response excludes them too)
+  const [deletedIds, setDeletedIds] = useState(() => new Set());
+
   useEffect(() => {
-    setBootcamps(initialBootcamps ?? []);
-  }, [initialBootcamps]);
+    setBootcamps((initialBootcamps ?? []).filter((b) => !deletedIds.has(b.id)));
+  }, [initialBootcamps, deletedIds]);
 
-  // ── handlers ──────────────────────────────────────────────────────────
-  const handleBootcampChange = useCallback((bootcampId, changes) => {
-    setBootcamps((prev) =>
-      prev.map((b) => (b.id === bootcampId ? { ...b, ...changes } : b))
-    );
-  }, []);
-
-  const handleBootcampDelete = useCallback(async (bootcampId) => {
-    if (
-      !confirm(
-        'Are you sure you want to delete this bootcamp? This action cannot be undone.'
-      )
-    ) {
-      return;
-    }
-
-    setDeleteLoading(bootcampId);
+  const handleDelete = useCallback(async (id) => {
+    if (!confirm('Permanently delete this bootcamp? This cannot be undone.')) return;
+    setDeleteLoading(id);
     try {
-      await deleteBootcamp(bootcampId);
-      setBootcamps((prev) => prev.filter((b) => b.id !== bootcampId));
-      toast.success('Bootcamp deleted');
+      await deleteBootcamp(id);
+      setDeletedIds((prev) => new Set(prev).add(id));
+      setBootcamps((prev) => prev.filter((b) => b.id !== id));
+      toast.success('Bootcamp deleted successfully');
+      router.refresh();
     } catch (err) {
       toast.error(err.message || 'Failed to delete bootcamp');
     } finally {
       setDeleteLoading(null);
     }
-  }, []);
+  }, [router]);
 
-  const handleToggleFeatured = useCallback(
-    async (bootcampId) => {
-      try {
-        const updated = await toggleBootcampFeatured(bootcampId);
-        handleBootcampChange(bootcampId, { is_featured: updated.is_featured });
-        toast.success(
-          updated.is_featured ? 'Bootcamp featured' : 'Bootcamp unfeatured'
-        );
-      } catch (err) {
-        toast.error(err.message || 'Failed to update bootcamp');
-      }
-    },
-    [handleBootcampChange]
-  );
+  const handleToggleFeatured = useCallback(async (id) => {
+    try {
+      await toggleBootcampFeatured(id);
+      setBootcamps((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, is_featured: !b.is_featured } : b))
+      );
+      toast.success('Featured status updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update featured status');
+    }
+  }, []);
 
   const handleSaved = useCallback(() => {
     router.refresh();
     setFormModal(null);
   }, [router]);
 
-  // ── derived stats ─────────────────────────────────────────────────────
-  const stats = {
+  const stats = useMemo(() => ({
     total: bootcamps.length,
     published: bootcamps.filter((b) => b.status === 'published').length,
     draft: bootcamps.filter((b) => b.status === 'draft').length,
-    archived: bootcamps.filter((b) => b.status === 'archived').length,
-    featured: bootcamps.filter((b) => b.is_featured).length,
-    totalEnrollments: bootcamps.reduce(
-      (s, b) => s + (b.enrollment_count ?? 0),
-      0
-    ),
+    totalEnrollments: bootcamps.reduce((s, b) => s + (b.enrollment_count ?? 0), 0),
     totalLessons: bootcamps.reduce((s, b) => s + (b.total_lessons ?? 0), 0),
-  };
+  }), [bootcamps]);
 
-  // ── filtered + sorted bootcamps ────────────────────────────────────────
   const filtered = useMemo(() => {
-    const result = bootcamps.filter((b) => {
-      const matchesTab =
-        activeTab === 'all' ||
-        (activeTab === 'featured' ? b.is_featured : b.status === activeTab);
-      const matchesSearch =
+    let result = bootcamps.filter((b) => {
+      const matchStatus = statusFilter === 'all' || b.status === statusFilter;
+      const matchSearch =
         !search ||
         b.title?.toLowerCase().includes(search.toLowerCase()) ||
         b.description?.toLowerCase().includes(search.toLowerCase()) ||
         b.batch_info?.toLowerCase().includes(search.toLowerCase());
-      return matchesTab && matchesSearch;
+      return matchStatus && matchSearch;
     });
-    return sortBootcamps(result, sortBy);
-  }, [bootcamps, activeTab, search, sortBy]);
+    return sortBootcamps(result, sortKey);
+  }, [bootcamps, statusFilter, search, sortKey]);
+
+  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (sortKey !== 'newest' ? 1 : 0);
 
   return (
     <>
-      <div className="mx-4 my-6 space-y-6 sm:mx-6 lg:mx-8">
-        {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-          <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-violet-500/6 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-blue-500/5 blur-3xl" />
+      <div className="min-h-screen p-6 md:p-8 pt-8 max-w-7xl mx-auto space-y-6">
 
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <nav className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
-                <Link
-                  href="/account/admin"
-                  className="transition-colors hover:text-gray-300"
-                >
-                  Dashboard
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-gray-400">Bootcamp Management</span>
-              </nav>
-              <h1 className="flex items-center gap-3 text-xl font-bold text-white sm:text-2xl">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/20 ring-1 ring-violet-500/30">
-                  <GraduationCap className="h-5 w-5 text-violet-400" />
-                </div>
-                Bootcamp Management
-              </h1>
-              <p className="mt-1.5 text-sm text-gray-500">
-                {stats.total} bootcamp{stats.total !== 1 ? 's' : ''} ·{' '}
-                {stats.published} published ·{' '}
-                {stats.totalEnrollments.toLocaleString()} total enrollments
-              </p>
+        {/* ── Page Header ─────────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/25">
+                <GraduationCap className="h-5 w-5 text-violet-400" />
+              </div>
+              <span className="text-xs font-semibold text-violet-400/70 uppercase tracking-[0.18em] font-mono">
+                Admin / Bootcamps
+              </span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <Link
-                href="/account/admin"
-                className="rounded-xl bg-white/6 px-4 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                ← Dashboard
-              </Link>
-              <button
-                onClick={() => setFormModal({ mode: 'create' })}
-                className="group flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 active:scale-95"
-              >
-                <PlusCircle className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
-                New Bootcamp
-              </button>
-            </div>
+            <h1 className="kinetic-headline text-3xl md:text-4xl font-bold text-white">
+              Track <span className="neon-text">Management</span>
+            </h1>
+            <p className="text-sm text-gray-500 mt-1.5">
+              {stats.total} learning tracks · {stats.totalEnrollments} total enrollments
+            </p>
           </div>
+
+          <button
+            onClick={() => setFormModal({ mode: 'create' })}
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_24px_rgba(124,92,255,0.45)] sm:w-auto w-full"
+          >
+            <span className="absolute inset-0 translate-y-full group-hover:translate-y-0 bg-violet-500 transition-transform duration-300 ease-out" />
+            <Plus className="relative h-4 w-4" />
+            <span className="relative">Create New Track</span>
+          </button>
         </div>
 
-        {/* ── Stats row ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard
-            icon={Layers}
-            label="Total Bootcamps"
-            value={stats.total}
-            colorClass="bg-gray-700/50 text-gray-300"
-            accentGradient="bg-linear-to-br from-gray-500/5 to-transparent"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Published"
-            value={stats.published}
-            colorClass="bg-emerald-500/15 text-emerald-400"
-            accentGradient="bg-linear-to-br from-emerald-500/8 to-transparent"
-          />
-          <StatCard
-            icon={FileEdit}
-            label="Drafts"
-            value={stats.draft}
-            colorClass="bg-gray-600/20 text-gray-400"
-            accentGradient="bg-linear-to-br from-gray-500/6 to-transparent"
-          />
-          <StatCard
-            icon={Star}
-            label="Featured"
-            value={stats.featured}
-            colorClass="bg-amber-500/15 text-amber-400"
-            accentGradient="bg-linear-to-br from-amber-500/8 to-transparent"
-          />
-          <StatCard
-            icon={Users}
-            label="Total Enrollments"
-            value={
-              stats.totalEnrollments >= 1000
-                ? `${(stats.totalEnrollments / 1000).toFixed(1)}k`
-                : stats.totalEnrollments
-            }
-            colorClass="bg-blue-500/15 text-blue-400"
-            accentGradient="bg-linear-to-br from-blue-500/8 to-transparent"
-          />
-          <StatCard
-            icon={BookOpen}
-            label="Total Lessons"
-            value={stats.totalLessons}
-            colorClass="bg-violet-500/15 text-violet-400"
-            accentGradient="bg-linear-to-br from-violet-500/8 to-transparent"
-          />
+        {/* ── Stats Row ────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            {
+              label: 'Total Tracks',
+              value: stats.total,
+              icon: GraduationCap,
+              color: 'text-violet-400',
+              bg: 'bg-violet-500/10 border-violet-500/20',
+            },
+            {
+              label: 'Published',
+              value: stats.published,
+              icon: Zap,
+              color: 'text-emerald-400',
+              bg: 'bg-emerald-500/10 border-emerald-500/20',
+            },
+            {
+              label: 'Total Students',
+              value: stats.totalEnrollments,
+              icon: Users,
+              color: 'text-blue-400',
+              bg: 'bg-blue-500/10 border-blue-500/20',
+            },
+            {
+              label: 'Total Lessons',
+              value: stats.totalLessons,
+              icon: BookOpen,
+              color: 'text-amber-400',
+              bg: 'bg-amber-500/10 border-amber-500/20',
+            },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div
+              key={label}
+              className={`glass-panel rounded-2xl p-4 border ${bg} flex items-center gap-3`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bg} border`}>
+                <Icon className={`h-5 w-5 ${color}`} />
+              </div>
+              <div>
+                <div className={`text-2xl font-bold stat-numeral ${color}`}>{value}</div>
+                <div className="text-xs text-gray-500 font-medium">{label}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* ── Tabs + filters ────────────────────────────────────────────────── */}
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="scrollbar-hide flex gap-1 overflow-x-auto pb-1">
-              <TabButton
-                active={activeTab === 'all'}
-                onClick={() => setActiveTab('all')}
-                count={stats.total}
+        {/* ── Toolbar: Search + Filters + View Toggle ──────────────────────── */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tracks, descriptions, batches..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
               >
-                All
-              </TabButton>
-              <TabButton
-                active={activeTab === 'published'}
-                onClick={() => setActiveTab('published')}
-                count={stats.published}
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+            {STATUS_FILTERS.map(({ value, label, color }) => (
+              <button
+                key={value}
+                onClick={() => setStatusFilter(value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  statusFilter === value
+                    ? `bg-white/10 ${color}`
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{' '}
-                Published
-              </TabButton>
-              <TabButton
-                active={activeTab === 'draft'}
-                onClick={() => setActiveTab('draft')}
-                count={stats.draft}
+                {label}
+                {value !== 'all' && (
+                  <span className={`ml-1.5 text-[10px] tabular-nums ${statusFilter === value ? color : 'text-gray-600'}`}>
+                    {bootcamps.filter((b) => b.status === value).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort + View toggle */}
+          <div className="flex items-center gap-2 ml-auto">
+            <div className="relative">
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                className="appearance-none bg-white/5 border border-white/10 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                style={{ colorScheme: 'dark' }}
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-400" /> Draft
-              </TabButton>
-              <TabButton
-                active={activeTab === 'archived'}
-                onClick={() => setActiveTab('archived')}
-                count={stats.archived}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />{' '}
-                Archived
-              </TabButton>
-              <TabButton
-                active={activeTab === 'featured'}
-                onClick={() => setActiveTab('featured')}
-                count={stats.featured}
-              >
-                <Star className="h-3 w-3" /> Featured
-              </TabButton>
+                {SORT_OPTIONS.map(({ key, label }) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
             </div>
 
-            {/* View mode toggle */}
-            <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-0.5">
+            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-white/12 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-violet-500/20 text-violet-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="Grid view"
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Grid
+                <LayoutGrid className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-white/12 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-violet-500/20 text-violet-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="List view"
               >
-                <LayoutList className="h-3.5 w-3.5" />
-                Table
+                <LayoutList className="h-4 w-4" />
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Search + Sort */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search bootcamps by title, description..."
-                className="w-full rounded-xl border border-white/8 bg-white/4 py-2 pr-3 pl-8 text-xs text-white placeholder-gray-400 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-              />
-            </div>
-
-            {/* Sort dropdown */}
-            <div className="relative">
+        {/* ── Results Summary ───────────────────────────────────────────────── */}
+        {(search || statusFilter !== 'all') && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>
+              Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
+              <span className="text-white font-medium">{bootcamps.length}</span> tracks
+            </span>
+            {(search || statusFilter !== 'all') && (
               <button
-                onClick={() => setSortOpen((o) => !o)}
-                className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-xs text-gray-300 transition-all hover:border-white/15 hover:bg-white/6 hover:text-white"
+                onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                className="ml-2 flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors font-medium"
               >
-                <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                {SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'Sort'}
-                <ChevronDown className="h-3 w-3 text-gray-600" />
+                <X className="h-3 w-3" />
+                Clear filters
               </button>
-              {sortOpen && (
+            )}
+          </div>
+        )}
+
+        {/* ── Empty State ───────────────────────────────────────────────────── */}
+        {filtered.length === 0 && (
+          <div className="flex min-h-[340px] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
+            <div className="text-center max-w-xs">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10">
+                <Terminal className="h-7 w-7 text-gray-600" />
+              </div>
+              {search || statusFilter !== 'all' ? (
                 <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setSortOpen(false)}
-                  />
-                  <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl">
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => {
-                          setSortBy(opt.key);
-                          setSortOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-white/6 ${
-                          sortBy === opt.key
-                            ? 'bg-white/6 text-white'
-                            : 'text-gray-400'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="text-white font-semibold mb-1">No tracks found</p>
+                  <p className="text-sm text-gray-500 mb-4">Try adjusting your search or filters.</p>
+                  <button
+                    onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                    className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium underline underline-offset-2"
+                  >
+                    Clear all filters
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-semibold mb-1">No tracks yet</p>
+                  <p className="text-sm text-gray-500 mb-4">Create your first learning track to get started.</p>
+                  <button
+                    onClick={() => setFormModal({ mode: 'create' })}
+                    className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Create Track
+                  </button>
                 </>
               )}
             </div>
           </div>
+        )}
 
-          {/* Results count */}
-          {(search || activeTab !== 'all') && (
-            <p className="text-xs text-gray-400">
-              Showing {filtered.length} of {bootcamps.length} bootcamp
-              {bootcamps.length !== 1 ? 's' : ''}
-              {search && (
-                <span>
-                  {' '}
-                  matching &quot;<span className="text-gray-400">{search}</span>
-                  &quot;
-                </span>
-              )}
-            </p>
-          )}
-        </div>
-
-        {/* ── Bootcamp grid / table ───────────────────────────────────────── */}
-        {filtered.length === 0 ? (
-          <EmptyState
-            tab={activeTab}
-            onCreateClick={() => setFormModal({ mode: 'create' })}
-          />
-        ) : viewMode === 'table' ? (
-          /* ── Table View ──────────────────────────────────────────────── */
-          <div className="overflow-x-auto rounded-xl border border-white/8 bg-[#0d1117]">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr className="border-b border-white/6 bg-[#161b22]">
-                  <th className="w-8 px-3 py-3 text-center font-medium text-gray-700">
-                    #
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    bootcamp
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    status
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium text-gray-500 md:table-cell">
-                    batch
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">
-                    price
-                  </th>
-                  <th className="hidden px-4 py-3 text-right font-medium text-gray-500 sm:table-cell">
-                    enrolled
-                  </th>
-                  <th className="hidden px-4 py-3 text-right font-medium text-gray-500 lg:table-cell">
-                    lessons
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium text-gray-500 lg:table-cell">
-                    created
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">
-                    actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/4">
-                {filtered.map((bootcamp, rowIdx) => {
-                  const sc = getStatusConfig(bootcamp.status);
-                  return (
-                    <tr
-                      key={bootcamp.id}
-                      className="group transition-colors hover:bg-[#161b22]"
-                    >
-                      <td className="px-3 py-3 text-center font-mono text-[10px] text-gray-700 select-none">
-                        {String(rowIdx + 1).padStart(2, '0')}
-                      </td>
-                      <td className="max-w-xs px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {bootcamp.thumbnail ? (
-                            <img
-                              src={bootcamp.thumbnail}
-                              alt=""
-                              className="hidden h-8 w-14 shrink-0 rounded-md object-cover sm:block"
-                            />
-                          ) : (
-                            <div className="hidden h-8 w-14 shrink-0 items-center justify-center rounded-md bg-violet-500/10 sm:flex">
-                              <GraduationCap className="h-4 w-4 text-violet-400/50" />
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate font-mono text-xs font-semibold text-gray-200">
-                              {bootcamp.title}
-                            </p>
-                            {bootcamp.is_featured && (
-                              <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[9px] text-amber-400">
-                                <Star className="h-2.5 w-2.5 fill-current" />{' '}
-                                featured
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${sc.badge}`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${sc.dot}`}
-                          />
-                          {sc.label}
-                        </span>
-                      </td>
-                      <td className="hidden px-4 py-3 md:table-cell">
-                        <span className="font-mono text-[11px] text-gray-500">
-                          {bootcamp.batch_info || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-400 tabular-nums">
-                        {formatPrice(bootcamp.price)}
-                      </td>
-                      <td className="hidden px-4 py-3 text-right font-mono text-gray-500 tabular-nums sm:table-cell">
-                        {bootcamp.enrollment_count ?? 0}
-                      </td>
-                      <td className="hidden px-4 py-3 text-right font-mono text-gray-500 tabular-nums lg:table-cell">
-                        {bootcamp.total_lessons ?? 0}
-                      </td>
-                      <td
-                        className="hidden px-4 py-3 font-mono text-[11px] text-gray-700 lg:table-cell"
-                        title={formatDate(bootcamp.created_at)}
-                      >
-                        {formatRelativeDate(bootcamp.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/account/admin/bootcamps/${bootcamp.id}`}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-blue-400"
-                            title="Edit & Curriculum"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                          </Link>
-                          <button
-                            onClick={() => handleToggleFeatured(bootcamp.id)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-white/8 ${
-                              bootcamp.is_featured
-                                ? 'text-amber-400'
-                                : 'text-gray-500 hover:text-amber-400'
-                            }`}
-                            title={
-                              bootcamp.is_featured ? 'Unfeature' : 'Feature'
-                            }
-                          >
-                            <Star
-                              className={`h-3.5 w-3.5 ${bootcamp.is_featured ? 'fill-current' : ''}`}
-                            />
-                          </button>
-                          {bootcamp.status === 'published' && (
-                            <Link
-                              href={`/account/member/bootcamps/${bootcamp.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-emerald-400"
-                              title="Preview as member"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
-                          )}
-                          <button
-                            onClick={() => handleBootcampDelete(bootcamp.id)}
-                            disabled={deleteLoading === bootcamp.id}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-red-400 disabled:opacity-50"
-                            title="Delete"
-                          >
-                            {deleteLoading === bootcamp.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* ── Grid View ───────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((bootcamp) => (
+        {/* ── Grid View ──────────────────────────────────────────────────────── */}
+        {filtered.length > 0 && viewMode === 'grid' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map((b) => (
               <BootcampCard
-                key={bootcamp.id}
-                bootcamp={bootcamp}
+                key={b.id}
+                bootcamp={b}
                 onToggleFeatured={handleToggleFeatured}
-                onDelete={handleBootcampDelete}
-                deleteLoading={deleteLoading === bootcamp.id}
+                onDelete={handleDelete}
+                deleteLoading={deleteLoading === b.id}
               />
             ))}
           </div>
         )}
 
-        {/* ── Footer legend ─────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-white/5 bg-white/4 px-4 py-3 font-mono text-xs text-gray-500">
-          <span className="text-gray-600">// status guide</span>
-          {[
-            { dot: 'bg-gray-400', label: 'Draft – work in progress' },
-            { dot: 'bg-emerald-400', label: 'Published – live on site' },
-            { dot: 'bg-amber-400', label: 'Archived – hidden from public' },
-          ].map(({ dot, label }) => (
-            <span key={label} className="flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-              {label}
-            </span>
-          ))}
-        </div>
+        {/* ── List View ──────────────────────────────────────────────────────── */}
+        {filtered.length > 0 && viewMode === 'list' && (
+          <div className="glass-panel rounded-2xl overflow-hidden border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-white/8">
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Track</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Students</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Lessons</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Updated</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filtered.map((b) => (
+                    <BootcampTableRow
+                      key={b.id}
+                      bootcamp={b}
+                      onToggleFeatured={handleToggleFeatured}
+                      onDelete={handleDelete}
+                      deleteLoading={deleteLoading === b.id}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-white/8 px-5 py-3 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                {filtered.length} track{filtered.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Modals ──────────────────────────────────────────────────────────── */}
+      {/* ── Create / Edit Modal ──────────────────────────────────────────────── */}
       {formModal && (
         <BootcampFormModal
           bootcamp={formModal.bootcamp ?? null}

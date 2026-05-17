@@ -13,6 +13,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X } from 'lucide-react';
 import { cn } from '@/app/_lib/utils';
 import { getUnreadCountAction } from '@/app/_lib/chat-actions';
@@ -21,6 +22,7 @@ import ChatPanel from './ChatPanel';
 const POLL_MS = 10_000;
 
 export default function ChatFAB({ session }) {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -75,6 +77,7 @@ export default function ChatFAB({ session }) {
   }, [isOpen, closeChat]);
 
   if (!session?.user) return null;
+  if (pathname?.startsWith('/account/member/bootcamps')) return null;
 
   return (
     <>

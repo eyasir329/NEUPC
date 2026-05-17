@@ -4,8 +4,6 @@ import {
   Calendar,
   Tag,
   FolderOpen,
-  Globe,
-  Lock,
   Pin,
   ImageIcon,
   PlayCircle,
@@ -13,7 +11,6 @@ import {
   FileDown,
   Share2,
   ExternalLink as ExternalLinkIcon,
-  User,
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 
@@ -93,7 +90,7 @@ function formatDate(dateStr) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function ResourceViewer({ resource }) {
+export default function ResourceViewer({ resource, hideHeader = false }) {
   if (!resource) return null;
 
   const type = resource.resource_type;
@@ -108,93 +105,48 @@ export default function ResourceViewer({ resource }) {
     resource.thumbnail && !['image', 'video', 'youtube'].includes(type);
 
   return (
-    <section className="space-y-4 sm:space-y-6" aria-label="Resource details">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="rounded-2xl border border-white/8 bg-white/3 p-4 sm:p-5 md:p-7">
-        {/* Meta pills */}
-        <div className="mb-3 flex flex-wrap items-center gap-1.5 sm:mb-4 sm:gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-xs font-semibold sm:px-2.5 ${cfg.color}`}
-          >
-            <TypeIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+    <section className="space-y-4" aria-label="Resource details">
+
+      {/* ── Meta row: type + category + date + tags ── */}
+      {!hideHeader && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-[11px] font-semibold ${cfg.color}`}>
+            <TypeIcon className="h-3 w-3" />
             {typeLabel}
           </span>
 
           {resource.category?.name && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-2 py-1 text-xs font-medium text-gray-300 sm:px-2.5">
-              <FolderOpen className="h-3 w-3 text-gray-500" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-[11px] text-white/50">
+              <FolderOpen className="h-3 w-3 text-white/25" />
               {resource.category.name}
             </span>
           )}
 
-          {resource.visibility === 'public' && (
-            <span className="inline-flex items-center gap-1 rounded-lg border border-green-500/20 bg-green-500/8 px-2 py-1 text-xs text-green-300 sm:px-2.5">
-              <Globe className="h-3 w-3" /> Public
-            </span>
-          )}
-          {resource.visibility === 'members' && (
-            <span className="inline-flex items-center gap-1 rounded-lg border border-blue-500/20 bg-blue-500/8 px-2 py-1 text-xs text-blue-300 sm:px-2.5">
-              <Lock className="h-3 w-3" /> Members
-            </span>
-          )}
-
           {resource.is_pinned && (
-            <span className="inline-flex items-center gap-1 rounded-lg border border-yellow-500/20 bg-yellow-500/8 px-2 py-1 text-xs text-yellow-300 sm:px-2.5">
+            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/80">
               <Pin className="h-3 w-3" /> Pinned
             </span>
           )}
-        </div>
 
-        {/* Title */}
-        <h1 className="text-xl leading-tight font-bold text-white sm:text-2xl md:text-3xl">
+          {date && (
+            <time dateTime={resource.published_at || resource.created_at} className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25">
+              <Calendar className="h-3 w-3" />
+              {date}
+            </time>
+          )}
+        </div>
+      )}
+
+      {/* ── Title ── */}
+      {!hideHeader && (
+        <h1 className="text-[18px] font-bold leading-snug tracking-tight text-white sm:text-[22px]">
           {resource.title}
         </h1>
+      )}
 
-        {/* Description */}
-        {resource.description && (
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/50 sm:mt-3 sm:text-[15px]">
-            {resource.description}
-          </p>
-        )}
-
-        {/* Date + tags footer */}
-        {(date || tags.length > 0) && (
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/8 pt-3 sm:mt-5 sm:pt-4">
-            {date && (
-              <time
-                dateTime={resource.published_at || resource.created_at}
-                className="flex items-center gap-1.5 text-xs text-gray-600"
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                {date}
-              </time>
-            )}
-
-            {tags.length > 0 && (
-              <div
-                className="flex flex-wrap items-center gap-1.5"
-                role="list"
-                aria-label="Tags"
-              >
-                <Tag className="h-3 w-3 text-gray-600" />
-                {tags.map((tag) => (
-                  <span
-                    key={tag.id || tag.slug || tag.name}
-                    role="listitem"
-                    className="rounded-md border border-blue-500/15 bg-blue-500/8 px-2 py-0.5 text-[11px] text-blue-400"
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </header>
-
-      {/* ── Thumbnail (only for non-visual types) ─────────────────── */}
+      {/* ── Thumbnail (for non-visual types that have one) ── */}
       {showThumbnail && (
-        <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-white/8 sm:h-64 md:h-80 lg:h-96">
+        <div className="relative h-52 w-full overflow-hidden rounded-2xl border border-white/8 sm:h-72">
           <Image
             src={resource.thumbnail}
             alt={resource.title}
@@ -205,24 +157,51 @@ export default function ResourceViewer({ resource }) {
         </div>
       )}
 
-      {/* ── Main content ──────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-white/8 bg-white/3 p-4 sm:p-5 md:p-7">
+      {/* ── Main embed / content ── */}
+      <div className="w-full">
         <ResourceEmbed resource={resource} />
       </div>
 
-      {/* ── Attachment (when file_url exists for non-media types) ── */}
+      {/* ── Description ── */}
+      {!hideHeader && resource.description && (
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
+          <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
+            Description
+          </p>
+          <p className="text-[13.5px] leading-relaxed text-white/55 whitespace-pre-line">
+            {resource.description}
+          </p>
+        </div>
+      )}
+
+      {/* ── Tags ── */}
+      {!hideHeader && tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Tag className="h-3 w-3 text-white/20" />
+          {tags.map((tag) => (
+            <span
+              key={tag.id || tag.slug || tag.name}
+              className="rounded-md border border-white/8 bg-white/4 px-2 py-0.5 text-[11px] text-white/40"
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Attachment ── */}
       {resource.file_url && !['file', 'image', 'video'].includes(type) && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-4 sm:p-5">
-          <p className="mb-3 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
+          <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
             Attachment
           </p>
           <a
             href={resource.file_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-all hover:border-white/15 hover:bg-white/10 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-[13px] font-medium text-white/70 transition-all hover:border-white/15 hover:bg-white/10 hover:text-white"
           >
-            <FileDown className="h-4 w-4 text-gray-500" />
+            <FileDown className="h-4 w-4 text-white/30" />
             Open attachment
           </a>
         </div>

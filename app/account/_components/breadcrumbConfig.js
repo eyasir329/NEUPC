@@ -41,6 +41,7 @@ export const SEGMENT_LABELS = {
   registrations: 'Registrations',
   'membership-application': 'Apply',
   'problem-solving': 'Problem Solving',
+  'daily-activity': 'Daily Activity',
   'problem-solving-extraction': 'PS Extraction',
   roadmaps: 'Roadmaps',
   budget: 'Budget',

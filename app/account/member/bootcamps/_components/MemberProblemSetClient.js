@@ -652,7 +652,7 @@ export default function MemberProblemSetClient({
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
             <PlatformCard
               label="Total Solved"
               value={memberStats.total_problems_solved}

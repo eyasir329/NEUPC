@@ -8,11 +8,12 @@
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
   getBookmarkedResourceIds,
+  getPublishedBlogCount,
   getPublishedResources,
+  getPublishedRoadmapCount,
   getResourceCategories,
 } from '@/app/_lib/resources/queries';
 import ResourcesClient from '@/app/_components/resources/ResourcesClient';
-import ResourcesPageHeader from '@/app/_components/resources/ResourcesPageHeader';
 
 export const metadata = { title: 'Resources | Member | NEUPC' };
 
@@ -26,7 +27,7 @@ export default async function MemberResourcesPage({ searchParams }) {
 
   const { user } = await requireRole('member');
 
-  const [{ resources, total }, categories] = await Promise.all([
+  const [{ resources, total }, categories, blogCount, roadmapCount] = await Promise.all([
     getPublishedResources({
       page,
       pageSize,
@@ -36,6 +37,8 @@ export default async function MemberResourcesPage({ searchParams }) {
       includeMembers: true,
     }),
     getResourceCategories(),
+    getPublishedBlogCount(),
+    getPublishedRoadmapCount(),
   ]);
 
   const bookmarkedIds = await getBookmarkedResourceIds(
@@ -46,24 +49,17 @@ export default async function MemberResourcesPage({ searchParams }) {
   const pinnedCount = resources.filter((r) => r.is_pinned).length;
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <ResourcesPageHeader
-        role="member"
-        total={total}
-        categoryCount={categories.length}
-        pinnedCount={pinnedCount}
-      />
-
-      <ResourcesClient
-        resources={resources}
-        categories={categories}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        bookmarkedIds={bookmarkedIds}
-        canBookmark={Boolean(user?.id)}
-        basePath="/account/member/resources"
-      />
-    </div>
+    <ResourcesClient
+      resources={resources}
+      categories={categories}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      bookmarkedIds={bookmarkedIds}
+      canBookmark={Boolean(user?.id)}
+      basePath="/account/member/resources"
+      blogCount={blogCount}
+      roadmapCount={roadmapCount}
+    />
   );
 }

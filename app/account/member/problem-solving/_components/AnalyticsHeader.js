@@ -201,7 +201,7 @@ export default function AnalyticsHeader({
   return (
     <div className="mb-6 space-y-4">
       {/* Main Stats Row */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
         <StatCard
           icon={Flame}
           label="Day Streak"
