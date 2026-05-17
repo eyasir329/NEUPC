@@ -10,7 +10,6 @@ import {
   getResourceCategories,
 } from '@/app/_lib/resources/queries';
 import ResourcesClient from '@/app/_components/resources/ResourcesClient';
-import ResourcesPageHeader from '@/app/_components/resources/ResourcesPageHeader';
 
 export const metadata = { title: 'Resources | Guest | NEUPC' };
 
@@ -38,23 +37,16 @@ export default async function GuestResourcesPage({ searchParams }) {
   ]);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <ResourcesPageHeader
-        role="guest"
-        total={total}
-        categoryCount={categories.length}
-      />
-
-      <ResourcesClient
-        resources={resources}
-        categories={categories}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        bookmarkedIds={[]}
-        canBookmark={false}
-        basePath="/account/guest/resources"
-      />
-    </div>
+    <ResourcesClient
+      resources={resources}
+      categories={categories}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      bookmarkedIds={[]}
+      canBookmark={false}
+      canUpload={false}
+      basePath="/account/guest/resources"
+    />
   );
 }

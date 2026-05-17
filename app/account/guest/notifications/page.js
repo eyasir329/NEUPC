@@ -24,9 +24,5 @@ export default async function GuestNotificationsPage() {
     );
   });
 
-  return (
-    <div className="gp-page">
-      <GuestNotificationsClient notices={notices} userId={user.id} />
-    </div>
-  );
+  return <GuestNotificationsClient notices={notices} userId={user.id} />;
 }

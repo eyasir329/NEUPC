@@ -17,9 +17,5 @@ export default async function GuestEventsPage() {
     getPublishedEvents().catch(() => []),
   ]);
 
-  return (
-    <div className="gp-page">
-      <GuestEventsClient events={events} />
-    </div>
-  );
+  return <GuestEventsClient events={events} />;
 }
