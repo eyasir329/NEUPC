@@ -24,12 +24,10 @@ export default async function GuestParticipationPage() {
   ]);
 
   return (
-    <div className="gp-page">
-      <GuestParticipationClient
-        registrations={registrations}
-        certificates={certificates}
-        userName={user.full_name}
-      />
-    </div>
+    <GuestParticipationClient
+      registrations={registrations}
+      certificates={certificates}
+      userName={user.full_name}
+    />
   );
 }

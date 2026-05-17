@@ -1,145 +1,128 @@
-/**
- * @file Membership application client — multi-step form for guests
- *   to submit club membership requests with personal and academic
- *   information.
- * @module GuestMembershipApplicationClient
- */
-
 'use client';
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User,
-  Mail,
-  BookOpen,
-  GraduationCap,
-  Phone,
-  Github,
-  Linkedin,
-  Code,
-  Code2,
-  FileText,
-  ChevronRight,
-  ChevronLeft,
-  Send,
-  Loader,
-  CheckCircle,
-  AlertCircle,
-  Building,
-  Hash,
-  Star,
-  Clock,
-  XCircle,
-  RefreshCw,
+  User, Mail, BookOpen, GraduationCap, Phone, Github, Linkedin,
+  Code, Code2, FileText, ChevronRight, ChevronLeft, Send, Loader,
+  CheckCircle, AlertCircle, Building, Hash, Star, Clock, XCircle,
+  RefreshCw, Sparkles, Check,
 } from 'lucide-react';
 import { submitMembershipApplicationAction } from '@/app/_lib/user-actions';
+import {
+  PageShell, PageHeader, GlassCard, SectionHeader, GradientBar,
+  Pill, ActionButton,
+} from '../_components/_ui';
 
 const DEPARTMENTS = [
-  'Computer Science & Engineering',
-  'Electrical & Electronic Engineering',
-  'Civil Engineering',
-  'Mechanical Engineering',
-  'Business Administration',
-  'English',
-  'Law',
-  'Pharmacy',
-  'Architecture',
-  'Other',
+  'Computer Science & Engineering', 'Electrical & Electronic Engineering',
+  'Civil Engineering', 'Mechanical Engineering', 'Business Administration',
+  'English', 'Law', 'Pharmacy', 'Architecture', 'Other',
 ];
-
-const BATCHES = Array.from({ length: 12 }, (_, i) => {
-  const start = 2019 + i;
-  return `${start}-${String(start + 1).slice(-2)}`;
-});
-
+const BATCHES = Array.from({ length: 12 }, (_, i) => { const s = 2019 + i; return `${s}-${String(s + 1).slice(-2)}`; });
 const SEMESTERS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
 
 const STEPS = [
   { id: 1, label: 'Basic Info', icon: User },
   { id: 2, label: 'Academic', icon: GraduationCap },
-  { id: 3, label: 'Competitive', icon: Code },
+  { id: 3, label: 'Profiles', icon: Code },
   { id: 4, label: 'About You', icon: FileText },
 ];
 
-function InputField({
-  label,
-  id,
-  required,
-  icon: Icon,
-  hint,
-  error,
-  className = '',
-  ...props
-}) {
+function StepIndicator({ currentStep }) {
   return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-300"
-      >
-        {Icon && <Icon className="h-3.5 w-3.5 text-gray-500" />}
-        {label}
-        {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        id={id}
-        name={id}
-        className={`w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 ${error ? 'border-red-500/50' : ''} ${className}`}
-        {...props}
-      />
-      {hint && !error && (
-        <p className="mt-1 text-[11px] text-gray-600">{hint}</p>
-      )}
-      {error && <p className="mt-1 text-[11px] text-red-400">{error}</p>}
+    <div className="flex items-center">
+      {STEPS.map((s, i) => {
+        const done = currentStep > s.id;
+        const active = currentStep === s.id;
+        const Icon = s.icon;
+        return (
+          <div key={s.id} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all ${
+                done ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
+                  : active ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-400'
+                  : 'border-white/[0.08] bg-white/[0.02] text-gray-600'
+              }`}>
+                {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+              </div>
+              <span className={`hidden font-mono text-[10px] uppercase tracking-wider sm:block ${
+                done ? 'text-emerald-400' : active ? 'text-indigo-400' : 'text-gray-600'
+              }`}>{s.label}</span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`mx-2 h-px flex-1 transition-all ${done ? 'bg-emerald-500/30' : 'bg-white/[0.06]'}`} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function SelectField({
-  label,
-  id,
-  required,
-  icon: Icon,
-  options,
-  placeholder,
-  error,
-  ...props
-}) {
+function FieldLabel({ children, required }) {
+  return (
+    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-gray-500">
+      {children}{required && <span className="ml-1 text-rose-400">*</span>}
+    </label>
+  );
+}
+
+const inputCls = "w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none transition focus:border-indigo-500/40 focus:bg-white/[0.04]";
+const inputErrCls = "w-full rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none transition focus:border-rose-500/50";
+
+function Field({ label, required, error, hint, children }) {
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-300"
-      >
-        {Icon && <Icon className="h-3.5 w-3.5 text-gray-500" />}
-        {label}
-        {required && <span className="text-red-400">*</span>}
-      </label>
-      <select
-        id={id}
-        name={id}
-        className={`w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white transition-all outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 ${error ? 'border-red-500/50' : ''}`}
-        {...props}
-      >
-        <option value="" className="bg-gray-900 text-gray-500">
-          {placeholder || 'Select…'}
-        </option>
-        {options.map((o) => (
-          <option key={o} value={o} className="bg-gray-900">
-            {o}
-          </option>
-        ))}
-      </select>
-      {error && <p className="mt-1 text-[11px] text-red-400">{error}</p>}
+      <FieldLabel required={required}>{label}</FieldLabel>
+      {children}
+      {hint && !error && <p className="mt-1 text-[11px] text-gray-600">{hint}</p>}
+      {error && <p className="mt-1 text-[11px] text-rose-400">{error}</p>}
     </div>
   );
 }
 
-export default function MembershipApplicationClient({
-  userData,
-  latestApplication,
-}) {
+function ReadonlyField({ label, value }) {
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] px-3 py-2 text-sm text-gray-500">{value || '—'}</div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-white/[0.04] py-1.5">
+      <span className="text-[12px] text-gray-500">{label}</span>
+      <span className="text-[12.5px] font-medium text-gray-200">{value}</span>
+    </div>
+  );
+}
+
+function StatusScreen({ icon: Icon, iconTone, title, children, actions }) {
+  const tones = {
+    amber: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    rose: 'border-rose-500/30 bg-rose-500/10 text-rose-400',
+    emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+  };
+  return (
+    <PageShell>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 ${tones[iconTone]}`}>
+          <Icon className="h-7 w-7" />
+        </div>
+        <h2 className="mb-2 text-xl font-bold text-white">{title}</h2>
+        {children}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">{actions}</div>
+      </div>
+    </PageShell>
+  );
+}
+
+export default function MembershipApplicationClient({ userData, latestApplication }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [step, setStep] = useState(1);
@@ -149,7 +132,6 @@ export default function MembershipApplicationClient({
   const [reapplying, setReapplying] = useState(false);
 
   const prefill = latestApplication ?? {};
-
   const [form, setForm] = useState({
     student_id: prefill.student_id || userData?.student_id || '',
     session: prefill.session || prefill.batch || '',
@@ -163,14 +145,11 @@ export default function MembershipApplicationClient({
     vjudge_handle: '',
     atcoder_handle: '',
     leetcode_handle: '',
-    interests: Array.isArray(prefill.interests)
-      ? prefill.interests.join(', ')
-      : prefill.interests || '',
+    interests: Array.isArray(prefill.interests) ? prefill.interests.join(', ') : prefill.interests || '',
     reason: prefill.reason || '',
   });
 
-  const set = (key) => (e) =>
-    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
   const validateStep = (s) => {
     const errs = {};
@@ -180,588 +159,269 @@ export default function MembershipApplicationClient({
       if (!form.department) errs.department = 'Department is required.';
     }
     if (s === 4) {
-      if (!form.reason.trim())
-        errs.reason = 'Please tell us why you want to join.';
+      if (!form.reason.trim()) errs.reason = 'Please tell us why you want to join.';
     }
     return errs;
   };
 
   const nextStep = () => {
     const errs = validateStep(step);
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setStep((s) => Math.min(s + 1, 4));
   };
-
-  const prevStep = () => {
-    setErrors({});
-    setStep((s) => Math.max(s - 1, 1));
-  };
+  const prevStep = () => { setErrors({}); setStep((s) => Math.max(s - 1, 1)); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const errs = validateStep(4);
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setServerError(null);
     startTransition(async () => {
       try {
         const fd = new FormData();
-        Object.entries(form).forEach(([k, v]) => {
-          if (v) fd.append(k, v);
-        });
-        // Pass the existing join_request id if editing a pending application
-        if (latestApplication?.status === 'pending' && latestApplication?.id) {
-          fd.append('joinRequestId', latestApplication.id);
-        }
+        Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+        if (latestApplication?.status === 'pending' && latestApplication?.id) fd.append('joinRequestId', latestApplication.id);
         await submitMembershipApplicationAction(fd);
         setSubmitted(true);
       } catch (err) {
-        setServerError(
-          err.message || 'Something went wrong. Please try again.'
-        );
+        setServerError(err.message || 'Something went wrong. Please try again.');
       }
     });
   };
 
-  // ── Pending screen ────────────────────────────────────────────────────────
+  // ── Status screens ──────────────────────────────────────────────────────────
   if (latestApplication?.status === 'pending' && !reapplying) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 ring-2 ring-amber-500/30">
-          <Clock className="h-8 w-8 text-amber-400" />
-        </div>
-        <h2 className="mt-5 text-xl font-semibold text-white">
-          Application Under Review
-        </h2>
-        <p className="mt-2 max-w-sm text-sm text-gray-400">
+      <StatusScreen icon={Clock} iconTone="amber" title="Application Under Review"
+        actions={
+          <>
+            <ActionButton href="/account/guest" tone="ghost">Back to Dashboard</ActionButton>
+            <ActionButton tone="indigo" icon={RefreshCw} onClick={() => { setReapplying(true); setStep(1); setErrors({}); }}>Edit Application</ActionButton>
+          </>
+        }
+      >
+        <p className="max-w-sm text-[13.5px] leading-relaxed text-gray-400">
           Your membership application submitted on{' '}
-          <span className="font-medium text-gray-300">
-            {new Date(latestApplication.created_at).toLocaleDateString(
-              'en-US',
-              {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }
-            )}
-          </span>{' '}
-          is currently being reviewed. You can still edit it before a decision
-          is made.
+          <span className="font-medium text-gray-200">{new Date(latestApplication.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>{' '}
+          is currently being reviewed. You can still edit it before a decision is made.
         </p>
-        <div className="mt-8 flex items-center gap-3">
-          <a
-            href="/account/guest"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-white/10"
-          >
-            Back to Dashboard
-          </a>
-          <button
-            onClick={() => {
-              setReapplying(true);
-              setStep(1);
-              setErrors({});
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Edit Application
-          </button>
-        </div>
-      </div>
+      </StatusScreen>
     );
   }
 
-  // ── Rejected screen ───────────────────────────────────────────────────────
   if (latestApplication?.status === 'rejected' && !reapplying) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/15 ring-2 ring-red-500/30">
-          <XCircle className="h-8 w-8 text-red-400" />
-        </div>
-        <h2 className="mt-5 text-xl font-semibold text-white">
-          Application Rejected
-        </h2>
-        <p className="mt-2 max-w-sm text-sm text-gray-400">
+      <StatusScreen icon={XCircle} iconTone="rose" title="Application Rejected"
+        actions={
+          <>
+            <ActionButton href="/account/guest" tone="ghost">Back to Dashboard</ActionButton>
+            <ActionButton tone="indigo" icon={RefreshCw} onClick={() => { setReapplying(true); setStep(1); setErrors({}); }}>Re-apply</ActionButton>
+          </>
+        }
+      >
+        <p className="max-w-sm text-[13.5px] leading-relaxed text-gray-400">
           Your application submitted on{' '}
-          <span className="font-medium text-gray-300">
-            {new Date(latestApplication.created_at).toLocaleDateString(
-              'en-US',
-              {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }
-            )}
-          </span>{' '}
+          <span className="font-medium text-gray-200">{new Date(latestApplication.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>{' '}
           was not approved.
         </p>
         {latestApplication.rejection_reason && (
-          <div className="mt-4 max-w-sm rounded-xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-left">
-            <p className="mb-1 text-[10px] font-semibold tracking-widest text-red-400 uppercase">
-              Rejection Reason
-            </p>
-            <p className="text-sm text-gray-300">
-              {latestApplication.rejection_reason}
-            </p>
+          <div className="mx-auto mt-4 max-w-sm rounded-xl border border-rose-500/20 bg-rose-500/8 p-4 text-left">
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-rose-400">Rejection reason</p>
+            <p className="text-[13px] text-gray-300">{latestApplication.rejection_reason}</p>
           </div>
         )}
-        <div className="mt-8 flex items-center gap-3">
-          <a
-            href="/account/guest"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-white/10"
-          >
-            Back to Dashboard
-          </a>
-          <button
-            onClick={() => {
-              setReapplying(true);
-              setStep(1);
-              setErrors({});
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Re-apply
-          </button>
-        </div>
-      </div>
+      </StatusScreen>
     );
   }
 
-  // ── Success screen ────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 ring-2 ring-emerald-500/30">
-          <CheckCircle className="h-8 w-8 text-emerald-400" />
-        </div>
-        <h2 className="mt-5 text-xl font-semibold text-white">
-          Application Submitted!
-        </h2>
-        <p className="mt-2 max-w-sm text-sm text-gray-400">
-          Your membership application has been received. Our team will review it
-          within{' '}
-          <span className="font-medium text-gray-300">2–3 business days</span>.
+      <StatusScreen icon={CheckCircle} iconTone="emerald" title="Application Submitted!"
+        actions={<ActionButton tone="indigo" onClick={() => router.push('/account/guest')}>Back to Dashboard</ActionButton>}
+      >
+        <p className="max-w-sm text-[13.5px] leading-relaxed text-gray-400">
+          Your membership application has been received. Our team will review it within{' '}
+          <span className="font-medium text-gray-200">2–3 business days</span>.
         </p>
-        <button
-          onClick={() => router.push('/account/guest')}
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-        >
-          Back to Dashboard
-        </button>
-      </div>
+      </StatusScreen>
     );
   }
 
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
   return (
-    <div className="gp-page mx-auto" style={{ maxWidth: 720 }}>
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 ring-1 ring-blue-500/25">
-          <Star className="h-7 w-7 text-blue-400" />
+    <PageShell className="max-w-[800px]">
+      <PageHeader
+        icon={Sparkles}
+        title={reapplying ? 'Re-apply for membership' : 'Membership application'}
+        subtitle="Join NEUPC and become part of our competitive programming community."
+        accent="indigo"
+      />
+
+      {reapplying && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-300">
+          <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+          {latestApplication?.status === 'pending'
+            ? 'Editing your pending application — changes will update your submission.'
+            : 'Re-applying — your previous answers have been pre-filled.'}
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-white">
-          {reapplying ? 'Re-apply for Membership' : 'Membership Application'}
-        </h1>
-        <p className="mt-1.5 text-sm text-gray-400">
-          Join NEUPC and become part of our competitive programming community.
-        </p>
-        {reapplying && (
-          <div className="mx-auto mt-3 flex max-w-sm items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3.5 py-2 text-xs text-amber-300">
-            <RefreshCw className="h-3.5 w-3.5 shrink-0" />
-            {latestApplication?.status === 'pending'
-              ? 'Editing your pending application — changes will update your submission.'
-              : 'Re-applying — your previous answers have been pre-filled.'}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Step indicator */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          {STEPS.map((s, i) => {
-            const Icon = s.icon;
-            const isActive = step === s.id;
-            const isDone = step > s.id;
-            return (
-              <div
-                key={s.id}
-                className="flex flex-1 flex-col items-center gap-1.5"
-              >
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    isDone
-                      ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40'
-                      : isActive
-                        ? 'bg-blue-500/20 text-blue-400 ring-2 ring-blue-500/50'
-                        : 'bg-white/5 text-gray-600 ring-1 ring-white/10'
-                  }`}
-                >
-                  {isDone ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
-                </div>
-                <span
-                  className={`hidden text-[10px] font-medium sm:block ${isActive ? 'text-blue-400' : isDone ? 'text-emerald-400' : 'text-gray-600'}`}
-                >
-                  {s.label}
-                </span>
-              </div>
-            );
-          })}
+      <GlassCard>
+        <div className="mb-4">
+          <StepIndicator currentStep={step} />
         </div>
-        {/* Progress bar */}
-        <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
-          <div
-            className="h-full rounded-full bg-linear-to-r from-blue-500 to-blue-400 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+        <GradientBar value={progress} max={100} tone="indigo" />
+      </GlassCard>
 
-      {/* Card */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm">
-        <div className="h-px w-full bg-linear-to-r from-blue-500/40 to-transparent" />
+      {/* Form card */}
+      <GlassCard className="relative overflow-hidden">
+        {/* Accent top bar */}
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-indigo-500/60 via-violet-500/40 to-transparent" />
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8">
-          {/* ── Step 1: Basic Info ── */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <SectionTitle icon={User} title="Personal Information" />
-
-              {/* Pre-filled read-only */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ReadonlyField
-                  label="Full Name"
-                  icon={User}
-                  value={userData?.full_name || '—'}
-                />
-                <ReadonlyField
-                  label="Email Address"
-                  icon={Mail}
-                  value={userData?.email || '—'}
-                />
-              </div>
-
-              <InputField
-                label="Student ID"
-                id="student_id"
-                icon={Hash}
-                required
-                placeholder="e.g. 2021-1-60-016"
-                value={form.student_id}
-                onChange={set('student_id')}
-                error={errors.student_id}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="Session"
-                  id="session"
-                  icon={GraduationCap}
-                  required
-                  options={BATCHES}
-                  placeholder="Select session"
-                  value={form.session}
-                  onChange={set('session')}
-                  error={errors.session}
-                />
-                <SelectField
-                  label="Department"
-                  id="department"
-                  icon={Building}
-                  required
-                  options={DEPARTMENTS}
-                  placeholder="Select department"
-                  value={form.department}
-                  onChange={set('department')}
-                  error={errors.department}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <InputField
-                  label="Phone Number"
-                  id="phone"
-                  icon={Phone}
-                  type="tel"
-                  placeholder="+880 1xxx-xxxxxx"
-                  value={form.phone}
-                  onChange={set('phone')}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 2: Academic ── */}
-          {step === 2 && (
-            <div className="space-y-5">
-              <SectionTitle icon={BookOpen} title="Academic Details" />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="Current Semester"
-                  id="semester"
-                  icon={BookOpen}
-                  options={SEMESTERS}
-                  placeholder="Select semester"
-                  value={form.semester}
-                  onChange={set('semester')}
-                />
-                <InputField
-                  label="CGPA"
-                  id="cgpa"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4"
-                  placeholder="e.g. 3.75"
-                  value={form.cgpa}
-                  onChange={set('cgpa')}
-                  hint="Out of 4.00"
-                />
-              </div>
-
-              <InputField
-                label="Areas of Interest"
-                id="interests"
-                icon={Star}
-                placeholder="e.g. Competitive Programming, Web Dev, AI/ML"
-                value={form.interests}
-                onChange={set('interests')}
-                hint="Separate multiple interests with commas"
-              />
-            </div>
-          )}
-
-          {/* ── Step 3: Competitive Profiles ── */}
-          {step === 3 && (
-            <div className="space-y-5">
-              <SectionTitle icon={Code} title="Online Profiles" />
-              <p className="text-xs text-gray-500">
-                All fields are optional — fill in whichever platforms you use.
-              </p>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <InputField
-                  label="GitHub"
-                  id="github"
-                  icon={Github}
-                  placeholder="github.com/username"
-                  value={form.github}
-                  onChange={set('github')}
-                />
-                <InputField
-                  label="LinkedIn"
-                  id="linkedin"
-                  icon={Linkedin}
-                  placeholder="linkedin.com/in/username"
-                  value={form.linkedin}
-                  onChange={set('linkedin')}
-                />
-                <InputField
-                  label="Codeforces Handle"
-                  id="codeforces_handle"
-                  icon={Code2}
-                  placeholder="your handle"
-                  value={form.codeforces_handle}
-                  onChange={set('codeforces_handle')}
-                />
-                <InputField
-                  label="VJudge Handle"
-                  id="vjudge_handle"
-                  icon={Code2}
-                  placeholder="your handle"
-                  value={form.vjudge_handle}
-                  onChange={set('vjudge_handle')}
-                />
-                <InputField
-                  label="AtCoder Handle"
-                  id="atcoder_handle"
-                  icon={Code2}
-                  placeholder="your handle"
-                  value={form.atcoder_handle}
-                  onChange={set('atcoder_handle')}
-                />
-                <InputField
-                  label="LeetCode Handle"
-                  id="leetcode_handle"
-                  icon={Code2}
-                  placeholder="your handle"
-                  value={form.leetcode_handle}
-                  onChange={set('leetcode_handle')}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 4: About You ── */}
-          {step === 4 && (
-            <div className="space-y-5">
-              <SectionTitle icon={FileText} title="Tell Us About Yourself" />
-
-              <div>
-                <label
-                  htmlFor="reason"
-                  className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-300"
-                >
-                  <FileText className="h-3.5 w-3.5 text-gray-500" />
-                  Why do you want to join NEUPC?
-                  <span className="text-red-400">*</span>
-                </label>
-                <textarea
-                  id="reason"
-                  name="reason"
-                  rows={5}
-                  maxLength={800}
-                  placeholder="Tell us about your interest in competitive programming, your goals, and what you hope to contribute to the club…"
-                  value={form.reason}
-                  onChange={set('reason')}
-                  className={`w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 ${errors.reason ? 'border-red-500/50' : ''}`}
-                />
-                <div className="mt-1 flex items-center justify-between">
-                  {errors.reason ? (
-                    <p className="text-[11px] text-red-400">{errors.reason}</p>
-                  ) : (
-                    <span />
-                  )}
-                  <span
-                    className={`text-[11px] ${form.reason.length > 750 ? 'text-amber-400' : 'text-gray-600'}`}
-                  >
-                    {800 - form.reason.length} remaining
-                  </span>
+        <form onSubmit={handleSubmit} className="pt-2">
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div key="s1" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-5">
+                <SectionHeader icon={User} title="Personal Information" accent="indigo" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ReadonlyField label="Full Name" value={userData?.full_name} />
+                  <ReadonlyField label="Email Address" value={userData?.email} />
                 </div>
-              </div>
+                <Field label="Student ID" required error={errors.student_id}>
+                  <input className={errors.student_id ? inputErrCls : inputCls} name="student_id" placeholder="e.g. 2021-1-60-016" value={form.student_id} onChange={set('student_id')} />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Session" required error={errors.session}>
+                    <select className={errors.session ? inputErrCls : inputCls} value={form.session} onChange={set('session')}>
+                      <option value="">Select session</option>
+                      {BATCHES.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Department" required error={errors.department}>
+                    <select className={errors.department ? inputErrCls : inputCls} value={form.department} onChange={set('department')}>
+                      <option value="">Select department</option>
+                      {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Phone Number">
+                    <input className={inputCls} type="tel" placeholder="+880 1xxx-xxxxxx" value={form.phone} onChange={set('phone')} />
+                  </Field>
+                </div>
+              </motion.div>
+            )}
 
-              {/* Review summary */}
-              <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-                <p className="mb-3 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
-                  Application Summary
-                </p>
-                <div className="grid gap-1.5 text-xs">
+            {step === 2 && (
+              <motion.div key="s2" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-5">
+                <SectionHeader icon={BookOpen} title="Academic Details" accent="indigo" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Current Semester">
+                    <select className={inputCls} value={form.semester} onChange={set('semester')}>
+                      <option value="">Select semester</option>
+                      {SEMESTERS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="CGPA" hint="Out of 4.00">
+                    <input className={inputCls} type="number" step="0.01" min="0" max="4" placeholder="e.g. 3.75" value={form.cgpa} onChange={set('cgpa')} />
+                  </Field>
+                </div>
+                <Field label="Areas of Interest" hint="Separate multiple interests with commas">
+                  <input className={inputCls} placeholder="e.g. Competitive Programming, Web Dev, AI/ML" value={form.interests} onChange={set('interests')} />
+                </Field>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div key="s3" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-5">
+                <SectionHeader icon={Code} title="Online Profiles" accent="indigo" />
+                <p className="text-[12px] text-gray-600">All fields are optional — fill in whichever platforms you use.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    { label: 'GitHub', key: 'github', icon: Github, placeholder: 'github.com/username' },
+                    { label: 'LinkedIn', key: 'linkedin', icon: Linkedin, placeholder: 'linkedin.com/in/username' },
+                    { label: 'Codeforces Handle', key: 'codeforces_handle', icon: Code2, placeholder: 'your handle' },
+                    { label: 'VJudge Handle', key: 'vjudge_handle', icon: Code2, placeholder: 'your handle' },
+                    { label: 'AtCoder Handle', key: 'atcoder_handle', icon: Code2, placeholder: 'your handle' },
+                    { label: 'LeetCode Handle', key: 'leetcode_handle', icon: Code2, placeholder: 'your handle' },
+                  ].map(({ label, key, placeholder }) => (
+                    <Field key={key} label={label}>
+                      <input className={inputCls} placeholder={placeholder} value={form[key]} onChange={set(key)} />
+                    </Field>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div key="s4" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }} className="flex flex-col gap-5">
+                <SectionHeader icon={FileText} title="Tell Us About Yourself" accent="indigo" />
+                <Field label="Why do you want to join NEUPC?" required error={errors.reason}>
+                  <textarea
+                    rows={5}
+                    maxLength={800}
+                    placeholder="Tell us about your interest in competitive programming, your goals, and what you hope to contribute…"
+                    value={form.reason}
+                    onChange={set('reason')}
+                    className={`${errors.reason ? inputErrCls : inputCls} resize-none`}
+                  />
+                  <div className="mt-1 flex items-center justify-between">
+                    {errors.reason ? <span className="text-[11px] text-rose-400">{errors.reason}</span> : <span />}
+                    <span className={`font-mono text-[11px] ${form.reason.length > 750 ? 'text-amber-400' : 'text-gray-600'}`}>
+                      {800 - form.reason.length} remaining
+                    </span>
+                  </div>
+                </Field>
+
+                {/* Summary */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-gray-600">Application summary</p>
                   <SummaryRow label="Student ID" value={form.student_id} />
                   <SummaryRow label="Session" value={form.session} />
                   <SummaryRow label="Department" value={form.department} />
-                  {form.semester && (
-                    <SummaryRow label="Semester" value={form.semester} />
-                  )}
+                  {form.semester && <SummaryRow label="Semester" value={form.semester} />}
                   {form.cgpa && <SummaryRow label="CGPA" value={form.cgpa} />}
-                  {form.codeforces_handle && (
-                    <SummaryRow
-                      label="Codeforces"
-                      value={form.codeforces_handle}
-                    />
-                  )}
-                  {form.github && (
-                    <SummaryRow label="GitHub" value={form.github} />
-                  )}
+                  {form.codeforces_handle && <SummaryRow label="Codeforces" value={form.codeforces_handle} />}
+                  {form.github && <SummaryRow label="GitHub" value={form.github} />}
                 </div>
-              </div>
 
-              {serverError && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  {serverError}
-                </div>
-              )}
-            </div>
-          )}
+                {serverError && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-300">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{serverError}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Navigation */}
-          <div
-            className={`mt-8 flex items-center ${step > 1 ? 'justify-between' : 'justify-end'}`}
-          >
+          <div className={`mt-8 flex items-center ${step > 1 ? 'justify-between' : 'justify-end'}`}>
             {step > 1 && (
-              <button
-                type="button"
-                onClick={prevStep}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/10"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </button>
+              <ActionButton type="button" tone="ghost" icon={ChevronLeft} onClick={prevStep}>Back</ActionButton>
             )}
-
             {step < 4 ? (
-              <button
-                type="button"
-                onClick={nextStep}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              <ActionButton type="button" tone="indigo" onClick={nextStep}>
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </ActionButton>
             ) : (
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+              <ActionButton tone="indigo" icon={isPending ? Loader : Send} disabled={isPending}>
                 {isPending
                   ? 'Submitting…'
                   : latestApplication?.status === 'pending' && reapplying
-                    ? 'Update Application'
-                    : 'Submit Application'}
-              </button>
+                  ? 'Update Application'
+                  : 'Submit Application'}
+              </ActionButton>
             )}
           </div>
         </form>
-      </div>
+      </GlassCard>
 
-      <p className="mt-4 text-center text-xs text-gray-600">
-        By submitting, you agree to abide by NEUPC&apos;s community guidelines and
-        code of conduct.
+      <p className="text-center font-mono text-[11.5px] text-gray-600">
+        By submitting, you agree to abide by NEUPC&apos;s community guidelines and code of conduct.
       </p>
-    </div>
-  );
-}
-
-function SectionTitle({ icon: Icon, title }) {
-  return (
-    <div className="flex items-center gap-2.5 pb-1">
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15">
-        <Icon className="h-3.5 w-3.5 text-blue-400" />
-      </div>
-      <h2 className="text-sm font-semibold text-white">{title}</h2>
-    </div>
-  );
-}
-
-function ReadonlyField({ label, icon: Icon, value }) {
-  return (
-    <div>
-      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-300">
-        {Icon && <Icon className="h-3.5 w-3.5 text-gray-500" />}
-        {label}
-      </label>
-      <div className="rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-gray-400">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-medium text-gray-300">{value || '—'}</span>
-    </div>
+    </PageShell>
   );
 }

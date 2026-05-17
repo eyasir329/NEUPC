@@ -123,6 +123,7 @@ export default function ResourcesClient({
   pageSize = 12,
   bookmarkedIds = [],
   canBookmark = false,
+  canUpload = true,
   basePath,
 }) {
   const pathname = usePathname();
@@ -239,10 +240,10 @@ export default function ResourcesClient({
   };
 
   return (
-    <div className="flex h-full min-h-screen text-gray-300 selection:bg-violet-500/30">
+    <div className="flex text-gray-300 selection:bg-violet-500/30">
       {/* ── Secondary left nav ───────────────────────────────────────── */}
-      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col">
-        <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <aside className="hidden w-[240px] shrink-0 border-r border-white/[0.06] bg-gray-950 xl:flex xl:flex-col sticky top-0 h-[calc(100vh-56px)] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="flex-1 px-3 py-2">
           <div className="space-y-0.5 mb-6 mt-2">
             <NavItem
               icon={List}
@@ -271,9 +272,11 @@ export default function ResourcesClient({
             <div className="text-[10.5px] font-semibold tracking-widest text-gray-600 uppercase select-none">
               Categories
             </div>
-            <button onClick={() => setIsAddModalOpen(true)} className="text-gray-500 hover:text-gray-300 transition-colors">
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+            {canUpload && (
+              <button onClick={() => setIsAddModalOpen(true)} className="text-gray-500 hover:text-gray-300 transition-colors">
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <div className="space-y-0.5 pb-6">
             {categories.map((cat) => (
@@ -293,7 +296,7 @@ export default function ResourcesClient({
       {/* ── Main content ─────────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile / tablet horizontal tab bar (visible below xl) */}
-        <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
+        <div className="sticky top-0 z-20 border-b border-white/[0.06] bg-gray-950/90 backdrop-blur-xl xl:hidden">
           <div className="flex items-center justify-between gap-2 px-4 sm:px-6">
             <nav className="scrollbar-none -mb-px flex items-center gap-0.5 overflow-x-auto">
               {[
@@ -315,28 +318,30 @@ export default function ResourcesClient({
                         : 'border-transparent text-gray-500 hover:text-gray-300'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : '')} />
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-violet-400' : '')} />
+                    <span className="truncate max-w-[56px] sm:max-w-none text-[12px] sm:text-[13px]">{tab.label}</span>
                   </button>
                 );
               })}
             </nav>
-            <div className="flex shrink-0 items-center gap-1.5 py-2">
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200"
-                aria-label="Add Resource"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
+            {canUpload && (
+              <div className="flex shrink-0 items-center gap-1.5 py-2">
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200"
+                  aria-label="Add Resource"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-4 pb-10 sm:p-5 lg:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <main className="flex-1 p-4 pb-10 sm:p-5 lg:p-6">
           <div className="mx-auto w-full max-w-7xl space-y-8">
             {activeResource ? (
-              <div className="flex flex-col rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 sm:p-8 min-h-[calc(100vh-160px)]">
+              <div className="flex flex-col rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-160px)]">
                 <button
                   onClick={() => setActiveResource(null)}
                   className="mb-8 flex items-center gap-2 self-start text-[13px] font-medium text-gray-400 transition-colors hover:text-gray-200"
@@ -363,34 +368,36 @@ export default function ResourcesClient({
                         {new Date(activeResource.published_at || activeResource.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     </div>
-                    <h1 className="mb-4 text-2xl font-bold text-white">
+                    <h1 className="mb-4 text-xl sm:text-2xl font-bold text-white">
                       {activeResource.title}
                     </h1>
                     <p className="mb-8 max-w-3xl text-[13px] leading-relaxed text-gray-400">
                       {activeResource.description || `Learning material in the ${activeResource.category?.name || 'Uncategorized'} category. This is a detailed view of the resource.`}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <a 
-                        href={activeResource.embed_url || activeResource.file_url || "#"} 
-                        target="_blank" 
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <a
+                        href={activeResource.embed_url || activeResource.file_url || "#"}
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-5 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-violet-600"
+                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 sm:px-5 sm:py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-violet-600"
                       >
-                        <ArrowUpRight className="w-4 h-4" /> Open Resource
+                        <ArrowUpRight className="w-4 h-4 shrink-0" /> Open Resource
                       </a>
-                      <button
-                        onClick={(e) => onToggleBookmark(activeResource.id, e)}
-                        className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-[13px] font-medium text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white"
-                      >
-                        <Star className={`w-4 h-4 ${activeResource.bookmarked ? "fill-amber-500 text-amber-500" : "text-gray-500"}`} />
-                        {activeResource.bookmarked ? "Bookmarked" : "Bookmark"}
-                      </button>
+                      {canBookmark && (
+                        <button
+                          onClick={(e) => onToggleBookmark(activeResource.id, e)}
+                          className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 sm:px-5 sm:py-2.5 text-[13px] font-medium text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        >
+                          <Star className={`w-4 h-4 shrink-0 ${activeResource.bookmarked ? "fill-amber-500 text-amber-500" : "text-gray-500"}`} />
+                          {activeResource.bookmarked ? "Bookmarked" : "Bookmark"}
+                        </button>
+                      )}
                       <button
                         onClick={(e) => onToggleCompleted(activeResource.id, e)}
-                        className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-[13px] font-medium text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 sm:px-5 sm:py-2.5 text-[13px] font-medium text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white"
                       >
-                        <CheckCircle2 className={`w-4 h-4 ${activeResource.completed ? "text-emerald-500" : "text-gray-500"}`} />
+                        <CheckCircle2 className={`w-4 h-4 shrink-0 ${activeResource.completed ? "text-emerald-500" : "text-gray-500"}`} />
                         {activeResource.completed ? "Completed" : "Mark as Completed"}
                       </button>
                     </div>
@@ -401,7 +408,7 @@ export default function ResourcesClient({
                   <h3 className="mb-6 text-lg font-semibold text-white">
                     Resource Content Preview
                   </h3>
-                  <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-gray-950 min-h-[400px] p-4 sm:p-6 lg:p-8">
+                  <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-gray-950 min-h-[280px] sm:min-h-[400px] p-3 sm:p-6 lg:p-8">
                     <ViewTracker resourceId={activeResource.id} source="inline_view" />
                     <ResourceViewer resource={activeResource} hideHeader={true} />
                   </div>
@@ -409,43 +416,47 @@ export default function ResourcesClient({
               </div>
             ) : (
               <div className="flex flex-col">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-violet-500/10 text-violet-400 outline outline-1 outline-offset-[-1px] outline-violet-500/20">
-                      <FolderOpen className="w-6 h-6 stroke-[2.5px]" />
+                <div className="flex flex-col gap-4 mb-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl flex items-center justify-center bg-violet-500/10 text-violet-400 outline outline-1 outline-offset-[-1px] outline-violet-500/20">
+                        <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5px]" />
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight truncate">
+                          {getTabLabel()}
+                        </h2>
+                        <p className="text-[12px] sm:text-[13px] text-gray-400 mt-0.5 font-medium hidden sm:block">
+                          Browse and filter learning materials
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white tracking-tight">
-                        {getTabLabel()}
-                      </h2>
-                      <p className="text-[13px] text-gray-400 mt-0.5 font-medium">
-                        Browse and filter learning materials
-                      </p>
-                    </div>
+                    {canUpload && (
+                      <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="hidden xl:flex shrink-0 items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-violet-600"
+                      >
+                        <Plus className="w-4 h-4" /> Add Resource
+                      </button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative group">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                    <div className="relative group flex-1 sm:flex-none">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-violet-400 transition-colors" />
                       <input
                         value={searchDraft}
                         onChange={(e) => handleSearchChange(e.target.value)}
-                        className="w-full sm:w-64 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-9 pr-4 py-2 text-[13px] text-gray-200 placeholder-gray-500 transition-colors focus:border-violet-500/50 focus:bg-white/[0.04] focus:outline-none"
+                        className="w-full sm:w-56 lg:w-64 rounded-lg border border-white/[0.08] bg-white/[0.02] pl-9 pr-4 py-2 text-[13px] text-gray-200 placeholder-gray-500 transition-colors focus:border-violet-500/50 focus:bg-white/[0.04] focus:outline-none"
                         placeholder="Search resources..."
                       />
                     </div>
                     <select
                       value={activeType}
                       onChange={(e) => updateFilters({ tab: activeTab, q: searchDraft, type: e.target.value })}
-                      className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[13px] font-medium text-gray-200 transition-colors focus:border-violet-500/50 focus:outline-none cursor-pointer"
+                      className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[13px] font-medium text-gray-200 transition-colors focus:border-violet-500/50 focus:outline-none cursor-pointer bg-gray-950"
                     >
                       {TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
-                    <button
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="hidden xl:flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-violet-600"
-                    >
-                      <Plus className="w-4 h-4" /> Add Resource
-                    </button>
                   </div>
                 </div>
 
@@ -462,7 +473,7 @@ export default function ResourcesClient({
                   </div>
                 ) : (
                   <>
-                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 ${pending ? 'opacity-50' : 'opacity-100'}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 ${pending ? 'opacity-50' : 'opacity-100'}`}>
                       {filteredResources.map((resource) => {
                         const style = getTypeStyle(resource.resource_type);
                         return (
@@ -512,35 +523,46 @@ export default function ResourcesClient({
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="mt-8 flex items-center justify-between border-t border-white/[0.06] pt-6">
+                      <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-6">
                         <span className="text-[13px] text-gray-500">
-                          Showing page {page} of {totalPages}
+                          Page {page} of {totalPages}
                         </span>
-                        <div className="flex items-center gap-1.5">
-                          <button 
-                            onClick={() => goPage(page - 1)} 
+                        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          <button
+                            onClick={() => goPage(page - 1)}
                             disabled={page <= 1 || pending}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
                           >
                             <ChevronLeft className="h-4 w-4" />
                           </button>
                           <div className="flex items-center gap-1">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                              <button
-                                key={p}
-                                onClick={() => goPage(p)}
-                                disabled={pending}
-                                className={`flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-medium transition-colors
-                                  ${page === p ? 'bg-violet-500 text-white' : 'border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-white/[0.14] hover:text-gray-200'}`}
-                              >
-                                {p}
-                              </button>
-                            ))}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                              .reduce((acc, p, idx, arr) => {
+                                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                                acc.push(p);
+                                return acc;
+                              }, [])
+                              .map((p, idx) =>
+                                p === '...' ? (
+                                  <span key={`ellipsis-${idx}`} className="flex h-8 w-6 items-center justify-center text-[13px] text-gray-600 select-none">…</span>
+                                ) : (
+                                  <button
+                                    key={p}
+                                    onClick={() => goPage(p)}
+                                    disabled={pending}
+                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-medium transition-colors
+                                      ${page === p ? 'bg-violet-500 text-white' : 'border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-white/[0.14] hover:text-gray-200'}`}
+                                  >
+                                    {p}
+                                  </button>
+                                )
+                              )}
                           </div>
-                          <button 
-                            onClick={() => goPage(page + 1)} 
+                          <button
+                            onClick={() => goPage(page + 1)}
                             disabled={page >= totalPages || pending}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] text-gray-400 transition-colors hover:border-white/[0.14] hover:text-gray-200 disabled:opacity-50"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </button>
@@ -556,7 +578,7 @@ export default function ResourcesClient({
       </div>
 
       {/* Submit Modal */}
-      {isAddModalOpen && (
+      {canUpload && isAddModalOpen && (
         <MemberResourceSubmitModal
           categories={categories}
           onClose={() => setIsAddModalOpen(false)}

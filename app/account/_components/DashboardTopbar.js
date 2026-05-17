@@ -104,7 +104,7 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0, ses
       >
         <div className="text-right hidden sm:block">
           <p className={cn('text-[9px] font-bold uppercase tracking-widest leading-none mb-1', theme.accentText)}>
-            Member
+            {activeRole ?? 'User'}
           </p>
           <p className="text-xs font-bold text-slate-100 leading-none truncate max-w-25">
             {session?.name || 'User'}
