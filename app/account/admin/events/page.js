@@ -21,12 +21,10 @@ export default async function AdminEventsPage() {
   ]);
 
   return (
-    <div className="space-y-5 px-4 pt-6 pb-8 sm:space-y-6 sm:px-6 sm:pt-8 lg:px-8">
-      <EventManagementClient
-        initialEvents={events}
-        stats={stats}
-        roles={roles}
-      />
-    </div>
+    <EventManagementClient
+      initialEvents={events}
+      stats={stats}
+      roles={roles}
+    />
   );
 }

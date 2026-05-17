@@ -1,0 +1,162 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CalendarX, Sparkles } from 'lucide-react';
+import { PageShell, PageHeader, TabBar, GlassCard } from '@/app/account/member/_components/_ui';
+import EventRow from './EventRow';
+import EventDetail from './EventDetail';
+
+const PAGE_MOTION = { duration: 0.18, ease: [0.22, 1, 0.36, 1] };
+
+/**
+ * Full-page event layout shared by all 6 role views.
+ *
+ * Props:
+ *   pageHeader   — { icon, title, subtitle, accent, actions? }
+ *   tabs         — array of { value, label, icon, count }
+ *   events       — enriched event array (from enrichEvent())
+ *   filterFn     — (event, activeTab) => boolean — how to filter per tab
+ *   stats        — computed stat array (from computeStats())
+ *   sidebarCta   — React node: role-specific card in sidebar
+ *   rowProps     — extra props forwarded to EventRow (showStatus, showCover, showRegs, onEdit, onDelete)
+ *   getDetailProps — (event) => { detailRows, ctaSlot?, sidebarSlot? }
+ *   flashSlot    — React node: flash/toast (member only)
+ *   aboveList    — React node: rendered above the event list (e.g. toolbar for manage roles)
+ */
+export default function EventListLayout({
+  pageHeader,
+  tabs,
+  events,
+  filterFn,
+  stats,
+  sidebarCta,
+  rowProps = {},
+  getDetailProps,
+  flashSlot,
+  aboveList,
+}) {
+  const [activeTab, setActiveTab] = useState(tabs[0]?.value ?? 'All');
+  const [selectedEventId, setSelectedEventId] = useState(null);
+
+  const selectedEvent = selectedEventId ? events.find((e) => e.id === selectedEventId) : null;
+  const filteredEvents = events.filter((e) => filterFn(e, activeTab));
+
+  const detailProps = selectedEvent ? getDetailProps(selectedEvent) : null;
+
+  return (
+    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+      {flashSlot}
+
+      <AnimatePresence mode="popLayout">
+        {selectedEvent ? (
+          <motion.div
+            key="detail"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={PAGE_MOTION}
+          >
+            <EventDetail
+              event={selectedEvent}
+              onBack={() => setSelectedEventId(null)}
+              {...detailProps}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="main"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={PAGE_MOTION}
+          >
+            <PageHeader {...pageHeader} />
+            <TabBar
+              tabs={tabs}
+              value={activeTab}
+              onChange={(id) => { setActiveTab(id); setSelectedEventId(null); }}
+            />
+
+            {aboveList}
+
+            <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+              {/* Event list */}
+              <div className="flex min-w-0 flex-col gap-3 lg:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/6 pb-3">
+                  <p className="text-xs font-medium text-gray-500">
+                    {filteredEvents.length === 0
+                      ? `No events in ${activeTab}`
+                      : `Showing ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+
+                <AnimatePresence mode="popLayout">
+                  {filteredEvents.length > 0 ? (
+                    <motion.div
+                      key="list"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col gap-3"
+                    >
+                      {filteredEvents.map((event, index) => (
+                        <EventRow
+                          key={event.id}
+                          event={event}
+                          index={index}
+                          onClick={rowProps.onEdit || rowProps.onDelete ? undefined : () => setSelectedEventId(event.id)}
+                          {...rowProps}
+                        />
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/8 bg-white/2 p-12 text-center"
+                    >
+                      <CalendarX size={48} className="mb-4 text-gray-700" />
+                      <h3 className="mb-1 text-lg font-medium text-gray-300">No {activeTab} events</h3>
+                      <p className="max-w-sm text-sm text-gray-500">
+                        There are currently no events in this category. Check back later!
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Sidebar */}
+              <div className="sticky top-14 hidden flex-col gap-6 lg:flex">
+                {/* Stats overview */}
+                <div className="rounded-xl border border-white/6 bg-gray-900 p-5 transition-all hover:border-white/10">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-200">Overview</h3>
+                  <div className="flex flex-col gap-4 text-sm">
+                    {stats.map((stat) => (
+                      <div key={stat.id} className="group flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`flex h-6 w-6 items-center justify-center rounded-md ${stat.bg}`}>
+                            <stat.icon size={12} className={stat.color} />
+                          </div>
+                          <span className="font-medium text-gray-400 transition-colors group-hover:text-gray-300">
+                            {stat.title}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-white tabular-nums">{stat.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Role-specific CTA card */}
+                {sidebarCta}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PageShell>
+  );
+}

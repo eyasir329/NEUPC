@@ -132,7 +132,7 @@ const TEMP_EVENTS = [
   },
 ];
 
-export default async function ManageEventsPage() {
+export default async function ExecutiveEventsPage() {
   const { user } = await requireRole(['executive', 'admin']);
   return <ManageEventsClient initialEvents={TEMP_EVENTS} userId={user.id} />;
 }

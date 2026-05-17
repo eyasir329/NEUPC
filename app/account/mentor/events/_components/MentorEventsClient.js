@@ -26,10 +26,10 @@ const SIDEBAR_CTA = (
   <GlassCard className="border-violet-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-violet-950/30">
     <div className="mb-3 flex items-center gap-2">
       <Sparkles className="h-4 w-4 text-violet-400" />
-      <p className="text-[13px] font-semibold text-white">Event Oversight</p>
+      <p className="text-[13px] font-semibold text-white">Club Events</p>
     </div>
     <p className="text-[12px] text-gray-400">
-      Monitor registrations, attendance, and event progress across all club activities.
+      Stay updated with upcoming workshops, contests, and mentoring sessions for your mentees.
     </p>
   </GlassCard>
 );
@@ -37,22 +37,22 @@ const SIDEBAR_CTA = (
 function getDetailProps(event) {
   return {
     detailRows: [
-      { label: 'Status',     value: event._bucket, accent: 'text-gray-200 capitalize' },
-      { label: 'Registered', value: event.registrationCount || 0 },
-      { label: 'Attended',   value: event.attendedCount || 0 },
-      { label: 'Access',     value: 'Club Members', accent: 'text-violet-400' },
+      { label: 'Status',      value: event._bucket, accent: 'text-gray-200 capitalize' },
+      { label: 'Registered',  value: event.registrationCount || 0 },
+      { label: 'Attended',    value: event.attendedCount || 0 },
+      { label: 'Access',      value: 'Club Members', accent: 'text-violet-400' },
     ],
   };
 }
 
-export default function AdvisorEventsClient({ events: serverEvents }) {
+export default function MentorEventsClient({ events: serverEvents }) {
   const allEvents = useMemo(() => (serverEvents || []).map(enrichEvent), [serverEvents]);
   const stats = computeStats('observer', allEvents);
   const tabs = TABS_BASE.map((t) => ({ ...t, count: allEvents.filter((e) => filterFn(e, t.value)).length }));
 
   return (
     <EventListLayout
-      pageHeader={{ icon: Calendar, title: 'Events', subtitle: 'Advisor oversight of club events and registrations', accent: 'blue' }}
+      pageHeader={{ icon: Calendar, title: 'Events', subtitle: 'Club events and activities relevant to you and your mentees', accent: 'blue' }}
       tabs={tabs}
       events={allEvents}
       filterFn={filterFn}
