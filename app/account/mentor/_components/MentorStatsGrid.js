@@ -1,117 +1,60 @@
-/**
- * @file Mentor stats grid — responsive card grid showing key
- *   mentoring metrics such as active mentees, sessions held,
- *   and pending tasks.
- * @module MentorStatsGrid
- */
-
 'use client';
 
-import Link from 'next/link';
-import {
-  Users,
-  Calendar,
-  CheckCircle,
-  Star,
-  TrendingUp,
-  MessageSquare,
-} from 'lucide-react';
+import { Users, Calendar, CheckCircle, Star, TrendingUp, MessageSquare } from 'lucide-react';
+import { StatCard } from './_ui';
 
 export default function MentorStatsGrid({ stats }) {
-  const statConfigs = [
+  const cards = [
     {
+      icon: Users,
       label: 'Active Mentees',
       value: stats.activeMentees,
-      href: '/account/mentor/mentees',
-      icon: Users,
-      color: 'blue',
-      shadowColor: 'blue',
+      accent: 'blue',
+      href: '/account/mentor/assigned-members',
+      sublabel: 'assigned to you',
     },
     {
-      label: 'Upcoming',
-      value: stats.upcomingSessions,
-      href: null,
       icon: Calendar,
-      color: 'green',
-      shadowColor: 'green',
+      label: 'Upcoming Sessions',
+      value: stats.upcomingSessions,
+      accent: 'emerald',
+      sublabel: 'scheduled',
     },
     {
-      label: 'Completed',
-      value: stats.completedSessions,
-      href: null,
       icon: CheckCircle,
-      color: 'purple',
-      shadowColor: 'purple',
+      label: 'Sessions Done',
+      value: stats.completedSessions,
+      accent: 'violet',
+      sublabel: 'total completed',
     },
     {
+      icon: Star,
       label: 'Avg. Rating',
       value: stats.averageRating,
-      href: null,
-      icon: Star,
-      color: 'amber',
-      shadowColor: 'amber',
-      isFilled: true,
+      accent: 'amber',
+      sublabel: 'out of 5.0',
     },
     {
-      label: 'Completion',
-      value: `${stats.completionRate}%`,
-      href: null,
       icon: TrendingUp,
-      color: 'cyan',
-      shadowColor: 'cyan',
+      label: 'Completion Rate',
+      value: `${stats.completionRate}%`,
+      accent: 'cyan',
+      sublabel: 'mentee progress',
     },
     {
-      label: 'Messages',
-      value: stats.unreadMessages,
-      href: null,
       icon: MessageSquare,
-      color: 'pink',
-      shadowColor: 'pink',
+      label: 'Unread Messages',
+      value: stats.unreadMessages,
+      accent: 'pink',
+      sublabel: 'need reply',
     },
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-      {statConfigs.map((config, idx) => {
-        const Icon = config.icon;
-        const baseClasses = `group rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-${config.shadowColor}-500/20 sm:p-6`;
-
-        const content = (
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-400">
-                {config.label}
-              </p>
-              <p className="mt-2 text-3xl font-bold text-white">
-                {config.value}
-              </p>
-            </div>
-            {config.isFilled ? (
-              <Icon
-                className={`h-8 w-8 fill-${config.color}-400 text-${config.color}-400 opacity-70 transition-transform duration-300 group-hover:scale-110`}
-              />
-            ) : (
-              <Icon
-                className={`h-8 w-8 text-${config.color}-400 opacity-70 transition-transform duration-300 group-hover:scale-110`}
-              />
-            )}
-          </div>
-        );
-
-        if (config.href) {
-          return (
-            <Link key={idx} href={config.href} className={baseClasses}>
-              {content}
-            </Link>
-          );
-        }
-
-        return (
-          <div key={idx} className={baseClasses}>
-            {content}
-          </div>
-        );
-      })}
+    <div className="grid gap-3 grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      {cards.map((c, i) => (
+        <StatCard key={c.label} delay={i * 0.06} {...c} />
+      ))}
     </div>
   );
 }

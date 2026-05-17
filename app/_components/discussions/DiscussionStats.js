@@ -29,30 +29,29 @@ function StatCard({
   trend,
   className = '',
 }) {
-  const colorClasses = {
-    blue: 'from-blue-500/20 to-blue-500/5 border-blue-500/20 text-blue-400',
-    green:
-      'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
-    yellow:
-      'from-yellow-500/20 to-yellow-500/5 border-yellow-500/20 text-yellow-400',
-    red: 'from-red-500/20 to-red-500/5 border-red-500/20 text-red-400',
-    purple:
-      'from-purple-500/20 to-purple-500/5 border-purple-500/20 text-purple-400',
-    gray: 'from-gray-500/20 to-gray-500/5 border-gray-500/20 text-gray-400',
+  const chipClasses = {
+    blue:   'border-blue-500/20   bg-blue-500/10   text-blue-400',
+    green:  'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+    yellow: 'border-amber-500/20  bg-amber-500/10  text-amber-400',
+    red:    'border-rose-500/20   bg-rose-500/10   text-rose-400',
+    purple: 'border-violet-500/20 bg-violet-500/10 text-violet-400',
+    gray:   'border-white/10      bg-white/5       text-gray-400',
   };
+
+  const chip = chipClasses[color] ?? chipClasses.gray;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-xl border bg-gradient-to-br p-4 ${colorClasses[color]} ${className}`}
+      className={`rounded-2xl border border-white/8 bg-gray-900 p-4 ${className}`}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-400">{label}</p>
+          <p className="text-xs font-medium text-gray-500">{label}</p>
           <p className="mt-1 text-2xl font-bold text-white">{value}</p>
           {trend !== undefined && (
-            <div className="mt-1 flex items-center gap-1 text-xs">
+            <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
               <TrendingUp className="h-3 w-3" />
               <span>
                 {trend > 0 ? '+' : ''}
@@ -61,10 +60,8 @@ function StatCard({
             </div>
           )}
         </div>
-        <div
-          className={`rounded-lg bg-white/5 p-2 ${colorClasses[color].split(' ')[2]}`}
-        >
-          <Icon className="h-5 w-5" />
+        <div className={`rounded-xl border p-2 ${chip}`}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
     </motion.div>
