@@ -1,97 +1,54 @@
-/**
- * @file Pending actions widget — dashboard panel listing items
- *   awaiting executive review (applications, content, approvals).
- * @module ExecutivePendingActions
- */
-
 'use client';
 
-import { UserCheck, UserPlus, FileText, Calendar } from 'lucide-react';
+import { UserCheck, UserPlus, FileText, Calendar, Zap } from 'lucide-react';
+import { GlassCard, SectionHeader, ActionButton } from './_ui';
 
-const iconMap = {
-  UserCheck: UserCheck,
-  UserPlus: UserPlus,
-  FileText: FileText,
-  Calendar: Calendar,
-};
+const iconMap = { UserCheck, UserPlus, FileText, Calendar };
 
-const colorClasses = {
-  red: {
-    border: 'border-red-500/30',
-    bg: 'bg-red-500/10',
-    hoverBg: 'hover:bg-red-500/20',
-    icon: 'text-red-400',
-    text: 'text-red-300',
-  },
-  amber: {
-    border: 'border-amber-500/30',
-    bg: 'bg-amber-500/10',
-    hoverBg: 'hover:bg-amber-500/20',
-    icon: 'text-amber-400',
-    text: 'text-amber-300',
-  },
-  blue: {
-    border: 'border-blue-500/30',
-    bg: 'bg-blue-500/10',
-    hoverBg: 'hover:bg-blue-500/20',
-    icon: 'text-blue-400',
-    text: 'text-blue-300',
-  },
-  orange: {
-    border: 'border-orange-500/30',
-    bg: 'bg-orange-500/10',
-    hoverBg: 'hover:bg-orange-500/20',
-    icon: 'text-orange-400',
-    text: 'text-orange-300',
-  },
+const ACCENT_ROW = {
+  red:    'border-rose-500/20 bg-rose-500/10 text-rose-400',
+  amber:  'border-amber-500/20 bg-amber-500/10 text-amber-400',
+  blue:   'border-blue-500/20 bg-blue-500/10 text-blue-400',
+  orange: 'border-orange-500/20 bg-orange-500/10 text-orange-400',
 };
 
 export default function PendingActions({ pendingActions }) {
-  const totalCount = pendingActions.reduce(
-    (sum, action) => sum + action.count,
-    0
-  );
+  const totalCount = pendingActions.reduce((sum, a) => sum + a.count, 0);
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">⚡ Pending Actions</h2>
-          <p className="text-sm text-gray-400">
-            Items requiring immediate attention
-          </p>
-        </div>
-        <span className="rounded-full bg-amber-500/20 px-3 py-1 text-sm font-semibold text-amber-300">
-          {totalCount} Total
-        </span>
-      </div>
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Zap}
+        title="Pending Actions"
+        subtitle="Items requiring immediate attention"
+        accent="amber"
+        action={
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400 px-2.5 py-0.5 text-[11px] font-semibold">
+            {totalCount} total
+          </span>
+        }
+      />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {pendingActions.map((action) => {
           const Icon = iconMap[action.icon];
-          const colors = colorClasses[action.color];
+          const chip = ACCENT_ROW[action.color] ?? ACCENT_ROW.blue;
           return (
             <div
               key={action.id}
-              className={`group cursor-pointer rounded-lg border ${colors.border} ${colors.bg} p-4 transition-all duration-200 ${colors.hoverBg}`}
+              className={`rounded-xl border p-4 transition-all hover:brightness-110 cursor-pointer ${chip.split(' ')[0]} ${chip.split(' ')[1]}`}
             >
-              <div className="flex items-center justify-between">
-                <Icon className={`h-5 w-5 ${colors.icon}`} />
-                <span className={`text-2xl font-bold ${colors.text}`}>
-                  {action.count}
-                </span>
+              <div className="flex items-center justify-between mb-3">
+                {Icon && <Icon className={`h-4.5 w-4.5 ${chip.split(' ')[2]}`} />}
+                <span className={`text-2xl font-bold ${chip.split(' ')[2]}`}>{action.count}</span>
               </div>
-              <p className={`mt-2 text-sm font-semibold ${colors.text}`}>
-                {action.label}
-              </p>
-              <button
-                className={`mt-2 text-xs ${colors.icon} transition-colors group-hover:brightness-125`}
-              >
-                View Details →
+              <p className="text-sm font-semibold text-gray-200">{action.label}</p>
+              <button className={`mt-2 text-[11px] font-medium ${chip.split(' ')[2]} hover:underline`}>
+                View details →
               </button>
             </div>
           );
         })}
       </div>
-    </div>
+    </GlassCard>
   );
 }

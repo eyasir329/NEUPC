@@ -1,80 +1,72 @@
-/**
- * @file Today’s schedule — dashboard widget showing the mentor’s
- *   upcoming sessions and tasks for the current day.
- * @module MentorTodaysSchedule
- */
-
 'use client';
 
 import Link from 'next/link';
-import { Video, Users, Clock, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Video, Users, Clock, ExternalLink, Calendar } from 'lucide-react';
+import { GlassCard, SectionHeader, Pill, ActionButton, Avatar, EmptyState } from './_ui';
 
 export default function TodaysSchedule({ todaySessions }) {
   return (
-    <div className="lg:col-span-2">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white">
-              📅 Today's Schedule
-            </h2>
-            <p className="text-sm text-gray-400">
-              Your upcoming mentoring sessions
-            </p>
-          </div>
-          <Link
-            href="/account/mentor/sessions"
-            className="rounded-lg bg-green-500/20 px-3 py-1.5 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/30"
-          >
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Calendar}
+        title="Today's Schedule"
+        subtitle="Upcoming mentoring sessions"
+        accent="emerald"
+        action={
+          <ActionButton href="/account/mentor/sessions" tone="emerald" icon={Calendar}>
             + Schedule
-          </Link>
-        </div>
-        <div className="space-y-4">
-          {todaySessions.map((session) => (
-            <div
+          </ActionButton>
+        }
+      />
+
+      {todaySessions.length === 0 ? (
+        <EmptyState
+          icon={Calendar}
+          title="No sessions today"
+          description="Schedule a session with one of your mentees."
+          accent="emerald"
+        />
+      ) : (
+        <div className="space-y-3">
+          {todaySessions.map((session, i) => (
+            <motion.div
               key={session.id}
-              className="group rounded-lg border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-green-500/30 hover:bg-white/10"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: i * 0.06 }}
+              className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-emerald-500/20 hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-green-500 to-emerald-500">
-                    <Video className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-white group-hover:text-green-300">
-                      {session.title}
-                    </h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {session.mentee}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {session.time}
-                      </span>
-                      <span>•</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          session.type === '1:1'
-                            ? 'bg-blue-500/20 text-blue-300'
-                            : 'bg-purple-500/20 text-purple-300'
-                        }`}
-                      >
-                        {session.type}
-                      </span>
-                    </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
+                  <Video className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white text-sm truncate">
+                    {session.title}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Avatar name={session.mentee} size="sm" />
+                      {session.mentee}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {session.time}
+                    </span>
+                    <Pill tone={session.type === '1:1' ? 'blue' : 'violet'}>
+                      {session.type}
+                    </Pill>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 rounded-lg bg-green-500/20 px-4 py-2 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/30">
-                  Join <ExternalLink className="h-4 w-4" />
-                </button>
               </div>
-            </div>
+              <ActionButton tone="emerald" icon={ExternalLink} className="shrink-0">
+                Join
+              </ActionButton>
+            </motion.div>
           ))}
         </div>
-      </div>
-    </div>
+      )}
+    </GlassCard>
   );
 }

@@ -1,93 +1,86 @@
-/**
- * @file Mentee progress overview — dashboard summary of assigned
- *   mentees’ learning progress, task completion rates, and skill growth.
- * @module MentorMenteeProgressOverview
- */
-
 'use client';
 
-import Link from 'next/link';
-import { CheckCircle, Target, AlertCircle } from 'lucide-react';
+import { CheckCircle, Target, AlertCircle, Users } from 'lucide-react';
+import { GlassCard, SectionHeader, GradientBar, Pill, ActionButton, Avatar, EmptyState } from './_ui';
+
+const STATUS_CONFIG = {
+  Excellent:      { tone: 'emerald', icon: CheckCircle },
+  'On Track':     { tone: 'blue',    icon: Target },
+  'Needs Attention': { tone: 'amber', icon: AlertCircle },
+};
+
+const PROGRESS_TONE = {
+  emerald: 'emerald',
+  green: 'emerald',
+  amber: 'amber',
+  red: 'rose',
+};
 
 export default function MenteeProgressOverview({ menteeProgress }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">
-            👥 Mentee Progress Overview
-          </h2>
-          <p className="text-sm text-gray-400">
-            Track your mentees' learning journey
-          </p>
-        </div>
-        <Link
-          href="/account/mentor/mentees"
-          className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-sm font-semibold text-blue-300 transition-colors hover:bg-blue-500/30"
-        >
-          View All
-        </Link>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-full">
-          <div className="grid gap-3">
-            {menteeProgress.map((mentee) => (
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={Users}
+        title="Mentee Progress"
+        subtitle="Track your mentees' learning journey"
+        accent="blue"
+        action={
+          <ActionButton href="/account/mentor/assigned-members" tone="primary">
+            View All
+          </ActionButton>
+        }
+      />
+
+      {menteeProgress.length === 0 ? (
+        <EmptyState icon={Users} title="No mentees yet" accent="blue" />
+      ) : (
+        <div className="space-y-3">
+          {menteeProgress.map((mentee) => {
+            const cfg = STATUS_CONFIG[mentee.status] ?? STATUS_CONFIG['On Track'];
+            const Icon = cfg.icon;
+            const tone = PROGRESS_TONE[mentee.statusColor] ?? 'blue';
+
+            return (
               <div
                 key={mentee.id}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-white/20 hover:bg-white/10 sm:grid-cols-12 sm:items-center"
+                className="grid grid-cols-1 gap-3 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-white/10 hover:bg-white/4 sm:grid-cols-12 sm:items-center"
               >
-                <div className="sm:col-span-3">
-                  <p className="font-semibold text-white">{mentee.name}</p>
-                  <p className="mt-1 text-xs text-gray-400">{mentee.roadmap}</p>
+                {/* Name */}
+                <div className="flex items-center gap-2.5 sm:col-span-3">
+                  <Avatar name={mentee.name} size="sm" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{mentee.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{mentee.roadmap}</p>
+                  </div>
                 </div>
-                <div className="sm:col-span-3">
+
+                {/* Progress bar */}
+                <div className="sm:col-span-4">
                   <div className="flex items-center gap-2">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className={`h-full rounded-full bg-${mentee.statusColor}-500 transition-all duration-500`}
-                        style={{ width: `${mentee.progress}%` }}
-                      />
+                    <div className="flex-1">
+                      <GradientBar value={mentee.progress} tone={tone} height="h-1.5" />
                     </div>
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-xs font-bold text-white w-8 text-right">
                       {mentee.progress}%
                     </span>
                   </div>
                 </div>
+
+                {/* Status */}
                 <div className="sm:col-span-3">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
-                      mentee.statusColor === 'emerald'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : mentee.statusColor === 'green'
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-amber-500/20 text-amber-300'
-                    }`}
-                  >
-                    {mentee.status === 'Excellent' && (
-                      <CheckCircle className="h-3 w-3" />
-                    )}
-                    {mentee.status === 'On Track' && (
-                      <Target className="h-3 w-3" />
-                    )}
-                    {mentee.status === 'Needs Attention' && (
-                      <AlertCircle className="h-3 w-3" />
-                    )}
-                    {mentee.status}
-                  </span>
+                  <Pill tone={cfg.tone} icon={Icon}>{mentee.status}</Pill>
                 </div>
-                <div className="flex items-center justify-between gap-2 sm:col-span-3 sm:justify-end">
-                  <span className="text-xs text-gray-400">
-                    Last: {mentee.lastSession}
-                  </span>
-                  <button className="rounded bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/30">
-                    Message
-                  </button>
+
+                {/* Meta + action */}
+                <div className="flex items-center justify-between gap-2 sm:col-span-2 sm:justify-end">
+                  <span className="text-xs text-gray-500">Last: {mentee.lastSession}</span>
+                  <ActionButton tone="primary">Message</ActionButton>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </div>
-    </div>
+      )}
+    </GlassCard>
   );
 }

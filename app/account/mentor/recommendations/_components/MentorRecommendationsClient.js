@@ -1,31 +1,57 @@
-/**
- * @file Mentor recommendations client — interface for creating and
- *   managing learning resource recommendations for assigned mentees.
- * @module MentorRecommendationsClient
- */
-
 'use client';
 
 import { useState } from 'react';
-import {
-  Star,
-  Search,
-  X,
-  TrendingUp,
-  Award,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Star, Search, TrendingUp, Award, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { saveMentorNotesAction } from '@/app/_lib/mentor-actions';
+import {
+  PageShell, PageHeader, GlassCard, StatCard, Avatar, Pill, ActionButton, EmptyState,
+} from '@/app/account/mentor/_components/_ui';
 
-export default function MentorRecommendationsClient({
-  mentorships = [],
-  mentorId,
-}) {
+const MOCK_MENTORSHIPS = [
+  {
+    id: 'mp1', status: 'active', focus_area: 'Frontend Development — React, TypeScript, CSS Architecture',
+    notes: 'Aisha is one of the strongest mentees I have worked with. She has an exceptional eye for UI detail and writes clean, well-typed React components. I recommend her for any frontend internship or junior role — she is more than ready. She should focus on state management at scale (Zustand or Redux Toolkit) and testing (React Testing Library) before her next interview cycle.',
+    'users!mentorships_mentee_id_fkey': { full_name: 'Aisha Rahman', member_profiles: { session: '2021-22', department: 'CSE', skills: ['React', 'TypeScript', 'CSS', 'Figma', 'Next.js'] } },
+    member_progress: [
+      { id: 'p1', period: 'May 2026',   problems_solved: 24, contests_participated: 2, mentor_notes: 'Completed TypeScript generics module. Great progress.' },
+      { id: 'p2', period: 'Apr 2026',   problems_solved: 31, contests_participated: 3, mentor_notes: 'Won 2nd place in internal UI contest.' },
+      { id: 'p3', period: 'Mar 2026',   problems_solved: 18, contests_participated: 1, mentor_notes: 'Focused on building portfolio project.' },
+    ],
+  },
+  {
+    id: 'mp2', status: 'active', focus_area: 'Backend Development — Node.js, PostgreSQL, REST APIs',
+    notes: 'Rahul has shown significant improvement over the last month after we resolved his mental model around async/await and the Node.js event loop. He is a diligent worker who asks good questions. I recommend more practice on database query optimisation and system design fundamentals before targeting backend roles.',
+    'users!mentorships_mentee_id_fkey': { full_name: 'Rahul Sharma', member_profiles: { session: '2022-23', department: 'CSE', skills: ['Node.js', 'Express', 'PostgreSQL', 'REST API', 'Docker'] } },
+    member_progress: [
+      { id: 'p4', period: 'May 2026', problems_solved: 15, contests_participated: 1, mentor_notes: 'Fixed async bug independently — great milestone.' },
+      { id: 'p5', period: 'Apr 2026', problems_solved: 9,  contests_participated: 0, mentor_notes: 'Struggled with middleware; extra session scheduled.' },
+    ],
+  },
+  {
+    id: 'mp3', status: 'active', focus_area: 'Competitive Programming — DSA, Graph Algorithms, DP',
+    notes: 'Sara is exceptional — Codeforces rating 1720 and rising. She solved a Div 2 D problem in our last session without hints. I strongly recommend her for ICPC training and any competitive programming leadership role. Next step: advance to Candidate Master (1900+) by the end of the year.',
+    'users!mentorships_mentee_id_fkey': { full_name: 'Sara Ahmed', member_profiles: { session: '2022-23', department: 'CSE', skills: ['C++', 'Competitive Programming', 'Graph Theory', 'Dynamic Programming', 'Segment Trees'] } },
+    member_progress: [
+      { id: 'p6', period: 'May 2026', problems_solved: 47, contests_participated: 4, mentor_notes: 'Achieved personal best rating — 1720.' },
+      { id: 'p7', period: 'Apr 2026', problems_solved: 52, contests_participated: 5, mentor_notes: 'Solved first Div 2 D problem independently.' },
+      { id: 'p8', period: 'Mar 2026', problems_solved: 38, contests_participated: 3, mentor_notes: 'Covered lazy propagation — implemented flawlessly.' },
+    ],
+  },
+  {
+    id: 'mp4', status: 'active', focus_area: 'Full Stack — MERN, Docker, CI/CD',
+    notes: null,
+    'users!mentorships_mentee_id_fkey': { full_name: 'John Doe', member_profiles: { session: '2023-24', department: 'CSE', skills: ['React', 'Node.js', 'MongoDB', 'Docker', 'GitHub Actions'] } },
+    member_progress: [
+      { id: 'p9', period: 'May 2026', problems_solved: 12, contests_participated: 1, mentor_notes: 'Containerised his side project — solid effort.' },
+    ],
+  },
+];
+
+export default function MentorRecommendationsClient({ mentorships: rawMentorships = [], mentorId }) {
+  const mentorships = rawMentorships.length === 0 ? MOCK_MENTORSHIPS : rawMentorships;
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(null);
-  const [editNotes, setEditNotes] = useState(null); // { mentorshipId, notes }
+  const [editNotes, setEditNotes] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -43,82 +69,42 @@ export default function MentorRecommendationsClient({
     fd.set('notes', editNotes?.notes || '');
     const result = await saveMentorNotesAction(fd);
     if (result.error) setMessage({ type: 'error', text: result.error });
-    else {
-      setMessage({ type: 'success', text: 'Notes saved!' });
-      setEditNotes(null);
-    }
+    else { setMessage({ type: 'success', text: 'Notes saved!' }); setEditNotes(null); }
     setSaving(false);
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Recommendations</h1>
-        <p className="mt-1 text-gray-400">
-          Track mentee progress and write recommendations
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Star}
+        title="Recommendations"
+        subtitle="Track mentee progress and write recommendations"
+        accent="amber"
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {[
-          {
-            label: 'Active Mentees',
-            value: activeMentorships.length,
-            color: 'text-blue-400',
-            icon: Star,
-          },
-          {
-            label: 'With Notes',
-            value: mentorships.filter((m) => m.notes).length,
-            color: 'text-green-400',
-            icon: MessageSquare,
-          },
-          {
-            label: 'Completed',
-            value: mentorships.filter((m) => m.status === 'completed').length,
-            color: 'text-purple-400',
-            icon: Award,
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <s.icon className={`h-4 w-4 ${s.color}`} />
-              <p className="text-sm text-gray-400">{s.label}</p>
-            </div>
-            <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
+          { label: 'Active Mentees', value: activeMentorships.length, accent: 'blue', icon: Star },
+          { label: 'With Notes', value: mentorships.filter((m) => m.notes).length, accent: 'emerald', icon: MessageSquare },
+          { label: 'Completed', value: mentorships.filter((m) => m.status === 'completed').length, accent: 'violet', icon: Award },
+        ].map((s, i) => (
+          <StatCard key={s.label} label={s.label} value={s.value} accent={s.accent} icon={s.icon} delay={i * 0.06} />
         ))}
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search mentees…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-3 pl-9 text-sm text-white placeholder-gray-500 focus:outline-none"
-        />
+        <input type="text" placeholder="Search mentees…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-3 pl-9 text-sm text-white placeholder-gray-500 focus:outline-none" />
       </div>
 
       {message && (
-        <div
-          className={`rounded-xl p-3 text-sm ${message.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
-        >
-          {message.text}
-        </div>
+        <div className={`rounded-xl p-3 text-sm ${message.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>{message.text}</div>
       )}
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 py-16 text-center backdrop-blur-xl">
-          <Star className="mx-auto mb-4 h-16 w-16 text-gray-600" />
-          <p className="text-lg font-medium text-gray-400">No active mentees</p>
-        </div>
+        <GlassCard padding="py-16">
+          <EmptyState icon={Star} title="No active mentees" accent="amber" />
+        </GlassCard>
       ) : (
         <div className="space-y-3">
           {filtered.map((m) => {
@@ -128,23 +114,12 @@ export default function MentorRecommendationsClient({
             const isExpanded = expanded === m.id;
 
             return (
-              <div
-                key={m.id}
-                className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl"
-              >
-                {/* Header Row */}
-                <div
-                  className="flex cursor-pointer items-center justify-between p-5"
-                  onClick={() => setExpanded(isExpanded ? null : m.id)}
-                >
+              <GlassCard key={m.id} padding="p-0" className="overflow-hidden">
+                <div className="flex cursor-pointer items-center justify-between p-5" onClick={() => setExpanded(isExpanded ? null : m.id)}>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-bold text-white">
-                      {mentee?.full_name?.charAt(0) || '?'}
-                    </div>
+                    <Avatar name={mentee?.full_name || '?'} size="md" />
                     <div>
-                      <h3 className="font-semibold text-white">
-                        {mentee?.full_name}
-                      </h3>
+                      <h3 className="font-semibold text-white text-sm">{mentee?.full_name}</h3>
                       <p className="text-xs text-gray-400">
                         {profile?.session ? `Session ${profile.session}` : ''}
                         {profile?.department ? ` · ${profile.department}` : ''}
@@ -153,164 +128,94 @@ export default function MentorRecommendationsClient({
                   </div>
                   <div className="flex items-center gap-3">
                     {m.notes && (
-                      <span className="flex items-center gap-1 text-xs text-green-400">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Has notes
-                      </span>
+                      <Pill tone="emerald" icon={MessageSquare}>Has notes</Pill>
                     )}
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    )}
+                    {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                   </div>
                 </div>
 
-                {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="space-y-5 border-t border-white/10 p-5 pt-4">
-                    {/* Focus Area */}
+                  <div className="space-y-5 border-t border-white/6 p-5 pt-4">
                     {m.focus_area && (
                       <div>
-                        <p className="mb-1 text-xs font-medium tracking-wider text-gray-500 uppercase">
-                          Focus Area
-                        </p>
+                        <p className="mb-1 text-xs font-medium tracking-wider text-gray-500 uppercase">Focus Area</p>
                         <p className="text-sm text-gray-300">{m.focus_area}</p>
                       </div>
                     )}
 
-                    {/* Skills */}
                     {profile?.skills?.length > 0 && (
                       <div>
-                        <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">
-                          Skills
-                        </p>
+                        <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">Skills</p>
                         <div className="flex flex-wrap gap-2">
                           {profile.skills.map((skill) => (
-                            <span
-                              key={skill}
-                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300"
-                            >
-                              {skill}
-                            </span>
+                            <span key={skill} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300">{skill}</span>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Progress Records */}
                     {progress.length > 0 && (
                       <div>
                         <p className="mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wider text-gray-500 uppercase">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          Progress History
+                          <TrendingUp className="h-3.5 w-3.5" /> Progress History
                         </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           {progress.slice(0, 4).map((p) => (
-                            <div
-                              key={p.id}
-                              className="rounded-xl bg-white/5 p-3"
-                            >
-                              <p className="mb-2 text-xs font-medium text-gray-300">
-                                {p.period}
-                              </p>
+                            <div key={p.id} className="rounded-xl border border-white/6 bg-white/2 p-3">
+                              <p className="mb-2 text-xs font-medium text-gray-300">{p.period}</p>
                               <div className="flex gap-4 text-sm">
                                 <div className="text-center">
-                                  <p className="font-semibold text-blue-400">
-                                    {p.problems_solved ?? 0}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Problems
-                                  </p>
+                                  <p className="font-semibold text-blue-400">{p.problems_solved ?? 0}</p>
+                                  <p className="text-xs text-gray-500">Problems</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="font-semibold text-green-400">
-                                    {p.contests_participated ?? 0}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Contests
-                                  </p>
+                                  <p className="font-semibold text-emerald-400">{p.contests_participated ?? 0}</p>
+                                  <p className="text-xs text-gray-500">Contests</p>
                                 </div>
                               </div>
-                              {p.mentor_notes && (
-                                <p className="mt-2 text-xs text-gray-500">
-                                  {p.mentor_notes}
-                                </p>
-                              )}
+                              {p.mentor_notes && <p className="mt-2 text-xs text-gray-500">{p.mentor_notes}</p>}
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Mentor Notes */}
                     <div>
-                      <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">
-                        Mentor Notes / Recommendation
-                      </p>
+                      <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">Mentor Notes / Recommendation</p>
                       {editNotes?.mentorshipId === m.id ? (
                         <div className="space-y-2">
                           <textarea
                             rows={4}
                             value={editNotes.notes}
-                            onChange={(e) =>
-                              setEditNotes({
-                                ...editNotes,
-                                notes: e.target.value,
-                              })
-                            }
+                            onChange={(e) => setEditNotes({ ...editNotes, notes: e.target.value })}
                             placeholder="Write your recommendation or notes about this mentee…"
                             className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none"
                           />
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => setEditNotes(null)}
-                              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 hover:bg-white/10"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => handleSaveNotes(m.id)}
-                              disabled={saving}
-                              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              {saving ? 'Saving…' : 'Save Notes'}
-                            </button>
+                            <ActionButton tone="ghost" onClick={() => setEditNotes(null)}>Cancel</ActionButton>
+                            <ActionButton tone="primary" onClick={() => handleSaveNotes(m.id)}>{saving ? 'Saving…' : 'Save Notes'}</ActionButton>
                           </div>
                         </div>
                       ) : (
                         <div>
                           {m.notes ? (
-                            <p className="mb-3 rounded-xl bg-white/5 p-3 text-sm text-gray-300">
-                              {m.notes}
-                            </p>
+                            <p className="mb-3 rounded-xl border border-white/6 bg-white/2 p-3 text-sm text-gray-300">{m.notes}</p>
                           ) : (
-                            <p className="mb-3 text-sm text-gray-500 italic">
-                              No notes written yet.
-                            </p>
+                            <p className="mb-3 text-sm italic text-gray-500">No notes written yet.</p>
                           )}
-                          <button
-                            onClick={() =>
-                              setEditNotes({
-                                mentorshipId: m.id,
-                                notes: m.notes || '',
-                              })
-                            }
-                            className="flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/20"
-                          >
-                            <MessageSquare className="h-4 w-4" />
+                          <ActionButton tone="primary" icon={MessageSquare} onClick={() => setEditNotes({ mentorshipId: m.id, notes: m.notes || '' })}>
                             {m.notes ? 'Edit Notes' : 'Write Notes'}
-                          </button>
+                          </ActionButton>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-              </div>
+              </GlassCard>
             );
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

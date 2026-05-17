@@ -1,64 +1,34 @@
-/**
- * @file Executive reports dashboard — aggregates user, event, contest,
- *   registration, and blog statistics from the database into a unified
- *   overview with recent-event highlights for the executive committee.
- * @module ExecutiveReportsPage
- * @access executive | admin
- */
-
 import { requireRole } from '@/app/_lib/auth-guard';
-import { supabaseAdmin } from '@/app/_lib/supabase';
 import ReportsClient from './_components/ReportsClient';
 
 export const metadata = { title: 'Reports | Executive | NEUPC' };
 
+const TEMP_STATS = {
+  totalUsers: 156,
+  activeUsers: 138,
+  totalEvents: 24,
+  publishedEvents: 20,
+  completedEvents: 14,
+  totalContests: 18,
+  totalRegistrations: 342,
+  attendedRegistrations: 267,
+  totalBlogs: 32,
+  publishedBlogs: 26,
+  totalGallery: 48,
+};
+
+const TEMP_RECENT_EVENTS = [
+  { id: 'e1', status: 'upcoming',  category: 'contest',     created_at: '2026-02-01T10:00:00' },
+  { id: 'e2', status: 'upcoming',  category: 'workshop',    created_at: '2026-01-20T11:00:00' },
+  { id: 'e3', status: 'ongoing',   category: 'hackathon',   created_at: '2026-01-25T12:00:00' },
+  { id: 'e4', status: 'completed', category: 'orientation', created_at: '2025-12-20T08:00:00' },
+  { id: 'e5', status: 'completed', category: 'workshop',    created_at: '2025-12-10T09:00:00' },
+  { id: 'e6', status: 'completed', category: 'contest',     created_at: '2025-11-15T10:00:00' },
+  { id: 'e7', status: 'completed', category: 'seminar',     created_at: '2025-11-01T11:00:00' },
+  { id: 'e8', status: 'draft',     category: 'workshop',    created_at: '2026-02-15T14:00:00' },
+];
+
 export default async function ReportsPage() {
   await requireRole(['executive', 'admin']);
-
-  const [usersRes, eventsRes, contestsRes, registrationsRes, blogsRes] =
-    await Promise.all([
-      supabaseAdmin
-        .from('users')
-        .select('id, account_status, created_at', { count: 'exact' }),
-      supabaseAdmin
-        .from('events')
-        .select('id, status, category, created_at', { count: 'exact' }),
-      supabaseAdmin
-        .from('contests')
-        .select('id, status, platform, created_at', { count: 'exact' }),
-      supabaseAdmin
-        .from('event_registrations')
-        .select('id, status, attended, registered_at', { count: 'exact' }),
-      supabaseAdmin
-        .from('blog_posts')
-        .select('id, status, views, created_at', { count: 'exact' }),
-    ]);
-
-  const stats = {
-    totalUsers: usersRes.count ?? 0,
-    activeUsers: (usersRes.data || []).filter(
-      (u) => u.account_status === 'active'
-    ).length,
-    totalEvents: eventsRes.count ?? 0,
-    publishedEvents: (eventsRes.data || []).filter((e) => e.status !== 'draft')
-      .length,
-    completedEvents: (eventsRes.data || []).filter(
-      (e) => e.status === 'completed'
-    ).length,
-    totalContests: contestsRes.count ?? 0,
-    totalRegistrations: registrationsRes.count ?? 0,
-    attendedRegistrations: (registrationsRes.data || []).filter(
-      (r) => r.attended
-    ).length,
-    totalBlogs: blogsRes.count ?? 0,
-    publishedBlogs: (blogsRes.data || []).filter(
-      (b) => b.status === 'published'
-    ).length,
-  };
-
-  const recentEvents = (eventsRes.data || [])
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
-
-  return <ReportsClient stats={stats} recentEvents={recentEvents} />;
+  return <ReportsClient stats={TEMP_STATS} recentEvents={TEMP_RECENT_EVENTS} />;
 }

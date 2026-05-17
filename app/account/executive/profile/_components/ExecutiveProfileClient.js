@@ -22,6 +22,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { execUpdateProfileAction } from '@/app/_lib/executive-actions';
+import { PageShell, PageHeader, GlassCard } from '@/app/account/executive/_components/_ui';
 
 function Avatar({ name, size = 'lg' }) {
   const initials =
@@ -96,27 +97,25 @@ export default function ExecutiveProfileClient({
   const committee = committeeInfo;
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">My Profile</h1>
-          <p className="mt-1 text-gray-400">
-            Manage your information and links
-          </p>
-        </div>
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/10"
-          >
-            <Edit2 className="h-4 w-4" /> Edit Profile
-          </button>
-        )}
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={User}
+        title="My Profile"
+        subtitle="Manage your information and links"
+        accent="blue"
+        actions={
+          !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/10"
+            >
+              <Edit2 className="h-4 w-4" /> Edit Profile
+            </button>
+          )
+        }
+      />
 
-      {/* Profile Card */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+      <GlassCard padding="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Avatar name={user?.full_name} />
           <div className="min-w-0 flex-1">
@@ -144,7 +143,7 @@ export default function ExecutiveProfileClient({
             )}
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* View / Edit */}
       {editing ? (
@@ -330,6 +329,6 @@ export default function ExecutiveProfileClient({
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

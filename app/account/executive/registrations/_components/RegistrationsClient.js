@@ -23,6 +23,7 @@ import {
   execUpdateRegistrationAction,
   execMarkAttendedAction,
 } from '@/app/_lib/executive-actions';
+import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/executive/_components/_ui';
 
 const STATUS_CONFIG = {
   registered: {
@@ -155,17 +156,15 @@ export default function RegistrationsClient({ events }) {
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Event Registrations</h1>
-        <p className="mt-1 text-gray-400">
-          View and manage registrations for events
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={ClipboardCheck}
+        title="Event Registrations"
+        subtitle="View and manage registrations for events"
+        accent="blue"
+      />
 
-      {/* Event Selector */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+      <GlassCard padding="p-5">
         <label className="mb-2 block text-sm font-medium text-gray-300">
           Select Event
         </label>
@@ -184,40 +183,15 @@ export default function RegistrationsClient({ events }) {
           </select>
           <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
         </div>
-      </div>
+      </GlassCard>
 
       {selectedEventId && (
         <>
-          {/* Stats */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {[
-              { label: 'Total', value: stats.total, color: 'text-blue-400' },
-              {
-                label: 'Confirmed',
-                value: stats.confirmed,
-                color: 'text-cyan-400',
-              },
-              {
-                label: 'Attended',
-                value: stats.attended,
-                color: 'text-green-400',
-              },
-              {
-                label: 'Cancelled',
-                value: stats.cancelled,
-                color: 'text-red-400',
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
-              >
-                <p className="text-sm text-gray-400">{s.label}</p>
-                <p className={`mt-1 text-3xl font-bold ${s.color}`}>
-                  {s.value}
-                </p>
-              </div>
-            ))}
+            <StatCard icon={Users}        label="Total"     value={stats.total}     accent="blue"   />
+            <StatCard icon={UserCheck}    label="Confirmed" value={stats.confirmed} accent="cyan"   />
+            <StatCard icon={CheckCircle}  label="Attended"  value={stats.attended}  accent="emerald"/>
+            <StatCard icon={XCircle}      label="Cancelled" value={stats.cancelled} accent="rose"   />
           </div>
 
           {/* Filters + Export */}
@@ -380,6 +354,6 @@ export default function RegistrationsClient({ events }) {
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

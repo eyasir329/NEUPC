@@ -18,42 +18,8 @@ import {
   Award,
   FileText,
 } from 'lucide-react';
+import { PageShell, PageHeader, GlassCard, GradientBar, StatCard } from '@/app/account/executive/_components/_ui';
 
-function StatCard({ icon: Icon, label, value, sub, color }) {
-  return (
-    <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-      <div className={`rounded-xl p-2.5 ${color}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="mt-0.5 text-3xl font-bold text-white">{value}</p>
-        {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-function ProgressBar({ label, value, max, color }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-sm">
-        <span className="text-gray-300">{label}</span>
-        <span className="text-gray-400">
-          {value} <span className="text-gray-600">/ {max}</span>
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-white/5">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${color}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="mt-0.5 text-right text-xs text-gray-500">{pct}%</p>
-    </div>
-  );
-}
 
 export default function ReportsClient({ stats, recentEvents }) {
   const attendanceRate =
@@ -72,14 +38,13 @@ export default function ReportsClient({ stats, recentEvents }) {
       : 0;
 
   return (
-    <div className="space-y-8 px-4 pt-6 pb-8 sm:space-y-10 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Reports & Analytics</h1>
-        <p className="mt-1 text-gray-400">
-          Overview of club activity and performance metrics
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={BarChart2}
+        title="Reports & Analytics"
+        subtitle="Overview of club activity and performance metrics"
+        accent="violet"
+      />
 
       {/* Primary Stats */}
       <div>
@@ -87,46 +52,16 @@ export default function ReportsClient({ stats, recentEvents }) {
           Club Overview
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            icon={Users}
-            label="Total Members"
-            value={stats.totalUsers}
-            sub={`${stats.activeUsers} active`}
-            color="bg-blue-500/20 text-blue-400"
-          />
-          <StatCard
-            icon={Calendar}
-            label="Total Events"
-            value={stats.totalEvents}
-            sub={`${stats.completedEvents} completed`}
-            color="bg-purple-500/20 text-purple-400"
-          />
-          <StatCard
-            icon={Trophy}
-            label="Contests"
-            value={stats.totalContests}
-            color="bg-amber-500/20 text-amber-400"
-          />
-          <StatCard
-            icon={Users}
-            label="Registrations"
-            value={stats.totalRegistrations}
-            sub={`${stats.attendedRegistrations} attended`}
-            color="bg-emerald-500/20 text-emerald-400"
-          />
-          <StatCard
-            icon={BookOpen}
-            label="Blog Posts"
-            value={stats.totalBlogs}
-            sub={`${stats.publishedBlogs} published`}
-            color="bg-rose-500/20 text-rose-400"
-          />
-          <StatCard
-            icon={Image}
-            label="Gallery Items"
-            value={stats.totalGallery ?? '—'}
-            color="bg-cyan-500/20 text-cyan-400"
-          />
+          {[
+            { icon: Users,    label: 'Total Members',   value: stats.totalUsers,         sublabel: `${stats.activeUsers} active`,          accent: 'blue'   },
+            { icon: Calendar, label: 'Total Events',    value: stats.totalEvents,        sublabel: `${stats.completedEvents} completed`,    accent: 'violet' },
+            { icon: Trophy,   label: 'Contests',        value: stats.totalContests,                                                         accent: 'amber'  },
+            { icon: Users,    label: 'Registrations',   value: stats.totalRegistrations, sublabel: `${stats.attendedRegistrations} attended`,accent: 'emerald'},
+            { icon: BookOpen, label: 'Blog Posts',      value: stats.totalBlogs,         sublabel: `${stats.publishedBlogs} published`,     accent: 'rose'   },
+            { icon: Image,    label: 'Gallery Items',   value: stats.totalGallery ?? '—',                                                   accent: 'cyan'   },
+          ].map((s, i) => (
+            <StatCard key={s.label} delay={i * 0.05} {...s} />
+          ))}
         </div>
       </div>
 
@@ -136,40 +71,40 @@ export default function ReportsClient({ stats, recentEvents }) {
           Performance Rates
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+          <GlassCard padding="p-6" className="space-y-5">
             <div className="flex items-center gap-2 font-semibold text-white">
               <TrendingUp className="h-5 w-5 text-emerald-400" /> Engagement
             </div>
-            <ProgressBar
-              label="Event Attendance"
-              value={stats.attendedRegistrations}
-              max={stats.totalRegistrations}
-              color="bg-emerald-500"
-            />
-            <ProgressBar
-              label="Event Completion"
-              value={stats.completedEvents}
-              max={stats.totalEvents}
-              color="bg-blue-500"
-            />
-          </div>
-          <div className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            {[
+              { label: 'Event Attendance', value: stats.attendedRegistrations, max: stats.totalRegistrations, tone: 'emerald' },
+              { label: 'Event Completion', value: stats.completedEvents,       max: stats.totalEvents,        tone: 'blue'    },
+            ].map((r) => (
+              <div key={r.label}>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span className="text-gray-300">{r.label}</span>
+                  <span className="text-gray-400">{r.value} <span className="text-gray-600">/ {r.max}</span></span>
+                </div>
+                <GradientBar value={r.value} max={r.max} tone={r.tone} />
+              </div>
+            ))}
+          </GlassCard>
+          <GlassCard padding="p-6" className="space-y-5">
             <div className="flex items-center gap-2 font-semibold text-white">
-              <BarChart2 className="h-5 w-5 text-purple-400" /> Content
+              <BarChart2 className="h-5 w-5 text-violet-400" /> Content
             </div>
-            <ProgressBar
-              label="Blog Publish Rate"
-              value={stats.publishedBlogs}
-              max={stats.totalBlogs}
-              color="bg-rose-500"
-            />
-            <ProgressBar
-              label="Active Members"
-              value={stats.activeUsers}
-              max={stats.totalUsers}
-              color="bg-blue-500"
-            />
-          </div>
+            {[
+              { label: 'Blog Publish Rate', value: stats.publishedBlogs, max: stats.totalBlogs,  tone: 'rose' },
+              { label: 'Active Members',    value: stats.activeUsers,    max: stats.totalUsers,  tone: 'blue' },
+            ].map((r) => (
+              <div key={r.label}>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span className="text-gray-300">{r.label}</span>
+                  <span className="text-gray-400">{r.value} <span className="text-gray-600">/ {r.max}</span></span>
+                </div>
+                <GradientBar value={r.value} max={r.max} tone={r.tone} />
+              </div>
+            ))}
+          </GlassCard>
         </div>
       </div>
 
@@ -270,6 +205,6 @@ export default function ReportsClient({ stats, recentEvents }) {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

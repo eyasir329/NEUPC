@@ -259,13 +259,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'events',
             label: 'Event Management',
             icon: Calendar,
-            href: '/account/executive/events/manage',
-          },
-          {
-            id: 'registrations',
-            label: 'Registrations',
-            icon: ClipboardCheck,
-            href: '/account/executive/registrations',
+            href: '/account/executive/events',
           },
           {
             id: 'contests',
@@ -560,6 +554,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Resources',
             icon: BookOpen,
             href: '/account/mentor/resources',
+          },
+          {
+            id: 'events',
+            label: 'Events',
+            icon: Calendar,
+            href: '/account/mentor/events',
           },
           {
             id: 'notices',

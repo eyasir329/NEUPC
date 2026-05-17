@@ -23,6 +23,7 @@ import {
   execCreateCertificateAction,
   execBulkCreateCertificatesAction,
 } from '@/app/_lib/executive-actions';
+import { PageShell, PageHeader, GlassCard } from '@/app/account/executive/_components/_ui';
 
 const CERT_TYPES = [
   'participation',
@@ -338,22 +339,18 @@ export default function GenerateCertificatesClient({
   });
 
   return (
-    <div className="space-y-8 px-4 pt-6 pb-8 sm:space-y-10 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Certificates</h1>
-          <p className="mt-1 text-gray-400">
-            Issue and manage certificates for events and contests
-          </p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">
-          <p className="text-3xl font-bold text-blue-400">
-            {certificates.length}
-          </p>
-          <p className="text-xs text-gray-400">Total Issued</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Award}
+        title="Certificates"
+        subtitle="Issue and manage certificates for events and contests"
+        accent="amber"
+        meta={
+          <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-sm font-semibold text-blue-400">
+            {certificates.length} issued
+          </span>
+        }
+      />
 
       {/* Generate form */}
       <GenerateForm
@@ -460,6 +457,6 @@ export default function GenerateCertificatesClient({
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

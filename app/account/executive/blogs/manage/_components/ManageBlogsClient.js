@@ -27,6 +27,7 @@ import {
 } from '@/app/_lib/executive-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import { useScrollLock } from '@/app/_lib/hooks';
+import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/executive/_components/_ui';
 
 const STATUS_CONFIG = {
   draft: {
@@ -306,47 +307,27 @@ export default function ManageBlogsClient({ initialBlogs }) {
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Blog Management</h1>
-          <p className="mt-1 text-gray-400">
-            Create and manage club blog posts
-          </p>
-        </div>
-        <button
-          onClick={() => setModal('create')}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-        >
-          <Plus className="h-4 w-4" /> New Post
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Total Posts', value: stats.total, color: 'text-blue-400' },
-          {
-            label: 'Published',
-            value: stats.published,
-            color: 'text-green-400',
-          },
-          { label: 'Drafts', value: stats.draft, color: 'text-amber-400' },
-          {
-            label: 'Total Views',
-            value: stats.totalViews.toLocaleString(),
-            color: 'text-purple-400',
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
+    <PageShell>
+      <PageHeader
+        icon={PenTool}
+        title="Blog Management"
+        subtitle="Create and manage club blog posts"
+        accent="blue"
+        actions={
+          <button
+            onClick={() => setModal('create')}
+            className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
           >
-            <p className="text-sm text-gray-400">{s.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+            <Plus className="h-4 w-4" /> New Post
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={PenTool} label="Total Posts"  value={stats.total}                     accent="blue"   />
+        <StatCard icon={Eye}     label="Published"    value={stats.published}                  accent="emerald"/>
+        <StatCard icon={Tag}     label="Drafts"       value={stats.draft}                      accent="amber"  />
+        <StatCard icon={Star}    label="Total Views"  value={stats.totalViews.toLocaleString()} accent="violet" />
       </div>
 
       {/* Filters */}
@@ -524,6 +505,6 @@ export default function ManageBlogsClient({ initialBlogs }) {
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

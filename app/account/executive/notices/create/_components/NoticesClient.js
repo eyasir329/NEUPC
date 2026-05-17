@@ -28,6 +28,7 @@ import {
   execDeleteNoticeAction,
 } from '@/app/_lib/executive-actions';
 import { useScrollLock } from '@/app/_lib/hooks';
+import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/executive/_components/_ui';
 
 const PRIORITY_CONFIG = {
   low: {
@@ -391,43 +392,27 @@ export default function NoticesClient({ initialNotices }) {
   };
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Notices</h1>
-          <p className="mt-1 text-gray-400">
-            Create and broadcast announcements to members
-          </p>
-        </div>
-        <button
-          onClick={() => setModal('create')}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-        >
-          <Plus className="h-4 w-4" /> Create Notice
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Total', value: stats.total, color: 'text-blue-400' },
-          { label: 'Pinned', value: stats.pinned, color: 'text-amber-400' },
-          { label: 'Critical', value: stats.critical, color: 'text-red-400' },
-          {
-            label: 'High Priority',
-            value: stats.high,
-            color: 'text-orange-400',
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
+    <PageShell>
+      <PageHeader
+        icon={Bell}
+        title="Notices"
+        subtitle="Create and broadcast announcements to members"
+        accent="pink"
+        actions={
+          <button
+            onClick={() => setModal('create')}
+            className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
           >
-            <p className="text-sm text-gray-400">{s.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+            <Plus className="h-4 w-4" /> Create Notice
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={Bell}          label="Total"         value={stats.total}    accent="blue"  />
+        <StatCard icon={Pin}           label="Pinned"        value={stats.pinned}   accent="amber" />
+        <StatCard icon={AlertCircle}   label="Critical"      value={stats.critical} accent="rose"  />
+        <StatCard icon={AlertTriangle} label="High Priority" value={stats.high}     accent="orange"/>
       </div>
 
       {/* Filters */}
@@ -531,6 +516,6 @@ export default function NoticesClient({ initialNotices }) {
           {toast.msg}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
