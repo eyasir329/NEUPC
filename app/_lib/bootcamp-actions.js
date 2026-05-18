@@ -873,9 +873,8 @@ export async function createLesson(moduleId, data) {
 export async function updateLesson(lessonId, data) {
   await requireAdmin();
 
-  // Process video source
-  let videoId = data.video_id || null;
   let duration = data.duration;
+  let videoId = data.video_id;
 
   if (data.video_source === 'drive' && videoId) {
     videoId = extractDriveFileId(videoId);
@@ -898,7 +897,7 @@ export async function updateLesson(lessonId, data) {
     description: data.description,
     content: data.content,
     video_source: data.video_source,
-    video_id: videoId,
+    video_id: 'video_id' in data ? videoId : undefined,
     video_url: data.video_url,
     duration: duration !== undefined ? parseInt(duration) || 0 : undefined,
     is_free_preview: data.is_free_preview,

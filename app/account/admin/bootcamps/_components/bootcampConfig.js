@@ -233,18 +233,6 @@ export function validateLesson(data) {
     errors.title = 'Title is required';
   }
 
-  if (data.video_source === 'drive' && !data.video_id?.trim()) {
-    errors.video_id = 'Google Drive file ID is required';
-  }
-
-  if (
-    data.video_source === 'youtube' &&
-    !data.video_id?.trim() &&
-    !data.video_url?.trim()
-  ) {
-    errors.video_id = 'YouTube video URL or ID is required';
-  }
-
   if (data.duration && (isNaN(data.duration) || data.duration < 0)) {
     errors.duration = 'Duration must be a positive number';
   }
