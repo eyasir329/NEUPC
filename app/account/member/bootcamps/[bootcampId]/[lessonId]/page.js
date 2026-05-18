@@ -31,7 +31,17 @@ export default async function LessonPage({ params }) {
   }
   if (!bootcamp) notFound();
 
-  // Verify lesson exists and belongs to this bootcamp
+  // Verify lesson belongs to this bootcamp via the curriculum (no extra query).
+  let stub = null;
+  for (const c of bootcamp.courses || []) {
+    for (const m of c.modules || []) {
+      const found = m.lessons?.find((l) => l.id === lessonId);
+      if (found) { stub = found; break; }
+    }
+    if (stub) break;
+  }
+  if (!stub) notFound();
+
   let lesson;
   try {
     lesson = await getLesson(lessonId);
@@ -40,10 +50,7 @@ export default async function LessonPage({ params }) {
   }
   if (!lesson) notFound();
 
-  const lessonBootcampId = lesson.modules?.courses?.bootcamps?.id;
-  if (lessonBootcampId && lessonBootcampId !== bootcamp.id) notFound();
-
-  if (!lesson.is_free_preview) {
+  if (!stub.is_free_preview) {
     const enrollmentCheck = await checkEnrollment(bootcamp.id);
     if (!enrollmentCheck.enrolled) redirect(`/account/member/bootcamps/${bootcampId}`);
   }

@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import {
   getLesson,
+  getLessonContent,
   updateLessonProgress,
   markLessonComplete,
   markLessonIncomplete,
@@ -473,7 +474,11 @@ function CurriculumRail({
         </div>
       </div>
 
-      <div className="spa-scroll flex-1 overflow-y-auto overscroll-contain">
+      {/* Bottom padding clears ChatFAB, mobile CTA bar, and iOS safe-area. */}
+      <div
+        className="spa-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12rem)' }}
+      >
         {filtered.length > 0 ? (
           filtered.map((course, ci) => (
             <CourseGroup
@@ -1035,7 +1040,7 @@ const LessonPanel = memo(function LessonPanel({
             </div>
 
             {/* Rich content */}
-            {lesson.content && (
+            {lesson.content ? (
               <Suspense fallback={<ChunkFallback label="Loading content…" />}>
                 <LessonContentRenderer
                   key={lesson.id}
@@ -1043,7 +1048,14 @@ const LessonPanel = memo(function LessonPanel({
                   lessonId={lesson.id}
                 />
               </Suspense>
-            )}
+            ) : lesson._pendingContent ? (
+              <div className="space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <div className="spa-skeleton h-3 w-full rounded" />
+                <div className="spa-skeleton h-3 w-11/12 rounded" />
+                <div className="spa-skeleton h-3 w-9/12 rounded" />
+                <div className="spa-skeleton h-3 w-10/12 rounded" />
+              </div>
+            ) : null}
 
             {/* Attachments */}
             {lesson.attachments?.length > 0 && (
@@ -1258,28 +1270,56 @@ export default function BootcampLearningClient({
     [allLessons, loadedLesson?.id]
   );
 
-  const loadFullLesson = useCallback(async (lessonId) => {
-    const cached = lessonCacheRef.current[lessonId];
-    if (cached) return cached;
-    const full = await getLesson(lessonId);
-    lessonCacheRef.current[lessonId] = full;
-    return full;
+  const allLessonsRef = useRef(allLessons);
+  useEffect(() => {
+    allLessonsRef.current = allLessons;
+  }, [allLessons]);
+
+  // Merge stub metadata (from curriculum) with content-only delta from server.
+  const mergeStubAndContent = useCallback((stub, content) => {
+    if (!content) return stub;
+    if (!stub) return content;
+    return { ...stub, ...content };
   }, []);
 
-  const prefetchLesson = useCallback((lesson) => {
-    if (!lesson?.id) return;
-    if (lessonCacheRef.current[lesson.id]) return;
-    if (prefetchInflightRef.current.has(lesson.id)) return;
-    prefetchInflightRef.current.add(lesson.id);
-    getLesson(lesson.id)
-      .then((full) => {
-        lessonCacheRef.current[lesson.id] = full;
-      })
-      .catch(() => {})
-      .finally(() => {
-        prefetchInflightRef.current.delete(lesson.id);
-      });
-  }, []);
+  const loadFullLesson = useCallback(
+    async (lessonId) => {
+      const cached = lessonCacheRef.current[lessonId];
+      if (cached) return cached;
+      const stub = allLessonsRef.current.find((l) => l.id === lessonId);
+      // Stub missing (deep link before curriculum loads, unlikely) → full fetch.
+      if (!stub) {
+        const full = await getLesson(lessonId);
+        lessonCacheRef.current[lessonId] = full;
+        return full;
+      }
+      const content = await getLessonContent(lessonId);
+      const merged = mergeStubAndContent(stub, content);
+      lessonCacheRef.current[lessonId] = merged;
+      return merged;
+    },
+    [mergeStubAndContent]
+  );
+
+  const prefetchLesson = useCallback(
+    (lesson) => {
+      if (!lesson?.id) return;
+      if (lessonCacheRef.current[lesson.id]) return;
+      if (prefetchInflightRef.current.has(lesson.id)) return;
+      prefetchInflightRef.current.add(lesson.id);
+      const stub =
+        allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+      getLessonContent(lesson.id)
+        .then((content) => {
+          lessonCacheRef.current[lesson.id] = mergeStubAndContent(stub, content);
+        })
+        .catch(() => {})
+        .finally(() => {
+          prefetchInflightRef.current.delete(lesson.id);
+        });
+    },
+    [mergeStubAndContent]
+  );
 
   // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
   // 'replace' (lesson-to-lesson switch), 'none' (browser popstate — URL already set).
@@ -1306,18 +1346,24 @@ export default function BootcampLearningClient({
       setActiveLessonId(lesson.id);
       setLoadError(null);
 
-      // Fast path: cached
+      // Fast path: cached (full lesson with content)
       const cached = lessonCacheRef.current[lesson.id];
-      if (cached) {
+      if (cached && cached.content !== undefined) {
         setLoadedLesson(cached);
         return;
       }
-      // Stub already has content
+      // Stub already has content (e.g. SSR-passed initial lesson)
       if (lesson.content !== undefined) {
         lessonCacheRef.current[lesson.id] = lesson;
         setLoadedLesson(lesson);
         return;
       }
+
+      // Instant render path: show the stub immediately so the title bar,
+      // video, and metadata render with zero wait. The body content (markdown,
+      // attachments) streams in when the small content fetch resolves.
+      const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+      setLoadedLesson({ ...stub, content: undefined, _pendingContent: true });
 
       // Async load — ignore result if user navigated again
       startLoading(async () => {
@@ -1383,8 +1429,10 @@ export default function BootcampLearningClient({
         setTimeout(cb, 300);
       }
     };
+    const next2 = allLessons[idx + 2];
     if (next) schedule(() => prefetchLesson(next));
     if (prev) schedule(() => prefetchLesson(prev));
+    if (next2) schedule(() => prefetchLesson(next2));
   }, [loadedLesson?.id, allLessons, prefetchLesson]);
 
   // Browser back/forward — DO NOT push, just sync state
@@ -1451,12 +1499,51 @@ export default function BootcampLearningClient({
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
   }, [activeLessonId]);
 
+  // Measure available height for the body row at runtime so the sidebar
+  // and main scroll containers always have the exact remaining viewport
+  // space, regardless of how many parent headers/topbars exist above us.
+  const bodyRef = useRef(null);
+  const [bodyHeight, setBodyHeight] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!bodyRef.current) return;
+        const top = bodyRef.current.getBoundingClientRect().top;
+        const available = window.innerHeight - top;
+        setBodyHeight(Math.max(0, available));
+      });
+    };
+    measure();
+    // Re-measure after layout settles (fonts, images, parent collapses, etc.)
+    const t = setTimeout(measure, 100);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    const ro =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(measure)
+        : null;
+    if (ro && bodyRef.current?.parentElement) {
+      ro.observe(bodyRef.current.parentElement);
+      ro.observe(document.body);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+      ro?.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#080b11] text-white">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#080b11] text-white">
       <style dangerouslySetInnerHTML={{ __html: SCROLLBAR }} />
 
       {/* Topbar */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080b11]/95 backdrop-blur-xl">
+      <header className="shrink-0 border-b border-white/[0.06] bg-[#080b11]/95 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-2 px-3 sm:px-5">
           {isLessonView ? (
             <button
@@ -1511,10 +1598,17 @@ export default function BootcampLearningClient({
         </div>
       </header>
 
-      {/* Body */}
-      <div className="flex" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      {/* Body — height measured at runtime so it always exactly fills
+          remaining viewport space regardless of ancestor headers/footers. */}
+      <div
+        ref={bodyRef}
+        className="flex min-h-0 flex-1 overflow-hidden"
+        style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
+      >
         {/* Desktop sidebar */}
-        <aside className="hidden h-full w-[320px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0e15] lg:flex xl:w-[360px]">
+        <aside
+          className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#0a0e15] lg:flex xl:w-[360px]"
+        >
           <CurriculumRail
             bootcamp={bootcamp}
             lessonProgress={lessonProgress}
@@ -1529,7 +1623,10 @@ export default function BootcampLearningClient({
         </aside>
 
         {/* Main content area */}
-        <main ref={mainScrollRef} className="spa-scroll min-w-0 flex-1 overflow-y-auto">
+        <main
+          ref={mainScrollRef}
+          className="spa-scroll h-full min-w-0 flex-1 overflow-y-auto"
+        >
           {/* Inline loading bar while a lesson fetches */}
           {(loading || isSwitching) && (
             <div className="sticky top-0 z-20 h-0.5 w-full overflow-hidden bg-emerald-500/10">
@@ -1612,7 +1709,7 @@ export default function BootcampLearningClient({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.2 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-[88%] max-w-[360px] flex-col border-r border-white/[0.06] bg-[#0a0e15] lg:hidden"
+              className="fixed top-0 left-0 z-50 flex h-[100dvh] w-[88%] max-w-[360px] flex-col overflow-hidden border-r border-white/[0.06] bg-[#0a0e15] lg:hidden"
             >
               <CurriculumRail
                 bootcamp={bootcamp}

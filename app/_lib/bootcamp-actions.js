@@ -1026,17 +1026,27 @@ export async function getLesson(lessonId) {
   const { data, error } = await supabaseAdmin
     .from('lessons')
     .select(
-      `
-      *,
-      modules (
-        id, title,
-        courses (
-          id, title,
-          bootcamps (id, title, slug)
-        )
-      )
-    `
+      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_locked, is_published, order_index'
     )
+    .eq('id', lessonId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Fetch only the heavy fields missing from the curriculum stub.
+ * Used by the SPA when switching lessons — stub already has
+ * id/title/duration/video_source/video_id, so we only need the rest.
+ */
+export async function getLessonContent(lessonId) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
+  const { data, error } = await supabaseAdmin
+    .from('lessons')
+    .select('id, content, attachments, video_url, is_locked')
     .eq('id', lessonId)
     .single();
 
