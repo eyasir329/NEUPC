@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarX, Sparkles } from 'lucide-react';
-import { PageShell, PageHeader, TabBar, GlassCard } from '@/app/account/member/_components/_ui';
+import { CalendarX, Filter, X, Search } from 'lucide-react';
+import { PageShell, PageHeader, TabBar } from '@/app/account/member/_components/_ui';
 import EventRow from './EventRow';
 import EventDetail from './EventDetail';
+import { VENUE_TYPES } from './eventConstants';
 
 const PAGE_MOTION = { duration: 0.18, ease: [0.22, 1, 0.36, 1] };
 
@@ -23,6 +24,7 @@ const PAGE_MOTION = { duration: 0.18, ease: [0.22, 1, 0.36, 1] };
  *   getDetailProps — (event) => { detailRows, ctaSlot?, sidebarSlot? }
  *   flashSlot    — React node: flash/toast (member only)
  *   aboveList    — React node: rendered above the event list (e.g. toolbar for manage roles)
+ *   listHeader   — React node: rendered inside the list column, above the count row
  */
 export default function EventListLayout({
   pageHeader,
@@ -33,16 +35,38 @@ export default function EventListLayout({
   sidebarCta,
   rowProps = {},
   getDetailProps,
+  renderDetail,
   flashSlot,
   aboveList,
+  listHeader,
 }) {
   const [activeTab, setActiveTab] = useState(tabs[0]?.value ?? 'All');
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterVenue, setFilterVenue] = useState('');
+  const [search, setSearch] = useState('');
 
   const selectedEvent = selectedEventId ? events.find((e) => e.id === selectedEventId) : null;
-  const filteredEvents = events.filter((e) => filterFn(e, activeTab));
 
-  const detailProps = selectedEvent ? getDetailProps(selectedEvent) : null;
+  const dynamicCategories = useMemo(
+    () => [...new Set(events.map((e) => e.category).filter(Boolean))].sort(),
+    [events]
+  );
+
+  const filteredEvents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return events.filter((e) => {
+      if (!filterFn(e, activeTab)) return false;
+      if (filterCategory && (e.category || '') !== filterCategory) return false;
+      if (filterVenue && (e.venue_type || '') !== filterVenue) return false;
+      if (q && !e.title.toLowerCase().includes(q) && !(e.description || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [events, activeTab, filterCategory, filterVenue, search, filterFn]);
+
+  const hasFilter = filterCategory || filterVenue || search;
+
+  const detailProps = selectedEvent && getDetailProps ? getDetailProps(selectedEvent) : null;
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
@@ -57,11 +81,15 @@ export default function EventListLayout({
             exit={{ opacity: 0, y: -6 }}
             transition={PAGE_MOTION}
           >
-            <EventDetail
-              event={selectedEvent}
-              onBack={() => setSelectedEventId(null)}
-              {...detailProps}
-            />
+            {renderDetail ? (
+              renderDetail(selectedEvent, () => setSelectedEventId(null))
+            ) : (
+              <EventDetail
+                event={selectedEvent}
+                onBack={() => setSelectedEventId(null)}
+                {...detailProps}
+              />
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -80,14 +108,64 @@ export default function EventListLayout({
 
             {aboveList}
 
-            <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+            <div className="grid grid-cols-1 items-start gap-8 pt-6 lg:grid-cols-3">
               {/* Event list */}
               <div className="flex min-w-0 flex-col gap-3 lg:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/6 pb-3">
-                  <p className="text-xs font-medium text-gray-500">
+                {listHeader}
+                {/* Search + filters */}
+                <div className="flex flex-col gap-2 border-b border-white/6 pb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search */}
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                      <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search events…"
+                        className="w-full rounded-lg border border-white/8 bg-white/4 py-1.5 pl-7 pr-3 text-[11px] text-gray-300 placeholder-gray-600 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                      />
+                    </div>
+                    {/* Category */}
+                    {dynamicCategories.length > 0 && (
+                      <select
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                        className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
+                          filterCategory
+                            ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
+                            : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
+                        }`}
+                      >
+                        <option value="">All Categories</option>
+                        {dynamicCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+                    {/* Venue */}
+                    <select
+                      value={filterVenue}
+                      onChange={(e) => setFilterVenue(e.target.value)}
+                      className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
+                        filterVenue
+                          ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
+                          : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
+                      }`}
+                    >
+                      <option value="">All Venues</option>
+                      {VENUE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+                    </select>
+                    {hasFilter && (
+                      <button
+                        onClick={() => { setFilterCategory(''); setFilterVenue(''); setSearch(''); }}
+                        className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/15"
+                      >
+                        <X size={10} /> Clear
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-600">
                     {filteredEvents.length === 0
-                      ? `No events in ${activeTab}`
-                      : `Showing ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`}
+                      ? 'No matching events'
+                      : `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}${hasFilter ? ' found' : ''}`}
                   </p>
                 </div>
 
@@ -105,7 +183,7 @@ export default function EventListLayout({
                           key={event.id}
                           event={event}
                           index={index}
-                          onClick={rowProps.onEdit || rowProps.onDelete ? undefined : () => setSelectedEventId(event.id)}
+                          onClick={() => setSelectedEventId(event.id)}
                           {...rowProps}
                         />
                       ))}

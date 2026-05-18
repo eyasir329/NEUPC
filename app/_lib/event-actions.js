@@ -31,9 +31,12 @@ function revalidateEvents() {
   revalidatePath('/account/admin/events', 'layout');
 
   // Executive
-  revalidatePath('/account/executive/events/manage');
+  revalidatePath('/account/executive/events');
   revalidatePath('/account/executive/registrations');
   revalidatePath('/account/executive/reports');
+
+  // Mentor
+  revalidatePath('/account/mentor/events');
 
   // Advisor
   revalidatePath('/account/advisor/events');
@@ -248,8 +251,6 @@ export async function createEventAction(formData) {
     team_size,
     is_featured: formData.get('is_featured') === 'true',
     tags: tags.length ? tags : null,
-    external_url: formData.get('external_url')?.trim() || null,
-    registration_url: formData.get('registration_url')?.trim() || null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
     created_by: admin.id,
@@ -336,8 +337,10 @@ export async function updateEventAction(formData) {
   const newCoverImage = formData.get('cover_image')?.trim() || null;
   const newContent = formData.get('content')?.trim() || null;
 
+  const slugRaw = formData.get('slug')?.trim();
   const updates = {
     title,
+    ...(slugRaw ? { slug: slugRaw } : {}),
     description: formData.get('description')?.trim() || null,
     content: newContent,
     location,
@@ -358,8 +361,6 @@ export async function updateEventAction(formData) {
     team_size,
     is_featured: formData.get('is_featured') === 'true',
     tags: tags.length ? tags : null,
-    external_url: formData.get('external_url')?.trim() || null,
-    registration_url: formData.get('registration_url')?.trim() || null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
     updated_at: new Date().toISOString(),

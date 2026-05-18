@@ -45,6 +45,13 @@ export const STATS_CONFIG = {
     { id: 'open',       title: 'Open Slots', icon: Ticket,        color: 'text-violet-400',  bg: 'bg-violet-500/10' },
     { id: 'attended',   title: 'Attended',   icon: CalendarCheck, color: 'text-amber-400',   bg: 'bg-amber-500/10' },
   ],
+  // executive / admin: total / upcoming / ongoing / registrations
+  manage: [
+    { id: 'total',         title: 'Total Events',   icon: Calendar,      color: 'text-blue-400',    bg: 'bg-blue-500/10' },
+    { id: 'upcoming',      title: 'Upcoming',       icon: CalendarCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { id: 'ongoing',       title: 'Ongoing',        icon: TrendingUp,    color: 'text-cyan-400',    bg: 'bg-cyan-500/10' },
+    { id: 'registrations', title: 'Registrations',  icon: Users,         color: 'text-amber-400',   bg: 'bg-amber-500/10' },
+  ],
   // mentor / advisor: upcoming / ongoing / completed / registrations
   observer: [
     { id: 'upcoming',      title: 'Upcoming',      icon: Calendar,      color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
@@ -63,7 +70,8 @@ export function computeStats(variant, events) {
   return STATS_CONFIG[variant].map((s) => {
     let count = 0;
     switch (s.id) {
-      case 'upcoming':      count = events.filter((e) => e._bucket === 'upcoming').length; break;
+      case 'total':         count = events.length; break;
+      case 'upcoming':      count = events.filter((e) => e._bucket === 'upcoming' || e.status === 'upcoming').length; break;
       case 'ongoing':       count = events.filter((e) => e._bucket === 'ongoing').length; break;
       case 'completed':     count = events.filter((e) => e._bucket === 'completed').length; break;
       case 'open':          count = events.filter((e) => e._isUpcoming).length; break;

@@ -45,19 +45,20 @@ export default async function LessonPage({ params }) {
 
   if (!lesson.is_free_preview) {
     const enrollmentCheck = await checkEnrollment(bootcamp.id);
-    if (!enrollmentCheck.enrolled) redirect(`/bootcamps/${bootcampId}`);
+    if (!enrollmentCheck.enrolled) redirect(`/account/member/bootcamps/${bootcampId}`);
   }
 
   await updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
   const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
 
-  // Render the same SPA shell with the lesson pre-selected
+  // Render the same SPA shell with the lesson pre-selected and preloaded
   return (
     <BootcampLearningClient
       bootcamp={bootcamp}
       lessonProgress={lessonProgress}
       initialLessonId={lessonId}
+      initialLesson={lesson}
     />
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Calendar, CalendarCheck, TrendingUp, Sparkles } from 'lucide-react';
+import { Calendar, CalendarCheck, TrendingUp, Sparkles, Users } from 'lucide-react';
 import { GlassCard } from '@/app/account/member/_components/_ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
+import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
 import { computeStats } from '@/app/account/_components/events/eventConstants';
 
@@ -34,17 +35,6 @@ const SIDEBAR_CTA = (
   </GlassCard>
 );
 
-function getDetailProps(event) {
-  return {
-    detailRows: [
-      { label: 'Status',      value: event._bucket, accent: 'text-gray-200 capitalize' },
-      { label: 'Registered',  value: event.registrationCount || 0 },
-      { label: 'Attended',    value: event.attendedCount || 0 },
-      { label: 'Access',      value: 'Club Members', accent: 'text-violet-400' },
-    ],
-  };
-}
-
 export default function MentorEventsClient({ events: serverEvents }) {
   const allEvents = useMemo(() => (serverEvents || []).map(enrichEvent), [serverEvents]);
   const stats = computeStats('observer', allEvents);
@@ -59,7 +49,51 @@ export default function MentorEventsClient({ events: serverEvents }) {
       stats={stats}
       sidebarCta={SIDEBAR_CTA}
       rowProps={{ showRegs: true }}
-      getDetailProps={getDetailProps}
+      renderDetail={(event, onBack) => (
+        <EventContentDetail
+          event={event}
+          onBack={onBack}
+          rightSlot={
+            <div className="flex flex-col gap-3">
+              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-700/80">
+                <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-3">
+                  <Users className="h-3.5 w-3.5 text-indigo-400" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Registrations</span>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-3">
+                      <p className="text-2xl font-bold text-white tabular-nums">{event.registrationCount ?? 0}</p>
+                      <p className="text-[10px] text-slate-500">Registered</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-3">
+                      <p className="text-2xl font-bold text-white tabular-nums">{event.attendedCount ?? 0}</p>
+                      <p className="text-[10px] text-slate-500">Attended</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-700/80">
+                <div className="border-b border-slate-800 px-4 py-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Info</span>
+                </div>
+                <div className="divide-y divide-slate-800/60">
+                  {[
+                    { label: 'Category', value: event.category || '—' },
+                    { label: 'Venue',    value: event.venue_type ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1) : '—' },
+                    { label: 'Access',   value: 'Club Members' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-start justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-slate-800/40">
+                      <span className="shrink-0 text-xs text-slate-500">{label}</span>
+                      <span className="text-right text-xs font-semibold text-slate-200">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }
+        />
+      )}
     />
   );
 }

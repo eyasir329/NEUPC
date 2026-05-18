@@ -23,6 +23,13 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
         <ChevronLeft size={16} /> Back to Events
       </button>
 
+      {/* Banner image */}
+      {event.banner_image && (
+        <div className="overflow-hidden rounded-2xl border border-white/8">
+          <img src={event.banner_image} alt={event.title} className="h-48 w-full object-cover opacity-80 sm:h-64" />
+        </div>
+      )}
+
       {/* Hero */}
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
         <div className="flex items-start gap-5">
@@ -81,6 +88,16 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
               {event.description || 'No description provided.'}
             </p>
           </GlassCard>
+          {event.content && (
+            <GlassCard>
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-200">
+                <FileText size={16} className="text-blue-400" /> Details
+              </h3>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-gray-300">
+                {event.content}
+              </p>
+            </GlassCard>
+          )}
         </div>
 
         <div className="flex flex-col gap-6">

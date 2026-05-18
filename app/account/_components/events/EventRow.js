@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, MapPin, Users, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Edit2, Trash2 } from 'lucide-react';
 import { driveImageUrl } from '@/app/_lib/utils';
 import { EVENT_STATUS_CONFIG } from './eventConstants';
 
@@ -84,24 +84,15 @@ export default function EventRow({
             </span>
           )}
 
-          {showStatus && sc ? (
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${sc.badge}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-              {sc.label}
+          {event._bucket === 'ongoing' && (
+            <span className="flex items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-400 uppercase">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" /> Live
             </span>
-          ) : (
-            <>
-              {event._bucket === 'ongoing' && (
-                <span className="flex items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-400 uppercase">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" /> Live
-                </span>
-              )}
-              {(event._bucket === 'upcoming' || event._isUpcoming) && event._bucket !== 'ongoing' && (
-                <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Open
-                </span>
-              )}
-            </>
+          )}
+          {(event._bucket === 'upcoming' || event._isUpcoming) && event._bucket !== 'ongoing' && !showStatus && (
+            <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Open
+            </span>
           )}
         </div>
 
@@ -110,6 +101,9 @@ export default function EventRow({
         </h3>
 
         <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <Calendar size={13} className="text-gray-600" /> {event._date}
+          </div>
           <div className="flex items-center gap-1.5">
             <Clock size={13} className="text-gray-600" /> {event._time}
           </div>
@@ -133,8 +127,10 @@ export default function EventRow({
         {actionSlot ?? (
           <>
             {!onEdit && !onDelete && (
-              <span className="rounded-md border border-white/8 bg-white/3 px-2.5 py-1 text-xs font-semibold tracking-wide text-gray-400 capitalize">
-                {showStatus ? (EVENT_STATUS_CONFIG[event.status]?.label ?? event.status) : event._bucket}
+              <span className={`rounded-md border px-2.5 py-1 text-xs font-semibold tracking-wide capitalize ${
+                showStatus && sc ? sc.badge : 'border-white/8 bg-white/3 text-gray-400'
+              }`}>
+                {showStatus && sc ? sc.label : event._bucket}
               </span>
             )}
             {(onEdit || onDelete) && (

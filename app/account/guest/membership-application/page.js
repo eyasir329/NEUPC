@@ -15,6 +15,7 @@ export const metadata = { title: 'Apply for Membership | Guest | NEUPC' };
 export default async function GuestMembershipApplicationPage() {
   // Only users with actual roles (not guests) and active status can apply for membership
   const { session, user } = await requireRole([
+    'guest',
     'member',
     'mentor',
     'advisor',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect, useCallback, useTransition, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, useTransition, memo, Suspense, lazy } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,7 +18,18 @@ import {
   saveLessonNotes,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
-import LessonContentRenderer from '../[lessonId]/_components/LessonContentRenderer';
+
+// Heavy chunk: lazy-load only the markdown/code-highlight renderer
+const LessonContentRenderer = lazy(() => import('../[lessonId]/_components/LessonContentRenderer'));
+
+function ChunkFallback({ label = 'Loading…' }) {
+  return (
+    <div className="flex items-center justify-center py-8 text-gray-500">
+      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+      <span className="text-[12px]">{label}</span>
+    </div>
+  );
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,12 +60,15 @@ const SCROLLBAR = `
 
 // ─── Curriculum Rail ──────────────────────────────────────────────────────────
 
-const LessonRow = memo(function LessonRow({ lesson, isActive, isCompleted, onSelect, index }) {
+const LessonRow = memo(function LessonRow({ lesson, isActive, isCompleted, onSelect, onPrefetch, index, activeRef }) {
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
   const duration = formatDurationSecs(lesson.duration);
   return (
     <button
+      ref={isActive ? activeRef : null}
       onClick={() => onSelect(lesson)}
+      onMouseEnter={() => onPrefetch?.(lesson)}
+      onFocus={() => onPrefetch?.(lesson)}
       className={`group flex w-full items-start gap-3 rounded-lg px-2.5 py-2 border text-left transition-colors ${
         isActive
           ? 'bg-emerald-500/[0.08] border-emerald-500/30'
@@ -93,9 +107,15 @@ const LessonRow = memo(function LessonRow({ lesson, isActive, isCompleted, onSel
   );
 });
 
-function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, onSelect, forceOpen }) {
-  const containsActive = module.lessons?.some((l) => l.id === activeLessonId || l.id === resumeLessonId);
-  const [open, setOpen] = useState(containsActive);
+function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, onSelect, onPrefetch, activeRef, forceOpen }) {
+  const containsActive = module.lessons?.some((l) => l.id === activeLessonId);
+  const containsResume = module.lessons?.some((l) => l.id === resumeLessonId);
+  const [open, setOpen] = useState(containsActive || containsResume);
+
+  // Auto-open when active lesson enters this module
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive]);
 
   const total = module.lessons?.length || 0;
   const done = module.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0;
@@ -134,6 +154,8 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
                   isActive={lesson.id === activeLessonId}
                   isCompleted={lessonProgress?.[lesson.id]?.is_completed}
                   onSelect={onSelect}
+                  onPrefetch={onPrefetch}
+                  activeRef={activeRef}
                   index={i}
                 />
               ))}
@@ -145,9 +167,15 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
   );
 }
 
-function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, courseIndex, onSelect, forceOpen }) {
-  const containsActive = course.modules?.some((m) => m.lessons?.some((l) => l.id === activeLessonId || l.id === resumeLessonId));
-  const [open, setOpen] = useState(containsActive || courseIndex === 0);
+function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, courseIndex, onSelect, onPrefetch, activeRef, forceOpen }) {
+  const containsActive = course.modules?.some((m) => m.lessons?.some((l) => l.id === activeLessonId));
+  const containsResume = course.modules?.some((m) => m.lessons?.some((l) => l.id === resumeLessonId));
+  const [open, setOpen] = useState(containsActive || containsResume || courseIndex === 0);
+
+  // Auto-open when active lesson enters this course
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive]);
 
   const total = course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
   const done = course.modules?.reduce((s, m) => s + (m.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0), 0) || 0;
@@ -192,6 +220,8 @@ function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, c
                   activeLessonId={activeLessonId}
                   resumeLessonId={resumeLessonId}
                   onSelect={onSelect}
+                  onPrefetch={onPrefetch}
+                  activeRef={activeRef}
                   forceOpen={forceOpen}
                 />
               ))}
@@ -203,12 +233,19 @@ function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, c
   );
 }
 
-function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson, onSelect, totalLessons, completedCount, progressPercent, onClose }) {
+function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson, onSelect, onPrefetch, totalLessons, completedCount, progressPercent, onClose }) {
   const [query, setQuery] = useState('');
   const activeRef = useRef(null);
 
   useEffect(() => {
-    if (activeRef.current) activeRef.current.scrollIntoView({ block: 'nearest' });
+    if (!activeLessonId) return;
+    // Wait for accordion expand animation (~180ms) before scrolling
+    const t = setTimeout(() => {
+      if (activeRef.current) {
+        activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 220);
+    return () => clearTimeout(t);
   }, [activeLessonId]);
 
   const filtered = useMemo(() => {
@@ -275,6 +312,8 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
               resumeLessonId={query ? null : resumeLesson?.id}
               courseIndex={ci}
               onSelect={(lesson) => { onSelect(lesson); onClose?.(); }}
+              onPrefetch={onPrefetch}
+              activeRef={activeRef}
               forceOpen={!!query}
             />
           ))
@@ -297,20 +336,40 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
 
 // ─── Notes Panel ──────────────────────────────────────────────────────────────
 
-function NotesPanel({ lessonId, initialNotes }) {
+function NotesPanel({ lessonId, initialNotes, onSave }) {
   const [notes, setNotes] = useState(initialNotes || '');
   const [saving, startSaving] = useTransition();
   const [saved, setSaved] = useState(false);
+  const lastSavedRef = useRef(initialNotes || '');
+  const prevLessonRef = useRef(lessonId);
+  const notesRef = useRef(notes);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
 
-  useEffect(() => { setNotes(initialNotes || ''); }, [initialNotes]);
+  // On lesson change: flush unsaved diff for previous lesson, then load new
+  useEffect(() => {
+    const prevLessonId = prevLessonRef.current;
+    if (prevLessonId && prevLessonId !== lessonId) {
+      const pending = notesRef.current;
+      if (pending !== lastSavedRef.current && onSave) {
+        onSave(prevLessonId, pending).catch(() => {});
+      }
+    }
+    prevLessonRef.current = lessonId;
+    setNotes(initialNotes || '');
+    lastSavedRef.current = initialNotes || '';
+  }, [lessonId, initialNotes, onSave]);
 
   const handleSave = useCallback(() => {
     startSaving(async () => {
-      await saveLessonNotes(lessonId, notes);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      try {
+        if (onSave) await onSave(lessonId, notes);
+        else await saveLessonNotes(lessonId, notes);
+        lastSavedRef.current = notes;
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch {}
     });
-  }, [lessonId, notes]);
+  }, [lessonId, notes, onSave]);
 
   return (
     <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
@@ -403,7 +462,7 @@ function TableOfContents({ contentRef }) {
 
 // ─── Overview Panel ───────────────────────────────────────────────────────────
 
-function OverviewPanel({ bootcamp, allLessons, lessonProgress, progressPercent, completedCount, totalLessons, totalWatchedSecs, totalDurationSecs, resumeLesson, resumeIndex, isComplete, onSelectLesson, coursesCount, modulesCount }) {
+const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lessonProgress, progressPercent, completedCount, totalLessons, totalWatchedSecs, totalDurationSecs, resumeLesson, resumeIndex, isComplete, onSelectLesson, coursesCount, modulesCount }) {
   const ctaLabel = isComplete ? 'Review' : completedCount > 0 ? 'Resume' : 'Start learning';
 
   return (
@@ -507,11 +566,11 @@ function OverviewPanel({ bootcamp, allLessons, lessonProgress, progressPercent, 
       <div className="h-8" />
     </div>
   );
-}
+});
 
 // ─── Lesson Panel ─────────────────────────────────────────────────────────────
 
-function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMarkComplete, onMarkIncomplete, completing, isCompleted, currentIndex }) {
+const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onSaveNotes, onMarkComplete, onMarkIncomplete, completing, isCompleted, currentIndex }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
@@ -520,6 +579,11 @@ function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMar
   const [localCompleted, setLocalCompleted] = useState(isCompleted);
 
   useEffect(() => { setLocalCompleted(isCompleted); }, [isCompleted]);
+
+  // Reset scroll to top when switching lessons
+  useEffect(() => {
+    if (contentAreaRef.current) contentAreaRef.current.scrollTop = 0;
+  }, [lesson.id]);
 
   const handleProgress = useCallback(async (progressData) => {
     try {
@@ -581,9 +645,10 @@ function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMar
               </div>
             </div>
 
-            {/* Video */}
+            {/* Video — keyed so it remounts cleanly between lessons */}
             {hasVideo && (
               <VideoPlayer
+                key={lesson.id}
                 lesson={lesson}
                 initialPosition={initialPosition}
                 onProgress={handleProgress}
@@ -624,7 +689,11 @@ function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMar
             </div>
 
             {/* Rich content */}
-            {lesson.content && <LessonContentRenderer content={lesson.content} lessonId={lesson.id} />}
+            {lesson.content && (
+              <Suspense fallback={<ChunkFallback label="Loading content…" />}>
+                <LessonContentRenderer key={lesson.id} content={lesson.content} lessonId={lesson.id} />
+              </Suspense>
+            )}
 
             {/* Attachments */}
             {lesson.attachments?.length > 0 && (
@@ -651,7 +720,7 @@ function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMar
             )}
 
             {/* Notes */}
-            <NotesPanel lessonId={lesson.id} initialNotes={lessonProgress[lesson.id]?.notes} />
+            <NotesPanel lessonId={lesson.id} initialNotes={lessonProgress[lesson.id]?.notes} onSave={onSaveNotes} />
           </div>
         </div>
 
@@ -702,18 +771,23 @@ function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onMar
       </div>
     </div>
   );
-}
+});
 
 // ─── Main SPA Shell ───────────────────────────────────────────────────────────
 
-export default function BootcampLearningClient({ bootcamp, lessonProgress: initialProgress = {}, initialLessonId = null }) {
+export default function BootcampLearningClient({ bootcamp, lessonProgress: initialProgress = {}, initialLessonId = null, initialLesson = null }) {
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
   const [activeLessonId, setActiveLessonId] = useState(initialLessonId);
-  const [loadedLesson, setLoadedLesson] = useState(null);
+  const [loadedLesson, setLoadedLesson] = useState(initialLesson);
   const [loading, startLoading] = useTransition();
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
+  const lessonCacheRef = useRef(initialLesson ? { [initialLesson.id]: initialLesson } : {});
+  const prefetchInflightRef = useRef(new Set());
+  const navTokenRef = useRef(0);
+  const activeLessonIdRef = useRef(activeLessonId);
+  useEffect(() => { activeLessonIdRef.current = activeLessonId; }, [activeLessonId]);
 
   const allLessons = useMemo(() => {
     const out = [];
@@ -749,62 +823,139 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
   const totalWatchedSecs = allLessons.filter((l) => lessonProgress?.[l.id]?.is_completed).reduce((s, l) => s + (l.duration || 0), 0);
   const totalDurationSecs = allLessons.reduce((s, l) => s + (l.duration || 0), 0);
 
+  // Index for Next/Prev — track what's actually rendered (loadedLesson),
+  // not what's pending (activeLessonId may be ahead during async load).
   const currentIndex = useMemo(
-    () => (activeLessonId ? allLessons.findIndex((l) => l.id === activeLessonId) : -1),
-    [allLessons, activeLessonId]
+    () => (loadedLesson?.id ? allLessons.findIndex((l) => l.id === loadedLesson.id) : -1),
+    [allLessons, loadedLesson?.id]
   );
 
-  // Load initial lesson from URL if provided
-  useEffect(() => {
-    if (initialLessonId && !loadedLesson) {
-      navigateToLesson({ id: initialLessonId });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadFullLesson = useCallback(async (lessonId) => {
+    const cached = lessonCacheRef.current[lessonId];
+    if (cached) return cached;
+    const full = await getLesson(lessonId);
+    lessonCacheRef.current[lessonId] = full;
+    return full;
   }, []);
 
-  const navigateToLesson = useCallback((lesson) => {
+  const prefetchLesson = useCallback((lesson) => {
+    if (!lesson?.id) return;
+    if (lessonCacheRef.current[lesson.id]) return;
+    if (prefetchInflightRef.current.has(lesson.id)) return;
+    prefetchInflightRef.current.add(lesson.id);
+    getLesson(lesson.id)
+      .then((full) => { lessonCacheRef.current[lesson.id] = full; })
+      .catch(() => {})
+      .finally(() => { prefetchInflightRef.current.delete(lesson.id); });
+  }, []);
+
+  // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
+  // 'replace' (lesson-to-lesson switch), 'none' (browser popstate — URL already set).
+  const navigateToLesson = useCallback((lesson, mode = 'push') => {
+    const token = ++navTokenRef.current;
+
     if (!lesson) {
-      // Go back to overview
       setActiveLessonId(null);
       setLoadedLesson(null);
       setLoadError(null);
-      window.history.pushState({}, '', `/account/member/bootcamps/${bootcamp.id}`);
+      if (mode !== 'none') {
+        window.history.pushState({}, '', `/account/member/bootcamps/${bootcamp.id}`);
+      }
       return;
     }
+
+    const url = `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`;
+    if (mode === 'push') window.history.pushState({}, '', url);
+    else if (mode === 'replace') window.history.replaceState({}, '', url);
 
     setActiveLessonId(lesson.id);
     setLoadError(null);
 
-    // Update URL without navigation
-    window.history.pushState({}, '', `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`);
-
-    // Check if we already have the full lesson data cached on the stub
+    // Fast path: cached
+    const cached = lessonCacheRef.current[lesson.id];
+    if (cached) {
+      setLoadedLesson(cached);
+      return;
+    }
+    // Stub already has content
     if (lesson.content !== undefined) {
+      lessonCacheRef.current[lesson.id] = lesson;
       setLoadedLesson(lesson);
       return;
     }
 
+    // Async load — ignore result if user navigated again
     startLoading(async () => {
       try {
-        const full = await getLesson(lesson.id);
+        const full = await loadFullLesson(lesson.id);
+        if (navTokenRef.current !== token) return;
+        if (!full) {
+          setLoadError('Lesson not found.');
+          return;
+        }
         setLoadedLesson(full);
       } catch (e) {
+        if (navTokenRef.current !== token) return;
         setLoadError('Failed to load lesson. Please try again.');
-        setActiveLessonId(null);
       }
     });
-  }, [bootcamp?.id]);
+  }, [bootcamp?.id, loadFullLesson]);
 
-  // Handle browser back/forward
+  // Wrapper used by UI: smart-detect push vs replace, skip no-op.
+  // Stable identity (reads activeLessonId via ref) so memoized children don't re-render.
+  const selectLesson = useCallback((lesson) => {
+    const current = activeLessonIdRef.current;
+    if (!lesson) {
+      if (!current) return;
+      return navigateToLesson(null, 'push');
+    }
+    if (lesson.id === current) return;
+    const mode = current ? 'replace' : 'push';
+    navigateToLesson(lesson, mode);
+  }, [navigateToLesson]);
+
+  // Initial hydration: if URL has a lessonId but no preloaded lesson, fetch it
+  useEffect(() => {
+    if (initialLessonId && !loadedLesson) {
+      startLoading(async () => {
+        try {
+          const full = await loadFullLesson(initialLessonId);
+          setLoadedLesson(full);
+        } catch {
+          setLoadError('Failed to load lesson. Please try again.');
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Prefetch neighbor lessons when active lesson changes
+  useEffect(() => {
+    if (!loadedLesson?.id) return;
+    const idx = allLessons.findIndex((l) => l.id === loadedLesson.id);
+    if (idx < 0) return;
+    const next = allLessons[idx + 1];
+    const prev = allLessons[idx - 1];
+    const schedule = (cb) => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    if (next) schedule(() => prefetchLesson(next));
+    if (prev) schedule(() => prefetchLesson(prev));
+  }, [loadedLesson?.id, allLessons, prefetchLesson]);
+
+  // Browser back/forward — DO NOT push, just sync state
   useEffect(() => {
     const onPop = () => {
       const path = window.location.pathname;
       const match = path.match(/\/bootcamps\/[^/]+\/([^/]+)$/);
       if (match) {
-        navigateToLesson({ id: match[1] });
+        navigateToLesson({ id: match[1] }, 'none');
       } else {
-        setActiveLessonId(null);
-        setLoadedLesson(null);
+        navigateToLesson(null, 'none');
       }
     };
     window.addEventListener('popstate', onPop);
@@ -825,6 +976,11 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
     });
   }, []);
 
+  const handleSaveNotes = useCallback(async (lessonId, notes) => {
+    await saveLessonNotes(lessonId, notes);
+    setLessonProgress((prev) => ({ ...prev, [lessonId]: { ...prev[lessonId], notes } }));
+  }, []);
+
   const ctaLabel = isComplete ? 'Review' : completedCount > 0 ? 'Resume' : 'Start learning';
   const isLessonView = !!activeLessonId;
 
@@ -837,7 +993,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
         <div className="flex items-center gap-2 px-3 sm:px-5 h-14">
           {isLessonView ? (
             <button
-              onClick={() => navigateToLesson(null)}
+              onClick={() => selectLesson(null)}
               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -869,7 +1025,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
 
           {!isLessonView && resumeLesson && (
             <button
-              onClick={() => navigateToLesson(resumeLesson)}
+              onClick={() => selectLesson(resumeLesson)}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-sm shadow-emerald-500/20 transition-colors"
             >
               <Play className="h-3 w-3 fill-current" />
@@ -888,7 +1044,8 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
             lessonProgress={lessonProgress}
             activeLessonId={activeLessonId}
             resumeLesson={activeLessonId ? null : resumeLesson}
-            onSelect={navigateToLesson}
+            onSelect={selectLesson}
+            onPrefetch={prefetchLesson}
             totalLessons={totalLessons}
             completedCount={completedCount}
             progressPercent={progressPercent}
@@ -897,87 +1054,63 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
 
         {/* Main content area */}
         <main className="flex-1 min-w-0 overflow-y-auto spa-scroll">
-          <AnimatePresence mode="wait">
-            {loading && !loadedLesson ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center h-full min-h-[400px]"
-              >
-                <div className="flex flex-col items-center gap-3 text-gray-500">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="text-[13px]">Loading lesson…</span>
-                </div>
-              </motion.div>
-            ) : loadError ? (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center h-full min-h-[400px]"
-              >
-                <div className="flex flex-col items-center gap-3 text-gray-500 text-center px-4">
-                  <AlertCircle className="w-6 h-6 text-red-400" />
-                  <span className="text-[13px]">{loadError}</span>
-                  <button
-                    onClick={() => { setLoadError(null); setActiveLessonId(null); }}
-                    className="text-[12px] text-violet-400 hover:text-violet-300"
-                  >
-                    Back to overview
-                  </button>
-                </div>
-              </motion.div>
-            ) : isLessonView && loadedLesson ? (
-              <motion.div
-                key={loadedLesson.id}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.15 }}
-                className="h-full"
-              >
-                <LessonPanel
-                  lesson={loadedLesson}
-                  lessonProgress={lessonProgress}
-                  allLessons={allLessons}
-                  onSelectLesson={navigateToLesson}
-                  onMarkComplete={handleMarkComplete}
-                  onMarkIncomplete={handleMarkIncomplete}
-                  completing={completing}
-                  isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
-                  currentIndex={currentIndex}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <OverviewPanel
-                  bootcamp={bootcamp}
-                  allLessons={allLessons}
-                  lessonProgress={lessonProgress}
-                  progressPercent={progressPercent}
-                  completedCount={completedCount}
-                  totalLessons={totalLessons}
-                  totalWatchedSecs={totalWatchedSecs}
-                  totalDurationSecs={totalDurationSecs}
-                  resumeLesson={resumeLesson}
-                  resumeIndex={resumeIndex}
-                  isComplete={isComplete}
-                  onSelectLesson={navigateToLesson}
-                  coursesCount={coursesCount}
-                  modulesCount={modulesCount}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Inline loading bar while next lesson fetches (current still visible) */}
+          {loading && loadedLesson && (
+            <div className="sticky top-0 z-20 h-0.5 w-full overflow-hidden bg-transparent">
+              <div className="h-full w-1/3 animate-pulse bg-emerald-500" />
+            </div>
+          )}
+          {loading && !loadedLesson ? (
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+              <div className="flex flex-col items-center gap-3 text-gray-500">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-[13px]">Loading lesson…</span>
+              </div>
+            </div>
+          ) : loadError ? (
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+              <div className="flex flex-col items-center gap-3 text-gray-500 text-center px-4">
+                <AlertCircle className="w-6 h-6 text-red-400" />
+                <span className="text-[13px]">{loadError}</span>
+                <button
+                  onClick={() => { setLoadError(null); setActiveLessonId(null); }}
+                  className="text-[12px] text-violet-400 hover:text-violet-300"
+                >
+                  Back to overview
+                </button>
+              </div>
+            </div>
+          ) : isLessonView && loadedLesson ? (
+            <LessonPanel
+              lesson={loadedLesson}
+              lessonProgress={lessonProgress}
+              allLessons={allLessons}
+              onSelectLesson={selectLesson}
+              onSaveNotes={handleSaveNotes}
+              onMarkComplete={handleMarkComplete}
+              onMarkIncomplete={handleMarkIncomplete}
+              completing={completing}
+              isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
+              currentIndex={currentIndex}
+            />
+          ) : (
+            <OverviewPanel
+              bootcamp={bootcamp}
+              allLessons={allLessons}
+              lessonProgress={lessonProgress}
+              progressPercent={progressPercent}
+              completedCount={completedCount}
+              totalLessons={totalLessons}
+              totalWatchedSecs={totalWatchedSecs}
+              totalDurationSecs={totalDurationSecs}
+              resumeLesson={resumeLesson}
+              resumeIndex={resumeIndex}
+              isComplete={isComplete}
+              onSelectLesson={selectLesson}
+              coursesCount={coursesCount}
+              modulesCount={modulesCount}
+            />
+          )}
         </main>
       </div>
 
@@ -1000,7 +1133,8 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
                 lessonProgress={lessonProgress}
                 activeLessonId={activeLessonId}
                 resumeLesson={activeLessonId ? null : resumeLesson}
-                onSelect={navigateToLesson}
+                onSelect={selectLesson}
+                onPrefetch={prefetchLesson}
                 totalLessons={totalLessons}
                 completedCount={completedCount}
                 progressPercent={progressPercent}
@@ -1015,7 +1149,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
       {!isLessonView && resumeLesson && (
         <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-white/10 bg-[#080b11]/95 backdrop-blur-xl px-4 py-3">
           <button
-            onClick={() => navigateToLesson(resumeLesson)}
+            onClick={() => selectLesson(resumeLesson)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20"
           >
             <Play className="h-4 w-4 fill-current" />

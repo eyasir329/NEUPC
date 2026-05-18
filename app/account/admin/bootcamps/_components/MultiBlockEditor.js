@@ -300,7 +300,8 @@ const VIDEO_ICONS = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function MultiBlockEditor({ value, onChange }) {
+export default function MultiBlockEditor({ value, onChange, uploadImageAction: uploadImageActionProp }) {
+  const uploadImageAction = uploadImageActionProp || uploadLessonImageAction;
   const [blocks, setBlocks] = useState(() => parseContentBlocks(value));
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -381,7 +382,7 @@ export default function MultiBlockEditor({ value, onChange }) {
           <RichTextEditor
             value={block.content}
             onChange={(val) => updateBlockContent(block.id, val)}
-            uploadImageAction={uploadLessonImageAction}
+            uploadImageAction={uploadImageAction}
             placeholder="Write your content here..."
             minHeight="200px"
           />
@@ -641,9 +642,10 @@ export default function MultiBlockEditor({ value, onChange }) {
           <h4 className="text-sm font-semibold text-[#c0c1ff] mb-2 flex items-center gap-2">
             <BookOpen className="h-4 w-4" /> Lesson Plan Structure
           </h4>
-          <MultiBlockEditor 
-            value={block.content} 
+          <MultiBlockEditor
+            value={block.content}
             onChange={(val) => updateBlockContent(block.id, val)}
+            uploadImageAction={uploadImageAction}
           />
         </div>
       );
@@ -706,7 +708,7 @@ export default function MultiBlockEditor({ value, onChange }) {
           const formData = new FormData();
           formData.append('file', file);
           
-          const result = await uploadLessonImageAction(formData);
+          const result = await uploadImageAction(formData);
           if (result.error) {
             updateImage(imgId, { uploadError: result.error, uploading: false });
           } else {

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Calendar, CalendarCheck, TrendingUp, Sparkles } from 'lucide-react';
 import { GlassCard, ActionButton } from '@/app/account/member/_components/_ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
+import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
 import { computeStats } from '@/app/account/_components/events/eventConstants';
 
@@ -46,29 +47,20 @@ const MEMBERSHIP_CTA = (
   </GlassCard>
 );
 
-function getDetailProps(event) {
-  return {
-    detailRows: [
-      { label: 'Status',   value: event._isUpcoming ? 'Upcoming' : 'Past' },
-      { label: 'Category', value: event._type },
-      { label: 'Access',   value: 'Public', accent: 'text-violet-400' },
-    ],
-    sidebarSlot: (
-      <GlassCard className="border-indigo-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-indigo-950/30">
-        <div className="mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-indigo-400" />
-          <p className="text-[13px] font-semibold text-white">Member-only benefits</p>
-        </div>
-        <p className="mb-3 text-[12px] text-gray-400">
-          Priority registration, exclusive materials, and post-event recordings.
-        </p>
-        <ActionButton href="/account/guest/membership-application" tone="indigo" className="w-full justify-center">
-          Apply for membership
-        </ActionButton>
-      </GlassCard>
-    ),
-  };
-}
+const MEMBER_BENEFITS_CARD = (
+  <GlassCard className="border-indigo-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-indigo-950/30">
+    <div className="mb-3 flex items-center gap-2">
+      <Sparkles className="h-4 w-4 text-indigo-400" />
+      <p className="text-[13px] font-semibold text-white">Member-only benefits</p>
+    </div>
+    <p className="mb-3 text-[12px] text-gray-400">
+      Priority registration, exclusive materials, and post-event recordings.
+    </p>
+    <ActionButton href="/account/guest/membership-application" tone="indigo" className="w-full justify-center">
+      Apply for membership
+    </ActionButton>
+  </GlassCard>
+);
 
 export default function GuestEventsClient({ events: serverEvents }) {
   const source = serverEvents?.length > 0 ? serverEvents : FALLBACK_EVENTS;
@@ -90,7 +82,13 @@ export default function GuestEventsClient({ events: serverEvents }) {
       filterFn={filterFn}
       stats={stats}
       sidebarCta={MEMBERSHIP_CTA}
-      getDetailProps={getDetailProps}
+      renderDetail={(event, onBack) => (
+        <EventContentDetail
+          event={event}
+          onBack={onBack}
+          rightSlot={MEMBER_BENEFITS_CARD}
+        />
+      )}
     />
   );
 }

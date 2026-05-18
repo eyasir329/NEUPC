@@ -390,9 +390,21 @@
 ====================== */
 
 /* Editor content area */
-.tiptap-editor-content {
+.tiptap-editor-content,
+.tiptap-viewer-content {
   padding: 1.25rem 1.5rem;
   min-height: 300px;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: #e4e4e7;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Viewer-only variant: no padding/min-height, inherits all element styles */
+.tiptap-viewer-content {
+  padding: 0;
+  min-height: 0;
   font-size: 1rem;
   line-height: 1.75;
   color: #e4e4e7;
@@ -411,7 +423,8 @@
 }
 
 /* Headings in editor */
-.tiptap-editor-content h2 {
+.tiptap-editor-content,
+.tiptap-viewer-content h2 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-top: 1.75rem;
@@ -421,7 +434,8 @@
   padding-bottom: 0.5rem;
 }
 
-.tiptap-editor-content h3 {
+.tiptap-editor-content,
+.tiptap-viewer-content h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin-top: 1.5rem;
@@ -430,12 +444,14 @@
 }
 
 /* Paragraphs */
-.tiptap-editor-content p {
+.tiptap-editor-content,
+.tiptap-viewer-content p {
   margin-bottom: 0.75rem;
 }
 
 /* Links */
-.tiptap-editor-content a {
+.tiptap-editor-content,
+.tiptap-viewer-content a {
   color: #60a5fa;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -443,33 +459,39 @@
   transition: color 0.15s;
 }
 
-.tiptap-editor-content a:hover {
+.tiptap-editor-content,
+.tiptap-viewer-content a:hover {
   color: #93bbfc;
 }
 
 /* Lists */
-.tiptap-editor-content ul {
+.tiptap-editor-content,
+.tiptap-viewer-content ul {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 0.75rem;
 }
 
-.tiptap-editor-content ol {
+.tiptap-editor-content,
+.tiptap-viewer-content ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-bottom: 0.75rem;
 }
 
-.tiptap-editor-content li {
+.tiptap-editor-content,
+.tiptap-viewer-content li {
   margin-bottom: 0.25rem;
 }
 
-.tiptap-editor-content li p {
+.tiptap-editor-content,
+.tiptap-viewer-content li p {
   margin-bottom: 0.25rem;
 }
 
 /* Blockquote */
-.tiptap-editor-content blockquote {
+.tiptap-editor-content,
+.tiptap-viewer-content blockquote {
   border-left: 3px solid #3b82f6;
   padding-left: 1rem;
   margin: 1rem 0;
@@ -481,7 +503,8 @@
 }
 
 /* Code inline */
-.tiptap-editor-content code {
+.tiptap-editor-content,
+.tiptap-viewer-content code {
   background: #1a1f2e;
   color: #abb2bf;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -495,7 +518,8 @@
 }
 
 /* Code block */
-.tiptap-editor-content pre {
+.tiptap-editor-content,
+.tiptap-viewer-content pre {
   background: #0d1117;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.75rem;
@@ -506,7 +530,8 @@
   line-height: 1.6;
 }
 
-.tiptap-editor-content pre code {
+.tiptap-editor-content,
+.tiptap-viewer-content pre code {
   background: none;
   color: #e4e4e7;
   padding: 0;
@@ -515,14 +540,16 @@
 }
 
 /* Horizontal rule */
-.tiptap-editor-content hr {
+.tiptap-editor-content,
+.tiptap-viewer-content hr {
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin: 1.5rem 0;
 }
 
 /* Images */
-.tiptap-editor-content img {
+.tiptap-editor-content,
+.tiptap-viewer-content img {
   max-width: 100%;
   height: auto;
   border-radius: 0.75rem;
@@ -530,12 +557,14 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tiptap-editor-content img[data-alignment='left'] {
+.tiptap-editor-content,
+.tiptap-viewer-content img[data-alignment='left'] {
   float: left;
   margin: 0.75rem 1.5rem 1rem 0;
 }
 
-.tiptap-editor-content img[data-alignment='right'] {
+.tiptap-editor-content,
+.tiptap-viewer-content img[data-alignment='right'] {
   float: right;
   margin: 0.75rem 0 1rem 1.5rem;
 }
@@ -550,33 +579,45 @@
   }
 }
 
-.tiptap-editor-content::after {
+.tiptap-editor-content,
+.tiptap-viewer-content::after {
   content: '';
   display: table;
   clear: both;
 }
 
 /* Block elements clear floats */
-.tiptap-editor-content h1,
-.tiptap-editor-content h2,
-.tiptap-editor-content h3,
-.tiptap-editor-content h4,
-.tiptap-editor-content h5,
-.tiptap-editor-content h6,
-.tiptap-editor-content hr,
-.tiptap-editor-content blockquote,
-.tiptap-editor-content pre {
+.tiptap-editor-content,
+.tiptap-viewer-content h1,
+.tiptap-editor-content,
+.tiptap-viewer-content h2,
+.tiptap-editor-content,
+.tiptap-viewer-content h3,
+.tiptap-editor-content,
+.tiptap-viewer-content h4,
+.tiptap-editor-content,
+.tiptap-viewer-content h5,
+.tiptap-editor-content,
+.tiptap-viewer-content h6,
+.tiptap-editor-content,
+.tiptap-viewer-content hr,
+.tiptap-editor-content,
+.tiptap-viewer-content blockquote,
+.tiptap-editor-content,
+.tiptap-viewer-content pre {
   clear: both;
 }
 
-.tiptap-editor-content img.ProseMirror-selectednode {
+.tiptap-editor-content,
+.tiptap-viewer-content img.ProseMirror-selectednode {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
   border-radius: 0.75rem;
 }
 
 /* Highlight */
-.tiptap-editor-content mark {
+.tiptap-editor-content,
+.tiptap-viewer-content mark {
   background-color: rgba(250, 204, 21, 0.3);
   color: inherit;
   border-radius: 0.25em;
@@ -584,19 +625,22 @@
 }
 
 /* Strong */
-.tiptap-editor-content strong {
+.tiptap-editor-content,
+.tiptap-viewer-content strong {
   color: #fafafa;
   font-weight: 700;
 }
 
 /* Strikethrough */
-.tiptap-editor-content s {
+.tiptap-editor-content,
+.tiptap-viewer-content s {
   color: #71717a;
 }
 
 /* ─── Headings h1, h4 in editor ─── */
 
-.tiptap-editor-content h1 {
+.tiptap-editor-content,
+.tiptap-viewer-content h1 {
   font-size: 2rem;
   font-weight: 800;
   margin-top: 2rem;
@@ -606,7 +650,8 @@
   padding-bottom: 0.5rem;
 }
 
-.tiptap-editor-content h4 {
+.tiptap-editor-content,
+.tiptap-viewer-content h4 {
   font-size: 1.1rem;
   font-weight: 600;
   margin-top: 1.25rem;
@@ -616,7 +661,8 @@
 
 /* ─── Tables in editor ─── */
 
-.tiptap-editor-content table {
+.tiptap-editor-content,
+.tiptap-viewer-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 1rem 0;
@@ -626,8 +672,10 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.tiptap-editor-content th,
-.tiptap-editor-content td {
+.tiptap-editor-content,
+.tiptap-viewer-content th,
+.tiptap-editor-content,
+.tiptap-viewer-content td {
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.5rem 0.75rem;
   min-width: 80px;
@@ -635,24 +683,29 @@
   position: relative;
 }
 
-.tiptap-editor-content th {
+.tiptap-editor-content,
+.tiptap-viewer-content th {
   background: rgba(255, 255, 255, 0.06);
   font-weight: 600;
   color: #fafafa;
   text-align: left;
 }
 
-.tiptap-editor-content td {
+.tiptap-editor-content,
+.tiptap-viewer-content td {
   background: transparent;
 }
 
-.tiptap-editor-content th p,
-.tiptap-editor-content td p {
+.tiptap-editor-content,
+.tiptap-viewer-content th p,
+.tiptap-editor-content,
+.tiptap-viewer-content td p {
   margin: 0;
 }
 
 /* Selected cell highlight */
-.tiptap-editor-content .selectedCell::after {
+.tiptap-editor-content,
+.tiptap-viewer-content .selectedCell::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -662,7 +715,8 @@
 }
 
 /* Table column resize handle */
-.tiptap-editor-content .column-resize-handle {
+.tiptap-editor-content,
+.tiptap-viewer-content .column-resize-handle {
   position: absolute;
   right: -2px;
   top: 0;
@@ -673,36 +727,42 @@
   z-index: 10;
 }
 
-.tiptap-editor-content .tableWrapper {
+.tiptap-editor-content,
+.tiptap-viewer-content .tableWrapper {
   overflow-x: auto;
   margin: 1rem 0;
 }
 
-.tiptap-editor-content.resize-cursor {
+.tiptap-editor-content,
+.tiptap-viewer-content.resize-cursor {
   cursor: col-resize;
 }
 
 /* ─── Task list in editor ─── */
 
-.tiptap-editor-content ul[data-type='taskList'] {
+.tiptap-editor-content,
+.tiptap-viewer-content ul[data-type='taskList'] {
   list-style: none;
   padding-left: 0;
   margin: 0.75rem 0;
 }
 
-.tiptap-editor-content ul[data-type='taskList'] li {
+.tiptap-editor-content,
+.tiptap-viewer-content ul[data-type='taskList'] li {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
   margin-bottom: 0.25rem;
 }
 
-.tiptap-editor-content ul[data-type='taskList'] li > label {
+.tiptap-editor-content,
+.tiptap-viewer-content ul[data-type='taskList'] li > label {
   flex-shrink: 0;
   margin-top: 0.25rem;
 }
 
-.tiptap-editor-content
+.tiptap-editor-content,
+.tiptap-viewer-content
   ul[data-type='taskList']
   li
   > label
@@ -719,7 +779,8 @@
   display: block;
 }
 
-.tiptap-editor-content
+.tiptap-editor-content,
+.tiptap-viewer-content
   ul[data-type='taskList']
   li
   > label
@@ -728,7 +789,8 @@
   border-color: #3b82f6;
 }
 
-.tiptap-editor-content
+.tiptap-editor-content,
+.tiptap-viewer-content
   ul[data-type='taskList']
   li
   > label
@@ -744,11 +806,13 @@
   transform: rotate(45deg);
 }
 
-.tiptap-editor-content ul[data-type='taskList'] li > div {
+.tiptap-editor-content,
+.tiptap-viewer-content ul[data-type='taskList'] li > div {
   flex: 1;
 }
 
-.tiptap-editor-content
+.tiptap-editor-content,
+.tiptap-viewer-content
   ul[data-type='taskList']
   li[data-checked='true']
   > div
@@ -759,12 +823,14 @@
 
 /* ─── Subscript / Superscript ─── */
 
-.tiptap-editor-content sub {
+.tiptap-editor-content,
+.tiptap-viewer-content sub {
   font-size: 0.75em;
   vertical-align: sub;
 }
 
-.tiptap-editor-content sup {
+.tiptap-editor-content,
+.tiptap-viewer-content sup {
   font-size: 0.75em;
   vertical-align: super;
 }
@@ -772,118 +838,154 @@
 /* ─── Lowlight syntax highlighting (dark theme) ─── */
 
 /* Base code text */
-.tiptap-editor-content pre code {
+.tiptap-editor-content,
+.tiptap-viewer-content pre code {
   color: #abb2bf;
 }
 
 /* Comments — muted green-grey italic */
-.tiptap-editor-content .hljs-comment,
-.tiptap-editor-content .hljs-quote {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-comment,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-quote {
   color: #5c6370;
   font-style: italic;
 }
 
 /* Keywords — vivid coral/red: if, else, return, import, const … */
-.tiptap-editor-content .hljs-keyword,
-.tiptap-editor-content .hljs-selector-tag,
-.tiptap-editor-content .hljs-tag {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-keyword,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-selector-tag,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-tag {
   color: #c678dd;
 }
 
 /* Types & class names — gold */
-.tiptap-editor-content .hljs-type,
-.tiptap-editor-content .hljs-class .hljs-title,
-.tiptap-editor-content .hljs-title.class_,
-.tiptap-editor-content .hljs-title {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-type,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-class .hljs-title,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-title.class_,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-title {
   color: #e5c07b;
 }
 
 /* Strings — warm green */
-.tiptap-editor-content .hljs-string,
-.tiptap-editor-content .hljs-addition,
-.tiptap-editor-content .hljs-template-string {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-string,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-addition,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-template-string {
   color: #98c379;
 }
 
 /* Numbers & booleans — sky blue */
-.tiptap-editor-content .hljs-number,
-.tiptap-editor-content .hljs-literal {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-number,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-literal {
   color: #d19a66;
 }
 
 /* Built-ins & functions — blue */
-.tiptap-editor-content .hljs-built_in,
-.tiptap-editor-content .hljs-function .hljs-title,
-.tiptap-editor-content .hljs-title.function_ {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-built_in,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-function .hljs-title,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-title.function_ {
   color: #61afef;
 }
 
 /* Attributes / props — light red */
-.tiptap-editor-content .hljs-attr,
-.tiptap-editor-content .hljs-attribute {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-attr,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-attribute {
   color: #e06c75;
 }
 
 /* Variables — cyan */
-.tiptap-editor-content .hljs-variable,
-.tiptap-editor-content .hljs-template-variable {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-variable,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-template-variable {
   color: #56b6c2;
 }
 
 /* Function calls — blue */
-.tiptap-editor-content .hljs-function {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-function {
   color: #61afef;
 }
 
 /* Operators & punctuation — soft white */
-.tiptap-editor-content .hljs-operator,
-.tiptap-editor-content .hljs-punctuation {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-operator,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-punctuation {
   color: #abb2bf;
 }
 
 /* Params — peach */
-.tiptap-editor-content .hljs-params {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-params {
   color: #d19a66;
 }
 
 /* Deleted lines */
-.tiptap-editor-content .hljs-deletion {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-deletion {
   color: #e06c75;
   background: rgba(224, 108, 117, 0.1);
 }
 
 /* Meta / preprocessor */
-.tiptap-editor-content .hljs-meta,
-.tiptap-editor-content .hljs-meta .hljs-keyword {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-meta,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-meta .hljs-keyword {
   color: #e5c07b;
 }
 
 /* Regexp */
-.tiptap-editor-content .hljs-regexp {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-regexp {
   color: #98c379;
 }
 
 /* Symbols & constants */
-.tiptap-editor-content .hljs-symbol,
-.tiptap-editor-content .hljs-bullet {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-symbol,
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-bullet {
   color: #56b6c2;
 }
 
 /* Selector id / class (CSS) */
-.tiptap-editor-content .hljs-selector-id {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-selector-id {
   color: #e06c75;
 }
-.tiptap-editor-content .hljs-selector-class {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-selector-class {
   color: #e5c07b;
 }
 
 /* Property names (JSON, CSS) */
-.tiptap-editor-content .hljs-property {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-property {
   color: #e06c75;
 }
 
 /* Namespace */
-.tiptap-editor-content .hljs-namespace {
+.tiptap-editor-content,
+.tiptap-viewer-content .hljs-namespace {
   color: #e5c07b;
 }
 

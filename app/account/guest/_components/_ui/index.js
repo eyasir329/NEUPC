@@ -231,11 +231,11 @@ const BUTTON_TONES = {
   indigo: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20',
 };
 
-export function ActionButton({ children, tone = 'ghost', icon: Icon, href, className = '', ...props }) {
+export function ActionButton({ children, tone = 'ghost', icon: Icon, href, className = '', type = 'button', ...props }) {
   const cls = `inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${BUTTON_TONES[tone] ?? BUTTON_TONES.ghost} ${className}`;
   const inner = <>{Icon && <Icon className="h-3.5 w-3.5" />}{children}</>;
   if (href) return <Link href={href} className={cls} {...props}>{inner}</Link>;
-  return <button type="button" className={cls} {...props}>{inner}</button>;
+  return <button type={type} className={cls} {...props}>{inner}</button>;
 }
 
 const AVATAR_TONES = [
