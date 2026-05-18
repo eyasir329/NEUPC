@@ -10,6 +10,7 @@ import {
   getMyEnrollments,
   getBootcampProgress,
   getMemberBootcamps,
+  getLearningActivity,
 } from '@/app/_lib/bootcamp-actions';
 import MemberBootcampsClient from './_components/MemberBootcampsClient';
 
@@ -24,13 +25,17 @@ export default async function MemberBootcampsPage() {
   // Fetch user's enrollments
   const enrollments = await getMyEnrollments().catch(() => []);
 
-  // Fetch progress for all enrolled bootcamps in parallel
+  // Fetch progress for all enrolled bootcamps + learning activity in parallel
   const valid = enrollments.filter((e) => e.bootcamps?.id);
-  const progressList = await Promise.all(
-    valid.map((e) =>
-      getBootcampProgress(e.bootcamps.id).catch(() => ({ lessonProgress: {} }))
-    )
-  );
+  const [progressList, learningActivity] = await Promise.all([
+    Promise.all(
+      valid.map((e) =>
+        getBootcampProgress(e.bootcamps.id).catch(() => ({ lessonProgress: {} }))
+      )
+    ),
+    getLearningActivity(null, 365).catch(() => []),
+  ]);
+
   const enrollmentMap = {};
   valid.forEach((enrollment, idx) => {
     const progress = progressList[idx];
@@ -49,6 +54,7 @@ export default async function MemberBootcampsPage() {
       user={user}
       bootcamps={allBootcamps}
       enrollmentMap={enrollmentMap}
+      learningActivity={learningActivity}
     />
   );
 }

@@ -924,6 +924,7 @@ const LessonPanel = memo(function LessonPanel({
     async (progressData) => {
       const delta = Math.floor(progressData.deltaSeconds || 0);
       const pos = Math.floor(progressData.currentTime || 0);
+      console.log('[watch] tick', { lessonId: lesson.id, bootcampId, delta, pos });
       try {
         await Promise.all([
           updateWatchTimeDelta(lesson.id, delta, pos, bootcampId),
@@ -931,7 +932,10 @@ const LessonPanel = memo(function LessonPanel({
             ? recordLearningActivity({ bootcampId, deltaSeconds: delta })
             : null,
         ]);
-      } catch {}
+        console.log('[watch] saved ok', { delta });
+      } catch (err) {
+        console.error('[watch] save failed', err);
+      }
     },
     [lesson.id, bootcampId]
   );

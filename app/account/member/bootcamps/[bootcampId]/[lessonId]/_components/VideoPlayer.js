@@ -39,12 +39,84 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function YouTubeEmbed({ videoId }) {
+const TICK_MS = 30000;
+
+function YouTubeEmbed({ videoId, onProgress, onComplete }) {
   const [loading, setLoading] = useState(true);
+  const iframeRef = useRef(null);
+  const playingRef = useRef(false);
+  const lastTickRef = useRef({ time: null, at: null });
+  const timerRef = useRef(null);
+
   const extractedId =
     videoId?.match(
       /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
     )?.[1] || videoId;
+
+  const postToPlayer = useCallback((event, data = {}) => {
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event, ...data }),
+      '*'
+    );
+  }, []);
+
+  const startTick = useCallback(() => {
+    if (timerRef.current) return;
+    lastTickRef.current = { time: null, at: Date.now() };
+    timerRef.current = setInterval(() => {
+      if (!onProgress) return;
+      // Ask player for current time; response handled in message listener
+      postToPlayer('listening');
+      // Fallback: compute delta from wall clock if we don't have currentTime
+      const now = Date.now();
+      const prev = lastTickRef.current;
+      if (prev.at != null) {
+        const wallDelta = Math.round((now - prev.at) / 1000);
+        const delta = Math.min(wallDelta, TICK_MS / 1000 + 2);
+        if (delta > 0) onProgress({ deltaSeconds: delta, currentTime: 0 });
+      }
+      lastTickRef.current = { time: null, at: now };
+    }, TICK_MS);
+  }, [onProgress, postToPlayer]);
+
+  const stopTick = useCallback(() => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    lastTickRef.current = { time: null, at: null };
+  }, []);
+
+  // Listen for YouTube iframe API messages
+  useEffect(() => {
+    const handler = (e) => {
+      let data;
+      try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+      if (!data) return;
+
+      // Player state: 1=playing, 2=paused, 0=ended
+      if (data.event === 'onStateChange') {
+        const state = data.info;
+        if (state === 1) {
+          playingRef.current = true;
+          startTick();
+        } else {
+          playingRef.current = false;
+          stopTick();
+          if (state === 0) onComplete?.();
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => {
+      window.removeEventListener('message', handler);
+      stopTick();
+    };
+  }, [startTick, stopTick, onComplete]);
+
+  // Once iframe loads, tell the API to send events
+  const handleLoad = useCallback(() => {
+    setLoading(false);
+    postToPlayer('listening');
+  }, [postToPlayer]);
 
   return (
     <div className="relative aspect-video max-h-[85vh] w-full overflow-hidden rounded-xl bg-black">
@@ -54,12 +126,13 @@ function YouTubeEmbed({ videoId }) {
         </div>
       )}
       <iframe
+        ref={iframeRef}
         src={`https://www.youtube-nocookie.com/embed/${extractedId}?rel=0&modestbranding=1&enablejsapi=1`}
         title="Video player"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
         className="absolute inset-0 h-full w-full"
-        onLoad={() => setLoading(false)}
+        onLoad={handleLoad}
       />
     </div>
   );
@@ -186,11 +259,11 @@ function DriveVideoPlayer({
   // Progress save: 30s interval + on tab hide.
   // deltaSeconds = real playback advanced since last save, clamped to [0, TICK]
   // so seeks/scrubs don't inflate watch time.
-  const TICK_MS = 30000;
   const lastTickRef = useRef({ time: null, at: null });
   useEffect(() => {
     const save = () => {
       const video = videoRef.current;
+      console.log('[player] save tick', { hasVideo: !!video, hasOnProgress: !!onProgress, currentTime: video?.currentTime });
       if (!video || !onProgress || !(video.currentTime > 0)) return;
       const now = Date.now();
       const prev = lastTickRef.current;
@@ -208,6 +281,7 @@ function DriveVideoPlayer({
       });
     };
 
+    console.log('[player] effect', { playing: state.playing, hasOnProgress: !!onProgress });
     if (state.playing && onProgress) {
       lastTickRef.current = {
         time: videoRef.current?.currentTime ?? 0,
@@ -906,7 +980,7 @@ export default function VideoPlayer({
   }
 
   if (video_source === 'youtube') {
-    return <YouTubeEmbed videoId={video_id || video_url} />;
+    return <YouTubeEmbed videoId={video_id || video_url} onProgress={onProgress} onComplete={onComplete} />;
   }
 
   if (video_source === 'drive' || video_source === 'upload') {

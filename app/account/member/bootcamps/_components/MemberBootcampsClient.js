@@ -302,13 +302,18 @@ function LearningCalendar({ enrolledBootcamps }) {
 
   const completedByDate = useMemo(() => {
     const map = {};
-    enrolledBootcamps.forEach(({ enrollment }) => {
+    enrolledBootcamps.forEach(({ bootcamp, enrollment }) => {
       const progress = enrollment?.progressData?.lessonProgress || {};
       Object.values(progress).forEach((p) => {
         if (p.is_completed && p.completed_at) {
           const d = new Date(p.completed_at);
           const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-          map[key] = (map[key] || 0) + 1;
+          if (!map[key]) map[key] = { count: 0, lessons: [] };
+          map[key].count += 1;
+          map[key].lessons.push({
+            title: p.lesson_title || 'Lesson',
+            href: `/account/member/bootcamps/${bootcamp.id}/${p.lesson_id}`,
+          });
         }
       });
     });
@@ -358,18 +363,30 @@ function LearningCalendar({ enrolledBootcamps }) {
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
             const key = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${day}`;
-            const count = completedByDate[key] || 0;
+            const entry = completedByDate[key];
+            const count = entry?.count || 0;
+            const lessons = entry?.lessons || [];
             const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
             return (
               <div key={i} className={cn('relative group aspect-square flex items-center justify-center rounded-xl border transition-all duration-300 font-semibold text-sm cursor-default', getIntensityClass(count, isToday))}>
                 {day}
                 {isToday && count === 0 && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-violet-500/60" />}
                 {count > 0 && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none origin-bottom">
-                    <div className="bg-white text-gray-900 text-xs rounded-xl p-2.5 shadow-xl whitespace-nowrap">
-                      {count} lesson{count > 1 ? 's' : ''} completed
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-auto origin-bottom">
+                    <div className="bg-[#1a1d27] border border-white/10 text-white text-xs rounded-xl p-3 shadow-xl min-w-[160px] max-w-[240px]">
+                      <p className="font-semibold text-gray-400 mb-2">{count} lesson{count > 1 ? 's' : ''} completed</p>
+                      <ul className="space-y-1.5">
+                        {lessons.map((l, li) => (
+                          <li key={li}>
+                            <a href={l.href} className="flex items-start gap-1.5 text-violet-300 hover:text-violet-100 transition-colors">
+                              <span className="mt-0.5 shrink-0 w-1 h-1 rounded-full bg-violet-400 mt-1.5" />
+                              <span className="line-clamp-2 leading-snug">{l.title}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-white" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#1a1d27]" />
                   </div>
                 )}
               </div>
@@ -391,30 +408,121 @@ function LearningCalendar({ enrolledBootcamps }) {
   );
 }
 
-function WatchTimeChart({ enrolledBootcamps }) {
-  const chartData = useMemo(() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const totals = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
-    const now = new Date();
-    enrolledBootcamps.forEach(({ bootcamp, enrollment }) => {
-      const progress = enrollment?.progressData?.lessonProgress || {};
-      Object.values(progress).forEach((p) => {
-        if (p.is_completed && p.completed_at) {
-          const d = new Date(p.completed_at);
-          const diffDays = Math.floor((now - d) / 86400000);
-          if (diffDays <= 6) {
-            const dayName = days[d.getDay()];
-            totals[dayName] += Math.round((bootcamp?.total_duration || 0) / (bootcamp?.total_lessons || 1));
-          }
-        }
-      });
-    });
-    return days.map(name => ({ name: name.slice(0, 3), duration: totals[name] }));
-  }, [enrolledBootcamps]);
+const WATCH_PRESETS = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: '6month', label: '6 Mo' },
+  { id: 'year', label: '1 Yr' },
+  { id: 'custom', label: 'Custom' },
+];
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
+  const now = new Date();
+
+  let from, to, groupBy;
+  if (preset === 'week') {
+    from = new Date(now); from.setDate(now.getDate() - 6); from.setHours(0, 0, 0, 0);
+    to = new Date(now); to.setHours(23, 59, 59, 999);
+    groupBy = 'day';
+  } else if (preset === 'month') {
+    from = new Date(now); from.setDate(now.getDate() - 29); from.setHours(0, 0, 0, 0);
+    to = new Date(now); to.setHours(23, 59, 59, 999);
+    groupBy = 'week';
+  } else if (preset === '6month') {
+    from = new Date(now); from.setMonth(now.getMonth() - 5); from.setDate(1); from.setHours(0, 0, 0, 0);
+    to = new Date(now); to.setHours(23, 59, 59, 999);
+    groupBy = 'month';
+  } else if (preset === 'year') {
+    from = new Date(now); from.setMonth(now.getMonth() - 11); from.setDate(1); from.setHours(0, 0, 0, 0);
+    to = new Date(now); to.setHours(23, 59, 59, 999);
+    groupBy = 'month';
+  } else {
+    from = customFrom ? new Date(customFrom + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+    to = customTo ? new Date(customTo + 'T23:59:59') : new Date(now);
+    const diffDays = Math.ceil((to - from) / 86400000);
+    groupBy = diffDays <= 31 ? 'day' : diffDays <= 120 ? 'week' : 'month';
+  }
+
+  const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Build buckets
+  const buckets = {};
+  if (groupBy === 'day') {
+    const cur = new Date(from);
+    while (cur <= to) {
+      buckets[toDateStr(cur)] = { name: DAY_ABBR[cur.getDay()], duration: 0 };
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else if (groupBy === 'week') {
+    // Weeks: Mon-Sun buckets
+    const cur = new Date(from);
+    let weekNum = 0;
+    while (cur <= to) {
+      const key = `w${weekNum}`;
+      const endOfWeek = new Date(cur); endOfWeek.setDate(cur.getDate() + 6);
+      const label = `${cur.getDate()} ${MONTH_ABBR[cur.getMonth()]}`;
+      buckets[key] = { name: label, start: new Date(cur), end: new Date(Math.min(endOfWeek, to)), duration: 0 };
+      cur.setDate(cur.getDate() + 7);
+      weekNum++;
+    }
+  } else {
+    // Month buckets
+    const cur = new Date(from.getFullYear(), from.getMonth(), 1);
+    while (cur <= to) {
+      const key = `${cur.getFullYear()}-${cur.getMonth()}`;
+      buckets[key] = { name: MONTH_ABBR[cur.getMonth()], year: cur.getFullYear(), month: cur.getMonth(), duration: 0 };
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  }
+
+  // Fill buckets from learning_activity_daily rows
+  learningActivity.forEach((row) => {
+    const d = new Date(row.activity_date + 'T00:00:00');
+    if (d < from || d > to) return;
+    const mins = Math.round((row.watch_time || 0) / 60);
+    if (mins === 0) return;
+    if (groupBy === 'day') {
+      const k = row.activity_date;
+      if (buckets[k]) buckets[k].duration += mins;
+    } else if (groupBy === 'week') {
+      for (const b of Object.values(buckets)) {
+        if (d >= b.start && d <= b.end) { b.duration += mins; break; }
+      }
+    } else {
+      const k = `${d.getFullYear()}-${d.getMonth()}`;
+      if (buckets[k]) buckets[k].duration += mins;
+    }
+  });
+
+  return Object.values(buckets);
+}
+
+function WatchTimeChart({ learningActivity }) {
+  const [preset, setPreset] = useState('week');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const chartData = useMemo(
+    () => buildWatchChartData(learningActivity, preset, customFrom, customTo),
+    [learningActivity, preset, customFrom, customTo]
+  );
 
   const totalMins = chartData.reduce((s, d) => s + d.duration, 0);
-  const avgMins = chartData.length ? Math.round(totalMins / chartData.filter(d => d.duration > 0).length || 0) : 0;
-  const topDay = chartData.reduce((a, b) => b.duration > a.duration ? b : a, { name: '-', duration: 0 });
+  const activeDays = chartData.filter(d => d.duration > 0).length;
+  const avgMins = activeDays > 0 ? Math.round(totalMins / activeDays) : 0;
+  const topBar = chartData.reduce((a, b) => b.duration > a.duration ? b : a, { name: '-', duration: 0 });
+
+  const presetLabel = {
+    week: "This week's effort",
+    month: 'Last 30 days',
+    '6month': 'Last 6 months',
+    year: 'Last 12 months',
+    custom: customFrom && customTo ? `${customFrom} → ${customTo}` : 'Select date range',
+  }[preset];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -433,24 +541,62 @@ function WatchTimeChart({ enrolledBootcamps }) {
 
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 md:p-6 h-full flex flex-col shadow-sm">
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2 mb-1 text-white">
             <TrendingUp className="w-5 h-5 text-violet-400" />
             Watch Time
           </h3>
-          <p className="text-sm text-gray-500">This week's effort</p>
+          <p className="text-sm text-gray-500">{presetLabel}</p>
         </div>
-        <div className="bg-violet-500/10 text-violet-300 px-3 py-1 rounded-lg text-sm font-semibold border border-violet-500/20">
+        <div className="bg-violet-500/10 text-violet-300 px-3 py-1 rounded-lg text-sm font-semibold border border-violet-500/20 shrink-0">
           {formatDuration(totalMins) || '0m'}
         </div>
       </div>
-      <div className="flex-1 w-full min-h-[180px] mt-4">
+
+      {/* Filter pills */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-3">
+        {WATCH_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setPreset(p.id)}
+            className={cn(
+              'px-3 py-1 rounded-lg text-xs font-semibold border transition-all',
+              preset === p.id
+                ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-white hover:border-white/10'
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Custom date inputs */}
+      {preset === 'custom' && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="flex-1 min-w-[130px] bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
+          />
+          <span className="text-gray-600 text-xs shrink-0">to</span>
+          <input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="flex-1 min-w-[130px] bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
+          />
+        </div>
+      )}
+
+      <div className="flex-1 w-full min-h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barSize={32}>
+          <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barSize={Math.max(8, Math.min(32, Math.floor(320 / Math.max(chartData.length, 1))))}>
             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#1e2535" opacity={0.8} />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 11, fontWeight: 500 }} dy={15} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={(v) => `${v}m`} />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 500 }} dy={10} interval={chartData.length > 12 ? 'preserveStartEnd' : 0} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={(v) => `${v}m`} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139,92,246,0.05)' }} />
             <Bar dataKey="duration" radius={[6, 6, 0, 0]}>
               {chartData.map((entry, index) => (
@@ -460,21 +606,22 @@ function WatchTimeChart({ enrolledBootcamps }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="grid grid-cols-2 gap-3 mt-6">
+
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
-          <span className="text-xs text-gray-500 font-medium mb-1">Daily Avg</span>
+          <span className="text-xs text-gray-500 font-medium mb-1">Avg / active day</span>
           <span className="text-lg font-bold text-white">{avgMins} <span className="text-sm font-medium text-gray-500">min</span></span>
         </div>
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
-          <span className="text-xs text-gray-500 font-medium mb-1">Top Day</span>
-          <span className="text-lg font-bold text-white">{topDay.duration > 0 ? topDay.name : '-'}</span>
+          <span className="text-xs text-gray-500 font-medium mb-1">Top Period</span>
+          <span className="text-lg font-bold text-white">{topBar.duration > 0 ? topBar.name : '-'}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function OverviewTab({ user, enrolledBootcamps, totalLessonsCompleted, streak, availableBootcamps, onTab }) {
+function OverviewTab({ user, enrolledBootcamps, totalLessonsCompleted, streak, availableBootcamps, learningActivity, onTab }) {
   const firstName = user?.full_name?.split(' ')[0] || 'there';
   const continueBootcamp = enrolledBootcamps.find((e) => {
     const total = e.bootcamp?.total_lessons || 0;
@@ -534,7 +681,7 @@ function OverviewTab({ user, enrolledBootcamps, totalLessonsCompleted, streak, a
       {/* Calendar + Watch Time */}
       <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col h-full"><LearningCalendar enrolledBootcamps={enrolledBootcamps} /></div>
-        <div className="flex flex-col h-full"><WatchTimeChart enrolledBootcamps={enrolledBootcamps} /></div>
+        <div className="flex flex-col h-full"><WatchTimeChart learningActivity={learningActivity} /></div>
       </motion.div>
 
       {/* Pick up where you left off */}
@@ -870,7 +1017,7 @@ function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, 
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {} }) {
+export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {}, learningActivity = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [, startTransition] = useTransition();
@@ -948,6 +1095,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
             totalLessonsCompleted={totalLessonsCompleted}
             streak={streak}
             availableBootcamps={availableBootcamps}
+            learningActivity={learningActivity}
             onTab={handleTabChange}
           />
         );

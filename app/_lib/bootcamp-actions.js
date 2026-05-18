@@ -1266,7 +1266,7 @@ export async function getBootcampProgress(bootcampId) {
 
   const { data, error } = await supabaseAdmin
     .from('user_progress')
-    .select('*')
+    .select('*, lessons(title)')
     .eq('user_id', userId)
     .eq('bootcamp_id', bootcampId);
 
@@ -1275,7 +1275,7 @@ export async function getBootcampProgress(bootcampId) {
   // Convert to a map for easy lookup
   const lessonProgress = {};
   data?.forEach((p) => {
-    lessonProgress[p.lesson_id] = p;
+    lessonProgress[p.lesson_id] = { ...p, lesson_title: p.lessons?.title };
   });
 
   return { progress: data || [], lessonProgress };
@@ -1428,6 +1428,7 @@ export async function recordLearningActivity({
     .single();
 
   if (error) throw error;
+  revalidatePath('/account/member/bootcamps');
   return data;
 }
 
