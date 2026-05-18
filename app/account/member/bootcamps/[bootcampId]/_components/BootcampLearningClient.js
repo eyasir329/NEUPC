@@ -1,14 +1,44 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect, useCallback, useTransition, memo, Suspense, lazy } from 'react';
+import {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  useTransition,
+  memo,
+  Suspense,
+  lazy,
+} from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ChevronDown, Play, FileText,
-  CheckCircle2, BookOpen, Layers, GraduationCap, Trophy,
-  Video, Lock, Search, X, Menu, Clock, CircleDot,
-  ChevronRight, Circle, Download, StickyNote, List,
-  Loader2, AlertCircle, ArrowLeft,
+  ChevronLeft,
+  ChevronDown,
+  Play,
+  FileText,
+  CheckCircle2,
+  BookOpen,
+  Layers,
+  GraduationCap,
+  Trophy,
+  Video,
+  Lock,
+  Search,
+  X,
+  Menu,
+  Clock,
+  CircleDot,
+  ChevronRight,
+  Circle,
+  Download,
+  StickyNote,
+  List,
+  Loader2,
+  AlertCircle,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   getLesson,
@@ -20,12 +50,14 @@ import {
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
 // Heavy chunk: lazy-load only the markdown/code-highlight renderer
-const LessonContentRenderer = lazy(() => import('../[lessonId]/_components/LessonContentRenderer'));
+const LessonContentRenderer = lazy(
+  () => import('../[lessonId]/_components/LessonContentRenderer')
+);
 
 function ChunkFallback({ label = 'Loading…' }) {
   return (
     <div className="flex items-center justify-center py-8 text-gray-500">
-      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
       <span className="text-[12px]">{label}</span>
     </div>
   );
@@ -46,7 +78,8 @@ function formatDurationFull(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (h > 0)
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
@@ -60,7 +93,15 @@ const SCROLLBAR = `
 
 // ─── Curriculum Rail ──────────────────────────────────────────────────────────
 
-const LessonRow = memo(function LessonRow({ lesson, isActive, isCompleted, onSelect, onPrefetch, index, activeRef }) {
+const LessonRow = memo(function LessonRow({
+  lesson,
+  isActive,
+  isCompleted,
+  onSelect,
+  onPrefetch,
+  index,
+  activeRef,
+}) {
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
   const duration = formatDurationSecs(lesson.duration);
   return (
@@ -69,45 +110,69 @@ const LessonRow = memo(function LessonRow({ lesson, isActive, isCompleted, onSel
       onClick={() => onSelect(lesson)}
       onMouseEnter={() => onPrefetch?.(lesson)}
       onFocus={() => onPrefetch?.(lesson)}
-      className={`group flex w-full items-start gap-3 rounded-lg px-2.5 py-2 border text-left transition-colors ${
+      className={`group flex w-full items-start gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors ${
         isActive
-          ? 'bg-emerald-500/[0.08] border-emerald-500/30'
-          : 'border-transparent hover:bg-white/[0.04] hover:border-white/10'
+          ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
+          : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
       }`}
     >
       <div className="mt-0.5 shrink-0">
         {isCompleted ? (
-          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         ) : isActive ? (
-          <div className="w-4 h-4 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40 flex items-center justify-center">
-            <Play className="w-2 h-2 fill-emerald-400 text-emerald-400" />
+          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
+            <Play className="h-2 w-2 fill-emerald-400 text-emerald-400" />
           </div>
         ) : (
-          <div className="w-4 h-4 rounded-full border border-white/15 flex items-center justify-center text-[8px] font-medium text-gray-600 group-hover:border-violet-500/40 group-hover:text-violet-400 transition-colors">
+          <div className="flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[8px] font-medium text-gray-600 transition-colors group-hover:border-violet-500/40 group-hover:text-violet-400">
             {index + 1}
           </div>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className={`text-[12.5px] leading-snug flex items-start gap-1.5 ${
-          isCompleted ? 'text-gray-500 line-through decoration-white/15'
-          : isActive ? 'text-white font-medium'
-          : 'text-gray-300 group-hover:text-white'
-        }`}>
+      <div className="min-w-0 flex-1">
+        <div
+          className={`flex items-start gap-1.5 text-[12.5px] leading-snug ${
+            isCompleted
+              ? 'text-gray-500 line-through decoration-white/15'
+              : isActive
+                ? 'font-medium text-white'
+                : 'text-gray-300 group-hover:text-white'
+          }`}
+        >
           <span className="line-clamp-2">{lesson.title}</span>
-          {lesson.is_locked && <Lock className="w-3 h-3 text-gray-600 mt-0.5 shrink-0" />}
+          {lesson.is_locked && (
+            <Lock className="mt-0.5 h-3 w-3 shrink-0 text-gray-600" />
+          )}
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[10.5px] text-gray-500">
-          {hasVideo ? <Video className="w-2.5 h-2.5" /> : <FileText className="w-2.5 h-2.5" />}
+          {hasVideo ? (
+            <Video className="h-2.5 w-2.5" />
+          ) : (
+            <FileText className="h-2.5 w-2.5" />
+          )}
           <span>{hasVideo ? 'Video' : 'Reading'}</span>
-          {duration && <><span className="text-gray-700">·</span><span>{duration}</span></>}
+          {duration && (
+            <>
+              <span className="text-gray-700">·</span>
+              <span>{duration}</span>
+            </>
+          )}
         </div>
       </div>
     </button>
   );
 });
 
-function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, onSelect, onPrefetch, activeRef, forceOpen }) {
+function ModuleGroup({
+  module,
+  lessonProgress,
+  activeLessonId,
+  resumeLessonId,
+  onSelect,
+  onPrefetch,
+  activeRef,
+  forceOpen,
+}) {
   const containsActive = module.lessons?.some((l) => l.id === activeLessonId);
   const containsResume = module.lessons?.some((l) => l.id === resumeLessonId);
   const [open, setOpen] = useState(containsActive || containsResume);
@@ -118,7 +183,9 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
   }, [containsActive]);
 
   const total = module.lessons?.length || 0;
-  const done = module.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0;
+  const done =
+    module.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed)
+      .length || 0;
   const allDone = total > 0 && done === total;
 
   const isOpen = forceOpen || open;
@@ -127,13 +194,19 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
     <div className="ml-1.5">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-white/[0.03] text-left group"
+        className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-white/[0.03]"
       >
-        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
-        <span className={`flex-1 text-[12px] font-medium truncate ${allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}>
+        <ChevronDown
+          className={`h-3 w-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+        />
+        <span
+          className={`flex-1 truncate text-[12px] font-medium ${allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}
+        >
           {module.title}
         </span>
-        <span className={`text-[10px] tabular-nums shrink-0 ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}>
+        <span
+          className={`shrink-0 text-[10px] tabular-nums ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}
+        >
           {done}/{total}
         </span>
       </button>
@@ -146,7 +219,7 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="pl-4 pt-1 space-y-0.5">
+            <div className="space-y-0.5 pt-1 pl-4">
               {module.lessons?.map((lesson, i) => (
                 <LessonRow
                   key={lesson.id}
@@ -167,18 +240,42 @@ function ModuleGroup({ module, lessonProgress, activeLessonId, resumeLessonId, o
   );
 }
 
-function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, courseIndex, onSelect, onPrefetch, activeRef, forceOpen }) {
-  const containsActive = course.modules?.some((m) => m.lessons?.some((l) => l.id === activeLessonId));
-  const containsResume = course.modules?.some((m) => m.lessons?.some((l) => l.id === resumeLessonId));
-  const [open, setOpen] = useState(containsActive || containsResume || courseIndex === 0);
+function CourseGroup({
+  course,
+  lessonProgress,
+  activeLessonId,
+  resumeLessonId,
+  courseIndex,
+  onSelect,
+  onPrefetch,
+  activeRef,
+  forceOpen,
+}) {
+  const containsActive = course.modules?.some((m) =>
+    m.lessons?.some((l) => l.id === activeLessonId)
+  );
+  const containsResume = course.modules?.some((m) =>
+    m.lessons?.some((l) => l.id === resumeLessonId)
+  );
+  const [open, setOpen] = useState(
+    containsActive || containsResume || courseIndex === 0
+  );
 
   // Auto-open when active lesson enters this course
   useEffect(() => {
     if (containsActive) setOpen(true);
   }, [containsActive]);
 
-  const total = course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
-  const done = course.modules?.reduce((s, m) => s + (m.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0), 0) || 0;
+  const total =
+    course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
+  const done =
+    course.modules?.reduce(
+      (s, m) =>
+        s +
+        (m.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed)
+          .length || 0),
+      0
+    ) || 0;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const isOpen = forceOpen || open;
@@ -187,18 +284,25 @@ function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, c
     <div className="border-b border-white/[0.06] last:border-b-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2.5 px-3 py-3 hover:bg-white/[0.03] text-left group"
+        className="group flex w-full items-center gap-2.5 px-3 py-3 text-left hover:bg-white/[0.03]"
       >
-        <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-white truncate group-hover:text-violet-300 transition-colors">
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-violet-300">
             {course.title}
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <div className="h-1 flex-1 rounded-full bg-white/5 overflow-hidden max-w-[120px]">
-              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-1 max-w-[120px] flex-1 overflow-hidden rounded-full bg-white/5">
+              <div
+                className="h-full bg-emerald-500 transition-all"
+                style={{ width: `${pct}%` }}
+              />
             </div>
-            <span className="text-[10px] tabular-nums text-gray-500">{done}/{total}</span>
+            <span className="text-[10px] text-gray-500 tabular-nums">
+              {done}/{total}
+            </span>
           </div>
         </div>
       </button>
@@ -211,7 +315,7 @@ function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, c
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="pb-2 space-y-0.5">
+            <div className="space-y-0.5 pb-2">
               {course.modules?.map((module) => (
                 <ModuleGroup
                   key={module.id}
@@ -233,7 +337,18 @@ function CourseGroup({ course, lessonProgress, activeLessonId, resumeLessonId, c
   );
 }
 
-function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson, onSelect, onPrefetch, totalLessons, completedCount, progressPercent, onClose }) {
+function CurriculumRail({
+  bootcamp,
+  lessonProgress,
+  activeLessonId,
+  resumeLesson,
+  onSelect,
+  onPrefetch,
+  totalLessons,
+  completedCount,
+  progressPercent,
+  onClose,
+}) {
   const [query, setQuery] = useState('');
   const activeRef = useRef(null);
 
@@ -242,7 +357,10 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
     // Wait for accordion expand animation (~180ms) before scrolling
     const t = setTimeout(() => {
       if (activeRef.current) {
-        activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        activeRef.current.scrollIntoView({
+          block: 'nearest',
+          behavior: 'smooth',
+        });
       }
     }, 220);
     return () => clearTimeout(t);
@@ -255,53 +373,78 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
       .map((c) => {
         const modules = (c.modules || [])
           .map((m) => {
-            const lessons = (m.lessons || []).filter((l) => l.title?.toLowerCase().includes(q));
-            return m.title?.toLowerCase().includes(q) ? m : lessons.length ? { ...m, lessons } : null;
+            const lessons = (m.lessons || []).filter((l) =>
+              l.title?.toLowerCase().includes(q)
+            );
+            return m.title?.toLowerCase().includes(q)
+              ? m
+              : lessons.length
+                ? { ...m, lessons }
+                : null;
           })
           .filter(Boolean);
-        return c.title?.toLowerCase().includes(q) ? c : modules.length ? { ...c, modules } : null;
+        return c.title?.toLowerCase().includes(q)
+          ? c
+          : modules.length
+            ? { ...c, modules }
+            : null;
       })
       .filter(Boolean);
   }, [bootcamp?.courses, query]);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.06]">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold tracking-wider uppercase text-gray-500">Course content</h2>
+      <div className="shrink-0 border-b border-white/[0.06] px-4 pt-4 pb-3">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+            Course content
+          </h2>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] tabular-nums text-gray-600">{completedCount}/{totalLessons}</span>
+            <span className="text-[10px] text-gray-600 tabular-nums">
+              {completedCount}/{totalLessons}
+            </span>
             {onClose && (
-              <button onClick={onClose} className="p-1 rounded-md hover:bg-white/[0.05] text-gray-500 hover:text-white lg:hidden">
-                <X className="w-4 h-4" />
+              <button
+                onClick={onClose}
+                className="rounded-md p-1 text-gray-500 hover:bg-white/[0.05] hover:text-white lg:hidden"
+              >
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
+            <div
+              className="h-full bg-emerald-500 transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
-          <span className="text-[11px] font-semibold tabular-nums text-emerald-400">{progressPercent}%</span>
+          <span className="text-[11px] font-semibold text-emerald-400 tabular-nums">
+            {progressPercent}%
+          </span>
         </div>
         <div className="relative mt-3">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search lessons..."
-            className="w-full bg-white/[0.03] border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-[12px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/40 focus:bg-white/[0.05] transition-colors"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-1.5 pr-7 pl-8 text-[12px] text-white transition-colors placeholder:text-gray-600 focus:border-violet-500/40 focus:bg-white/[0.05] focus:outline-none"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/5 text-gray-500">
-              <X className="w-3 h-3" />
+            <button
+              onClick={() => setQuery('')}
+              className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-gray-500 hover:bg-white/5"
+            >
+              <X className="h-3 w-3" />
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain spa-scroll">
+      <div className="spa-scroll flex-1 overflow-y-auto overscroll-contain">
         {filtered.length > 0 ? (
           filtered.map((course, ci) => (
             <CourseGroup
@@ -311,7 +454,10 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
               activeLessonId={activeLessonId}
               resumeLessonId={query ? null : resumeLesson?.id}
               courseIndex={ci}
-              onSelect={(lesson) => { onSelect(lesson); onClose?.(); }}
+              onSelect={(lesson) => {
+                onSelect(lesson);
+                onClose?.();
+              }}
               onPrefetch={onPrefetch}
               activeRef={activeRef}
               forceOpen={!!query}
@@ -319,13 +465,20 @@ function CurriculumRail({ bootcamp, lessonProgress, activeLessonId, resumeLesson
           ))
         ) : query ? (
           <div className="px-4 py-10 text-center">
-            <Search className="mx-auto mb-2 w-5 h-5 text-gray-700" />
-            <p className="text-[12px] text-gray-500">No matches for &ldquo;{query}&rdquo;</p>
-            <button onClick={() => setQuery('')} className="mt-2 text-[11px] text-violet-400 hover:text-violet-300">Clear</button>
+            <Search className="mx-auto mb-2 h-5 w-5 text-gray-700" />
+            <p className="text-[12px] text-gray-500">
+              No matches for &ldquo;{query}&rdquo;
+            </p>
+            <button
+              onClick={() => setQuery('')}
+              className="mt-2 text-[11px] text-violet-400 hover:text-violet-300"
+            >
+              Clear
+            </button>
           </div>
         ) : (
           <div className="px-4 py-10 text-center">
-            <BookOpen className="mx-auto mb-2 w-5 h-5 text-gray-700" />
+            <BookOpen className="mx-auto mb-2 h-5 w-5 text-gray-700" />
             <p className="text-[12px] text-gray-500">No curriculum yet</p>
           </div>
         )}
@@ -343,7 +496,9 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   const lastSavedRef = useRef(initialNotes || '');
   const prevLessonRef = useRef(lessonId);
   const notesRef = useRef(notes);
-  useEffect(() => { notesRef.current = notes; }, [notes]);
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
 
   // On lesson change: flush unsaved diff for previous lesson, then load new
   useEffect(() => {
@@ -372,8 +527,8 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   }, [lessonId, notes, onSave]);
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+    <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
         <div className="flex items-center gap-2">
           <StickyNote className="h-3.5 w-3.5 text-yellow-400" />
           <h3 className="text-[13px] font-semibold text-white">My Notes</h3>
@@ -383,14 +538,22 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
           disabled={saving}
           className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10 disabled:opacity-50"
         >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : saved ? <><CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved</> : 'Save'}
+          {saving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : saved ? (
+            <>
+              <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved
+            </>
+          ) : (
+            'Save'
+          )}
         </button>
       </div>
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Take notes while watching…"
-        className="w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none spa-scroll"
+        className="spa-scroll w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none"
         rows={4}
       />
     </div>
@@ -410,8 +573,17 @@ function TableOfContents({ contentRef }) {
       const els = container.querySelectorAll('h2, h3, h4');
       const items = [];
       els.forEach((el, i) => {
-        if (!el.id) el.id = `h-${i}-${el.textContent.slice(0, 20).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()}`;
-        items.push({ id: el.id, text: el.textContent, level: parseInt(el.tagName.charAt(1)) });
+        if (!el.id)
+          el.id = `h-${i}-${el.textContent
+            .slice(0, 20)
+            .replace(/\s+/g, '-')
+            .replace(/[^a-zA-Z0-9-]/g, '')
+            .toLowerCase()}`;
+        items.push({
+          id: el.id,
+          text: el.textContent,
+          level: parseInt(el.tagName.charAt(1)),
+        });
       });
       setHeadings(items);
     }, 400);
@@ -421,10 +593,16 @@ function TableOfContents({ contentRef }) {
   useEffect(() => {
     if (!headings.length) return;
     const observer = new IntersectionObserver(
-      (entries) => { const v = entries.filter((e) => e.isIntersecting); if (v.length) setActiveId(v[0].target.id); },
+      (entries) => {
+        const v = entries.filter((e) => e.isIntersecting);
+        if (v.length) setActiveId(v[0].target.id);
+      },
       { rootMargin: '-80px 0px -60% 0px', threshold: 0.1 }
     );
-    headings.forEach((h) => { const el = document.getElementById(h.id); if (el) observer.observe(el); });
+    headings.forEach((h) => {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    });
     return () => observer.disconnect();
   }, [headings]);
 
@@ -432,21 +610,31 @@ function TableOfContents({ contentRef }) {
 
   return (
     <div className="sticky top-6">
-      <div className="flex items-center gap-2 mb-3 px-1">
+      <div className="mb-3 flex items-center gap-2 px-1">
         <List className="h-3.5 w-3.5 text-violet-400" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">On this page</span>
+        <span className="text-[10px] font-bold tracking-widest text-gray-600 uppercase">
+          On this page
+        </span>
       </div>
       <nav>
         <ul className="space-y-0.5 border-l border-white/[0.08]">
           {headings.map((h) => {
             const isActive = activeId === h.id;
-            const indent = h.level === 2 ? 'pl-3' : h.level === 3 ? 'pl-5' : 'pl-7';
+            const indent =
+              h.level === 2 ? 'pl-3' : h.level === 3 ? 'pl-5' : 'pl-7';
             return (
               <li key={h.id}>
                 <button
-                  onClick={() => { document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveId(h.id); }}
-                  className={`w-full text-left py-1.5 ${indent} text-[11px] leading-snug transition-all border-l-2 -ml-px truncate ${
-                    isActive ? 'border-violet-500 text-violet-300 font-semibold' : 'border-transparent text-gray-600 hover:text-gray-400 hover:border-gray-600'
+                  onClick={() => {
+                    document
+                      .getElementById(h.id)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setActiveId(h.id);
+                  }}
+                  className={`w-full py-1.5 text-left ${indent} -ml-px truncate border-l-2 text-[11px] leading-snug transition-all ${
+                    isActive
+                      ? 'border-violet-500 font-semibold text-violet-300'
+                      : 'border-transparent text-gray-600 hover:border-gray-600 hover:text-gray-400'
                   }`}
                 >
                   {h.text}
@@ -462,52 +650,115 @@ function TableOfContents({ contentRef }) {
 
 // ─── Overview Panel ───────────────────────────────────────────────────────────
 
-const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lessonProgress, progressPercent, completedCount, totalLessons, totalWatchedSecs, totalDurationSecs, resumeLesson, resumeIndex, isComplete, onSelectLesson, coursesCount, modulesCount }) {
-  const ctaLabel = isComplete ? 'Review' : completedCount > 0 ? 'Resume' : 'Start learning';
+const OverviewPanel = memo(function OverviewPanel({
+  bootcamp,
+  allLessons,
+  lessonProgress,
+  progressPercent,
+  completedCount,
+  totalLessons,
+  totalWatchedSecs,
+  totalDurationSecs,
+  resumeLesson,
+  resumeIndex,
+  isComplete,
+  onSelectLesson,
+  coursesCount,
+  modulesCount,
+}) {
+  const ctaLabel = isComplete
+    ? 'Review'
+    : completedCount > 0
+      ? 'Resume'
+      : 'Start learning';
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-10 py-6 sm:py-10">
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
       {/* Title + meta */}
       <div className="space-y-3">
         {bootcamp?.difficulty_level && (
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-300 ring-1 ring-violet-500/20">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-violet-300 uppercase ring-1 ring-violet-500/20">
             {bootcamp.difficulty_level}
           </div>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{bootcamp?.title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          {bootcamp?.title}
+        </h1>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1 text-[12px] text-gray-500">
-          {coursesCount > 0 && <span className="inline-flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> {coursesCount} courses</span>}
-          {modulesCount > 0 && <span className="inline-flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" /> {modulesCount} modules</span>}
-          {totalLessons > 0 && <span className="inline-flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5" /> {totalLessons} lessons</span>}
-          {totalDurationSecs > 0 && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {formatDurationSecs(totalDurationSecs)}</span>}
+          {coursesCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5" /> {coursesCount} courses
+            </span>
+          )}
+          {modulesCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <BookOpen className="h-3.5 w-3.5" /> {modulesCount} modules
+            </span>
+          )}
+          {totalLessons > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <GraduationCap className="h-3.5 w-3.5" /> {totalLessons} lessons
+            </span>
+          )}
+          {totalDurationSecs > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />{' '}
+              {formatDurationSecs(totalDurationSecs)}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Continue card */}
       {resumeLesson && (
-        <div className={`mt-7 rounded-2xl border ${isComplete ? 'border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] to-transparent' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-transparent'} p-5 sm:p-6`}>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-            <div className="flex-1 min-w-0">
-              <div className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${isComplete ? 'text-amber-300' : 'text-emerald-300'}`}>
-                {isComplete ? <><Trophy className="w-3 h-3" /> Bootcamp complete</> : <><CircleDot className="w-3 h-3" /> {completedCount > 0 ? 'Continue where you left off' : 'Ready to begin'}</>}
+        <div
+          className={`mt-7 rounded-2xl border ${isComplete ? 'border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] to-transparent' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-transparent'} p-5 sm:p-6`}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <div className="min-w-0 flex-1">
+              <div
+                className={`inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase ${isComplete ? 'text-amber-300' : 'text-emerald-300'}`}
+              >
+                {isComplete ? (
+                  <>
+                    <Trophy className="h-3 w-3" /> Bootcamp complete
+                  </>
+                ) : (
+                  <>
+                    <CircleDot className="h-3 w-3" />{' '}
+                    {completedCount > 0
+                      ? 'Continue where you left off'
+                      : 'Ready to begin'}
+                  </>
+                )}
               </div>
-              <h3 className="mt-1.5 text-lg font-semibold text-white truncate">{resumeLesson.title}</h3>
+              <h3 className="mt-1.5 truncate text-lg font-semibold text-white">
+                {resumeLesson.title}
+              </h3>
               <div className="mt-1 flex items-center gap-3 text-[12px] text-gray-400">
-                <span>Lesson {resumeIndex + 1} of {totalLessons}</span>
+                <span>
+                  Lesson {resumeIndex + 1} of {totalLessons}
+                </span>
                 {resumeLesson.duration > 0 && (
-                  <><span className="text-gray-700">·</span><span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDurationSecs(resumeLesson.duration)}</span></>
+                  <>
+                    <span className="text-gray-700">·</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />{' '}
+                      {formatDurationSecs(resumeLesson.duration)}
+                    </span>
+                  </>
                 )}
               </div>
             </div>
             <button
               onClick={() => onSelectLesson(resumeLesson)}
-              className={`shrink-0 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-[0.99] ${
+              className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-[0.99] ${
                 isComplete
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 shadow-amber-500/20'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/20'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500'
+                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
               }`}
             >
-              <Play className="w-4 h-4 fill-current" />
+              <Play className="h-4 w-4 fill-current" />
               {ctaLabel}
             </button>
           </div>
@@ -516,24 +767,47 @@ const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lesson
 
       {/* Progress tiles */}
       <section className="mt-8">
-        <h2 className="text-[11px] font-bold tracking-wider uppercase text-gray-500 mb-3">Your progress</h2>
+        <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+          Your progress
+        </h2>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="text-[10.5px] uppercase tracking-wider text-gray-500 font-semibold">Overall</div>
-            <div className="mt-1 text-2xl font-bold text-white tabular-nums">{progressPercent}<span className="text-base text-gray-500">%</span></div>
-            <div className="mt-2 h-1 rounded-full bg-white/5 overflow-hidden">
-              <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+            <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
+              Overall
+            </div>
+            <div className="mt-1 text-2xl font-bold text-white tabular-nums">
+              {progressPercent}
+              <span className="text-base text-gray-500">%</span>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="text-[10.5px] uppercase tracking-wider text-gray-500 font-semibold">Lessons</div>
-            <div className="mt-1 text-2xl font-bold text-white tabular-nums">{completedCount}<span className="text-base text-gray-500">/{totalLessons}</span></div>
-            <div className="mt-2 text-[11px] text-gray-500">{totalLessons - completedCount} remaining</div>
+            <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
+              Lessons
+            </div>
+            <div className="mt-1 text-2xl font-bold text-white tabular-nums">
+              {completedCount}
+              <span className="text-base text-gray-500">/{totalLessons}</span>
+            </div>
+            <div className="mt-2 text-[11px] text-gray-500">
+              {totalLessons - completedCount} remaining
+            </div>
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="text-[10.5px] uppercase tracking-wider text-gray-500 font-semibold">Watched</div>
-            <div className="mt-1 text-2xl font-bold text-white tabular-nums">{formatDurationSecs(totalWatchedSecs) || '0m'}</div>
-            <div className="mt-2 text-[11px] text-gray-500">of {formatDurationSecs(totalDurationSecs) || '—'}</div>
+            <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
+              Watched
+            </div>
+            <div className="mt-1 text-2xl font-bold text-white tabular-nums">
+              {formatDurationSecs(totalWatchedSecs) || '0m'}
+            </div>
+            <div className="mt-2 text-[11px] text-gray-500">
+              of {formatDurationSecs(totalDurationSecs) || '—'}
+            </div>
           </div>
         </div>
       </section>
@@ -541,9 +815,13 @@ const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lesson
       {/* About */}
       {bootcamp?.description && (
         <section className="mt-8">
-          <h2 className="text-[11px] font-bold tracking-wider uppercase text-gray-500 mb-3">About this bootcamp</h2>
+          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+            About this bootcamp
+          </h2>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="text-[14px] leading-relaxed text-gray-300 whitespace-pre-line">{bootcamp.description}</p>
+            <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
+              {bootcamp.description}
+            </p>
           </div>
         </section>
       )}
@@ -551,12 +829,19 @@ const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lesson
       {/* What you'll learn */}
       {coursesCount > 0 && (
         <section className="mt-8">
-          <h2 className="text-[11px] font-bold tracking-wider uppercase text-gray-500 mb-3">What you&apos;ll learn</h2>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+            What you&apos;ll learn
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
             {bootcamp.courses.map((c) => (
-              <div key={c.id} className="flex items-start gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                <span className="text-[13px] text-gray-300 leading-snug">{c.title}</span>
+              <div
+                key={c.id}
+                className="flex items-start gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="text-[13px] leading-snug text-gray-300">
+                  {c.title}
+                </span>
               </div>
             ))}
           </div>
@@ -570,30 +855,47 @@ const OverviewPanel = memo(function OverviewPanel({ bootcamp, allLessons, lesson
 
 // ─── Lesson Panel ─────────────────────────────────────────────────────────────
 
-const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLessons, onSelectLesson, onSaveNotes, onMarkComplete, onMarkIncomplete, completing, isCompleted, currentIndex }) {
+const LessonPanel = memo(function LessonPanel({
+  lesson,
+  lessonProgress,
+  allLessons,
+  onSelectLesson,
+  onSaveNotes,
+  onMarkComplete,
+  onMarkIncomplete,
+  completing,
+  isCompleted,
+  currentIndex,
+}) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-  const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+  const nextLesson =
+    currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
   const initialPosition = lessonProgress[lesson.id]?.last_position || 0;
   const [localCompleted, setLocalCompleted] = useState(isCompleted);
 
-  useEffect(() => { setLocalCompleted(isCompleted); }, [isCompleted]);
+  useEffect(() => {
+    setLocalCompleted(isCompleted);
+  }, [isCompleted]);
 
   // Reset scroll to top when switching lessons
   useEffect(() => {
     if (contentAreaRef.current) contentAreaRef.current.scrollTop = 0;
   }, [lesson.id]);
 
-  const handleProgress = useCallback(async (progressData) => {
-    try {
-      await updateLessonProgress(lesson.id, {
-        watch_time: Math.floor(progressData.watchTime),
-        last_position: Math.floor(progressData.currentTime),
-        is_completed: false,
-      });
-    } catch {}
-  }, [lesson.id]);
+  const handleProgress = useCallback(
+    async (progressData) => {
+      try {
+        await updateLessonProgress(lesson.id, {
+          watch_time: Math.floor(progressData.watchTime),
+          last_position: Math.floor(progressData.currentTime),
+          is_completed: false,
+        });
+      } catch {}
+    },
+    [lesson.id]
+  );
 
   const handleVideoComplete = useCallback(async () => {
     if (!localCompleted) {
@@ -612,24 +914,30 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
     }
   }, [lesson.id, localCompleted, onMarkComplete, onMarkIncomplete]);
 
-  const hasVideo = lesson.video_source && lesson.video_source !== 'none' && (lesson.video_id || lesson.video_url);
+  const hasVideo =
+    lesson.video_source &&
+    lesson.video_source !== 'none' &&
+    (lesson.video_id || lesson.video_url);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Scrollable content + TOC */}
       <div className="flex flex-1 overflow-hidden">
-        <div ref={contentAreaRef} className="flex-1 min-w-0 overflow-y-auto spa-scroll">
-          <div className="mx-auto max-w-5xl 2xl:max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8 pb-8">
-
+        <div
+          ref={contentAreaRef}
+          className="spa-scroll min-w-0 flex-1 overflow-y-auto"
+        >
+          <div className="mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
             {/* Lesson title */}
             <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
-              <h1 className="text-lg sm:text-xl font-extrabold leading-tight tracking-tight text-white lg:text-2xl">
+              <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
                 {lesson.title}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {lesson.duration > 0 && (
                   <span className="flex items-center gap-1.5 text-[12px] text-gray-500">
-                    <Clock className="h-3.5 w-3.5" /> {formatDurationFull(lesson.duration)}
+                    <Clock className="h-3.5 w-3.5" />{' '}
+                    {formatDurationFull(lesson.duration)}
                   </span>
                 )}
                 {hasVideo && (
@@ -657,27 +965,36 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
             )}
 
             {/* Completion toggle */}
-            <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border px-4 py-4 transition-all ${
-              localCompleted ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-white/[0.08] bg-white/[0.02]'
-            }`}>
+            <div
+              className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
+                localCompleted
+                  ? 'border-emerald-500/20 bg-emerald-500/5'
+                  : 'border-white/[0.08] bg-white/[0.02]'
+              }`}
+            >
               <div className="flex items-center gap-3">
-                {localCompleted
-                  ? <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-                  : <Circle className="h-5 w-5 text-gray-600 shrink-0" />
-                }
+                {localCompleted ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                ) : (
+                  <Circle className="h-5 w-5 shrink-0 text-gray-600" />
+                )}
                 <div>
-                  <p className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}>
+                  <p
+                    className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}
+                  >
                     {localCompleted ? 'Lesson complete!' : 'Mark as complete'}
                   </p>
                   <p className="text-[11px] text-gray-600">
-                    {localCompleted ? 'Great work — keep going!' : 'Mark done when finished'}
+                    {localCompleted
+                      ? 'Great work — keep going!'
+                      : 'Mark done when finished'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleToggle}
                 disabled={completing}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all disabled:opacity-50 active:scale-95 ${
+                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
                   localCompleted
                     ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
                     : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
@@ -691,28 +1008,36 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
             {/* Rich content */}
             {lesson.content && (
               <Suspense fallback={<ChunkFallback label="Loading content…" />}>
-                <LessonContentRenderer key={lesson.id} content={lesson.content} lessonId={lesson.id} />
+                <LessonContentRenderer
+                  key={lesson.id}
+                  content={lesson.content}
+                  lessonId={lesson.id}
+                />
               </Suspense>
             )}
 
             {/* Attachments */}
             {lesson.attachments?.length > 0 && (
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+              <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
                 <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
                   <Download className="h-4 w-4 text-purple-400" />
-                  <h3 className="text-[13px] font-semibold text-white">Attachments</h3>
+                  <h3 className="text-[13px] font-semibold text-white">
+                    Attachments
+                  </h3>
                 </div>
-                <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
                   {lesson.attachments.map((att, i) => (
                     <a
                       key={i}
                       href={att.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-xs text-gray-300 transition-all hover:bg-white/5 hover:border-white/10"
+                      className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
                     >
-                      <FileText className="h-4 w-4 text-gray-500 shrink-0" />
-                      <span className="truncate">{att.name || `Attachment ${i + 1}`}</span>
+                      <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                      <span className="truncate">
+                        {att.name || `Attachment ${i + 1}`}
+                      </span>
                     </a>
                   ))}
                 </div>
@@ -720,12 +1045,16 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
             )}
 
             {/* Notes */}
-            <NotesPanel lessonId={lesson.id} initialNotes={lessonProgress[lesson.id]?.notes} onSave={onSaveNotes} />
+            <NotesPanel
+              lessonId={lesson.id}
+              initialNotes={lessonProgress[lesson.id]?.notes}
+              onSave={onSaveNotes}
+            />
           </div>
         </div>
 
         {/* TOC (xl+) */}
-        <div className="hidden xl:block w-64 shrink-0 border-l border-white/[0.06] overflow-y-auto spa-scroll p-4 pt-8">
+        <div className="spa-scroll hidden w-64 shrink-0 overflow-y-auto border-l border-white/[0.06] p-4 pt-8 xl:block">
           <TableOfContents contentRef={contentAreaRef} />
         </div>
       </div>
@@ -736,13 +1065,17 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
           {prevLesson ? (
             <button
               onClick={() => onSelectLesson(prevLesson)}
-              className="group flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 sm:px-4 py-2.5 text-[12px] sm:text-[13px] font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/[0.08] hover:text-white"
+              className="group flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-[12px] font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/[0.08] hover:text-white sm:px-4 sm:text-[13px]"
             >
               <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-              <span className="hidden sm:inline max-w-[200px] md:max-w-[300px] truncate">{prevLesson.title}</span>
+              <span className="hidden max-w-[200px] truncate sm:inline md:max-w-[300px]">
+                {prevLesson.title}
+              </span>
               <span className="sm:hidden">Prev</span>
             </button>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
 
           <span className="text-[11px] text-gray-600 tabular-nums">
             {currentIndex + 1} / {allLessons.length}
@@ -751,16 +1084,18 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
           {nextLesson ? (
             <button
               onClick={() => onSelectLesson(nextLesson)}
-              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 px-3 sm:px-5 py-2.5 text-[12px] sm:text-[13px] font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:from-violet-500 hover:to-violet-600"
+              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:from-violet-500 hover:to-violet-600 sm:px-5 sm:text-[13px]"
             >
-              <span className="hidden sm:inline max-w-[200px] md:max-w-[300px] truncate">{nextLesson.title}</span>
+              <span className="hidden max-w-[200px] truncate sm:inline md:max-w-[300px]">
+                {nextLesson.title}
+              </span>
               <span className="sm:hidden">Next</span>
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           ) : (
             <button
               onClick={() => onSelectLesson(null)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 sm:px-5 py-2.5 text-[12px] sm:text-[13px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500 sm:px-5 sm:text-[13px]"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span className="hidden sm:inline">Finish Course</span>
@@ -775,7 +1110,13 @@ const LessonPanel = memo(function LessonPanel({ lesson, lessonProgress, allLesso
 
 // ─── Main SPA Shell ───────────────────────────────────────────────────────────
 
-export default function BootcampLearningClient({ bootcamp, lessonProgress: initialProgress = {}, initialLessonId = null, initialLesson = null }) {
+export default function BootcampLearningClient({
+  bootcamp,
+  lessonProgress: initialProgress = {},
+  initialLessonId = null,
+  initialLesson = null,
+}) {
+  const router = useRouter();
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
   const [activeLessonId, setActiveLessonId] = useState(initialLessonId);
   const [loadedLesson, setLoadedLesson] = useState(initialLesson);
@@ -783,11 +1124,23 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
-  const lessonCacheRef = useRef(initialLesson ? { [initialLesson.id]: initialLesson } : {});
+
+  useEffect(() => {
+    setActiveLessonId(initialLessonId);
+    if (initialLesson) {
+      setLoadedLesson(initialLesson);
+    }
+  }, [initialLessonId, initialLesson]);
+
+  const lessonCacheRef = useRef(
+    initialLesson ? { [initialLesson.id]: initialLesson } : {}
+  );
   const prefetchInflightRef = useRef(new Set());
   const navTokenRef = useRef(0);
   const activeLessonIdRef = useRef(activeLessonId);
-  useEffect(() => { activeLessonIdRef.current = activeLessonId; }, [activeLessonId]);
+  useEffect(() => {
+    activeLessonIdRef.current = activeLessonId;
+  }, [activeLessonId]);
 
   const allLessons = useMemo(() => {
     const out = [];
@@ -805,28 +1158,43 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
   }, [bootcamp?.courses]);
 
   const totalLessons = allLessons.length;
-  const completedCount = allLessons.filter((l) => lessonProgress?.[l.id]?.is_completed).length;
-  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const completedCount = allLessons.filter(
+    (l) => lessonProgress?.[l.id]?.is_completed
+  ).length;
+  const progressPercent =
+    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
   const isComplete = completedCount === totalLessons && totalLessons > 0;
 
   const resumeLesson = useMemo(
-    () => allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) || allLessons[0],
+    () =>
+      allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) ||
+      allLessons[0],
     [allLessons, lessonProgress]
   );
   const resumeIndex = useMemo(
-    () => (resumeLesson ? allLessons.findIndex((l) => l.id === resumeLesson.id) : -1),
+    () =>
+      resumeLesson ? allLessons.findIndex((l) => l.id === resumeLesson.id) : -1,
     [allLessons, resumeLesson]
   );
 
   const coursesCount = bootcamp?.courses?.length || 0;
-  const modulesCount = bootcamp?.courses?.reduce((s, c) => s + (c.modules?.length || 0), 0) || 0;
-  const totalWatchedSecs = allLessons.filter((l) => lessonProgress?.[l.id]?.is_completed).reduce((s, l) => s + (l.duration || 0), 0);
-  const totalDurationSecs = allLessons.reduce((s, l) => s + (l.duration || 0), 0);
+  const modulesCount =
+    bootcamp?.courses?.reduce((s, c) => s + (c.modules?.length || 0), 0) || 0;
+  const totalWatchedSecs = allLessons
+    .filter((l) => lessonProgress?.[l.id]?.is_completed)
+    .reduce((s, l) => s + (l.duration || 0), 0);
+  const totalDurationSecs = allLessons.reduce(
+    (s, l) => s + (l.duration || 0),
+    0
+  );
 
   // Index for Next/Prev — track what's actually rendered (loadedLesson),
   // not what's pending (activeLessonId may be ahead during async load).
   const currentIndex = useMemo(
-    () => (loadedLesson?.id ? allLessons.findIndex((l) => l.id === loadedLesson.id) : -1),
+    () =>
+      loadedLesson?.id
+        ? allLessons.findIndex((l) => l.id === loadedLesson.id)
+        : -1,
     [allLessons, loadedLesson?.id]
   );
 
@@ -844,75 +1212,87 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
     if (prefetchInflightRef.current.has(lesson.id)) return;
     prefetchInflightRef.current.add(lesson.id);
     getLesson(lesson.id)
-      .then((full) => { lessonCacheRef.current[lesson.id] = full; })
+      .then((full) => {
+        lessonCacheRef.current[lesson.id] = full;
+      })
       .catch(() => {})
-      .finally(() => { prefetchInflightRef.current.delete(lesson.id); });
+      .finally(() => {
+        prefetchInflightRef.current.delete(lesson.id);
+      });
   }, []);
 
   // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
   // 'replace' (lesson-to-lesson switch), 'none' (browser popstate — URL already set).
-  const navigateToLesson = useCallback((lesson, mode = 'push') => {
-    const token = ++navTokenRef.current;
+  const navigateToLesson = useCallback(
+    (lesson, mode = 'push') => {
+      const token = ++navTokenRef.current;
 
-    if (!lesson) {
-      setActiveLessonId(null);
-      setLoadedLesson(null);
-      setLoadError(null);
-      if (mode !== 'none') {
-        window.history.pushState({}, '', `/account/member/bootcamps/${bootcamp.id}`);
-      }
-      return;
-    }
-
-    const url = `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`;
-    if (mode === 'push') window.history.pushState({}, '', url);
-    else if (mode === 'replace') window.history.replaceState({}, '', url);
-
-    setActiveLessonId(lesson.id);
-    setLoadError(null);
-
-    // Fast path: cached
-    const cached = lessonCacheRef.current[lesson.id];
-    if (cached) {
-      setLoadedLesson(cached);
-      return;
-    }
-    // Stub already has content
-    if (lesson.content !== undefined) {
-      lessonCacheRef.current[lesson.id] = lesson;
-      setLoadedLesson(lesson);
-      return;
-    }
-
-    // Async load — ignore result if user navigated again
-    startLoading(async () => {
-      try {
-        const full = await loadFullLesson(lesson.id);
-        if (navTokenRef.current !== token) return;
-        if (!full) {
-          setLoadError('Lesson not found.');
-          return;
+      if (!lesson) {
+        setActiveLessonId(null);
+        setLoadedLesson(null);
+        setLoadError(null);
+        if (mode !== 'none') {
+          const url = `/account/member/bootcamps/${bootcamp.id}`;
+          if (mode === 'replace') router.replace(url, { scroll: false });
+          else router.push(url, { scroll: false });
         }
-        setLoadedLesson(full);
-      } catch (e) {
-        if (navTokenRef.current !== token) return;
-        setLoadError('Failed to load lesson. Please try again.');
+        return;
       }
-    });
-  }, [bootcamp?.id, loadFullLesson]);
+
+      const url = `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`;
+      if (mode === 'push') router.push(url, { scroll: false });
+      else if (mode === 'replace') router.replace(url, { scroll: false });
+
+      setActiveLessonId(lesson.id);
+      setLoadError(null);
+
+      // Fast path: cached
+      const cached = lessonCacheRef.current[lesson.id];
+      if (cached) {
+        setLoadedLesson(cached);
+        return;
+      }
+      // Stub already has content
+      if (lesson.content !== undefined) {
+        lessonCacheRef.current[lesson.id] = lesson;
+        setLoadedLesson(lesson);
+        return;
+      }
+
+      // Async load — ignore result if user navigated again
+      startLoading(async () => {
+        try {
+          const full = await loadFullLesson(lesson.id);
+          if (navTokenRef.current !== token) return;
+          if (!full) {
+            setLoadError('Lesson not found.');
+            return;
+          }
+          setLoadedLesson(full);
+        } catch (e) {
+          if (navTokenRef.current !== token) return;
+          setLoadError('Failed to load lesson. Please try again.');
+        }
+      });
+    },
+    [bootcamp?.id, loadFullLesson]
+  );
 
   // Wrapper used by UI: smart-detect push vs replace, skip no-op.
   // Stable identity (reads activeLessonId via ref) so memoized children don't re-render.
-  const selectLesson = useCallback((lesson) => {
-    const current = activeLessonIdRef.current;
-    if (!lesson) {
-      if (!current) return;
-      return navigateToLesson(null, 'push');
-    }
-    if (lesson.id === current) return;
-    const mode = current ? 'replace' : 'push';
-    navigateToLesson(lesson, mode);
-  }, [navigateToLesson]);
+  const selectLesson = useCallback(
+    (lesson) => {
+      const current = activeLessonIdRef.current;
+      if (!lesson) {
+        if (!current) return;
+        return navigateToLesson(null, 'push');
+      }
+      if (lesson.id === current) return;
+      const mode = current ? 'replace' : 'push';
+      navigateToLesson(lesson, mode);
+    },
+    [navigateToLesson]
+  );
 
   // Initial hydration: if URL has a lessonId but no preloaded lesson, fetch it
   useEffect(() => {
@@ -926,7 +1306,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Prefetch neighbor lessons when active lesson changes
@@ -965,23 +1345,36 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
   const handleMarkComplete = useCallback((lessonId) => {
     startCompleting(async () => {
       await markLessonComplete(lessonId);
-      setLessonProgress((prev) => ({ ...prev, [lessonId]: { ...prev[lessonId], is_completed: true } }));
+      setLessonProgress((prev) => ({
+        ...prev,
+        [lessonId]: { ...prev[lessonId], is_completed: true },
+      }));
     });
   }, []);
 
   const handleMarkIncomplete = useCallback((lessonId) => {
     startCompleting(async () => {
       await markLessonIncomplete(lessonId);
-      setLessonProgress((prev) => ({ ...prev, [lessonId]: { ...prev[lessonId], is_completed: false } }));
+      setLessonProgress((prev) => ({
+        ...prev,
+        [lessonId]: { ...prev[lessonId], is_completed: false },
+      }));
     });
   }, []);
 
   const handleSaveNotes = useCallback(async (lessonId, notes) => {
     await saveLessonNotes(lessonId, notes);
-    setLessonProgress((prev) => ({ ...prev, [lessonId]: { ...prev[lessonId], notes } }));
+    setLessonProgress((prev) => ({
+      ...prev,
+      [lessonId]: { ...prev[lessonId], notes },
+    }));
   }, []);
 
-  const ctaLabel = isComplete ? 'Review' : completedCount > 0 ? 'Resume' : 'Start learning';
+  const ctaLabel = isComplete
+    ? 'Review'
+    : completedCount > 0
+      ? 'Resume'
+      : 'Start learning';
   const isLessonView = !!activeLessonId;
 
   return (
@@ -990,11 +1383,11 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
 
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080b11]/95 backdrop-blur-xl">
-        <div className="flex items-center gap-2 px-3 sm:px-5 h-14">
+        <div className="flex h-14 items-center gap-2 px-3 sm:px-5">
           {isLessonView ? (
             <button
               onClick={() => selectLesson(null)}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -1002,7 +1395,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
           ) : (
             <Link
               href="/account/member/bootcamps"
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Bootcamps</span>
@@ -1011,13 +1404,15 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
 
           <span className="text-gray-700">/</span>
           <div className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/90">
-            {isLessonView && loadedLesson ? loadedLesson.title : bootcamp?.title}
+            {isLessonView && loadedLesson
+              ? loadedLesson.title
+              : bootcamp?.title}
           </div>
 
           {/* Mobile: open curriculum drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="lg:hidden flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white lg:hidden"
             aria-label="Open curriculum"
           >
             <Menu className="h-4 w-4" />
@@ -1026,7 +1421,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
           {!isLessonView && resumeLesson && (
             <button
               onClick={() => selectLesson(resumeLesson)}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-sm shadow-emerald-500/20 transition-colors"
+              className="hidden items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-sm shadow-emerald-500/20 transition-colors hover:bg-emerald-400 sm:inline-flex"
             >
               <Play className="h-3 w-3 fill-current" />
               {ctaLabel}
@@ -1038,7 +1433,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
       {/* Body */}
       <div className="flex" style={{ height: 'calc(100vh - 3.5rem)' }}>
         {/* Desktop sidebar */}
-        <aside className="hidden lg:flex flex-col w-[320px] xl:w-[360px] shrink-0 border-r border-white/[0.06] bg-[#0a0e15] h-full">
+        <aside className="hidden h-full w-[320px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0e15] lg:flex xl:w-[360px]">
           <CurriculumRail
             bootcamp={bootcamp}
             lessonProgress={lessonProgress}
@@ -1053,7 +1448,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
         </aside>
 
         {/* Main content area */}
-        <main className="flex-1 min-w-0 overflow-y-auto spa-scroll">
+        <main className="spa-scroll min-w-0 flex-1 overflow-y-auto">
           {/* Inline loading bar while next lesson fetches (current still visible) */}
           {loading && loadedLesson && (
             <div className="sticky top-0 z-20 h-0.5 w-full overflow-hidden bg-transparent">
@@ -1061,19 +1456,22 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
             </div>
           )}
           {loading && !loadedLesson ? (
-            <div className="flex items-center justify-center h-full min-h-[400px]">
+            <div className="flex h-full min-h-[400px] items-center justify-center">
               <div className="flex flex-col items-center gap-3 text-gray-500">
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="text-[13px]">Loading lesson…</span>
               </div>
             </div>
           ) : loadError ? (
-            <div className="flex items-center justify-center h-full min-h-[400px]">
-              <div className="flex flex-col items-center gap-3 text-gray-500 text-center px-4">
-                <AlertCircle className="w-6 h-6 text-red-400" />
+            <div className="flex h-full min-h-[400px] items-center justify-center">
+              <div className="flex flex-col items-center gap-3 px-4 text-center text-gray-500">
+                <AlertCircle className="h-6 w-6 text-red-400" />
                 <span className="text-[13px]">{loadError}</span>
                 <button
-                  onClick={() => { setLoadError(null); setActiveLessonId(null); }}
+                  onClick={() => {
+                    setLoadError(null);
+                    setActiveLessonId(null);
+                  }}
                   className="text-[12px] text-violet-400 hover:text-violet-300"
                 >
                   Back to overview
@@ -1119,14 +1517,18 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
         {drawerOpen && (
           <>
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
               onClick={() => setDrawerOpen(false)}
             />
             <motion.aside
-              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.2 }}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-[88%] max-w-[360px] bg-[#0a0e15] border-r border-white/[0.06] flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 flex w-[88%] max-w-[360px] flex-col border-r border-white/[0.06] bg-[#0a0e15] lg:hidden"
             >
               <CurriculumRail
                 bootcamp={bootcamp}
@@ -1147,10 +1549,10 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress: initi
 
       {/* Mobile sticky CTA (overview only) */}
       {!isLessonView && resumeLesson && (
-        <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-white/10 bg-[#080b11]/95 backdrop-blur-xl px-4 py-3">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#080b11]/95 px-4 py-3 backdrop-blur-xl sm:hidden">
           <button
             onClick={() => selectLesson(resumeLesson)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
           >
             <Play className="h-4 w-4 fill-current" />
             {ctaLabel}
