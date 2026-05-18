@@ -496,9 +496,6 @@ function DriveVideoPlayer({
     },
     onError: (e) => {
       const code = e.target?.error?.code;
-      // MEDIA_ERR_ABORTED (1): fetch was aborted (e.g. component unmount,
-      // src change, fast navigation). Not a real failure — ignore.
-      if (code === 1) return;
       const isNetwork = code === 2;
       // Auto-retry transient network errors with exp backoff: 1s, 2s, 4s
       if (isNetwork && errorRetryRef.current < 3) {
@@ -513,10 +510,15 @@ function DriveVideoPlayer({
         setState((s) => ({ ...s, loading: true }));
         return;
       }
-      const errorMsg = isNetwork
-        ? 'Network error while loading video.'
-        : 'Failed to load video. Please try again.';
-      setState((s) => ({ ...s, loading: false, error: errorMsg }));
+      fetch(videoSrc, { method: 'GET', headers: { Range: 'bytes=0-0' } })
+        .then(async (r) => {
+          if (r.ok || r.status === 206) return `Playback failed (code ${code ?? '?'}).`;
+          let msg = `Server ${r.status}`;
+          try { const j = await r.json(); if (j?.error) msg = `${msg}: ${j.error}`; } catch {}
+          return msg;
+        })
+        .catch(() => isNetwork ? 'Network error while loading video.' : 'Failed to load video. Please try again.')
+        .then((errorMsg) => setState((s) => ({ ...s, loading: false, error: errorMsg })));
     },
     onWaiting: (e) => {
       setState((s) => ({ ...s, loading: true }));

@@ -18,7 +18,46 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/app/_lib/auth';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { streamVideo } from '@/app/_lib/bootcamp-video';
-import { getYouTubeEmbedUrl } from '@/app/_lib/utils';
+import { getYouTubeEmbedUrl, extractDriveFileId } from '@/app/_lib/utils';
+
+/**
+ * Collect every Drive fileId embedded in a lesson's content blocks.
+ * Lessons can hold videos either in the legacy single video_id column
+ * or as one or more video blocks inside content JSON. Members reference
+ * these via ?fileId=... — authorize against this allowlist.
+ */
+function collectLessonDriveIds(lesson) {
+  const ids = new Set();
+  const add = (v) => {
+    const id = extractDriveFileId(v) || (typeof v === 'string' ? v : null);
+    if (id) ids.add(id);
+  };
+  if (lesson?.video_source === 'drive') {
+    add(lesson.video_id);
+    add(lesson.video_url);
+  }
+  const content = lesson?.content;
+  const blocks = Array.isArray(content)
+    ? content
+    : Array.isArray(content?.blocks)
+      ? content.blocks
+      : [];
+  for (const block of blocks) {
+    if (block?.type !== 'video') continue;
+    const data = block.data || {};
+    const videos = Array.isArray(data.videos)
+      ? data.videos
+      : (data.video_id || data.video_url)
+        ? [{ video_source: data.video_source, video_id: data.video_id, video_url: data.video_url }]
+        : [];
+    for (const v of videos) {
+      if ((v.video_source || 'drive') !== 'drive') continue;
+      add(v.video_id);
+      add(v.video_url);
+    }
+  }
+  return ids;
+}
 
 /**
  * Check if user has access to the lesson.
@@ -63,6 +102,7 @@ async function canAccessLesson(lessonId, userEmail) {
         video_source,
         video_id,
         video_url,
+        content,
         is_free_preview,
         is_published,
         modules (
@@ -169,21 +209,30 @@ export async function GET(request, { params }) {
 
     const lesson = access.lesson;
 
-    // Determine target video ID
-    // SECURITY: Only allow explicit fileId overrides for admins previewing content.
-    // Regular users MUST only see the video specifically attached to the lesson they have access to.
-    const targetVideoId = access.isAdmin ? (fileId || lesson.video_id) : lesson.video_id;
+    // Determine target video ID.
+    // Admins: any fileId (preview mode).
+    // Members: fileId must match a video embedded in lesson (legacy column or content blocks).
+    const allowedDriveIds = collectLessonDriveIds(lesson);
+    const requestedFileId = fileId ? extractDriveFileId(fileId) || fileId : null;
+    let targetVideoId;
+    let videoSource;
+    if (access.isAdmin && requestedFileId) {
+      targetVideoId = requestedFileId;
+      videoSource = 'drive';
+    } else if (requestedFileId && allowedDriveIds.has(requestedFileId)) {
+      targetVideoId = requestedFileId;
+      videoSource = 'drive';
+    } else {
+      targetVideoId = lesson.video_id;
+      videoSource = lesson.video_source || 'none';
+    }
 
-    if (!targetVideoId) {
+    if (!targetVideoId && videoSource !== 'youtube' && videoSource !== 'upload') {
       return NextResponse.json(
         { error: 'No video configured' },
         { status: 404 }
       );
     }
-
-    // Handle different video sources
-    // Note: If fileId is provided by an admin, we assume it's a Drive video.
-    const videoSource = (access.isAdmin && fileId) ? 'drive' : (lesson.video_source || 'none');
 
     switch (videoSource) {
       case 'drive': {
@@ -285,8 +334,20 @@ export async function HEAD(request, { params }) {
     }
 
     const lesson = access.lesson;
-    const targetVideoId = access.isAdmin ? (fileId || lesson.video_id) : lesson.video_id;
-    const videoSource = (access.isAdmin && fileId) ? 'drive' : (lesson.video_source || 'none');
+    const allowedDriveIds = collectLessonDriveIds(lesson);
+    const requestedFileId = fileId ? extractDriveFileId(fileId) || fileId : null;
+    let targetVideoId;
+    let videoSource;
+    if (access.isAdmin && requestedFileId) {
+      targetVideoId = requestedFileId;
+      videoSource = 'drive';
+    } else if (requestedFileId && allowedDriveIds.has(requestedFileId)) {
+      targetVideoId = requestedFileId;
+      videoSource = 'drive';
+    } else {
+      targetVideoId = lesson.video_id;
+      videoSource = lesson.video_source || 'none';
+    }
 
     if (videoSource === 'drive' && targetVideoId) {
       const { getFileMetadata } = await import('@/app/_lib/bootcamp-video');
