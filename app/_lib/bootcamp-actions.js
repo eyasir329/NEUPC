@@ -495,6 +495,7 @@ export async function updateBootcamp(id, formData) {
 
   revalidatePath('/account/admin/bootcamps');
   revalidatePath(`/account/admin/bootcamps/${id}`);
+  revalidatePath(`/account/member/bootcamps/${id}`);
   revalidatePath(`/bootcamps/${data.slug}`);
 
   return data;
@@ -576,6 +577,7 @@ export async function createCourse(bootcampId, data) {
   if (error) throw error;
 
   revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+  revalidatePath(`/account/member/bootcamps/${bootcampId}`);
   return course;
 }
 
@@ -599,6 +601,7 @@ export async function updateCourse(courseId, data) {
   if (error) throw error;
 
   revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+  revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
   return course;
 }
 
@@ -624,6 +627,7 @@ export async function deleteCourse(courseId) {
   if (course?.bootcamp_id) {
     await recomputeBootcampTotals(course.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
   }
 
   return { success: true };
@@ -648,6 +652,7 @@ export async function reorderCourses(bootcampId, courseIds) {
   await Promise.all(updates);
 
   revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+  revalidatePath(`/account/member/bootcamps/${bootcampId}`);
   return { success: true };
 }
 
@@ -693,6 +698,7 @@ export async function createModule(courseId, data) {
 
   if (course?.bootcamp_id) {
     revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
   }
 
   return module;
@@ -726,6 +732,7 @@ export async function updateModule(moduleId, data) {
 
   if (course?.bootcamp_id) {
     revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
   }
 
   return module;
@@ -754,6 +761,7 @@ export async function deleteModule(moduleId) {
   if (module?.courses?.bootcamp_id) {
     await recomputeBootcampTotals(module.courses.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${module.courses.bootcamp_id}`);
   }
 
   return { success: true };
@@ -786,6 +794,7 @@ export async function reorderModules(courseId, moduleIds) {
 
   if (course?.bootcamp_id) {
     revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
   }
 
   return { success: true };
@@ -862,6 +871,7 @@ export async function createLesson(moduleId, data) {
   if (module?.courses?.bootcamp_id) {
     await recomputeBootcampTotals(module.courses.bootcamp_id);
     revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${module.courses.bootcamp_id}`);
   }
 
   return lesson;
@@ -933,6 +943,7 @@ export async function updateLesson(lessonId, data) {
       await recomputeBootcampTotals(bootcampId);
     }
     revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+    revalidatePath(`/account/member/bootcamps/${bootcampId}`);
     revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
   }
 
@@ -963,6 +974,9 @@ export async function deleteLesson(lessonId) {
     await recomputeBootcampTotals(lesson.modules.courses.bootcamp_id);
     revalidatePath(
       `/account/admin/bootcamps/${lesson.modules.courses.bootcamp_id}`
+    );
+    revalidatePath(
+      `/account/member/bootcamps/${lesson.modules.courses.bootcamp_id}`
     );
   }
 
@@ -996,6 +1010,7 @@ export async function reorderLessons(moduleId, lessonIds) {
 
   if (mod?.courses?.bootcamp_id) {
     revalidatePath(`/account/admin/bootcamps/${mod.courses.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${mod.courses.bootcamp_id}`);
   }
 
   return { success: true };
