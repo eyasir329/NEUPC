@@ -1040,6 +1040,21 @@ CREATE TABLE public.roles (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT roles_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.member_statistics (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  member_id uuid NOT NULL UNIQUE,
+  codeforces_rating integer DEFAULT 0,
+  codeforces_handle text,
+  vjudge_handle text,
+  atcoder_handle text,
+  leetcode_handle text,
+  total_solved integer DEFAULT 0,
+  contests_participated integer DEFAULT 0,
+  last_sync_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT member_statistics_pkey PRIMARY KEY (id),
+  CONSTRAINT member_statistics_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member_profiles(id) ON DELETE CASCADE
+);
 CREATE TABLE public.solution_analysis (
   solution_id uuid NOT NULL,
   approach_name character varying,

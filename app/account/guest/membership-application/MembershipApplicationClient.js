@@ -407,7 +407,7 @@ export default function MembershipApplicationClient({ userData, latestApplicatio
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </ActionButton>
             ) : (
-              <ActionButton tone="indigo" icon={isPending ? Loader : Send} disabled={isPending}>
+              <ActionButton type="submit" tone="indigo" icon={isPending ? Loader : Send} disabled={isPending}>
                 {isPending
                   ? 'Submitting…'
                   : latestApplication?.status === 'pending' && reapplying

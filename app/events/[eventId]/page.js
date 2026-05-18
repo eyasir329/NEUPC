@@ -17,6 +17,7 @@ import { driveImageUrl } from '@/app/_lib/utils';
 import { auth } from '@/app/_lib/auth';
 import EventGalleryViewer from './EventGalleryViewer';
 import EventRegistrationCard from './EventRegistrationCard';
+import EventContentRenderer from '@/app/account/_components/events/EventContentRenderer';
 
 /* ──────────────── Helpers ──────────────────────────────────────────────── */
 
@@ -490,10 +491,7 @@ async function EventDetailPage({ params }) {
                   )}
                   {event.content && (
                     <div className={`${event.description ? 'mt-5 border-t border-white/5 pt-5 sm:mt-6 sm:pt-6' : ''}`}>
-                      <div
-                        className="blog-content leading-relaxed text-zinc-300"
-                        dangerouslySetInnerHTML={{ __html: event.content }}
-                      />
+                      <EventContentRenderer content={event.content} />
                     </div>
                   )}
                 </div>

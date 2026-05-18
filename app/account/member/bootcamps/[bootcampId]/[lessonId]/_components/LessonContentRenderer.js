@@ -368,7 +368,17 @@ export default function LessonContentRenderer({ content, lessonId }) {
 
         if (!hasContent && !hasData && block.type !== 'lessonPlan') return null;
 
-        if (block.type === 'richText' || block.type === 'html') {
+        if (block.type === 'richText') {
+          return (
+            <div
+              key={block.id}
+              className="tiptap-editor-content"
+              dangerouslySetInnerHTML={{ __html: block.content }}
+            />
+          );
+        }
+
+        if (block.type === 'html') {
           return (
             <div
               key={block.id}

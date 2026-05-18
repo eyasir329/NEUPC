@@ -198,8 +198,10 @@ export async function execUpdateEventAction(formData) {
   const maxP = formData.get('max_participants');
   const status = formData.get('status') || 'draft';
 
+  const slugRaw = formData.get('slug')?.trim();
   const updates = {
     title,
+    ...(slugRaw ? { slug: slugRaw } : {}),
     description: formData.get('description')?.trim() || null,
     content: formData.get('content')?.trim() || null,
     location,

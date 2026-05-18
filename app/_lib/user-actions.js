@@ -1161,20 +1161,6 @@ export async function submitMembershipApplicationAction(formData) {
     if (jrError) throw new Error(jrError.message);
   }
 
-  // 2. Insert minimal member_profiles stub so admin can see pending applications
-  const { error: mpError } = await supabaseAdmin.from('member_profiles').upsert(
-    {
-      user_id: userId,
-      student_id: studentId,
-      academic_session: academicSession,
-      department,
-      approved: false,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' }
-  );
-  if (mpError) throw new Error(mpError.message);
-
   revalidatePath('/account/guest/membership-application');
   revalidatePath('/account/admin/users');
   revalidatePath('/account/admin/applications');

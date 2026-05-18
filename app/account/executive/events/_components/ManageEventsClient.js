@@ -1,303 +1,43 @@
 'use client';
 
-import { useState, useEffect, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import {
-  CalendarDays, Clock, CheckCircle2, Zap, Plus, Search,
-  Users, FileEdit, X, UserCheck, XCircle, CheckCircle, Download, Loader2, AlertTriangle,
+  CalendarDays, Clock, CheckCircle2, Zap, Plus,
+  FileEdit, XCircle,
 } from 'lucide-react';
 import {
   execCreateEventAction, execUpdateEventAction, execDeleteEventAction,
-  execUpdateRegistrationAction, execMarkAttendedAction,
+  execUpdateRegistrationAction,
   uploadExecEventImageAction, deleteExecEventImageAction,
 } from '@/app/_lib/executive-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import ManageEventDetail from '@/app/account/_components/events/ManageEventDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
-import { EVENT_STATUS_CONFIG, REG_STATUS_CONFIG, CATEGORIES, VENUE_TYPES, computeStats } from '@/app/account/_components/events/eventConstants';
-
-// ─── Create event modal (new events only) ──────────────────────────────────────
-
-function CreateEventModal({ onClose, onSuccess }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState(null);
-  useScrollLock();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError(null);
-    const fd = new FormData(e.target);
-    startTransition(async () => {
-      const res = await execCreateEventAction(fd);
-      if (res?.error) return setError(res.error);
-      onSuccess();
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-2xl rounded-2xl border border-white/10 bg-gray-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 p-6">
-          <h2 className="text-xl font-bold text-white">Create Event</h2>
-          <button onClick={onClose} className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4 p-6">
-          {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
-            </div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm text-gray-400">Title *</label>
-              <input name="title" required placeholder="Event title"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Start Date *</label>
-              <input name="start_date" type="datetime-local" required
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:outline-none" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">End Date</label>
-              <input name="end_date" type="datetime-local"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:outline-none" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Location *</label>
-              <input name="location" required placeholder="Location or URL"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Venue Type</label>
-              <select name="venue_type" defaultValue="offline"
-                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
-                {VENUE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Category</label>
-              <select name="category" defaultValue=""
-                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
-                <option value="">Select category</option>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Status</label>
-              <select name="status" defaultValue="draft"
-                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
-                {Object.entries(EVENT_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-400">Max Participants</label>
-              <input name="max_participants" type="number" placeholder="Unlimited"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm text-gray-400">Description</label>
-              <textarea name="description" rows={3} placeholder="Short description"
-                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
-            </div>
-            <div className="flex items-center gap-6">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input name="registration_required" type="checkbox" value="true" className="h-4 w-4 rounded accent-blue-500" />
-                <span className="text-sm text-gray-400">Registration Required</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input name="is_featured" type="checkbox" value="true" className="h-4 w-4 rounded accent-purple-500" />
-                <span className="text-sm text-gray-400">Featured</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
-            <button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-5 py-2.5 text-sm text-gray-400 hover:bg-white/5">Cancel</button>
-            <button type="submit" disabled={isPending} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
-              {isPending ? 'Creating…' : 'Create Event'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+import { computeStats } from '@/app/account/_components/events/eventConstants';
+import SharedRegistrationsModal from '@/app/account/_components/events/RegistrationsModal';
+import CreateEventForm from '@/app/account/_components/events/CreateEventForm';
 
 // ─── Registrations modal ───────────────────────────────────────────────────────
 
 function RegistrationsModal({ event, onClose }) {
-  const [registrations, setRegistrations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isPending, startTransition] = useTransition();
-  const [toast, setToast] = useState(null);
-  useScrollLock();
-
-  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
-
-  useEffect(() => {
-    fetch(`/api/account/events/${event.id}/registrations`)
-      .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((data) => setRegistrations(data.registrations || []))
-      .catch(() => showToast('Failed to load registrations', 'error'))
-      .finally(() => setLoading(false));
-  }, [event.id]);
-
-  const handleStatusUpdate = (id, status) => {
-    startTransition(async () => {
-      const fd = new FormData(); fd.set('id', id); fd.set('status', status);
-      const res = await execUpdateRegistrationAction(fd);
-      if (res?.error) return showToast(res.error, 'error');
-      setRegistrations((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
-      showToast('Status updated.');
-    });
-  };
-
-  const handleToggleAttended = (id, attended) => {
-    startTransition(async () => {
-      const fd = new FormData(); fd.set('id', id); fd.set('attended', String(!attended));
-      const res = await execMarkAttendedAction(fd);
-      if (res?.error) return showToast(res.error, 'error');
-      setRegistrations((prev) => prev.map((r) => r.id === id ? { ...r, attended: !attended, status: !attended ? 'attended' : 'confirmed' } : r));
-      showToast(attended ? 'Marked not attended.' : 'Marked attended.');
-    });
-  };
-
-  const filtered = registrations.filter((r) => {
-    const name = r.user?.full_name?.toLowerCase() || '';
-    const email = r.user?.email?.toLowerCase() || '';
-    return (!search || name.includes(search.toLowerCase()) || email.includes(search.toLowerCase()))
-      && (statusFilter === 'all' || r.status === statusFilter);
-  });
-
-  const exportCSV = () => {
-    const rows = [['Name', 'Email', 'Status', 'Attended', 'Registered At'],
-      ...filtered.map((r) => [r.user?.full_name || '', r.user?.email || '', r.status, r.attended ? 'Yes' : 'No', r.registered_at ? new Date(r.registered_at).toLocaleDateString() : ''])];
-    const blob = new Blob([rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')], { type: 'text/csv' });
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `registrations-${event.id}.csv` });
-    a.click();
-  };
-
-  const regStats = {
-    total: registrations.length,
-    confirmed: registrations.filter((r) => r.status === 'confirmed').length,
-    attended: registrations.filter((r) => r.attended).length,
-    cancelled: registrations.filter((r) => r.status === 'cancelled').length,
-  };
+  async function handleUpdateStatus(id, status, registrations, setRegistrations) {
+    const fd = new FormData();
+    fd.set('id', id);
+    fd.set('status', status);
+    const res = await execUpdateRegistrationAction(fd);
+    if (res?.error) throw new Error(res.error);
+    setRegistrations((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-8 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0f1117] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
-          <div>
-            <h2 className="font-bold text-white">{event.title}</h2>
-            <p className="mt-0.5 text-xs text-gray-500">Registrations</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:bg-white/5 hover:text-gray-300">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-4 p-6">
-          {!loading && registrations.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { icon: Users, label: 'Total', val: regStats.total },
-                { icon: UserCheck, label: 'Confirmed', val: regStats.confirmed },
-                { icon: CheckCircle, label: 'Attended', val: regStats.attended },
-                { icon: XCircle, label: 'Cancelled', val: regStats.cancelled },
-              ].map(({ icon: Icon, label, val }) => (
-                <div key={label} className="flex items-center gap-2 rounded-xl border border-white/6 bg-white/3 px-3 py-2">
-                  <Icon className="h-4 w-4 shrink-0 text-gray-500" />
-                  <div><p className="text-base font-bold text-white tabular-nums">{val}</p><p className="mt-0.5 text-[10px] text-gray-500">{label}</p></div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative max-w-xs flex-1">
-              <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
-              <input type="text" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pr-3 pl-9 text-sm text-white placeholder-gray-600 outline-none focus:border-white/20" />
-            </div>
-            <div className="flex gap-2">
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none">
-                <option value="all">All Status</option>
-                {Object.entries(REG_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-              <button onClick={exportCSV} disabled={registrations.length === 0}
-                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-gray-400 hover:bg-white/8 hover:text-white disabled:opacity-40">
-                <Download className="h-3.5 w-3.5" /> Export CSV
-              </button>
-            </div>
-          </div>
-
-          <div className="max-h-80 overflow-y-auto rounded-2xl border border-white/6 bg-white/3">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-7 w-7 animate-spin text-gray-500" />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                <Users className="mb-3 h-10 w-10 opacity-20" />
-                <p className="text-sm">{registrations.length === 0 ? 'No registrations yet.' : 'No results.'}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {filtered.map((reg, idx) => {
-                  const sc = REG_STATUS_CONFIG[reg.status] || REG_STATUS_CONFIG.registered;
-                  return (
-                    <div key={reg.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/3">
-                      <span className="w-5 text-center text-xs text-gray-500">{idx + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-white">{reg.user?.full_name || '—'}</p>
-                        <p className="truncate text-xs text-gray-500">{reg.user?.email || '—'}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${sc.color}`}>{sc.label}</span>
-                        <button onClick={() => handleToggleAttended(reg.id, reg.attended)} disabled={isPending}
-                          className={`rounded-lg p-1 transition-colors ${reg.attended ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/5'}`}
-                          title={reg.attended ? 'Mark not attended' : 'Mark attended'}>
-                          {reg.attended ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                        </button>
-                        <select value={reg.status} onChange={(e) => handleStatusUpdate(reg.id, e.target.value)} disabled={isPending}
-                          className="rounded-lg border border-white/10 bg-gray-900 px-2 py-1 text-xs text-white focus:outline-none">
-                          {Object.entries(REG_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {event.max_participants && (
-            <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/3 px-4 py-3 text-sm">
-              <div className="flex items-center gap-2 text-gray-400"><Users className="h-4 w-4 text-gray-600" /> Capacity</div>
-              <div className="text-right">
-                <span className="font-bold text-white">{registrations.length}</span>
-                <span className="text-gray-500"> / {event.max_participants}</span>
-                {registrations.length >= event.max_participants && (
-                  <span className="ml-2 rounded-md bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">Full</span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {toast && (
-        <div className={`fixed right-6 bottom-6 z-50 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/20 text-red-300' : 'border-green-500/30 bg-green-500/20 text-green-300'}`}>
-          {toast.msg}
-        </div>
-      )}
-    </div>
+    <SharedRegistrationsModal
+      event={event}
+      onClose={onClose}
+      fetchUrl={`/api/account/events/${event.id}/registrations`}
+      onUpdateStatus={handleUpdateStatus}
+      dataKey="registrations"
+      userKey="user"
+    />
   );
 }
 
@@ -374,9 +114,12 @@ export default function ManageEventsClient({ initialEvents }) {
       />
 
       {createModal && (
-        <CreateEventModal
+        <CreateEventForm
           onClose={() => setCreateModal(false)}
           onSuccess={() => { setCreateModal(false); showToast('Event created!'); window.location.reload(); }}
+          createAction={execCreateEventAction}
+          uploadImageAction={uploadExecEventImageAction}
+          allCategories={allCategories}
         />
       )}
 

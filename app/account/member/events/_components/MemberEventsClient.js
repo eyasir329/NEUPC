@@ -51,25 +51,20 @@ function RegisterCta({ event, onFlash }) {
     });
   };
 
+  if (event._bucket === 'completed') return null;
+
   return (
-    <div className="flex flex-col gap-2 w-full md:w-auto">
-      <button
-        onClick={handle}
-        disabled={pending || !canRegister}
-        className="w-full md:w-48 py-3 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-600/20 active:scale-95 transition-all disabled:opacity-50"
-      >
-        {pending
-          ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-          : event._bucket === 'completed'
-          ? 'View Past Event'
-          : event._userStatus === 'Registered'
-          ? 'Registered ✓'
-          : 'Register Now'}
-      </button>
-      <p className="text-center text-xs text-gray-500 font-medium">
-        {event._userStatus === 'Registered' ? 'You have a confirmed ticket' : 'Secure your spot today'}
-      </p>
-    </div>
+    <button
+      onClick={handle}
+      disabled={pending || !canRegister}
+      className="py-2 px-5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-600/20 active:scale-95 transition-all disabled:opacity-50"
+    >
+      {pending
+        ? <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+        : event._userStatus === 'Registered'
+        ? 'Registered ✓'
+        : 'Register Now'}
+    </button>
   );
 }
 
@@ -147,16 +142,23 @@ export default function MemberEventsClient({ events: serverEvents, myRegistratio
           onBack={onBack}
           topSlot={<RegisterCta event={event} onFlash={setFlash} />}
           rightSlot={
-            <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Your Registration</p>
-              <div className="flex flex-col divide-y divide-white/6">
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+              <div className="border-b border-slate-800 px-4 py-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Your Registration</span>
+              </div>
+              <div className="divide-y divide-slate-800/60">
                 {[
-                  { label: 'Status',  value: event._userStatus === 'Registered' ? 'Registered ✓' : event._isUpcoming ? 'Open' : 'Past' },
-                  { label: 'Access',  value: 'Members Only' },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-start justify-between gap-3 py-2">
-                    <span className="shrink-0 text-xs text-gray-500">{label}</span>
-                    <span className={`text-right text-xs font-medium ${event._userStatus === 'Registered' && label === 'Status' ? 'text-emerald-400' : 'text-gray-200'}`}>{value}</span>
+                  {
+                    label: 'Status',
+                    value: event._userStatus === 'Registered' ? 'Registered ✓' : event._bucket === 'completed' ? 'Past' : 'Open',
+                    highlight: event._userStatus === 'Registered' ? 'text-emerald-400' : event._bucket === 'upcoming' ? 'text-indigo-300' : 'text-slate-400',
+                  },
+                  { label: 'Access', value: 'Members Only', highlight: 'text-slate-200' },
+                  ...(event.max_participants ? [{ label: 'Capacity', value: `${event.registrationCount ?? 0} / ${event.max_participants}`, highlight: 'text-slate-200' }] : []),
+                ].map(({ label, value, highlight }) => (
+                  <div key={label} className="flex items-start justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-slate-800/40">
+                    <span className="shrink-0 text-xs text-slate-500">{label}</span>
+                    <span className={`text-right text-xs font-semibold ${highlight}`}>{value}</span>
                   </div>
                 ))}
               </div>

@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarX, Filter, X } from 'lucide-react';
+import { CalendarX, Filter, X, Search } from 'lucide-react';
 import { PageShell, PageHeader, TabBar } from '@/app/account/member/_components/_ui';
 import EventRow from './EventRow';
 import EventDetail from './EventDetail';
-import { CATEGORIES, VENUE_TYPES } from './eventConstants';
+import { VENUE_TYPES } from './eventConstants';
 
 const PAGE_MOTION = { duration: 0.18, ease: [0.22, 1, 0.36, 1] };
 
@@ -44,17 +44,27 @@ export default function EventListLayout({
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [filterVenue, setFilterVenue] = useState('');
+  const [search, setSearch] = useState('');
 
   const selectedEvent = selectedEventId ? events.find((e) => e.id === selectedEventId) : null;
 
-  const filteredEvents = useMemo(() => events.filter((e) => {
-    if (!filterFn(e, activeTab)) return false;
-    if (filterCategory && (e.category || '') !== filterCategory) return false;
-    if (filterVenue && (e.venue_type || '') !== filterVenue) return false;
-    return true;
-  }), [events, activeTab, filterCategory, filterVenue, filterFn]);
+  const dynamicCategories = useMemo(
+    () => [...new Set(events.map((e) => e.category).filter(Boolean))].sort(),
+    [events]
+  );
 
-  const hasFilter = filterCategory || filterVenue;
+  const filteredEvents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return events.filter((e) => {
+      if (!filterFn(e, activeTab)) return false;
+      if (filterCategory && (e.category || '') !== filterCategory) return false;
+      if (filterVenue && (e.venue_type || '') !== filterVenue) return false;
+      if (q && !e.title.toLowerCase().includes(q) && !(e.description || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [events, activeTab, filterCategory, filterVenue, search, filterFn]);
+
+  const hasFilter = filterCategory || filterVenue || search;
 
   const detailProps = selectedEvent && getDetailProps ? getDetailProps(selectedEvent) : null;
 
@@ -102,28 +112,35 @@ export default function EventListLayout({
               {/* Event list */}
               <div className="flex min-w-0 flex-col gap-3 lg:col-span-2">
                 {listHeader}
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/6 pb-3">
-                  <p className="text-xs font-medium text-gray-500">
-                    {filteredEvents.length === 0
-                      ? `No events in ${activeTab}`
-                      : `Showing ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`}
-                  </p>
+                {/* Search + filters */}
+                <div className="flex flex-col gap-2 border-b border-white/6 pb-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-600">
-                      <Filter size={11} /> Filter
-                    </span>
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
-                        filterCategory
-                          ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
-                          : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
-                      }`}
-                    >
-                      <option value="">All Categories</option>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {/* Search */}
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                      <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search events…"
+                        className="w-full rounded-lg border border-white/8 bg-white/4 py-1.5 pl-7 pr-3 text-[11px] text-gray-300 placeholder-gray-600 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                      />
+                    </div>
+                    {/* Category */}
+                    {dynamicCategories.length > 0 && (
+                      <select
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                        className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
+                          filterCategory
+                            ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
+                            : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
+                        }`}
+                      >
+                        <option value="">All Categories</option>
+                        {dynamicCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+                    {/* Venue */}
                     <select
                       value={filterVenue}
                       onChange={(e) => setFilterVenue(e.target.value)}
@@ -138,13 +155,18 @@ export default function EventListLayout({
                     </select>
                     {hasFilter && (
                       <button
-                        onClick={() => { setFilterCategory(''); setFilterVenue(''); }}
+                        onClick={() => { setFilterCategory(''); setFilterVenue(''); setSearch(''); }}
                         className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/15"
                       >
                         <X size={10} /> Clear
                       </button>
                     )}
                   </div>
+                  <p className="text-[11px] text-gray-600">
+                    {filteredEvents.length === 0
+                      ? 'No matching events'
+                      : `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}${hasFilter ? ' found' : ''}`}
+                  </p>
                 </div>
 
                 <AnimatePresence mode="popLayout">

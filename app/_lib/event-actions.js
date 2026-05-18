@@ -334,8 +334,10 @@ export async function updateEventAction(formData) {
   const newCoverImage = formData.get('cover_image')?.trim() || null;
   const newContent = formData.get('content')?.trim() || null;
 
+  const slugRaw = formData.get('slug')?.trim();
   const updates = {
     title,
+    ...(slugRaw ? { slug: slugRaw } : {}),
     description: formData.get('description')?.trim() || null,
     content: newContent,
     location,
