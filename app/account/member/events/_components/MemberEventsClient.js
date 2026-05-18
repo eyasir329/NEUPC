@@ -6,6 +6,7 @@ import { Calendar, CheckCircle, CalendarCheck, TrendingUp, CheckCircle2, XCircle
 import { registerForEventAction } from '@/app/_lib/member-events-actions';
 import { GlassCard } from '@/app/account/member/_components/_ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
+import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent, isPast } from '@/app/account/_components/events/eventUtils';
 import { computeStats } from '@/app/account/_components/events/eventConstants';
 
@@ -140,14 +141,29 @@ export default function MemberEventsClient({ events: serverEvents, myRegistratio
       filterFn={filterFn}
       stats={stats}
       sidebarCta={SIDEBAR_CTA}
-      getDetailProps={(event) => ({
-        detailRows: [
-          { label: 'Status',   value: event._userStatus === 'Registered' ? 'Registered' : event._isUpcoming ? 'Open' : 'Past' },
-          { label: 'Category', value: event._type },
-          { label: 'Access',   value: 'Members Only', accent: 'text-emerald-400' },
-        ],
-        ctaSlot: <RegisterCta event={event} onFlash={setFlash} />,
-      })}
+      renderDetail={(event, onBack) => (
+        <EventContentDetail
+          event={event}
+          onBack={onBack}
+          topSlot={<RegisterCta event={event} onFlash={setFlash} />}
+          rightSlot={
+            <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Your Registration</p>
+              <div className="flex flex-col divide-y divide-white/6">
+                {[
+                  { label: 'Status',  value: event._userStatus === 'Registered' ? 'Registered ✓' : event._isUpcoming ? 'Open' : 'Past' },
+                  { label: 'Access',  value: 'Members Only' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-start justify-between gap-3 py-2">
+                    <span className="shrink-0 text-xs text-gray-500">{label}</span>
+                    <span className={`text-right text-xs font-medium ${event._userStatus === 'Registered' && label === 'Status' ? 'text-emerald-400' : 'text-gray-200'}`}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          }
+        />
+      )}
       flashSlot={
         <AnimatePresence>
           {flash && <Flash msg={flash} onClose={() => setFlash(null)} />}

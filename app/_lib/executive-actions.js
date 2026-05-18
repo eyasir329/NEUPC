@@ -11,6 +11,9 @@ import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { logActivity, generateSlug } from '@/app/_lib/helpers';
+import { uploadToDrive, deleteFromDrive } from '@/app/_lib/gdrive';
+import { generateImage } from '@/app/_lib/image-gen';
+import { generateText } from '@/app/_lib/text-gen';
 import sanitizeHtml from 'sanitize-html';
 import {
   isV2SchemaAvailable,
@@ -152,8 +155,10 @@ export async function execCreateEventAction(formData) {
     max_participants: maxP ? parseInt(maxP, 10) : null,
     is_featured: formData.get('is_featured') === 'true',
     tags: tags.length ? tags : null,
-    external_url: formData.get('external_url')?.trim() || null,
-    registration_url: formData.get('registration_url')?.trim() || null,
+    eligibility: formData.get('eligibility')?.trim() || 'all',
+    participation_type: formData.get('participation_type') || 'individual',
+    team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
+    prerequisites: formData.get('prerequisites')?.trim() || null,
     created_by: user.id,
     approved_by: status !== 'draft' ? user.id : null,
     approved_at: status !== 'draft' ? new Date().toISOString() : null,
@@ -213,8 +218,10 @@ export async function execUpdateEventAction(formData) {
     max_participants: maxP ? parseInt(maxP, 10) : null,
     is_featured: formData.get('is_featured') === 'true',
     tags: tags.length ? tags : null,
-    external_url: formData.get('external_url')?.trim() || null,
-    registration_url: formData.get('registration_url')?.trim() || null,
+    eligibility: formData.get('eligibility')?.trim() || 'all',
+    participation_type: formData.get('participation_type') || 'individual',
+    team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
+    prerequisites: formData.get('prerequisites')?.trim() || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -1021,4 +1028,85 @@ export async function execUpdateProfileAction(formData) {
 
   revalidatePath('/account/executive/profile');
   return { success: true };
+}
+
+// =============================================================================
+// EVENT IMAGE UPLOAD
+// =============================================================================
+
+const ALLOWED_EVENT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+export async function uploadExecEventImageAction(formData) {
+  const user = await requireExecutive();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) return { error: 'No image provided.' };
+  if (!ALLOWED_EVENT_IMAGE_TYPES.includes(file.type)) return { error: 'Use JPEG, PNG, WebP, or GIF.' };
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `events_${user.id}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url, fileId } = await uploadToDrive(Buffer.from(arrayBuffer), filename, file.type, 'event-images');
+    await logActivity(user.id, 'event_image_uploaded', fileId, { filename: file.name, fileId });
+    return { success: true, url };
+  } catch (err) {
+    console.error('Executive event image upload error:', err);
+    return { error: 'Failed to upload image. Please try again.' };
+  }
+}
+
+// =============================================================================
+// EVENT IMAGE — DELETE
+// =============================================================================
+
+export async function deleteExecEventImageAction(url) {
+  await requireExecutive();
+  if (!url) return { error: 'No URL provided.' };
+  try {
+    await deleteFromDrive(url);
+    return { success: true };
+  } catch (err) {
+    console.error('Delete exec event image error:', err);
+    return { error: 'Failed to delete image.' };
+  }
+}
+
+// =============================================================================
+// EVENT IMAGE — AI GENERATE
+// =============================================================================
+
+export async function generateExecEventImageAction(prompt, model) {
+  const user = await requireExecutive();
+  if (!prompt || prompt.trim().length < 3) return { error: 'Provide a descriptive prompt (at least 3 characters).' };
+  try {
+    const { buffer, mimeType } = await generateImage(prompt.trim(), model);
+    const extMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+    const ext = extMap[mimeType] || 'png';
+    const filename = `ai_event_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+    const { url, fileId } = await uploadToDrive(buffer, filename, mimeType, 'event-images');
+    await logActivity(user.id, 'exec_event_image_ai_generated', fileId, { prompt: prompt.trim().slice(0, 200), filename });
+    return { success: true, url };
+  } catch (err) {
+    console.error('Exec AI image generation error:', err);
+    return { error: err.message || 'Failed to generate image.' };
+  }
+}
+
+// =============================================================================
+// EVENT TEXT — AI GENERATE
+// =============================================================================
+
+export async function generateExecEventTextAction(prompt, mode, model, existingContent) {
+  await requireExecutive();
+  if (!prompt && mode !== 'improve') return { error: 'Provide a prompt.' };
+  if (mode === 'improve' && !existingContent) return { error: 'No existing content to improve.' };
+  try {
+    const text = await generateText(prompt, { model, mode, existingContent });
+    return { success: true, text };
+  } catch (err) {
+    console.error('Exec AI text generation error:', err);
+    return { error: err.message || 'Text generation failed.' };
+  }
 }

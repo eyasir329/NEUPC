@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Calendar, CalendarCheck, TrendingUp, Sparkles } from 'lucide-react';
+import { Calendar, CalendarCheck, TrendingUp, Sparkles, Users } from 'lucide-react';
 import { GlassCard } from '@/app/account/member/_components/_ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
+import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
 import { computeStats } from '@/app/account/_components/events/eventConstants';
 
@@ -34,17 +35,6 @@ const SIDEBAR_CTA = (
   </GlassCard>
 );
 
-function getDetailProps(event) {
-  return {
-    detailRows: [
-      { label: 'Status',     value: event._bucket, accent: 'text-gray-200 capitalize' },
-      { label: 'Registered', value: event.registrationCount || 0 },
-      { label: 'Attended',   value: event.attendedCount || 0 },
-      { label: 'Access',     value: 'Club Members', accent: 'text-violet-400' },
-    ],
-  };
-}
-
 export default function AdvisorEventsClient({ events: serverEvents }) {
   const allEvents = useMemo(() => (serverEvents || []).map(enrichEvent), [serverEvents]);
   const stats = computeStats('observer', allEvents);
@@ -59,7 +49,29 @@ export default function AdvisorEventsClient({ events: serverEvents }) {
       stats={stats}
       sidebarCta={SIDEBAR_CTA}
       rowProps={{ showRegs: true }}
-      getDetailProps={getDetailProps}
+      renderDetail={(event, onBack) => (
+        <EventContentDetail
+          event={event}
+          onBack={onBack}
+          rightSlot={
+            <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Oversight</p>
+              <div className="flex flex-col divide-y divide-white/6">
+                {[
+                  { label: 'Registered', value: event.registrationCount ?? 0 },
+                  { label: 'Attended',   value: event.attendedCount ?? 0 },
+                  { label: 'Access',     value: 'Club Members' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-start justify-between gap-3 py-2">
+                    <span className="shrink-0 text-xs text-gray-500">{label}</span>
+                    <span className="text-right text-xs font-medium text-gray-200">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          }
+        />
+      )}
     />
   );
 }

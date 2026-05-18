@@ -1,38 +1,285 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
-  CalendarDays, Star, Search, PlusCircle, FileEdit,
-  Clock, CheckCircle2, XCircle, Users, Zap,
-  LayoutGrid, LayoutList, Filter, ArrowUpDown, Eye,
-  Edit3, Trash2, Loader2, X,
+  CalendarDays, FileEdit, Clock, CheckCircle2, XCircle, Users, Zap, Plus,
+  Search, Download, CheckCircle, UserCheck, X, Loader2,
 } from 'lucide-react';
-import EventCard from './EventCard';
-import EventFormPanel from './EventFormPanel';
-import RegistrationsModal from './RegistrationsModal';
-import { getStatusConfig, getCategoryConfig, formatEventDate, CATEGORIES, STATUSES } from './eventConfig';
-import { deleteEventAction } from '@/app/_lib/event-actions';
-import { driveImageUrl } from '@/app/_lib/utils';
-import { PageShell, PageHeader, TabBar, StatCard } from '@/app/account/member/_components/_ui';
+import { deleteEventAction, createEventAction, updateEventAction, uploadEventImageAction, deleteEventImageAction } from '@/app/_lib/event-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
+import ManageEventDetail from '@/app/account/_components/events/ManageEventDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
-import { EVENT_STATUS_CONFIG } from '@/app/account/_components/events/eventConstants';
+import { EVENT_STATUS_CONFIG, REG_STATUS_CONFIG, computeStats } from '@/app/account/_components/events/eventConstants';
 
-const SORT_OPTIONS = [
-  { key: 'newest', label: 'Newest First' },
-  { key: 'oldest', label: 'Oldest First' },
-  { key: 'title',  label: 'Title A–Z' },
-  { key: 'registrations', label: 'Most Registrations' },
-];
+// ─── Create event modal (new events only — no edit popup) ──────────────────────
+
+import { CATEGORIES, VENUE_TYPES } from '@/app/account/_components/events/eventConstants';
+import { AlertTriangle } from 'lucide-react';
+
+function CreateEventModal({ onClose, onSuccess }) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState(null);
+  useScrollLock();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError(null);
+    const fd = new FormData(e.target);
+    startTransition(async () => {
+      const res = await createEventAction(fd);
+      if (res?.error) return setError(res.error);
+      onSuccess();
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
+      <div className="my-8 w-full max-w-2xl rounded-2xl border border-white/10 bg-gray-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 p-6">
+          <h2 className="text-xl font-bold text-white">Create Event</h2>
+          <button onClick={onClose} className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm text-gray-400">Title *</label>
+              <input name="title" required placeholder="Event title"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Start Date *</label>
+              <input name="start_date" type="datetime-local" required
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:ring-1 focus:ring-blue-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">End Date</label>
+              <input name="end_date" type="datetime-local"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Location *</label>
+              <input name="location" required placeholder="Location or URL"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Venue Type</label>
+              <select name="venue_type" defaultValue="offline"
+                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
+                {VENUE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Category</label>
+              <select name="category" defaultValue=""
+                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
+                <option value="">Select category</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Status</label>
+              <select name="status" defaultValue="draft"
+                className="w-full rounded-xl border border-white/10 bg-gray-900 px-3 py-2.5 text-white focus:outline-none">
+                {Object.entries(EVENT_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-400">Max Participants</label>
+              <input name="max_participants" type="number" placeholder="Unlimited"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm text-gray-400">Description</label>
+              <textarea name="description" rows={3} placeholder="Short description"
+                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none" />
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input name="registration_required" type="checkbox" value="true" className="h-4 w-4 rounded accent-blue-500" />
+                <span className="text-sm text-gray-400">Registration Required</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input name="is_featured" type="checkbox" value="true" className="h-4 w-4 rounded accent-purple-500" />
+                <span className="text-sm text-gray-400">Featured</span>
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+            <button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-5 py-2.5 text-sm text-gray-400 hover:bg-white/5">Cancel</button>
+            <button type="submit" disabled={isPending} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
+              {isPending ? 'Creating…' : 'Create Event'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Registrations modal ───────────────────────────────────────────────────────
+
+function RegistrationsModal({ event, onClose }) {
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [toast, setToast] = useState(null);
+  useScrollLock();
+
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    fetch(`/api/admin/events/${event.id}/registrations`)
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((data) => setRegistrations(Array.isArray(data) ? data : (data.registrations || [])))
+      .catch(() => showToast('Failed to load registrations', 'error'))
+      .finally(() => setLoading(false));
+  }, [event.id]);
+
+  const filtered = registrations.filter((r) => {
+    const name = (r.users?.full_name || r.user?.full_name || '').toLowerCase();
+    const email = (r.users?.email || r.user?.email || '').toLowerCase();
+    return (!search || name.includes(search.toLowerCase()) || email.includes(search.toLowerCase()))
+      && (statusFilter === 'all' || r.status === statusFilter);
+  });
+
+  const exportCSV = () => {
+    const rows = [['Name', 'Email', 'Status', 'Attended', 'Registered At'],
+      ...filtered.map((r) => {
+        const u = r.users || r.user || {};
+        return [u.full_name || '', u.email || '', r.status, r.attended ? 'Yes' : 'No', r.registered_at ? new Date(r.registered_at).toLocaleDateString() : ''];
+      })];
+    const blob = new Blob([rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')], { type: 'text/csv' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `registrations-${event.id}.csv` });
+    a.click();
+  };
+
+  const regStats = {
+    total: registrations.length,
+    confirmed: registrations.filter((r) => r.status === 'confirmed').length,
+    attended: registrations.filter((r) => r.attended).length,
+    cancelled: registrations.filter((r) => r.status === 'cancelled').length,
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-8 backdrop-blur-sm">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0f1117] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
+          <div>
+            <h2 className="font-bold text-white">{event.title}</h2>
+            <p className="mt-0.5 text-xs text-gray-500">Registrations</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:bg-white/5 hover:text-gray-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-6">
+          {!loading && registrations.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { icon: Users, label: 'Total', val: regStats.total },
+                { icon: UserCheck, label: 'Confirmed', val: regStats.confirmed },
+                { icon: CheckCircle, label: 'Attended', val: regStats.attended },
+                { icon: XCircle, label: 'Cancelled', val: regStats.cancelled },
+              ].map(({ icon: Icon, label, val }) => (
+                <div key={label} className="flex items-center gap-2 rounded-xl border border-white/6 bg-white/3 px-3 py-2">
+                  <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+                  <div><p className="text-base font-bold text-white tabular-nums">{val}</p><p className="mt-0.5 text-[10px] text-gray-500">{label}</p></div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative max-w-xs flex-1">
+              <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+              <input type="text" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pr-3 pl-9 text-sm text-white placeholder-gray-600 outline-none focus:border-white/20" />
+            </div>
+            <div className="flex gap-2">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-xl border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none">
+                <option value="all">All Status</option>
+                {Object.entries(REG_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              <button onClick={exportCSV} disabled={registrations.length === 0}
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-gray-400 hover:bg-white/8 hover:text-white disabled:opacity-40">
+                <Download className="h-3.5 w-3.5" /> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto rounded-2xl border border-white/6 bg-white/3">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="h-7 w-7 animate-spin text-gray-500" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                <Users className="mb-3 h-10 w-10 opacity-20" />
+                <p className="text-sm">{registrations.length === 0 ? 'No registrations yet.' : 'No results.'}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {filtered.map((reg, idx) => {
+                  const u = reg.users || reg.user || {};
+                  const sc = REG_STATUS_CONFIG[reg.status] || REG_STATUS_CONFIG.registered;
+                  return (
+                    <div key={reg.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/3">
+                      <span className="w-5 text-center text-xs text-gray-500">{idx + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{u.full_name || '—'}</p>
+                        <p className="truncate text-xs text-gray-500">{u.email || '—'}</p>
+                      </div>
+                      <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${sc.color}`}>{sc.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {event.max_participants && (
+            <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/3 px-4 py-3 text-sm">
+              <div className="flex items-center gap-2 text-gray-400"><Users className="h-4 w-4 text-gray-600" /> Capacity</div>
+              <div className="text-right">
+                <span className="font-bold text-white">{registrations.length}</span>
+                <span className="text-gray-500"> / {event.max_participants}</span>
+                {registrations.length >= event.max_participants && (
+                  <span className="ml-2 rounded-md bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">Full</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {toast && (
+        <div className={`fixed right-6 bottom-6 z-50 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/20 text-red-300' : 'border-green-500/30 bg-green-500/20 text-green-300'}`}>
+          {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Status tabs ───────────────────────────────────────────────────────────────
 
 const STATUS_TABS = [
   { value: 'all',       label: 'All',       icon: CalendarDays  },
-  { value: 'draft',     label: 'Draft',     icon: FileEdit      },
   { value: 'upcoming',  label: 'Upcoming',  icon: Clock         },
   { value: 'ongoing',   label: 'Ongoing',   icon: Zap           },
   { value: 'completed', label: 'Completed', icon: CheckCircle2  },
+  { value: 'draft',     label: 'Draft',     icon: FileEdit      },
   { value: 'cancelled', label: 'Cancelled', icon: XCircle       },
 ];
 
@@ -41,223 +288,78 @@ function filterFn(event, tab) {
   return event.status === tab;
 }
 
-export default function EventManagementClient({ initialEvents, roles = [] }) {
-  const router = useRouter();
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
+export default function EventManagementClient({ initialEvents }) {
   const [events, setEvents] = useState(initialEvents);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [view, setView] = useState('list');
+  const [createModal, setCreateModal] = useState(false);
   const [viewRegEvent, setViewRegEvent] = useState(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editEvent, setEditEvent] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deletePending, setDeletePending] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const liveStats = useMemo(() => ({
-    total: events.length,
-    draft: events.filter((e) => e.status === 'draft').length,
-    upcoming: events.filter((e) => e.status === 'upcoming').length,
-    ongoing: events.filter((e) => e.status === 'ongoing').length,
-    completed: events.filter((e) => e.status === 'completed').length,
-    cancelled: events.filter((e) => e.status === 'cancelled').length,
-    featured: events.filter((e) => e.is_featured).length,
-    totalRegistrations: events.reduce((s, e) => s + (e.registrationCount ?? 0), 0),
-  }), [events]);
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
-  // Secondary filters applied on top of tab filter
-  const baseEnriched = useMemo(() => events.map(enrichEvent), [events]);
-
-  const searchFiltered = useMemo(() => {
-    let list = baseEnriched;
-    if (search) {
-      const term = search.toLowerCase();
-      list = list.filter((e) =>
-        e.title?.toLowerCase().includes(term) ||
-        e.description?.toLowerCase().includes(term) ||
-        e.location?.toLowerCase().includes(term) ||
-        e.category?.toLowerCase().includes(term)
-      );
-    }
-    if (categoryFilter) list = list.filter((e) => e.category === categoryFilter);
-    return [...list].sort((a, b) => {
-      switch (sortBy) {
-        case 'oldest': return new Date(a.start_date) - new Date(b.start_date);
-        case 'title': return (a.title ?? '').localeCompare(b.title ?? '');
-        case 'registrations': return (b.registrationCount ?? 0) - (a.registrationCount ?? 0);
-        default: return new Date(b.start_date) - new Date(a.start_date);
-      }
-    });
-  }, [baseEnriched, search, categoryFilter, sortBy]);
-
-  async function handleDelete(id) {
-    setDeletePending(true);
-    const fd = new FormData(); fd.set('id', id);
-    const result = await deleteEventAction(fd);
-    setDeletePending(false);
-    setDeleteId(null);
-    if (!result?.error) router.refresh();
-  }
+  const enriched = useMemo(() => events.map(enrichEvent), [events]);
+  const sidebarStats = useMemo(() => computeStats('manage', enriched), [enriched]);
+  const allCategories = useMemo(() => [...new Set(enriched.map((e) => e.category).filter(Boolean))], [enriched]);
 
   const tabs = STATUS_TABS.map((t) => ({
     ...t,
     count: t.value === 'all' ? events.length : events.filter((e) => e.status === t.value).length,
   }));
 
-  const toolbar = (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-600" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title, location or category…"
-            className="w-full rounded-xl border border-white/8 bg-white/4 py-2.5 pr-4 pl-10 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/30 focus:ring-1 focus:ring-blue-500/15 transition-all" />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-0.5 text-gray-500 hover:text-gray-300">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="h-3.5 w-3.5 shrink-0 text-gray-600" />
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-            className="appearance-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 pr-8 text-sm text-gray-400 scheme-dark outline-none focus:border-white/20 focus:text-white">
-            <option value="">All Categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-gray-600" />
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-            className="appearance-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 pr-8 text-sm text-gray-400 scheme-dark outline-none focus:border-white/20 focus:text-white">
-            {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-          </select>
-          {/* View toggle */}
-          <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-0.5">
-            <button onClick={() => setView('list')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${view === 'list' ? 'bg-white/12 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-              <LayoutList className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={() => setView('grid')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${view === 'grid' ? 'bg-white/12 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-              <LayoutGrid className="h-3.5 w-3.5" />
+  return (
+    <>
+      <EventListLayout
+        pageHeader={{ icon: CalendarDays, title: 'Event Management', subtitle: 'Create, edit, and manage events', accent: 'blue' }}
+        tabs={tabs}
+        events={enriched}
+        filterFn={filterFn}
+        stats={sidebarStats}
+        sidebarCta={null}
+        rowProps={{ showStatus: true, showRegs: true }}
+        renderDetail={(event, onBack) => (
+          <ManageEventDetail
+            event={event}
+            onBack={onBack}
+            allCategories={allCategories}
+            saveAction={updateEventAction}
+            uploadImageAction={uploadEventImageAction}
+            deleteImageAction={deleteEventImageAction}
+            deleteAction={(fd) => deleteEventAction(fd).then((res) => {
+              if (!res?.error) setEvents((prev) => prev.filter((e) => e.id !== fd.get('id')));
+              return res;
+            })}
+            onSaved={() => { showToast('Event saved!'); window.location.reload(); }}
+            onDeleted={() => { showToast('Event deleted.'); window.location.reload(); }}
+            onViewRegs={() => setViewRegEvent(event)}
+          />
+        )}
+        listHeader={
+          <div className="flex justify-end">
+            <button onClick={() => setCreateModal(true)}
+              className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-medium text-blue-300 hover:bg-blue-500/20 transition-colors">
+              <Plus className="h-4 w-4" /> Create Event
             </button>
           </div>
-          <button onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-all shrink-0">
-            <PlusCircle className="h-4 w-4" /> New Event
-          </button>
-        </div>
-      </div>
-
-      {(search || categoryFilter) && (
-        <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 px-4 py-2.5">
-          <p className="text-xs text-gray-500">
-            Showing <span className="font-semibold text-gray-300">{searchFiltered.length}</span> of {events.length} events
-          </p>
-          <button onClick={() => { setSearch(''); setCategoryFilter(''); }}
-            className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300">
-            <X className="h-3 w-3" /> Clear filters
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <PageShell>
-      <PageHeader
-        icon={CalendarDays}
-        title="Event Management"
-        subtitle={`${liveStats.total} events · ${liveStats.totalRegistrations} registrations`}
-        accent="blue"
+        }
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={CalendarDays} label="Total Events"       value={liveStats.total}                        accent="blue"   />
-        <StatCard icon={Users}        label="Registrations"      value={liveStats.totalRegistrations}           accent="emerald"/>
-        <StatCard icon={Zap}          label="Ongoing / Upcoming" value={liveStats.ongoing + liveStats.upcoming} accent="amber"  />
-        <StatCard icon={Star}         label="Featured"           value={liveStats.featured}                     accent="violet" />
-      </div>
-
-      <TabBar tabs={tabs} value={undefined} onChange={() => {}} />
-
-      {/* Toolbar + content — handled internally via EventListLayout, but we need
-          the extra search/sort/view filters here so we compose manually */}
-      <EventListLayout
-        pageHeader={null}
-        tabs={tabs}
-        events={searchFiltered}
-        filterFn={filterFn}
-        stats={[]}
-        sidebarCta={null}
-        rowProps={{
-          showStatus: true,
-          showCover: true,
-          showRegs: true,
-          onEdit: (ev) => setEditEvent(ev),
-          onDelete: (ev) => setDeleteId(ev.id),
-          actionSlot: undefined,
-        }}
-        getDetailProps={(event) => ({
-          detailRows: [
-            { label: 'Status',    value: getStatusConfig(event.status)?.label ?? event.status },
-            { label: 'Category',  value: event._type },
-            { label: 'Registered', value: `${event.registrationCount ?? 0}${event.max_participants ? ` / ${event.max_participants}` : ''}` },
-          ],
-          ctaSlot: (
-            <div className="flex gap-2">
-              <button onClick={() => setViewRegEvent(event)}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 transition-colors">
-                <Eye className="h-3.5 w-3.5" /> Registrations
-              </button>
-              <button onClick={() => setEditEvent(event)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:bg-blue-500/15 hover:text-blue-400 transition-colors">
-                <Edit3 className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setDeleteId(event.id)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ),
-        })}
-        aboveList={toolbar}
-      />
-
-      {/* Grid view overlay — replaces EventListLayout list when view=grid */}
-      {view === 'grid' && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 -mt-4">
-          {searchFiltered.map((event) => (
-            <EventCard key={event.id} event={event}
-              onEdit={(e) => setEditEvent(e)}
-              onViewRegistrations={(e) => setViewRegEvent(e)} />
-          ))}
-        </div>
+      {createModal && (
+        <CreateEventModal
+          onClose={() => setCreateModal(false)}
+          onSuccess={() => { setCreateModal(false); showToast('Event created!'); window.location.reload(); }}
+        />
       )}
 
-      {createOpen && (
-        <EventFormPanel roles={roles} onClose={() => setCreateOpen(false)} onSaved={() => { setCreateOpen(false); router.refresh(); }} />
-      )}
-      {editEvent && (
-        <EventFormPanel event={editEvent} roles={roles} onClose={() => setEditEvent(null)} onSaved={() => { setEditEvent(null); router.refresh(); }} />
-      )}
       {viewRegEvent && (
         <RegistrationsModal event={viewRegEvent} onClose={() => setViewRegEvent(null)} />
       )}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-gray-900 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white">Delete Event?</h3>
-            <p className="mt-2 text-sm text-gray-400">This action cannot be undone.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm text-gray-400 hover:bg-white/5">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} disabled={deletePending}
-                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60">
-                {deletePending ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Delete'}
-              </button>
-            </div>
-          </div>
+
+      {toast && (
+        <div className={`fixed right-6 bottom-6 z-50 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/20 text-red-300' : 'border-green-500/30 bg-green-500/20 text-green-300'}`}>
+          {toast.msg}
         </div>
       )}
-    </PageShell>
+    </>
   );
 }
