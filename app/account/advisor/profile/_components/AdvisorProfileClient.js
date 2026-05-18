@@ -1,64 +1,83 @@
 /**
- * @file Advisor profile client — editable profile view for updating
- *   personal information, academic credentials, and advisory details.
+ * @file Advisor profile client — read-only profile view with sections
+ *   for identity, security, and a sign-out action. Mirrors the member
+ *   profile's design language using shared primitives.
+ *
  * @module AdvisorProfileClient
  */
 
 'use client';
 
-import { User, Mail, Phone, Shield, Calendar, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import {
+  User,
+  Mail,
+  Phone,
+  Shield,
+  Calendar,
+  LogOut,
+  Sparkles,
+} from 'lucide-react';
 import { signOutAction } from '@/app/_lib/actions';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  SectionHeader,
+  Avatar,
+  Pill,
+  ActionButton,
+} from '../../../_components/ui/dashboard';
 
 export default function AdvisorProfileClient({ user }) {
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleSignOut = async () => {
-    if (confirm('Are you sure you want to sign out?')) {
-      const formData = new FormData();
-      await signOutAction(formData);
-    }
+    if (!confirm('Are you sure you want to sign out?')) return;
+    setSigningOut(true);
+    const fd = new FormData();
+    await signOutAction(fd);
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">My Profile</h1>
-        <p className="mt-1 text-gray-400">Advisor account details</p>
-      </div>
+  const active = user.account_status === 'active';
 
-      {/* Profile Overview Card */}
-      <div className="rounded-2xl border border-white/10 bg-linear-to-br from-blue-500/20 to-purple-600/20 p-8 backdrop-blur-xl">
-        <div className="flex items-center gap-6">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-4xl font-semibold text-white">
-            {user.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
-          </div>
+  return (
+    <PageShell>
+      <PageHeader
+        icon={User}
+        title="My Profile"
+        subtitle="Advisor account details"
+        accent="indigo"
+      />
+
+      <GlassCard className="bg-linear-to-br from-gray-900 via-gray-900 to-indigo-950/30">
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          <Avatar name={user.full_name ?? user.email ?? '?'} size="xl" />
           <div className="flex-1">
-            <h2 className="text-3xl font-bold text-white">
+            <h2 className="text-2xl font-semibold text-white">
               {user.full_name || 'Advisor'}
             </h2>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-blue-500 px-3 py-1 text-sm font-medium text-white">
-                Advisor
-              </span>
-              <span
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
-                  user.account_status === 'active'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-amber-500/20 text-amber-400'
-                }`}
-              >
+            <p className="mt-0.5 text-sm text-gray-400">{user.email}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Pill tone="indigo" icon={Shield}>
+                Faculty Advisor
+              </Pill>
+              <Pill tone={active ? 'emerald' : 'amber'} icon={Sparkles}>
                 {user.account_status}
-              </span>
+              </Pill>
             </div>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Personal Information */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-        <h2 className="mb-6 text-xl font-semibold text-white">
-          Personal Information
-        </h2>
-        <div className="grid gap-6 sm:grid-cols-2">
+      <GlassCard>
+        <SectionHeader
+          icon={User}
+          title="Personal Information"
+          subtitle="From your authentication provider"
+          accent="blue"
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
           <InfoField
             icon={User}
             label="Full Name"
@@ -77,75 +96,84 @@ export default function AdvisorProfileClient({ user }) {
             locked
           />
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Security Section */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-        <h2 className="mb-6 flex items-center gap-2 text-xl font-semibold text-white">
-          <Shield className="h-5 w-5 text-blue-400" />
-          Security
-        </h2>
-        <div className="space-y-4">
+      <GlassCard>
+        <SectionHeader
+          icon={Shield}
+          title="Security"
+          subtitle="Authentication and account state"
+          accent="emerald"
+        />
+        <ul className="space-y-1">
           <SecurityRow label="Authentication" value="Google OAuth" />
           {user.last_login && (
             <SecurityRow
-              label="Last Login"
+              label="Last login"
               value={new Date(user.last_login).toLocaleString()}
             />
           )}
           <SecurityRow
-            label="Account Status"
+            label="Account status"
             value={user.account_status}
-            statusColor={user.account_status === 'active' ? 'green' : 'amber'}
+            tone={active ? 'emerald' : 'amber'}
           />
-        </div>
-      </div>
+        </ul>
+      </GlassCard>
 
-      {/* Danger Zone */}
-      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 backdrop-blur-xl">
-        <h2 className="mb-4 text-xl font-semibold text-red-400">Actions</h2>
-        <button
+      <GlassCard className="border-rose-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-rose-950/20">
+        <SectionHeader
+          icon={LogOut}
+          title="Sign out"
+          subtitle="End the current session on this device"
+          accent="rose"
+        />
+        <ActionButton
+          tone="danger"
+          icon={LogOut}
           onClick={handleSignOut}
-          className="flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-500/20 px-6 py-3 font-medium text-red-400 transition-colors hover:bg-red-500/30"
+          disabled={signingOut}
         >
-          <LogOut className="h-5 w-5" />
-          Sign Out
-        </button>
-      </div>
-    </div>
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </ActionButton>
+      </GlassCard>
+    </PageShell>
   );
 }
 
 function InfoField({ icon: Icon, label, value, locked }) {
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-medium text-gray-400">
-        <Icon className="h-4 w-4" />
+    <div>
+      <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-gray-500 uppercase">
+        <Icon className="h-3 w-3" />
         {label}
-        {locked && <span className="text-xs text-gray-500">(locked)</span>}
+        {locked && (
+          <span className="text-[10px] tracking-normal text-gray-600 normal-case">
+            (locked)
+          </span>
+        )}
       </label>
-      <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white">
+      <div className="truncate rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white">
         {value}
       </div>
     </div>
   );
 }
 
-function SecurityRow({ label, value, statusColor }) {
-  const colorClasses = {
-    green: 'text-green-400',
-    amber: 'text-amber-400',
-    red: 'text-red-400',
-  };
+const TONE_TEXT = {
+  emerald: 'text-emerald-300',
+  amber: 'text-amber-300',
+  rose: 'text-rose-300',
+  gray: 'text-gray-200',
+};
 
+function SecurityRow({ label, value, tone = 'gray' }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/10 py-3 last:border-0">
-      <span className="text-gray-400">{label}</span>
-      <span
-        className={`font-medium ${statusColor ? colorClasses[statusColor] : 'text-white'}`}
-      >
+    <li className="flex items-center justify-between border-b border-white/[0.06] py-2.5 last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={`text-sm font-medium ${TONE_TEXT[tone]}`}>
         {value}
       </span>
-    </div>
+    </li>
   );
 }

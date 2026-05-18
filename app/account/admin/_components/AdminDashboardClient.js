@@ -1,7 +1,16 @@
 /**
- * @file Admin dashboard shell — composes the header, stats grid, system
- *   metrics, pending approvals, recent activity, quick actions, system
- *   notifications, and management links into the main admin view.
+ * @file Admin dashboard shell — clarity-first layout that mirrors the
+ *   member panel hierarchy and visual language.
+ *
+ * Layout (top → bottom):
+ *   1. AdminHeader       — console title + role pills + system health
+ *   2. StatsGrid         — 6 hero metrics
+ *   3. SystemMetrics     — secondary KPIs (growth, participation, etc.)
+ *   4. Action zone       — 2/3 primary + 1/3 side rail
+ *        primary: PendingApprovals · QuickActions
+ *        rail:    RecentActivity · SystemNotifications
+ *   5. ManagementLinks   — full-width secondary navigation
+ *
  * @module AdminDashboardClient
  */
 
@@ -15,6 +24,7 @@ import RecentActivity from './RecentActivity';
 import QuickActions from './QuickActions';
 import SystemNotifications from './SystemNotifications';
 import ManagementLinks from './ManagementLinks';
+import { PageShell } from './_ui';
 
 export default function AdminDashboardClient({ session }) {
   // Mock stats - replace with real data
@@ -27,7 +37,6 @@ export default function AdminDashboardClient({ session }) {
     systemHealth: 98,
   };
 
-  // Mock recent activities (use icon names as strings for serialization)
   const recentActivities = [
     {
       action: 'New user registration: Aisha Rahman',
@@ -55,14 +64,12 @@ export default function AdminDashboardClient({ session }) {
     },
   ];
 
-  // Mock pending approvals
   const pendingApprovals = [
     { id: 1, type: 'Member Application', user: 'Sarah Ahmed', date: 'Feb 15' },
     { id: 2, type: 'Event Request', user: 'John Doe', date: 'Feb 15' },
     { id: 3, type: 'Mentor Application', user: 'Mike Chen', date: 'Feb 14' },
   ];
 
-  // Mock system stats
   const systemStats = [
     { label: 'User Growth', value: '+12.5%', trend: 'up', color: 'green' },
     { label: 'Event Participation', value: '87%', trend: 'up', color: 'blue' },
@@ -75,7 +82,6 @@ export default function AdminDashboardClient({ session }) {
     { label: 'System Uptime', value: '99.9%', trend: 'stable', color: 'cyan' },
   ];
 
-  // Admin quick actions (use icon names as strings for serialization)
   const quickActions = [
     {
       title: 'Users',
@@ -122,24 +128,28 @@ export default function AdminDashboardClient({ session }) {
   ];
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
+    <PageShell>
       <AdminHeader stats={stats} />
+
       <StatsGrid stats={stats} />
+
       <SystemMetrics systemStats={systemStats} />
 
-      {/* Main Content Grid */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        <PendingApprovals pendingApprovals={pendingApprovals} />
-        <RecentActivity recentActivities={recentActivities} />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative mt-2">
+        <div className="xl:col-span-8 flex flex-col gap-8">
+          <PendingApprovals pendingApprovals={pendingApprovals} />
+          <QuickActions quickActions={quickActions} />
+        </div>
+
+        <div className="xl:col-span-4 flex flex-col gap-8">
+          <div className="sticky top-8 flex flex-col gap-8">
+            <RecentActivity recentActivities={recentActivities} />
+            <SystemNotifications />
+          </div>
+        </div>
       </div>
 
-      <QuickActions quickActions={quickActions} />
-
-      {/* System Overview & Management */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <SystemNotifications />
-        <ManagementLinks />
-      </div>
-    </div>
+      <ManagementLinks />
+    </PageShell>
   );
 }

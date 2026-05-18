@@ -1,11 +1,27 @@
 /**
  * @file Shared dashboard UI primitives barrel.
+ *
+ * The dark-glass primitives (PageShell, GlassCard, StatCard, etc.) live
+ * in ./dashboard.js and are used by the member, advisor, and executive
+ * panels. The Card/Button/Badge files predate them — kept as direct
+ * imports because nothing currently routes through this barrel for them.
+ *
  * @module account/ui
  */
 
-export { Button } from './Button';
-export { Card, CardHeader, CardTitle, CardBody, CardFooter } from './Card';
-export { Badge } from './Badge';
-export { PageHeader } from './PageHeader';
-export { StatCard, StatGrid } from './StatCard';
-export { EmptyState } from './EmptyState';
+export {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  SectionHeader,
+  IconChip,
+  StatCard,
+  Pill,
+  GradientBar,
+  TabBar,
+  EmptyState,
+  ActionButton,
+  Avatar,
+  Sparkline,
+  StaggerList,
+} from './dashboard';

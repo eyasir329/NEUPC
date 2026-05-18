@@ -26,13 +26,11 @@ export default async function AdvisorAchievementsPage() {
   ]);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <AdvisorAchievementsClient
-        achievements={achievements}
-        stats={stats}
-        topAchievements={topAchievements}
-        advisorId={user.id}
-      />
-    </div>
+    <AdvisorAchievementsClient
+      achievements={achievements}
+      stats={stats}
+      topAchievements={topAchievements}
+      advisorId={user.id}
+    />
   );
 }

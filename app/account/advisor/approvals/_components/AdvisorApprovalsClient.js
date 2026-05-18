@@ -1,12 +1,15 @@
 /**
- * @file Advisor approvals client — full-page approval management
- *   interface for reviewing, approving, or rejecting pending items.
+ * @file Advisor approvals client — review queue for join requests,
+ *   member profile updates, and budget entries. Uses the shared dark-
+ *   glass primitives (PageShell / PageHeader / TabBar / GlassCard) so
+ *   the advisor panel matches the member panel's design language.
+ *
  * @module AdvisorApprovalsClient
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   UserCheck,
   UserPlus,
@@ -14,11 +17,12 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  Calendar,
   Mail,
   Phone,
+  Calendar,
   X,
   AlertCircle,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   approveJoinRequestAction,
@@ -26,496 +30,432 @@ import {
   approveMemberProfileAction,
   approveBudgetEntryAction,
 } from '@/app/_lib/advisor-actions';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  TabBar,
+  Pill,
+  Avatar,
+  ActionButton,
+  EmptyState,
+} from '../../../_components/ui/dashboard';
+
+const TAB_DEFS = [
+  { value: 'join-requests', label: 'Join Requests', icon: UserPlus },
+  { value: 'member-profiles', label: 'Member Profiles', icon: UserCheck },
+  { value: 'budget-entries', label: 'Budget Approvals', icon: DollarSign },
+];
+
+function Alert({ message }) {
+  if (!message) return null;
+  const ok = message.type === 'success';
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-xl border p-3 text-sm ${
+        ok
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+          : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+      }`}
+    >
+      {ok ? (
+        <CheckCircle className="h-4 w-4" />
+      ) : (
+        <AlertCircle className="h-4 w-4" />
+      )}
+      <span>{message.text}</span>
+    </div>
+  );
+}
 
 export default function AdvisorApprovalsClient({
-  joinRequests,
-  memberProfiles,
-  budgetEntries,
-  advisorId,
+  joinRequests = [],
+  memberProfiles = [],
+  budgetEntries = [],
 }) {
-  const [activeTab, setActiveTab] = useState('join-requests');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tab, setTab] = useState('join-requests');
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
-  const handleApprove = async (item, type) => {
-    setIsSubmitting(true);
+  const tabs = TAB_DEFS.map((t) => ({
+    ...t,
+    count:
+      t.value === 'join-requests'
+        ? joinRequests.length
+        : t.value === 'member-profiles'
+          ? memberProfiles.length
+          : budgetEntries.length,
+  }));
+
+  const openReview = (item, type) => {
+    setSelected({ ...item, _type: type });
+    setReason('');
     setMessage(null);
+  };
 
-    const formData = new FormData();
+  const closeReview = () => {
+    setSelected(null);
+    setReason('');
+    setMessage(null);
+  };
 
+  const handleApprove = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    setMessage(null);
+    const fd = new FormData();
     try {
       let result;
-      if (type === 'join-request') {
-        formData.append('requestId', item.id);
-        result = await approveJoinRequestAction(formData);
-      } else if (type === 'member-profile') {
-        formData.append('userId', item.user_id);
-        result = await approveMemberProfileAction(formData);
-      } else if (type === 'budget') {
-        formData.append('entryId', item.id);
-        result = await approveBudgetEntryAction(formData);
-      }
-
-      if (result.error) {
-        setMessage({ type: 'error', text: result.error });
+      if (selected._type === 'join-request') {
+        fd.append('requestId', selected.id);
+        result = await approveJoinRequestAction(fd);
+      } else if (selected._type === 'member-profile') {
+        fd.append('userId', selected.user_id);
+        result = await approveMemberProfileAction(fd);
       } else {
-        setMessage({ type: 'success', text: result.success });
-        setShowReviewModal(false);
-        setSelectedItem(null);
+        fd.append('entryId', selected.id);
+        result = await approveBudgetEntryAction(fd);
       }
-    } catch (error) {
+      if (result?.error) setMessage({ type: 'error', text: result.error });
+      else {
+        setMessage({ type: 'success', text: result?.success ?? 'Approved' });
+        setTimeout(closeReview, 800);
+      }
+    } catch {
       setMessage({ type: 'error', text: 'An error occurred.' });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const handleReject = async (item) => {
-    if (!rejectionReason.trim()) {
+  const handleReject = async () => {
+    if (!selected) return;
+    if (!reason.trim()) {
       setMessage({ type: 'error', text: 'Please provide a rejection reason.' });
       return;
     }
-
-    setIsSubmitting(true);
+    setSubmitting(true);
     setMessage(null);
-
-    const formData = new FormData();
-    formData.append('requestId', item.id);
-    formData.append('reason', rejectionReason);
-
+    const fd = new FormData();
+    fd.append('requestId', selected.id);
+    fd.append('reason', reason);
     try {
-      const result = await rejectJoinRequestAction(formData);
-
-      if (result.error) {
-        setMessage({ type: 'error', text: result.error });
-      } else {
-        setMessage({ type: 'success', text: result.success });
-        setShowReviewModal(false);
-        setSelectedItem(null);
-        setRejectionReason('');
+      const result = await rejectJoinRequestAction(fd);
+      if (result?.error) setMessage({ type: 'error', text: result.error });
+      else {
+        setMessage({ type: 'success', text: result?.success ?? 'Rejected' });
+        setTimeout(closeReview, 800);
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'An error occurred.' });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const openReviewModal = (item, type) => {
-    setSelectedItem({ ...item, type });
-    setShowReviewModal(true);
-    setMessage(null);
-    setRejectionReason('');
-  };
+  const filteredJoin = useMemo(
+    () =>
+      joinRequests.filter(
+        (r) =>
+          !query ||
+          r.name?.toLowerCase().includes(query.toLowerCase()) ||
+          r.email?.toLowerCase().includes(query.toLowerCase())
+      ),
+    [joinRequests, query]
+  );
 
-  const tabs = [
-    {
-      id: 'join-requests',
-      label: 'Join Requests',
-      count: joinRequests?.length || 0,
-      icon: UserPlus,
-    },
-    {
-      id: 'member-profiles',
-      label: 'Member Profiles',
-      count: memberProfiles?.length || 0,
-      icon: UserCheck,
-    },
-    {
-      id: 'budget-entries',
-      label: 'Budget Approvals',
-      count: budgetEntries?.length || 0,
-      icon: DollarSign,
-    },
-  ];
+  const filteredProfiles = useMemo(
+    () =>
+      memberProfiles.filter(
+        (p) =>
+          !query ||
+          p.users?.full_name?.toLowerCase().includes(query.toLowerCase()) ||
+          p.users?.email?.toLowerCase().includes(query.toLowerCase()) ||
+          p.student_id?.toLowerCase().includes(query.toLowerCase())
+      ),
+    [memberProfiles, query]
+  );
+
+  const filteredBudget = useMemo(
+    () =>
+      budgetEntries.filter(
+        (e) =>
+          !query ||
+          e.description?.toLowerCase().includes(query.toLowerCase()) ||
+          e.events?.title?.toLowerCase().includes(query.toLowerCase())
+      ),
+    [budgetEntries, query]
+  );
+
+  const totalPending =
+    joinRequests.length + memberProfiles.length + budgetEntries.length;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Approvals</h1>
-          <p className="mt-1 text-gray-400">
-            Review and manage pending requests
-          </p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={ClipboardCheck}
+        title="Approvals"
+        subtitle={
+          totalPending === 0
+            ? 'Inbox zero — nothing waiting for your decision.'
+            : `${totalPending} item${totalPending === 1 ? '' : 's'} awaiting your review`
+        }
+        accent="amber"
+        meta={
+          <>
+            <Pill tone="amber">{joinRequests.length} join</Pill>
+            <Pill tone="blue">{memberProfiles.length} profiles</Pill>
+            <Pill tone="emerald">{budgetEntries.length} budget</Pill>
+          </>
+        }
+      />
 
-      {/* Summary Chips */}
-      <div className="flex flex-wrap gap-3">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-xl"
-          >
-            <tab.icon className="h-4 w-4 text-blue-400" />
-            <span className="font-medium text-white">{tab.count}</span>
-            <span className="text-sm text-gray-400">{tab.label}</span>
-          </div>
-        ))}
-      </div>
+      <Alert message={message} />
 
-      {/* Message Alert */}
-      {message && (
-        <div
-          className={`rounded-xl border p-4 ${
-            message.type === 'success'
-              ? 'border-green-500/30 bg-green-500/10 text-green-400'
-              : 'border-red-500/30 bg-red-500/10 text-red-400'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {message.type === 'success' ? (
-              <CheckCircle className="h-5 w-5" />
-            ) : (
-              <AlertCircle className="h-5 w-5" />
-            )}
-            <p>{message.text}</p>
-          </div>
-        </div>
-      )}
+      <GlassCard padding="p-4">
+        <TabBar tabs={tabs} value={tab} onChange={setTab} />
 
-      {/* Tabs */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-        {/* Tab Headers */}
-        <div className="flex overflow-x-auto border-b border-white/10">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`min-w-37.5 flex-1 px-6 py-4 text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-blue-500 bg-blue-500/20 text-blue-400'
-                  : 'text-gray-400 hover:bg-white/5'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <tab.icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    activeTab === tab.id
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white/10'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </div>
-            </button>
-          ))}
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              tab === 'join-requests'
+                ? 'Search by name or email…'
+                : tab === 'member-profiles'
+                  ? 'Search by name, email, or student ID…'
+                  : 'Search by description or event…'
+            }
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-3 pl-10 text-sm text-white placeholder-gray-500 focus:border-amber-500/40 focus:outline-none"
+          />
         </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-12 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
-            />
-          </div>
-
-          {/* Join Requests Tab */}
-          {activeTab === 'join-requests' && (
+        <div className="mt-4">
+          {tab === 'join-requests' && (
             <JoinRequestsList
-              requests={joinRequests}
-              searchQuery={searchQuery}
-              onReview={openReviewModal}
+              items={filteredJoin}
+              onReview={(item) => openReview(item, 'join-request')}
             />
           )}
-
-          {/* Member Profiles Tab */}
-          {activeTab === 'member-profiles' && (
+          {tab === 'member-profiles' && (
             <MemberProfilesList
-              profiles={memberProfiles}
-              searchQuery={searchQuery}
-              onReview={openReviewModal}
+              items={filteredProfiles}
+              onReview={(item) => openReview(item, 'member-profile')}
             />
           )}
-
-          {/* Budget Entries Tab */}
-          {activeTab === 'budget-entries' && (
+          {tab === 'budget-entries' && (
             <BudgetEntriesList
-              entries={budgetEntries}
-              searchQuery={searchQuery}
-              onReview={openReviewModal}
+              items={filteredBudget}
+              onReview={(item) => openReview(item, 'budget')}
             />
           )}
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Review Modal */}
-      {showReviewModal && selectedItem && (
+      {selected && (
         <ReviewModal
-          item={selectedItem}
+          item={selected}
+          onClose={closeReview}
           onApprove={handleApprove}
           onReject={handleReject}
-          onClose={() => {
-            setShowReviewModal(false);
-            setSelectedItem(null);
-            setRejectionReason('');
-            setMessage(null);
-          }}
-          rejectionReason={rejectionReason}
-          setRejectionReason={setRejectionReason}
-          isSubmitting={isSubmitting}
+          reason={reason}
+          setReason={setReason}
+          submitting={submitting}
           message={message}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 
-function JoinRequestsList({ requests, searchQuery, onReview }) {
-  const filtered = requests?.filter(
-    (req) =>
-      !searchQuery ||
-      req.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (!filtered || filtered.length === 0) {
+function JoinRequestsList({ items, onReview }) {
+  if (items.length === 0)
     return (
-      <div className="py-12 text-center">
-        <UserPlus className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-        <p className="text-gray-400">No pending join requests</p>
-      </div>
+      <EmptyState
+        icon={UserPlus}
+        title="No pending join requests"
+        description="When prospective members apply, they'll appear here."
+      />
     );
-  }
-
   return (
-    <div className="space-y-3">
-      {filtered.map((request) => (
-        <div
-          key={request.id}
-          className="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
+    <ul className="space-y-2">
+      {items.map((r) => (
+        <li
+          key={r.id}
+          className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-amber-500/30 hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <h3 className="font-medium text-white">{request.name}</h3>
-              <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-400">
-                <div className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  <span>{request.email}</span>
-                </div>
-                {request.phone && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
-                    <span>{request.phone}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {new Date(request.created_at).toLocaleDateString()}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar name={r.name ?? r.email ?? '?'} size="md" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-white">{r.name}</p>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {r.email}
+                </span>
+                {r.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {r.phone}
                   </span>
-                </div>
+                )}
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(r.created_at).toLocaleDateString()}
+                </span>
               </div>
             </div>
-            <button
-              onClick={() => onReview(request, 'join-request')}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-            >
-              Review
-            </button>
           </div>
-        </div>
+          <ActionButton tone="primary" onClick={() => onReview(r)}>
+            Review
+          </ActionButton>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
-function MemberProfilesList({ profiles, searchQuery, onReview }) {
-  const filtered = profiles?.filter(
-    (prof) =>
-      !searchQuery ||
-      prof.users?.full_name
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      prof.users?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prof.student_id?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (!filtered || filtered.length === 0) {
+function MemberProfilesList({ items, onReview }) {
+  if (items.length === 0)
     return (
-      <div className="py-12 text-center">
-        <UserCheck className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-        <p className="text-gray-400">No pending member profiles</p>
-      </div>
+      <EmptyState
+        icon={UserCheck}
+        title="No pending member profiles"
+        description="Member profile changes that need approval will show up here."
+      />
     );
-  }
-
   return (
-    <div className="space-y-3">
-      {filtered.map((profile) => (
-        <div
-          key={profile.user_id}
-          className="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
+    <ul className="space-y-2">
+      {items.map((p) => (
+        <li
+          key={p.user_id}
+          className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-blue-500/30 hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-semibold text-white">
-                {profile.users?.full_name?.charAt(0) || '?'}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-white">
-                  {profile.users?.full_name}
-                </h3>
-                <div className="mt-1 flex flex-wrap gap-3 text-sm text-gray-400">
-                  <span>{profile.student_id}</span>
-                  <span>•</span>
-                  <span>{profile.session}</span>
-                  <span>•</span>
-                  <span>{profile.department}</span>
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => onReview(profile, 'member-profile')}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-            >
-              Review
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BudgetEntriesList({ entries, searchQuery, onReview }) {
-  const filtered = entries?.filter(
-    (entry) =>
-      !searchQuery ||
-      entry.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.events?.title?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (!filtered || filtered.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <DollarSign className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-        <p className="text-gray-400">No pending budget entries</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {filtered.map((entry) => (
-        <div
-          key={entry.id}
-          className="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <div className="mb-2 flex items-center gap-2">
-                <span
-                  className={`rounded px-2 py-1 text-xs font-medium ${
-                    entry.entry_type === 'income'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-red-500/20 text-red-400'
-                  }`}
-                >
-                  {entry.entry_type}
-                </span>
-                <span className="text-lg font-semibold text-white">
-                  ৳{entry.amount}
-                </span>
-              </div>
-              <p className="text-white">{entry.description}</p>
-              {entry.events && (
-                <p className="mt-1 text-sm text-gray-400">
-                  Event: {entry.events.title}
-                </p>
-              )}
-              <p className="mt-1 text-sm text-gray-400">
-                Date: {new Date(entry.transaction_date).toLocaleDateString()}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar name={p.users?.full_name ?? '?'} size="md" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-white">
+                {p.users?.full_name}
+              </p>
+              <p className="mt-1 truncate text-xs text-gray-500">
+                {p.student_id} · {p.session} · {p.department}
               </p>
             </div>
-            <button
-              onClick={() => onReview(entry, 'budget')}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-            >
-              Review
-            </button>
           </div>
-        </div>
+          <ActionButton tone="primary" onClick={() => onReview(p)}>
+            Review
+          </ActionButton>
+        </li>
       ))}
+    </ul>
+  );
+}
+
+function BudgetEntriesList({ items, onReview }) {
+  if (items.length === 0)
+    return (
+      <EmptyState
+        icon={DollarSign}
+        title="No pending budget entries"
+        description="Budget items submitted for approval will appear here."
+      />
+    );
+  return (
+    <ul className="space-y-2">
+      {items.map((e) => (
+        <li
+          key={e.id}
+          className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-emerald-500/30 hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Pill tone={e.entry_type === 'income' ? 'emerald' : 'rose'}>
+                {e.entry_type}
+              </Pill>
+              <span className="text-lg font-semibold text-white">
+                ৳{Number(e.amount).toLocaleString()}
+              </span>
+            </div>
+            <p className="mt-1 truncate text-sm text-gray-200">
+              {e.description}
+            </p>
+            <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
+              {e.events && <span>Event: {e.events.title}</span>}
+              <span>
+                {new Date(e.transaction_date).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+          <ActionButton tone="primary" onClick={() => onReview(e)}>
+            Review
+          </ActionButton>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between border-b border-white/[0.06] py-2 last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-sm font-medium text-white">{value ?? '—'}</span>
     </div>
   );
 }
 
 function ReviewModal({
   item,
+  onClose,
   onApprove,
   onReject,
-  onClose,
-  rejectionReason,
-  setRejectionReason,
-  isSubmitting,
+  reason,
+  setReason,
+  submitting,
   message,
 }) {
+  const isJoin = item._type === 'join-request';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-gray-900/95 backdrop-blur-xl">
-        {/* Header */}
-        <div className="sticky top-0 flex items-start justify-between border-b border-white/10 bg-gray-900/95 p-6 backdrop-blur-xl">
-          <h2 className="text-2xl font-bold text-white">Review Request</h2>
+        <div className="sticky top-0 flex items-start justify-between border-b border-white/10 bg-gray-900/95 p-5">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              Review request
+            </h2>
+            <p className="mt-0.5 text-xs text-gray-500 capitalize">
+              {item._type.replace('-', ' ')}
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 transition-colors hover:bg-white/10"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
           >
-            <X className="h-5 w-5 text-gray-400" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="space-y-6 p-6">
-          {/* Message */}
-          {message && (
-            <div
-              className={`rounded-xl border p-4 ${
-                message.type === 'success'
-                  ? 'border-green-500/30 bg-green-500/10 text-green-400'
-                  : 'border-red-500/30 bg-red-500/10 text-red-400'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {message.type === 'success' ? (
-                  <CheckCircle className="h-5 w-5" />
-                ) : (
-                  <AlertCircle className="h-5 w-5" />
-                )}
-                <p>{message.text}</p>
-              </div>
-            </div>
-          )}
+        <div className="space-y-5 p-5">
+          <Alert message={message} />
 
-          {/* Item Details */}
-          {item.type === 'join-request' && (
-            <div className="space-y-4">
+          {item._type === 'join-request' && (
+            <div className="space-y-1">
               <DetailRow label="Name" value={item.name} />
               <DetailRow label="Email" value={item.email} />
               {item.phone && <DetailRow label="Phone" value={item.phone} />}
               <DetailRow
-                label="Requested On"
+                label="Requested"
                 value={new Date(item.created_at).toLocaleDateString()}
               />
             </div>
           )}
 
-          {item.type === 'member-profile' && (
-            <div className="space-y-4">
+          {item._type === 'member-profile' && (
+            <div className="space-y-1">
               <DetailRow label="Name" value={item.users?.full_name} />
               <DetailRow label="Email" value={item.users?.email} />
               <DetailRow label="Student ID" value={item.student_id} />
@@ -524,69 +464,73 @@ function ReviewModal({
             </div>
           )}
 
-          {item.type === 'budget' && (
-            <div className="space-y-4">
+          {item._type === 'budget' && (
+            <div className="space-y-1">
               <DetailRow label="Type" value={item.entry_type} />
-              <DetailRow label="Amount" value={`৳${item.amount}`} />
+              <DetailRow
+                label="Amount"
+                value={`৳${Number(item.amount).toLocaleString()}`}
+              />
               <DetailRow label="Description" value={item.description} />
               {item.events && (
                 <DetailRow label="Event" value={item.events.title} />
               )}
               <DetailRow
-                label="Transaction Date"
+                label="Date"
                 value={new Date(item.transaction_date).toLocaleDateString()}
               />
             </div>
           )}
 
-          {/* Rejection Reason (only for join requests) */}
-          {item.type === 'join-request' && (
+          {isJoin && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-400">
-                Rejection Reason (optional for approval, required for rejection)
+              <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                Rejection reason{' '}
+                <span className="text-gray-600">
+                  (required to reject; optional to approve)
+                </span>
               </label>
               <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Provide a reason if rejecting..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                placeholder="Provide a reason if rejecting…"
+                className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white placeholder-gray-500 focus:border-amber-500/40 focus:outline-none"
               />
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => onApprove(item, item.type)}
-              disabled={isSubmitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-3 font-medium text-white transition-colors hover:bg-green-600 disabled:bg-gray-600"
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <ActionButton
+              tone="ghost"
+              onClick={onClose}
+              className="flex-1 justify-center"
             >
-              <CheckCircle className="h-5 w-5" />
-              {isSubmitting ? 'Processing...' : 'Approve'}
-            </button>
-            {item.type === 'join-request' && (
-              <button
-                onClick={() => onReject(item)}
-                disabled={isSubmitting}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 px-6 py-3 font-medium text-white transition-colors hover:bg-red-600 disabled:bg-gray-600"
+              Cancel
+            </ActionButton>
+            {isJoin && (
+              <ActionButton
+                tone="danger"
+                icon={XCircle}
+                onClick={onReject}
+                disabled={submitting}
+                className="flex-1 justify-center"
               >
-                <XCircle className="h-5 w-5" />
-                {isSubmitting ? 'Processing...' : 'Reject'}
-              </button>
+                {submitting ? 'Working…' : 'Reject'}
+              </ActionButton>
             )}
+            <ActionButton
+              tone="emerald"
+              icon={CheckCircle}
+              onClick={onApprove}
+              disabled={submitting}
+              className="flex-1 justify-center"
+            >
+              {submitting ? 'Working…' : 'Approve'}
+            </ActionButton>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex justify-between border-b border-white/10 py-2">
-      <span className="text-gray-400">{label}</span>
-      <span className="font-medium text-white">{value}</span>
     </div>
   );
 }

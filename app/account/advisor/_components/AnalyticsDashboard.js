@@ -1,29 +1,47 @@
 /**
- * @file Analytics dashboard — compact overview of club performance
- *   metrics, growth trends, and engagement statistics for advisors.
- * @module AdvisorAnalyticsDashboard
+ * @file Analytics dashboard tile — sparkline preview of recent club
+ *   engagement with a CTA into the full analytics page.
+ *
+ * @module AdvisorAnalyticsDashboardTile
  */
 
 'use client';
 
-import Link from 'next/link';
-import { BarChart3, Eye } from 'lucide-react';
+import { BarChart3, ArrowRight } from 'lucide-react';
+import {
+  GlassCard,
+  SectionHeader,
+  Sparkline,
+  ActionButton,
+} from '../../_components/ui/dashboard';
 
-export default function AnalyticsDashboard() {
+export default function AnalyticsDashboard({
+  weekActivity = [12, 18, 9, 22, 30, 24, 28],
+  growth = 25,
+}) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-3 flex items-center gap-2">
-        <BarChart3 className="h-5 w-5 text-purple-400" />
-        <h3 className="font-bold text-white">Analytics</h3>
+    <GlassCard>
+      <SectionHeader
+        icon={BarChart3}
+        title="Analytics"
+        subtitle="Engagement · last 7 days"
+        accent="violet"
+        action={
+          <ActionButton
+            href="/account/advisor/analytics"
+            tone="ghost"
+            icon={ArrowRight}
+          >
+            Open
+          </ActionButton>
+        }
+      />
+
+      <div className="mb-3 flex items-baseline justify-between">
+        <span className="text-2xl font-bold text-white">+{growth}%</span>
+        <span className="text-[11px] text-gray-500">participation YoY</span>
       </div>
-      <p className="mb-4 text-sm text-gray-400">View insights</p>
-      <Link
-        href="/account/advisor/analytics"
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-4 py-2 text-sm font-semibold text-purple-300 transition-colors hover:bg-purple-500/30"
-      >
-        <Eye className="h-4 w-4" />
-        View Dashboard
-      </Link>
-    </div>
+      <Sparkline data={weekActivity} tone="violet" height="h-12" />
+    </GlassCard>
   );
 }

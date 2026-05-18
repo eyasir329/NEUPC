@@ -1,68 +1,85 @@
 /**
- * @file Budget overview — financial summary card showing allocated,
- *   spent, and remaining club budget with recent transactions.
+ * @file Budget overview — financial snapshot with allocated / used /
+ *   remaining and a gradient utilization bar.
+ *
  * @module AdvisorBudgetOverview
  */
 
 'use client';
 
-import Link from 'next/link';
+import { Wallet, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import {
+  GlassCard,
+  SectionHeader,
+  GradientBar,
+  ActionButton,
+} from '../../_components/ui/dashboard';
 
-export default function BudgetOverview({ budgetData, budgetUtilization }) {
+const fmt = (n) =>
+  typeof n === 'number' ? `৳${n.toLocaleString()}` : `৳${n ?? 0}`;
+
+export default function BudgetOverview({ budgetData, budgetUtilization = 0 }) {
+  const tone =
+    budgetUtilization > 90
+      ? 'rose'
+      : budgetUtilization > 70
+        ? 'amber'
+        : 'emerald';
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">💰 Budget Overview</h2>
-          <p className="text-sm text-gray-400">Financial status</p>
+    <GlassCard>
+      <SectionHeader
+        icon={Wallet}
+        title="Budget Health"
+        subtitle="Financial status this term"
+        accent="emerald"
+        action={
+          <ActionButton
+            href="/account/advisor/budget"
+            tone="ghost"
+            icon={ArrowRight}
+          >
+            View full
+          </ActionButton>
+        }
+      />
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <p className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
+            Allocated
+          </p>
+          <p className="mt-1 text-base font-bold text-white">
+            {fmt(budgetData?.allocated)}
+          </p>
         </div>
-        <Link
-          href="/account/advisor/budget"
-          className="rounded-lg bg-cyan-500/20 px-3 py-1.5 text-sm font-semibold text-cyan-300 transition-colors hover:bg-cyan-500/30"
-        >
-          View Full
-        </Link>
-      </div>
-      <div className="space-y-4">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Allocated Budget</span>
-            <span className="text-lg font-bold text-white">
-              ৳{budgetData.allocated.toLocaleString()}
-            </span>
-          </div>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3">
+          <p className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-amber-400 uppercase">
+            <TrendingDown className="h-3 w-3" />
+            Used
+          </p>
+          <p className="mt-1 text-base font-bold text-white">
+            {fmt(budgetData?.used)}
+          </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Used</span>
-            <span className="text-lg font-bold text-cyan-300">
-              ৳{budgetData.used.toLocaleString()}
-            </span>
-          </div>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Remaining</span>
-            <span className="text-lg font-bold text-green-300">
-              ৳{budgetData.remaining.toLocaleString()}
-            </span>
-          </div>
-        </div>
-        <div>
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-gray-400">Utilization</span>
-            <span className="font-semibold text-white">
-              {budgetUtilization}%
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-linear-to-r from-cyan-500 to-blue-500"
-              style={{ width: `${budgetUtilization}%` }}
-            />
-          </div>
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
+          <p className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-emerald-400 uppercase">
+            <TrendingUp className="h-3 w-3" />
+            Remaining
+          </p>
+          <p className="mt-1 text-base font-bold text-white">
+            {fmt(budgetData?.remaining)}
+          </p>
         </div>
       </div>
-    </div>
+
+      <div className="mt-4">
+        <div className="mb-1.5 flex items-center justify-between text-xs">
+          <span className="text-gray-400">Utilization</span>
+          <span className="font-semibold text-white">{budgetUtilization}%</span>
+        </div>
+        <GradientBar value={budgetUtilization} tone={tone} />
+      </div>
+    </GlassCard>
   );
 }

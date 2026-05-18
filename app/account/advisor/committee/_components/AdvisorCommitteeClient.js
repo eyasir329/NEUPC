@@ -1,182 +1,208 @@
 /**
- * @file Advisor committee client — committee management view showing
- *   current executive members, roles, and term information.
+ * @file Advisor committee client — view current committee members
+ *   grouped by category and the full position catalogue. Uses shared
+ *   dark-glass primitives.
+ *
  * @module AdvisorCommitteeClient
  */
 
 'use client';
 
-import { useState } from 'react';
-import { Users, Award, Search, Calendar } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Users, Award, Search, Calendar, Layers } from 'lucide-react';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  TabBar,
+  Avatar,
+  Pill,
+  EmptyState,
+  StaggerList,
+} from '../../../_components/ui/dashboard';
+
+const TABS = [
+  { value: 'current', label: 'Current Committee', icon: Users },
+  { value: 'positions', label: 'All Positions', icon: Layers },
+];
 
 export default function AdvisorCommitteeClient({
-  positions,
-  currentCommittee,
-  advisorId,
+  positions = [],
+  currentCommittee = [],
 }) {
-  const [activeTab, setActiveTab] = useState('current');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [tab, setTab] = useState('current');
+  const [query, setQuery] = useState('');
 
-  // Group current committee by category
-  const committeeByCategory = currentCommittee?.reduce((acc, member) => {
-    const category = member.committee_positions?.category || 'Other';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(member);
+  const byCategory = useMemo(() => {
+    const acc = {};
+    currentCommittee.forEach((m) => {
+      const cat = m.committee_positions?.category || 'Other';
+      (acc[cat] ||= []).push(m);
+    });
     return acc;
-  }, {});
+  }, [currentCommittee]);
 
-  const tabs = [
-    { id: 'current', label: 'Current Committee' },
-    { id: 'positions', label: 'All Positions' },
-  ];
+  const filteredPositions = useMemo(
+    () =>
+      positions.filter(
+        (p) =>
+          !query ||
+          p.title?.toLowerCase().includes(query.toLowerCase()) ||
+          p.category?.toLowerCase().includes(query.toLowerCase())
+      ),
+    [positions, query]
+  );
+
+  const filteredCommittee = useMemo(() => {
+    if (!query) return byCategory;
+    const acc = {};
+    Object.entries(byCategory).forEach(([cat, members]) => {
+      const matches = members.filter(
+        (m) =>
+          m.users?.full_name?.toLowerCase().includes(query.toLowerCase()) ||
+          m.committee_positions?.title
+            ?.toLowerCase()
+            .includes(query.toLowerCase())
+      );
+      if (matches.length) acc[cat] = matches;
+    });
+    return acc;
+  }, [byCategory, query]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Committee</h1>
-        <p className="mt-1 text-gray-400">
-          View and manage committee structure
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Users}
+        title="Committee"
+        subtitle="Executive structure, positions, and terms"
+        accent="indigo"
+        meta={
+          <>
+            <Pill tone="indigo">
+              {currentCommittee.length} active member
+              {currentCommittee.length === 1 ? '' : 's'}
+            </Pill>
+            <Pill tone="gray">
+              {positions.length} position{positions.length === 1 ? '' : 's'}
+            </Pill>
+          </>
+        }
+      />
 
-      {/* Tabs */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-        {/* Tab Headers */}
-        <div className="flex border-b border-white/10">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-blue-500 bg-blue-500/20 text-blue-400'
-                  : 'text-gray-400 hover:bg-white/5'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <GlassCard padding="p-4">
+        <TabBar tabs={TABS} value={tab} onChange={setTab} />
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              tab === 'current'
+                ? 'Search by name or role…'
+                : 'Search positions by title or category…'
+            }
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-3 pl-10 text-sm text-white placeholder-gray-500 focus:border-indigo-500/40 focus:outline-none"
+          />
         </div>
+      </GlassCard>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-12 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
-            />
-          </div>
-
-          {/* Current Committee Tab */}
-          {activeTab === 'current' && (
-            <div className="space-y-6">
-              {Object.keys(committeeByCategory || {}).length > 0 ? (
-                Object.entries(committeeByCategory).map(
-                  ([category, members]) => (
-                    <div key={category} className="space-y-3">
-                      <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
-                        <Award className="h-5 w-5 text-blue-400" />
-                        {category}
-                      </h3>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {members.map((member) => (
-                          <CommitteeMemberCard
-                            key={member.id}
-                            member={member}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )
-              ) : (
-                <div className="py-12 text-center">
-                  <Users className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-                  <p className="text-gray-400">No current committee members</p>
+      {tab === 'current' && (
+        <div className="space-y-6">
+          {Object.keys(filteredCommittee).length === 0 ? (
+            <GlassCard>
+              <EmptyState
+                icon={Users}
+                title="No committee members"
+                description="Once positions are assigned, members will appear here grouped by category."
+              />
+            </GlassCard>
+          ) : (
+            Object.entries(filteredCommittee).map(([category, members]) => (
+              <section key={category} className="space-y-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-200">
+                  <Award className="h-4 w-4 text-indigo-400" />
+                  {category}
+                  <span className="text-xs text-gray-500">
+                    · {members.length}
+                  </span>
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <StaggerList>
+                    {members.map((m) => (
+                      <CommitteeCard key={m.id} member={m} />
+                    ))}
+                  </StaggerList>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Positions Tab */}
-          {activeTab === 'positions' && (
-            <div className="space-y-3">
-              {positions && positions.length > 0 ? (
-                positions
-                  .filter(
-                    (pos) =>
-                      !searchQuery ||
-                      pos.title
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                      pos.category
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase())
-                  )
-                  .map((position) => (
-                    <PositionCard key={position.id} position={position} />
-                  ))
-              ) : (
-                <div className="py-12 text-center">
-                  <Award className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-                  <p className="text-gray-400">No positions defined</p>
-                </div>
-              )}
-            </div>
+              </section>
+            ))
           )}
         </div>
-      </div>
-    </div>
+      )}
+
+      {tab === 'positions' && (
+        <div className="space-y-2">
+          {filteredPositions.length === 0 ? (
+            <GlassCard>
+              <EmptyState
+                icon={Layers}
+                title="No positions defined"
+                description="Define committee positions to see them listed here."
+              />
+            </GlassCard>
+          ) : (
+            filteredPositions.map((p) => (
+              <PositionRow key={p.id} position={p} />
+            ))
+          )}
+        </div>
+      )}
+    </PageShell>
   );
 }
 
-function CommitteeMemberCard({ member }) {
+function CommitteeCard({ member }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-colors hover:bg-white/10">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-semibold text-white">
-          {member.users?.full_name?.charAt(0) || '?'}
-        </div>
-        <div className="flex-1">
-          <h3 className="font-medium text-white">
+    <GlassCard
+      padding="p-4"
+      className="transition-colors hover:border-indigo-500/30"
+    >
+      <div className="flex items-center gap-3">
+        <Avatar name={member.users?.full_name ?? '?'} size="md" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-white">
             {member.users?.full_name || 'Unknown'}
-          </h3>
-          <p className="text-sm text-blue-400">
+          </p>
+          <p className="truncate text-xs text-indigo-300">
             {member.committee_positions?.title}
           </p>
         </div>
       </div>
       {member.term_start && (
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="mt-3 flex items-center gap-1.5 text-[11px] text-gray-500">
           <Calendar className="h-3 w-3" />
           <span>
             {new Date(member.term_start).getFullYear()}
-            {member.term_end && ` - ${new Date(member.term_end).getFullYear()}`}
+            {member.term_end &&
+              ` — ${new Date(member.term_end).getFullYear()}`}
           </span>
         </div>
       )}
-    </div>
+    </GlassCard>
   );
 }
 
-function PositionCard({ position }) {
+function PositionRow({ position }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-colors hover:bg-white/10">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <h3 className="font-medium text-white">{position.title}</h3>
-          <p className="mt-1 text-sm text-gray-400">{position.category}</p>
-        </div>
-        <span className="text-sm text-gray-500">
-          Order: {position.display_order || 0}
-        </span>
+    <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.1] hover:bg-white/[0.04]">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-white">
+          {position.title}
+        </p>
+        <p className="mt-0.5 text-xs text-gray-500">{position.category}</p>
       </div>
+      <span className="text-[11px] text-gray-500">
+        #{position.display_order ?? 0}
+      </span>
     </div>
   );
 }

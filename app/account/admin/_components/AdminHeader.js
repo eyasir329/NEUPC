@@ -1,53 +1,89 @@
 /**
- * @file Admin header banner — gradient card displaying “Admin Control
- *   Centre” title, full-access badge, system-health indicator, and
- *   current uptime derived from stats props.
+ * @file Admin header banner — clarity-first dark glass surface with
+ *   greeting, role pills, and a system-health progress meter. Matches
+ *   the member panel header pattern.
  * @module AdminHeader
  */
 
 'use client';
 
-import { Shield, Activity, Server } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, Activity, AlertCircle, Server } from 'lucide-react';
 
 export default function AdminHeader({ stats }) {
+  const health = Math.max(0, Math.min(100, stats?.systemHealth ?? 0));
+  const pending = stats?.pendingApprovals ?? 0;
+
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-linear-to-br from-red-500/10 via-orange-500/10 to-amber-500/10 p-6 backdrop-blur-xl sm:p-8">
-      <div className="absolute top-0 right-0 h-40 w-40 bg-red-500/20 blur-3xl" />
-      <div className="absolute bottom-0 left-0 h-40 w-40 bg-orange-500/20 blur-3xl" />
-      <div className="relative">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white md:text-4xl">
-              🛠️ Admin Control Center
-            </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="flex items-center gap-2 rounded-full bg-red-500/20 px-3 py-1 text-sm font-semibold text-red-300">
-                <Shield className="h-4 w-4" />
-                Full Access
-              </span>
-              <span className="flex items-center gap-1 rounded-full bg-green-500/20 px-3 py-1 text-sm font-semibold text-green-300">
-                <Activity className="h-4 w-4" />
-                System Healthy
-              </span>
-            </div>
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-8 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-bl-full -translate-y-1/2 translate-x-1/2 border-l border-b border-white/10" />
+
+      <div className="flex items-center gap-5 relative z-10">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 rounded-2xl shrink-0"
+        >
+          <Shield className="w-7 h-7" />
+        </motion.div>
+        <div>
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+            Control center
+          </p>
+          <h1 className="text-3xl font-light text-zinc-100 mb-2">
+            Admin Console
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Full access
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              All systems healthy
+            </motion.div>
+            {pending > 0 && (
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-tight rounded-2xl cursor-default"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                {pending} pending
+              </motion.div>
+            )}
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-cyan-400" />
-              <div>
-                <p className="text-xs text-gray-400">System Health</p>
-                <p className="text-sm font-bold text-white">
-                  {stats.systemHealth}%
-                </p>
-              </div>
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-linear-to-r from-green-500 to-cyan-500"
-                style={{ width: `${stats.systemHealth}%` }}
-              />
-            </div>
-          </div>
+        </div>
+      </div>
+
+      <div className="w-full md:w-80 relative z-10 bg-white/5 p-4 border border-white/10 rounded-2xl">
+        <div className="flex items-center justify-between text-sm mb-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+            <Server className="w-3.5 h-3.5" /> System health
+          </span>
+          <span className="text-zinc-100 font-mono text-xs font-medium">
+            {health}
+            <span className="text-zinc-500">%</span>
+          </span>
+        </div>
+        <div className="h-1.5 w-full bg-white/10 rounded-lg overflow-hidden mb-2">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${health}%` }}
+            transition={{ duration: 1.5, ease: 'easeOut' }}
+            className="h-full bg-emerald-500 rounded-lg"
+          />
+        </div>
+        <div className="flex items-center justify-between text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+          <span>Uptime nominal</span>
+          <span>Live</span>
         </div>
       </div>
     </div>

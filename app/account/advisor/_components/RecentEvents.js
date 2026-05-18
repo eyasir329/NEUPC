@@ -1,61 +1,90 @@
 /**
- * @file Recent events — dashboard preview of the latest club events
- *   with attendance figures and status indicators.
+ * @file Recent events — dashboard preview of latest club events with
+ *   attendance, approval status, and shared visual language.
+ *
  * @module AdvisorRecentEvents
  */
 
 'use client';
 
-import Link from 'next/link';
-import { Users } from 'lucide-react';
+import { Calendar, ArrowRight, Users } from 'lucide-react';
+import {
+  GlassCard,
+  SectionHeader,
+  Pill,
+  ActionButton,
+  EmptyState,
+} from '../../_components/ui/dashboard';
 
-export default function RecentEvents({ recentEvents }) {
+const APPROVAL_TONE = {
+  Approved: 'emerald',
+  Pending: 'amber',
+  Rejected: 'rose',
+};
+
+const TYPE_TONE = {
+  Contest: 'rose',
+  Workshop: 'violet',
+  Seminar: 'cyan',
+  Hackathon: 'amber',
+  Bootcamp: 'emerald',
+};
+
+export default function RecentEvents({ recentEvents = [] }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">📅 Recent Events</h2>
-          <p className="text-sm text-gray-400">Event monitoring</p>
-        </div>
-        <Link
-          href="/account/advisor/events"
-          className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-sm font-semibold text-blue-300 transition-colors hover:bg-blue-500/30"
-        >
-          View All
-        </Link>
-      </div>
-      <div className="space-y-3">
-        {recentEvents.map((event, idx) => (
-          <div
-            key={idx}
-            className="rounded-lg border border-white/10 bg-white/5 p-3 transition-all duration-200 hover:border-blue-500/30 hover:bg-white/10"
+    <GlassCard>
+      <SectionHeader
+        icon={Calendar}
+        title="Recent Events"
+        subtitle="Latest activity across the club"
+        accent="violet"
+        action={
+          <ActionButton
+            href="/account/advisor/events"
+            tone="ghost"
+            icon={ArrowRight}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-white">
-                  {event.name}
-                </h3>
-                <p className="mt-1 text-xs text-gray-400">
-                  {event.type} • {event.date}
-                </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  <Users className="mr-1 inline h-3 w-3" />
-                  {event.participants} Participants
-                </p>
+            View all
+          </ActionButton>
+        }
+      />
+      {recentEvents.length === 0 ? (
+        <EmptyState
+          icon={Calendar}
+          title="No recent events"
+          description="Events created by the executive committee will show up here."
+        />
+      ) : (
+        <ul className="space-y-2">
+          {recentEvents.map((event, idx) => (
+            <li
+              key={idx}
+              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.1] hover:bg-white/[0.04]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold text-white">
+                    {event.name}
+                  </h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <Pill tone={TYPE_TONE[event.type] ?? 'gray'}>
+                      {event.type}
+                    </Pill>
+                    <span>{event.date}</span>
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {event.participants}
+                    </span>
+                  </div>
+                </div>
+                <Pill tone={APPROVAL_TONE[event.approval] ?? 'gray'}>
+                  {event.approval}
+                </Pill>
               </div>
-              <span
-                className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                  event.approval === 'Approved'
-                    ? 'bg-green-500/20 text-green-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}
-              >
-                {event.approval}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </GlassCard>
   );
 }

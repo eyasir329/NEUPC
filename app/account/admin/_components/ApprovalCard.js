@@ -1,49 +1,52 @@
 /**
- * @file Approval card — renders a single pending-approval item with
- *   approve / reject action handlers, approval type, requester name,
- *   and submission date.
+ * @file Approval card — single pending-approval row with approve /
+ *   reject actions. Dark-glass surface and Avatar pattern matching the
+ *   member panel.
  * @module ApprovalCard
  */
 
 'use client';
 
-import { AlertCircle } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { Avatar } from './_ui';
 
 export default function ApprovalCard({ approval }) {
   const handleApprove = () => {
-    // TODO: Implement approval logic
     console.log('Approved:', approval.id);
   };
 
   const handleReject = () => {
-    // TODO: Implement rejection logic
     console.log('Rejected:', approval.id);
   };
 
   return (
-    <div className="group flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-red-500/30 hover:bg-white/10">
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-500/20">
-          <AlertCircle className="h-6 w-6 text-red-400" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-white">{approval.type}</h3>
-          <p className="mt-1 text-xs text-gray-400">
-            {approval.user} • {approval.date}
+    <div className="group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-all duration-200 hover:border-white/20 hover:bg-white/[0.06]">
+      <div className="flex items-center gap-3 min-w-0">
+        <Avatar name={approval.user} size="md" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-zinc-100 truncate">
+            {approval.user}
+          </p>
+          <p className="text-xs text-zinc-500 truncate">
+            {approval.type} · {approval.date}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={handleApprove}
-          className="rounded-lg bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-300 transition-colors hover:bg-green-500/30"
+          aria-label="Approve"
+          className="flex items-center gap-1 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300 transition-colors hover:bg-emerald-500/20"
         >
+          <Check className="w-3 h-3" />
           Approve
         </button>
         <button
           onClick={handleReject}
-          className="rounded-lg bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/30"
+          aria-label="Reject"
+          className="flex items-center gap-1 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-rose-300 transition-colors hover:bg-rose-500/20"
         >
+          <X className="w-3 h-3" />
           Reject
         </button>
       </div>

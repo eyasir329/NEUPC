@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Calendar, CalendarCheck, TrendingUp, Sparkles, Users, Globe } from 'lucide-react';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { Calendar, CalendarCheck, TrendingUp, Sparkles, Users, Shield } from 'lucide-react';
+import { GlassCard, Pill } from '@/app/account/_components/ui/dashboard';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';
@@ -24,14 +24,17 @@ function filterFn(event, tab) {
 }
 
 const SIDEBAR_CTA = (
-  <GlassCard className="border-violet-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-violet-950/30">
-    <div className="mb-3 flex items-center gap-2">
-      <Sparkles className="h-4 w-4 text-violet-400" />
-      <p className="text-[13px] font-semibold text-white">Event Oversight</p>
+  <GlassCard className="border-indigo-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-indigo-950/30">
+    <div className="mb-2 flex items-center gap-2">
+      <Shield className="h-4 w-4 text-indigo-400" />
+      <p className="text-[13px] font-semibold text-white">Advisor View</p>
     </div>
-    <p className="text-[12px] text-gray-400">
-      Monitor registrations, attendance, and event progress across all club activities.
+    <p className="mb-3 text-[12px] text-gray-400">
+      Read-only oversight. Monitor registrations, attendance, and approvals across all club events.
     </p>
+    <div className="flex flex-wrap gap-1.5">
+      <Pill tone="violet" icon={Sparkles}>Read-only</Pill>
+    </div>
   </GlassCard>
 );
 

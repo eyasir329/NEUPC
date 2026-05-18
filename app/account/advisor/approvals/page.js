@@ -30,13 +30,11 @@ export default async function AdvisorApprovalsPage() {
   );
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <AdvisorApprovalsClient
-        joinRequests={joinRequests}
-        memberProfiles={memberProfiles}
-        budgetEntries={pendingBudgetEntries}
-        advisorId={user.id}
-      />
-    </div>
+    <AdvisorApprovalsClient
+      joinRequests={joinRequests}
+      memberProfiles={memberProfiles}
+      budgetEntries={pendingBudgetEntries}
+      advisorId={user.id}
+    />
   );
 }

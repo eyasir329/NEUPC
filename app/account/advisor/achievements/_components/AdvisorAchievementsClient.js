@@ -1,401 +1,332 @@
 /**
- * @file Advisor achievements client — comprehensive view of club
- *   achievements with filtering, categorisation, and detail modals.
+ * @file Advisor achievements client — comprehensive view with search,
+ *   year/category/type filters, grid of cards, and a detail modal.
+ *
  * @module AdvisorAchievementsClient
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Calendar,
   Trophy,
   Users,
-  TrendingUp,
   Search,
-  Filter,
-  Plus,
   X,
-  Edit2,
-  Trash2,
+  Award,
 } from 'lucide-react';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  StatCard,
+  TabBar,
+  Pill,
+  Avatar,
+  EmptyState,
+  StaggerList,
+} from '../../../_components/ui/dashboard';
+
+const TYPE_TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'team', label: 'Team' },
+  { value: 'individual', label: 'Individual' },
+];
 
 export default function AdvisorAchievementsClient({
-  achievements,
-  stats,
-  topAchievements,
-  advisorId,
+  achievements = [],
+  stats = {},
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedYear, setSelectedYear] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedAchievement, setSelectedAchievement] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [query, setQuery] = useState('');
+  const [year, setYear] = useState('all');
+  const [category, setCategory] = useState('all');
+  const [type, setType] = useState('all');
+  const [selected, setSelected] = useState(null);
 
-  // Extract unique years and categories
-  const uniqueYears = stats?.years || [];
-  const uniqueCategories = [
-    ...new Set(achievements?.map((a) => a.category).filter(Boolean)),
-  ];
+  const years = stats.years ?? [];
+  const categories = useMemo(
+    () => [...new Set(achievements.map((a) => a.category).filter(Boolean))],
+    [achievements]
+  );
 
-  // Filter achievements
-  const filteredAchievements = achievements?.filter((achievement) => {
-    const matchesSearch =
-      !searchQuery ||
-      achievement.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      achievement.description
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    const matchesYear =
-      selectedYear === 'all' || achievement.year?.toString() === selectedYear;
-    const matchesCategory =
-      selectedCategory === 'all' || achievement.category === selectedCategory;
-    const matchesType =
-      selectedType === 'all' ||
-      (selectedType === 'team' && achievement.is_team) ||
-      (selectedType === 'individual' && !achievement.is_team);
-    return matchesSearch && matchesYear && matchesCategory && matchesType;
-  });
-
-  const handleViewDetails = (achievement) => {
-    setSelectedAchievement(achievement);
-    setShowDetailModal(true);
-  };
+  const filtered = useMemo(() => {
+    return achievements.filter((a) => {
+      const matchSearch =
+        !query ||
+        a.title?.toLowerCase().includes(query.toLowerCase()) ||
+        a.description?.toLowerCase().includes(query.toLowerCase());
+      const matchYear = year === 'all' || String(a.year) === year;
+      const matchCat = category === 'all' || a.category === category;
+      const matchType =
+        type === 'all' ||
+        (type === 'team' && a.is_team) ||
+        (type === 'individual' && !a.is_team);
+      return matchSearch && matchYear && matchCat && matchType;
+    });
+  }, [achievements, query, year, category, type]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Achievements</h1>
-          <p className="mt-1 text-gray-400">
-            Club achievements and recognitions
-          </p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Trophy}
+        title="Achievements"
+        subtitle="Club achievements and recognitions"
+        accent="amber"
+      />
 
-      {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Trophy}
           label="Total Achievements"
-          value={stats?.total || 0}
-          color="blue"
+          value={stats.total ?? 0}
+          accent="blue"
+          delay={0}
         />
         <StatCard
           icon={Calendar}
           label="This Year"
-          value={stats?.thisYear || 0}
-          color="green"
+          value={stats.thisYear ?? 0}
+          accent="emerald"
+          delay={0.04}
         />
         <StatCard
           icon={Users}
-          label="Team Achievements"
-          value={stats?.team || 0}
-          color="purple"
+          label="Team"
+          value={stats.team ?? 0}
+          accent="violet"
+          delay={0.08}
         />
         <StatCard
-          icon={TrendingUp}
+          icon={Award}
           label="Individual"
-          value={stats?.individual || 0}
-          color="amber"
+          value={stats.individual ?? 0}
+          accent="amber"
+          delay={0.12}
         />
       </div>
 
-      {/* Filters */}
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-        {/* Search */}
+      <GlassCard padding="p-4">
         <div className="relative">
-          <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
-            type="text"
-            placeholder="Search achievements..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-12 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search achievements…"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-3 pl-10 text-sm text-white placeholder-gray-500 focus:border-amber-500/40 focus:outline-none"
           />
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex flex-wrap gap-3">
-          {/* Year Filter */}
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
-          >
-            <option value="all">All Years</option>
-            {uniqueYears.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-
-          {/* Category Filter */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
-          >
-            <option value="all">All Categories</option>
-            {uniqueCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-
-          {/* Type Filter */}
-          <div className="flex gap-2">
-            {['all', 'team', 'individual'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(type)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                  selectedType === type
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
+        <div className="mt-3 flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+              Year
+            </p>
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white focus:border-amber-500/40 focus:outline-none"
+            >
+              <option value="all">All</option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+              Category
+            </p>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white focus:border-amber-500/40 focus:outline-none"
+            >
+              <option value="all">All</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="mb-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+              Type
+            </p>
+            <TabBar tabs={TYPE_TABS} value={type} onChange={setType} />
           </div>
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Achievements Grid */}
-      {filteredAchievements && filteredAchievements.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAchievements.map((achievement) => (
-            <AchievementCard
-              key={achievement.id}
-              achievement={achievement}
-              onViewDetails={handleViewDetails}
-            />
-          ))}
-        </div>
+      {filtered.length === 0 ? (
+        <GlassCard>
+          <EmptyState
+            icon={Trophy}
+            title="No achievements match"
+            description={
+              query || year !== 'all' || category !== 'all' || type !== 'all'
+                ? 'Try clearing some filters.'
+                : "When members earn achievements, they'll appear here."
+            }
+          />
+        </GlassCard>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center backdrop-blur-xl">
-          <Trophy className="mx-auto mb-4 h-16 w-16 text-gray-500" />
-          <p className="text-lg text-gray-400">No achievements found</p>
-          <p className="mt-2 text-sm text-gray-500">
-            {searchQuery || selectedYear !== 'all' || selectedCategory !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Achievements will appear here'}
-          </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerList>
+            {filtered.map((a) => (
+              <Card key={a.id} achievement={a} onClick={() => setSelected(a)} />
+            ))}
+          </StaggerList>
         </div>
       )}
 
-      {/* Detail Modal */}
-      {showDetailModal && selectedAchievement && (
+      {selected && (
         <DetailModal
-          achievement={selectedAchievement}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedAchievement(null);
-          }}
+          achievement={selected}
+          onClose={() => setSelected(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }) {
-  const colorClasses = {
-    blue: 'from-blue-500/20 to-blue-600/20 border-blue-500/30 text-blue-400',
-    green:
-      'from-green-500/20 to-green-600/20 border-green-500/30 text-green-400',
-    purple:
-      'from-purple-500/20 to-purple-600/20 border-purple-500/30 text-purple-400',
-    amber:
-      'from-amber-500/20 to-amber-600/20 border-amber-500/30 text-amber-400',
-  };
-
+function Card({ achievement, onClick }) {
+  const memberCount = achievement.member_achievements?.length ?? 0;
   return (
-    <div
-      className={`bg-linear-to-br backdrop-blur-xl ${colorClasses[color]} rounded-2xl border p-6`}
+    <button
+      onClick={onClick}
+      className="group block w-full rounded-2xl border border-white/[0.08] bg-gray-900 p-4 text-left transition-all hover:border-amber-500/30 hover:bg-white/[0.02]"
     >
-      <Icon className="mb-4 h-8 w-8" />
-      <p className="text-sm text-gray-400">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-white">{value}</p>
-    </div>
-  );
-}
-
-function AchievementCard({ achievement, onViewDetails }) {
-  const memberCount = achievement.member_achievements?.length || 0;
-
-  return (
-    <div
-      onClick={() => onViewDetails(achievement)}
-      className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all hover:bg-white/10"
-    >
-      {/* Badges Row */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400">
-          {achievement.year}
-        </span>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        <Pill tone="blue">{achievement.year}</Pill>
         {achievement.category && (
-          <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-medium text-purple-400">
-            {achievement.category}
-          </span>
+          <Pill tone="violet">{achievement.category}</Pill>
         )}
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            achievement.is_team
-              ? 'bg-green-500/20 text-green-400'
-              : 'bg-amber-500/20 text-amber-400'
-          }`}
-        >
+        <Pill tone={achievement.is_team ? 'emerald' : 'amber'}>
           {achievement.is_team ? 'Team' : 'Individual'}
-        </span>
+        </Pill>
       </div>
-
-      {/* Title */}
-      <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-white transition-colors group-hover:text-blue-400">
+      <h3 className="line-clamp-2 text-base font-semibold text-white transition-colors group-hover:text-amber-300">
         {achievement.title}
       </h3>
-
-      {/* Description */}
       {achievement.description && (
-        <p className="mb-4 line-clamp-2 text-sm text-gray-400">
+        <p className="mt-2 line-clamp-2 text-xs text-gray-500">
           {achievement.description}
         </p>
       )}
-
-      {/* Meta */}
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2 text-gray-500">
-          <Users className="h-4 w-4" />
-          <span>
-            {memberCount} {memberCount === 1 ? 'member' : 'members'}
-          </span>
-        </div>
+      <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <Users className="h-3 w-3" />
+          {memberCount} {memberCount === 1 ? 'member' : 'members'}
+        </span>
         {achievement.achievement_date && (
-          <span className="text-gray-500">
+          <span>
             {new Date(achievement.achievement_date).toLocaleDateString()}
           </span>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 
 function DetailModal({ achievement, onClose }) {
-  const memberCount = achievement.member_achievements?.length || 0;
-
+  const memberCount = achievement.member_achievements?.length ?? 0;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-gray-900/95 backdrop-blur-xl">
-        {/* Header */}
-        <div className="sticky top-0 flex items-start justify-between border-b border-white/10 bg-gray-900/95 p-6 backdrop-blur-xl">
-          <div className="flex-1">
-            <h2 className="mb-2 text-2xl font-bold text-white">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-gray-900/95 backdrop-blur-xl"
+      >
+        <div className="sticky top-0 flex items-start justify-between border-b border-white/10 bg-gray-900/95 p-5">
+          <div className="flex-1 pr-3">
+            <h2 className="text-xl font-bold text-white">
               {achievement.title}
             </h2>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400">
-                {achievement.year}
-              </span>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <Pill tone="blue">{achievement.year}</Pill>
               {achievement.category && (
-                <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-medium text-purple-400">
-                  {achievement.category}
-                </span>
+                <Pill tone="violet">{achievement.category}</Pill>
               )}
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  achievement.is_team
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-amber-500/20 text-amber-400'
-                }`}
-              >
+              <Pill tone={achievement.is_team ? 'emerald' : 'amber'}>
                 {achievement.is_team ? 'Team' : 'Individual'}
-              </span>
+              </Pill>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="ml-4 rounded-lg p-2 transition-colors hover:bg-white/10"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
           >
-            <X className="h-5 w-5 text-gray-400" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="space-y-6 p-6">
-          {/* Description */}
+        <div className="space-y-5 p-5">
           {achievement.description && (
             <div>
-              <h3 className="mb-2 text-sm font-medium text-gray-400">
+              <h3 className="mb-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                 Description
               </h3>
-              <p className="text-white">{achievement.description}</p>
+              <p className="text-sm text-gray-200">{achievement.description}</p>
             </div>
           )}
-
-          {/* Achievement Date */}
           {achievement.achievement_date && (
             <div>
-              <h3 className="mb-2 text-sm font-medium text-gray-400">
-                Achievement Date
+              <h3 className="mb-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                Achievement date
               </h3>
-              <p className="text-white">
+              <p className="text-sm text-gray-200">
                 {new Date(achievement.achievement_date).toLocaleDateString(
                   'en-US',
-                  {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  }
+                  { year: 'numeric', month: 'long', day: 'numeric' }
                 )}
               </p>
             </div>
           )}
-
-          {/* Members */}
           {memberCount > 0 && (
             <div>
-              <h3 className="mb-3 text-sm font-medium text-gray-400">
+              <h3 className="mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                 Members ({memberCount})
               </h3>
-              <div className="space-y-2">
+              <ul className="space-y-2">
                 {achievement.member_achievements.map((ma) => (
-                  <div
+                  <li
                     key={ma.id}
-                    className="flex items-center gap-3 rounded-lg bg-white/5 p-3"
+                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 font-semibold text-white">
-                      {ma.users?.full_name?.charAt(0) || '?'}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-white">
+                    <Avatar name={ma.users?.full_name ?? '?'} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">
                         {ma.users?.full_name || 'Unknown'}
                       </p>
                       {ma.position && (
-                        <p className="text-sm text-gray-400">{ma.position}</p>
+                        <p className="truncate text-xs text-gray-500">
+                          {ma.position}
+                        </p>
                       )}
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
-          {/* Audit Info */}
-          <div className="space-y-2 border-t border-white/10 pt-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Created by:</span>
-              <span className="text-white">
+          <div className="space-y-1 border-t border-white/[0.06] pt-3 text-xs text-gray-500">
+            <div className="flex justify-between">
+              <span>Created by</span>
+              <span className="text-gray-300">
                 {achievement.users?.full_name || 'Unknown'}
               </span>
             </div>
             {achievement.created_at && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Created at:</span>
-                <span className="text-white">
+              <div className="flex justify-between">
+                <span>Created at</span>
+                <span className="text-gray-300">
                   {new Date(achievement.created_at).toLocaleDateString()}
                 </span>
               </div>

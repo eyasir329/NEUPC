@@ -1,45 +1,63 @@
 /**
- * @file Reports quick access — navigation tiles linking to advisor
- *   reporting tools such as analytics, budget, and activity reports.
+ * @file Reports quick access — compact tile linking to the reports
+ *   module with quick-download shortcuts for common reports.
+ *
  * @module AdvisorReportsQuickAccess
  */
 
 'use client';
 
 import Link from 'next/link';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, ArrowRight } from 'lucide-react';
+import {
+  GlassCard,
+  SectionHeader,
+  ActionButton,
+} from '../../_components/ui/dashboard';
+
+const REPORTS = [
+  { label: 'Annual Report', href: '/account/advisor/reports', tone: 'emerald' },
+  { label: 'Semester Summary', href: '/account/advisor/reports', tone: 'blue' },
+  { label: 'Financial Report', href: '/account/advisor/reports', tone: 'cyan' },
+];
+
+const TONE_CLS = {
+  emerald: 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300 hover:bg-emerald-500/10',
+  blue: 'border-blue-500/20 bg-blue-500/[0.05] text-blue-300 hover:bg-blue-500/10',
+  cyan: 'border-cyan-500/20 bg-cyan-500/[0.05] text-cyan-300 hover:bg-cyan-500/10',
+};
 
 export default function ReportsQuickAccess() {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-6">
-      <div className="mb-3 flex items-center gap-2">
-        <FileText className="h-5 w-5 text-green-400" />
-        <h3 className="font-bold text-white">Reports</h3>
-      </div>
-      <p className="mb-4 text-sm text-gray-400">Download reports</p>
-      <div className="space-y-2">
-        <Link
-          href="/account/advisor/reports"
-          className="flex w-full items-center justify-between rounded-lg bg-green-500/10 px-3 py-2 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/20"
-        >
-          <span>Annual Report</span>
-          <Download className="h-4 w-4" />
-        </Link>
-        <Link
-          href="/account/advisor/reports"
-          className="flex w-full items-center justify-between rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
-        >
-          <span>Semester Summary</span>
-          <Download className="h-4 w-4" />
-        </Link>
-        <Link
-          href="/account/advisor/reports"
-          className="flex w-full items-center justify-between rounded-lg bg-cyan-500/10 px-3 py-2 text-sm font-semibold text-cyan-300 transition-colors hover:bg-cyan-500/20"
-        >
-          <span>Financial Report</span>
-          <Download className="h-4 w-4" />
-        </Link>
-      </div>
-    </div>
+    <GlassCard>
+      <SectionHeader
+        icon={FileText}
+        title="Reports"
+        subtitle="Download or browse"
+        accent="emerald"
+        action={
+          <ActionButton
+            href="/account/advisor/reports"
+            tone="ghost"
+            icon={ArrowRight}
+          >
+            Open
+          </ActionButton>
+        }
+      />
+      <ul className="space-y-2">
+        {REPORTS.map((r) => (
+          <li key={r.label}>
+            <Link
+              href={r.href}
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${TONE_CLS[r.tone]}`}
+            >
+              <span>{r.label}</span>
+              <Download className="h-3.5 w-3.5" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </GlassCard>
   );
 }
