@@ -496,6 +496,9 @@ function DriveVideoPlayer({
     },
     onError: (e) => {
       const code = e.target?.error?.code;
+      // MEDIA_ERR_ABORTED (1): fetch was aborted (e.g. component unmount,
+      // src change, fast navigation). Not a real failure — ignore.
+      if (code === 1) return;
       const isNetwork = code === 2;
       // Auto-retry transient network errors with exp backoff: 1s, 2s, 4s
       if (isNetwork && errorRetryRef.current < 3) {

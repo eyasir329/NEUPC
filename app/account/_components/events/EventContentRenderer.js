@@ -324,7 +324,7 @@ export default function EventContentRenderer({ content }) {
         if (!hasContent && !hasData && block.type !== 'lessonPlan') return null;
 
         if (block.type === 'richText') {
-          return <div key={block.id} className="tiptap-editor-content" dangerouslySetInnerHTML={{ __html: block.content }} />;
+          return <div key={block.id} className="tiptap-viewer-content" dangerouslySetInnerHTML={{ __html: block.content }} />;
         }
 
         if (block.type === 'html') {

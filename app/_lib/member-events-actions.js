@@ -208,6 +208,10 @@ export async function registerForEventAction(eventId, teamData) {
 
     revalidatePath('/account/member/events');
     revalidatePath('/account/executive/registrations');
+    revalidatePath('/account/executive/events');
+    revalidatePath('/account/admin/events', 'layout');
+    revalidatePath('/account/advisor/events');
+    revalidatePath('/account/mentor/events');
     revalidatePath(`/events/${eventId}`);
     return { success: true };
   }
@@ -238,6 +242,10 @@ export async function registerForEventAction(eventId, teamData) {
       }
       revalidatePath('/account/member/events');
       revalidatePath('/account/executive/registrations');
+      revalidatePath('/account/executive/events');
+      revalidatePath('/account/admin/events', 'layout');
+      revalidatePath('/account/advisor/events');
+      revalidatePath('/account/mentor/events');
       revalidatePath(`/events/${eventId}`);
       return { success: true };
     }
@@ -270,6 +278,10 @@ export async function registerForEventAction(eventId, teamData) {
   }
   revalidatePath('/account/member/events');
   revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/executive/events');
+  revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
   revalidatePath(`/events/${eventId}`);
   return { success: true };
 }
@@ -340,7 +352,10 @@ export async function cancelEventRegistrationAction(eventId) {
   revalidatePath('/account/member/events');
   revalidatePath('/account/member/participation');
   revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/executive/events');
   revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
   revalidatePath(`/events/${eventId}`);
   return { success: true };
 }
@@ -405,7 +420,11 @@ export async function respondToTeamInviteAction(registrationId, accept) {
 
   revalidatePath(`/events/${reg.event_id}`);
   revalidatePath('/account/member/events');
+  revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/executive/events');
   revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
   return { success: true, status: newStatus };
 }
 

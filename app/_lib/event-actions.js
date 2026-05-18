@@ -31,9 +31,12 @@ function revalidateEvents() {
   revalidatePath('/account/admin/events', 'layout');
 
   // Executive
-  revalidatePath('/account/executive/events/manage');
+  revalidatePath('/account/executive/events');
   revalidatePath('/account/executive/registrations');
   revalidatePath('/account/executive/reports');
+
+  // Mentor
+  revalidatePath('/account/mentor/events');
 
   // Advisor
   revalidatePath('/account/advisor/events');

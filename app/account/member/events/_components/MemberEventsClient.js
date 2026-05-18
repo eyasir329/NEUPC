@@ -7,7 +7,7 @@ import { registerForEventAction } from '@/app/_lib/member-events-actions';
 import { GlassCard } from '@/app/account/member/_components/_ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
-import { enrichEvent, isPast } from '@/app/account/_components/events/eventUtils';
+import { enrichEvent } from '@/app/account/_components/events/eventUtils';
 import { computeStats } from '@/app/account/_components/events/eventConstants';
 
 // ─── Flash toast ───────────────────────────────────────────────────────────────

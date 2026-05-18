@@ -173,7 +173,12 @@ export async function execCreateEventAction(formData) {
   await logActivity(user.id, 'exec_create_event', 'event', data.id, { title });
   revalidateTag('events');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/events/manage');
+  revalidatePath('/account/executive/events');
+  revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
+  revalidatePath('/account/member/events');
+  revalidatePath('/account/guest/events');
   revalidatePath('/events');
   revalidatePath('/');
   return { success: true, id: data.id };
@@ -240,7 +245,12 @@ export async function execUpdateEventAction(formData) {
   await logActivity(user.id, 'exec_update_event', 'event', id, { title });
   revalidateTag('events');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/events/manage');
+  revalidatePath('/account/executive/events');
+  revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
+  revalidatePath('/account/member/events');
+  revalidatePath('/account/guest/events');
   revalidatePath('/events');
   revalidatePath('/');
   return { success: true };
@@ -255,7 +265,12 @@ export async function execDeleteEventAction(formData) {
   await logActivity(user.id, 'exec_delete_event', 'event', id, {});
   revalidateTag('events');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/events/manage');
+  revalidatePath('/account/executive/events');
+  revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
+  revalidatePath('/account/member/events');
+  revalidatePath('/account/guest/events');
   revalidatePath('/events');
   revalidatePath('/');
   return { success: true };
@@ -285,6 +300,10 @@ export async function execUpdateRegistrationAction(formData) {
     { status }
   );
   revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/executive/events');
+  revalidatePath('/account/admin/events', 'layout');
+  revalidatePath('/account/advisor/events');
+  revalidatePath('/account/mentor/events');
   revalidatePath('/account/member/events');
   revalidatePath('/account/member/participation');
   revalidatePath('/account/guest/events');
