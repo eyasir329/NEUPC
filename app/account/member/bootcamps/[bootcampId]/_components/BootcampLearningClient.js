@@ -89,6 +89,35 @@ const SCROLLBAR = `
   .spa-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius:10px; }
   .spa-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
   .spa-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
+
+  @keyframes spa-indeterminate {
+    0%   { transform: translateX(-100%); }
+    50%  { transform: translateX(20%); }
+    100% { transform: translateX(120%); }
+  }
+  .spa-progress-bar {
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgb(16 185 129), transparent);
+    animation: spa-indeterminate 1.1s ease-in-out infinite;
+  }
+
+  @keyframes spa-shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .spa-skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%);
+    background-size: 800px 100%;
+    animation: spa-shimmer 1.4s linear infinite;
+  }
+
+  @keyframes spa-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .spa-fade-in { animation: spa-fade-in 0.22s ease-out both; }
 `;
 
 // ─── Curriculum Rail ──────────────────────────────────────────────────────────
@@ -1108,6 +1137,37 @@ const LessonPanel = memo(function LessonPanel({
   );
 });
 
+// ─── Lesson Skeleton ──────────────────────────────────────────────────────────
+
+function LessonSkeleton({ title, hasVideo }) {
+  return (
+    <div className="spa-fade-in mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
+      <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
+        {title ? (
+          <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
+            {title}
+          </h1>
+        ) : (
+          <div className="spa-skeleton h-6 w-2/3 rounded-md" />
+        )}
+        <div className="mt-3 flex gap-3">
+          <div className="spa-skeleton h-3 w-16 rounded" />
+          <div className="spa-skeleton h-3 w-20 rounded" />
+        </div>
+      </div>
+      {hasVideo !== false && (
+        <div className="spa-skeleton aspect-video w-full rounded-2xl" />
+      )}
+      <div className="space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <div className="spa-skeleton h-3 w-full rounded" />
+        <div className="spa-skeleton h-3 w-11/12 rounded" />
+        <div className="spa-skeleton h-3 w-9/12 rounded" />
+        <div className="spa-skeleton h-3 w-10/12 rounded" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main SPA Shell ───────────────────────────────────────────────────────────
 
 export default function BootcampLearningClient({
@@ -1377,6 +1437,20 @@ export default function BootcampLearningClient({
       : 'Start learning';
   const isLessonView = !!activeLessonId;
 
+  // Stub of the lesson currently being navigated to (used for instant skeleton
+  // header while the full lesson body loads).
+  const pendingLessonStub = useMemo(() => {
+    if (!activeLessonId) return null;
+    if (loadedLesson?.id === activeLessonId) return null;
+    return allLessons.find((l) => l.id === activeLessonId) || null;
+  }, [activeLessonId, loadedLesson?.id, allLessons]);
+  const isSwitching = !!pendingLessonStub;
+
+  const mainScrollRef = useRef(null);
+  useEffect(() => {
+    if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+  }, [activeLessonId]);
+
   return (
     <div className="min-h-screen bg-[#080b11] text-white">
       <style dangerouslySetInnerHTML={{ __html: SCROLLBAR }} />
@@ -1403,10 +1477,17 @@ export default function BootcampLearningClient({
           )}
 
           <span className="text-gray-700">/</span>
-          <div className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/90">
-            {isLessonView && loadedLesson
-              ? loadedLesson.title
-              : bootcamp?.title}
+          <div className="flex min-w-0 flex-1 items-center gap-2 truncate text-[13px] font-semibold text-white/90">
+            <span className="truncate">
+              {isLessonView
+                ? pendingLessonStub?.title ||
+                  loadedLesson?.title ||
+                  'Loading…'
+                : bootcamp?.title}
+            </span>
+            {isSwitching && (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-emerald-400" />
+            )}
           </div>
 
           {/* Mobile: open curriculum drawer */}
@@ -1448,20 +1529,21 @@ export default function BootcampLearningClient({
         </aside>
 
         {/* Main content area */}
-        <main className="spa-scroll min-w-0 flex-1 overflow-y-auto">
-          {/* Inline loading bar while next lesson fetches (current still visible) */}
-          {loading && loadedLesson && (
-            <div className="sticky top-0 z-20 h-0.5 w-full overflow-hidden bg-transparent">
-              <div className="h-full w-1/3 animate-pulse bg-emerald-500" />
+        <main ref={mainScrollRef} className="spa-scroll min-w-0 flex-1 overflow-y-auto">
+          {/* Inline loading bar while a lesson fetches */}
+          {(loading || isSwitching) && (
+            <div className="sticky top-0 z-20 h-0.5 w-full overflow-hidden bg-emerald-500/10">
+              <div className="spa-progress-bar" />
             </div>
           )}
-          {loading && !loadedLesson ? (
-            <div className="flex h-full min-h-[400px] items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-gray-500">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-[13px]">Loading lesson…</span>
-              </div>
-            </div>
+          {isSwitching ? (
+            <LessonSkeleton
+              title={pendingLessonStub?.title}
+              hasVideo={
+                pendingLessonStub?.video_source &&
+                pendingLessonStub.video_source !== 'none'
+              }
+            />
           ) : loadError ? (
             <div className="flex h-full min-h-[400px] items-center justify-center">
               <div className="flex flex-col items-center gap-3 px-4 text-center text-gray-500">
@@ -1479,18 +1561,20 @@ export default function BootcampLearningClient({
               </div>
             </div>
           ) : isLessonView && loadedLesson ? (
-            <LessonPanel
-              lesson={loadedLesson}
-              lessonProgress={lessonProgress}
-              allLessons={allLessons}
-              onSelectLesson={selectLesson}
-              onSaveNotes={handleSaveNotes}
-              onMarkComplete={handleMarkComplete}
-              onMarkIncomplete={handleMarkIncomplete}
-              completing={completing}
-              isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
-              currentIndex={currentIndex}
-            />
+            <div key={loadedLesson.id} className="spa-fade-in h-full">
+              <LessonPanel
+                lesson={loadedLesson}
+                lessonProgress={lessonProgress}
+                allLessons={allLessons}
+                onSelectLesson={selectLesson}
+                onSaveNotes={handleSaveNotes}
+                onMarkComplete={handleMarkComplete}
+                onMarkIncomplete={handleMarkIncomplete}
+                completing={completing}
+                isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
+                currentIndex={currentIndex}
+              />
+            </div>
           ) : (
             <OverviewPanel
               bootcamp={bootcamp}
