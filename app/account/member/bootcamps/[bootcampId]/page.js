@@ -31,14 +31,19 @@ export default async function BootcampLearningPage({ params }) {
 
   if (!bootcamp) notFound();
 
-  const enrollmentCheck = await checkEnrollment(bootcamp.id);
+  const [enrollmentCheck, progressResult] = await Promise.all([
+    checkEnrollment(bootcamp.id),
+    getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} })),
+  ]);
+
   if (!enrollmentCheck.enrolled) {
     redirect(`/account/member/bootcamps`);
   }
 
-  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
+  // Fire-and-forget — don't block render
+  updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
-  const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
+  const { lessonProgress } = progressResult;
 
   return <BootcampLearningClient bootcamp={bootcamp} lessonProgress={lessonProgress} />;
 }

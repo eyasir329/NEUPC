@@ -43,7 +43,8 @@ import {
 import {
   getLesson,
   getLessonContent,
-  updateLessonProgress,
+  updateWatchTimeDelta,
+  recordLearningActivity,
   markLessonComplete,
   markLessonIncomplete,
   saveLessonNotes,
@@ -900,6 +901,7 @@ const LessonPanel = memo(function LessonPanel({
   completing,
   isCompleted,
   currentIndex,
+  bootcampId,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -920,15 +922,18 @@ const LessonPanel = memo(function LessonPanel({
 
   const handleProgress = useCallback(
     async (progressData) => {
+      const delta = Math.floor(progressData.deltaSeconds || 0);
+      const pos = Math.floor(progressData.currentTime || 0);
       try {
-        await updateLessonProgress(lesson.id, {
-          watch_time: Math.floor(progressData.watchTime),
-          last_position: Math.floor(progressData.currentTime),
-          is_completed: false,
-        });
+        await Promise.all([
+          updateWatchTimeDelta(lesson.id, delta, pos, bootcampId),
+          delta > 0 && bootcampId
+            ? recordLearningActivity({ bootcampId, deltaSeconds: delta })
+            : null,
+        ]);
       } catch {}
     },
-    [lesson.id]
+    [lesson.id, bootcampId]
   );
 
   const handleVideoComplete = useCallback(async () => {
@@ -1450,19 +1455,55 @@ export default function BootcampLearningClient({
     return () => window.removeEventListener('popstate', onPop);
   }, [navigateToLesson]);
 
-  const handleMarkComplete = useCallback((lessonId) => {
-    startCompleting(async () => {
-      await markLessonComplete(lessonId);
-      setLessonProgress((prev) => ({
-        ...prev,
-        [lessonId]: { ...prev[lessonId], is_completed: true },
-      }));
-    });
-  }, []);
+  const moduleIndex = useMemo(() => {
+    const lessonToModule = {};
+    const moduleLessons = {};
+    bootcamp?.courses?.forEach((c) =>
+      c.modules?.forEach((m) => {
+        const ids = (m.lessons || []).map((l) => l.id);
+        moduleLessons[m.id] = ids;
+        ids.forEach((id) => {
+          lessonToModule[id] = m.id;
+        });
+      })
+    );
+    return { lessonToModule, moduleLessons };
+  }, [bootcamp]);
+
+  const handleMarkComplete = useCallback(
+    (lessonId) => {
+      startCompleting(async () => {
+        await markLessonComplete(lessonId, bootcamp?.id);
+        const nextProgress = {
+          ...lessonProgress,
+          [lessonId]: { ...lessonProgress[lessonId], is_completed: true },
+        };
+        setLessonProgress(nextProgress);
+
+        // Detect if this lesson's module just became fully complete.
+        const moduleId = moduleIndex.lessonToModule[lessonId];
+        let completedModuleId = null;
+        if (moduleId) {
+          const ids = moduleIndex.moduleLessons[moduleId] || [];
+          const allDone =
+            ids.length > 0 && ids.every((id) => nextProgress[id]?.is_completed);
+          if (allDone) completedModuleId = moduleId;
+        }
+        if (bootcamp?.id) {
+          recordLearningActivity({
+            bootcampId: bootcamp.id,
+            completedLessonId: lessonId,
+            completedModuleId,
+          }).catch(() => {});
+        }
+      });
+    },
+    [bootcamp, moduleIndex, lessonProgress]
+  );
 
   const handleMarkIncomplete = useCallback((lessonId) => {
     startCompleting(async () => {
-      await markLessonIncomplete(lessonId);
+      await markLessonIncomplete(lessonId, bootcamp?.id);
       setLessonProgress((prev) => ({
         ...prev,
         [lessonId]: { ...prev[lessonId], is_completed: false },
@@ -1670,6 +1711,7 @@ export default function BootcampLearningClient({
                 completing={completing}
                 isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
                 currentIndex={currentIndex}
+                bootcampId={bootcamp?.id}
               />
             </div>
           ) : (

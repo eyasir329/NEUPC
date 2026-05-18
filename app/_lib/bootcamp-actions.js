@@ -1026,7 +1026,7 @@ export async function getLesson(lessonId) {
   const { data, error } = await supabaseAdmin
     .from('lessons')
     .select(
-      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_locked, is_published, order_index'
+      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_published, order_index'
     )
     .eq('id', lessonId)
     .single();
@@ -1046,7 +1046,7 @@ export async function getLessonContent(lessonId) {
 
   const { data, error } = await supabaseAdmin
     .from('lessons')
-    .select('id, content, attachments, video_url, is_locked')
+    .select('id, content, attachments, video_url')
     .eq('id', lessonId)
     .single();
 
@@ -1328,23 +1328,151 @@ export async function updateLessonProgress(lessonId, progressData) {
 }
 
 /**
- * Mark a lesson as completed.
- * Preserves existing watch_time/last_position; only flips completion flag.
+ * Increment cumulative watch_time for a lesson and update last_position.
+ * Use this for periodic ticks from the player. `deltaSeconds` is how many
+ * seconds of *new* playback have elapsed since the last tick.
+ * Pass `bootcampId` from the client to skip the lesson join query.
  */
-export async function markLessonComplete(lessonId) {
+export async function updateWatchTimeDelta(lessonId, deltaSeconds, lastPosition, bootcampId) {
   const userId = await getCurrentUserId();
   if (!userId) throw new Error('Not authenticated');
 
-  const { data: lesson } = await supabaseAdmin
-    .from('lessons')
-    .select('module_id, modules(course_id, courses(bootcamp_id))')
-    .eq('id', lessonId)
+  const delta = Math.max(0, Math.floor(Number(deltaSeconds) || 0));
+  const pos = Math.max(0, Math.floor(Number(lastPosition) || 0));
+  if (delta === 0 && pos === 0) return null;
+
+  // Resolve bootcampId from DB only if not provided by caller
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson?.modules?.courses?.bootcamp_id) throw new Error('Lesson not found');
+    bootcampId = lesson.modules.courses.bootcamp_id;
+  }
+
+  const { data: existing } = await supabaseAdmin
+    .from('user_progress')
+    .select('watch_time, is_completed')
+    .eq('user_id', userId)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  const { data, error } = await supabaseAdmin
+    .from('user_progress')
+    .upsert(
+      {
+        user_id: userId,
+        lesson_id: lessonId,
+        bootcamp_id: bootcampId,
+        watch_time: (existing?.watch_time ?? 0) + delta,
+        last_position: pos,
+        is_completed: existing?.is_completed ?? false,
+      },
+      { onConflict: 'user_id,lesson_id' }
+    )
+    .select()
     .single();
 
-  if (!lesson?.modules?.courses?.bootcamp_id) {
-    throw new Error('Lesson not found');
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Record a chunk of learning activity for today.
+ * Adds `deltaSeconds` to today's watch_time bucket and unions any newly
+ * completed lesson/module ids into the day's arrays.
+ */
+export async function recordLearningActivity({
+  bootcampId,
+  deltaSeconds = 0,
+  completedLessonId = null,
+  completedModuleId = null,
+}) {
+  const userId = await getCurrentUserId();
+  if (!userId || !bootcampId) return null;
+
+  const delta = Math.max(0, Math.floor(Number(deltaSeconds) || 0));
+  if (delta === 0 && !completedLessonId && !completedModuleId) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: existing } = await supabaseAdmin
+    .from('learning_activity_daily')
+    .select('id, watch_time, completed_lesson_ids, completed_module_ids')
+    .eq('user_id', userId)
+    .eq('bootcamp_id', bootcampId)
+    .eq('activity_date', today)
+    .maybeSingle();
+
+  const mergedLessons = new Set(existing?.completed_lesson_ids || []);
+  if (completedLessonId) mergedLessons.add(completedLessonId);
+  const mergedModules = new Set(existing?.completed_module_ids || []);
+  if (completedModuleId) mergedModules.add(completedModuleId);
+
+  const payload = {
+    user_id: userId,
+    bootcamp_id: bootcampId,
+    activity_date: today,
+    watch_time: (existing?.watch_time ?? 0) + delta,
+    completed_lesson_ids: Array.from(mergedLessons),
+    completed_module_ids: Array.from(mergedModules),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('learning_activity_daily')
+    .upsert(payload, { onConflict: 'user_id,bootcamp_id,activity_date' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get the user's daily activity for a bootcamp (or all bootcamps).
+ */
+export async function getLearningActivity(bootcampId = null, days = 30) {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  let q = supabaseAdmin
+    .from('learning_activity_daily')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('activity_date', since)
+    .order('activity_date', { ascending: false });
+  if (bootcampId) q = q.eq('bootcamp_id', bootcampId);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Mark a lesson as completed.
+ * Preserves existing watch_time/last_position; only flips completion flag.
+ * Pass `bootcampId` from the client to skip the lesson join query.
+ */
+export async function markLessonComplete(lessonId, bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson?.modules?.courses?.bootcamp_id) throw new Error('Lesson not found');
+    bootcampId = lesson.modules.courses.bootcamp_id;
   }
-  const bootcampId = lesson.modules.courses.bootcamp_id;
 
   const { data: existing } = await supabaseAdmin
     .from('user_progress')
@@ -1376,18 +1504,20 @@ export async function markLessonComplete(lessonId) {
 
 /**
  * Mark a lesson as incomplete.
+ * Pass `bootcampId` from the client to skip the lesson join query.
  */
-export async function markLessonIncomplete(lessonId) {
+export async function markLessonIncomplete(lessonId, bootcampId) {
   const userId = await getCurrentUserId();
   if (!userId) throw new Error('Not authenticated');
 
-  const { data: lesson } = await supabaseAdmin
-    .from('lessons')
-    .select('module_id, modules(course_id, courses(bootcamp_id))')
-    .eq('id', lessonId)
-    .single();
-  if (!lesson?.modules?.courses?.bootcamp_id) {
-    throw new Error('Lesson not found');
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson?.modules?.courses?.bootcamp_id) throw new Error('Lesson not found');
+    bootcampId = lesson.modules.courses.bootcamp_id;
   }
 
   const { error } = await supabaseAdmin
@@ -1396,7 +1526,7 @@ export async function markLessonIncomplete(lessonId) {
       {
         user_id: userId,
         lesson_id: lessonId,
-        bootcamp_id: lesson.modules.courses.bootcamp_id,
+        bootcamp_id: bootcampId,
         is_completed: false,
         completed_at: null,
       },

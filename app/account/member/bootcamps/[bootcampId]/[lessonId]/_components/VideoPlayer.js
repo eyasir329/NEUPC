@@ -183,21 +183,39 @@ function DriveVideoPlayer({
     };
   }, []);
 
-  // Progress save: 30s interval + on tab hide
+  // Progress save: 30s interval + on tab hide.
+  // deltaSeconds = real playback advanced since last save, clamped to [0, TICK]
+  // so seeks/scrubs don't inflate watch time.
+  const TICK_MS = 30000;
+  const lastTickRef = useRef({ time: null, at: null });
   useEffect(() => {
     const save = () => {
       const video = videoRef.current;
-      if (video && onProgress && video.currentTime > 0) {
-        onProgress({
-          currentTime: video.currentTime,
-          duration: video.duration,
-          watchTime: video.currentTime,
-        });
+      if (!video || !onProgress || !(video.currentTime > 0)) return;
+      const now = Date.now();
+      const prev = lastTickRef.current;
+      let delta = 0;
+      if (prev.time != null && prev.at != null) {
+        const playDelta = video.currentTime - prev.time;
+        const wallDelta = (now - prev.at) / 1000;
+        delta = Math.max(0, Math.min(playDelta, wallDelta, TICK_MS / 1000 + 2));
       }
+      lastTickRef.current = { time: video.currentTime, at: now };
+      onProgress({
+        currentTime: video.currentTime,
+        duration: video.duration,
+        deltaSeconds: delta,
+      });
     };
 
     if (state.playing && onProgress) {
-      progressTimerRef.current = setInterval(save, 30000);
+      lastTickRef.current = {
+        time: videoRef.current?.currentTime ?? 0,
+        at: Date.now(),
+      };
+      progressTimerRef.current = setInterval(save, TICK_MS);
+    } else {
+      lastTickRef.current = { time: null, at: null };
     }
     const onHide = () => {
       if (document.visibilityState === 'hidden') save();

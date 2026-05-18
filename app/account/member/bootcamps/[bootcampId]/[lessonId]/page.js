@@ -10,10 +10,19 @@ import {
 import BootcampLearningClient from '../_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
-  const { lessonId } = await params;
+  const { bootcampId, lessonId } = await params;
   try {
-    const lesson = await getLesson(lessonId);
-    return { title: `${lesson?.title || 'Lesson'} | NEUPC` };
+    // Use the curriculum light fetch (shared with page handler via Next.js request dedup)
+    // rather than a separate getLesson call. Falls back gracefully.
+    const bootcamp = await getBootcampCurriculumLight(bootcampId);
+    let title = 'Lesson';
+    for (const c of bootcamp?.courses || []) {
+      for (const m of c.modules || []) {
+        const l = m.lessons?.find((l) => l.id === lessonId);
+        if (l) { title = l.title; break; }
+      }
+    }
+    return { title: `${title} | NEUPC` };
   } catch {
     return { title: 'Lesson | NEUPC' };
   }
@@ -42,24 +51,28 @@ export default async function LessonPage({ params }) {
   }
   if (!stub) notFound();
 
-  let lesson;
-  try {
-    lesson = await getLesson(lessonId);
-  } catch {
-    notFound();
-  }
+  // Run independent fetches in parallel
+  const [lessonResult, enrollmentCheck, progressResult] = await Promise.allSettled([
+    getLesson(lessonId),
+    stub.is_free_preview ? Promise.resolve({ enrolled: true }) : checkEnrollment(bootcamp.id),
+    getBootcampProgress(bootcamp.id),
+  ]);
+
+  const lesson = lessonResult.status === 'fulfilled' ? lessonResult.value : null;
   if (!lesson) notFound();
 
   if (!stub.is_free_preview) {
-    const enrollmentCheck = await checkEnrollment(bootcamp.id);
-    if (!enrollmentCheck.enrolled) redirect(`/account/member/bootcamps/${bootcampId}`);
+    const enrollment = enrollmentCheck.status === 'fulfilled' ? enrollmentCheck.value : { enrolled: false };
+    if (!enrollment.enrolled) redirect(`/account/member/bootcamps/${bootcampId}`);
   }
 
-  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
+  const { lessonProgress } = progressResult.status === 'fulfilled'
+    ? progressResult.value
+    : { lessonProgress: {} };
 
-  const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
+  // Fire-and-forget — don't block render
+  updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
-  // Render the same SPA shell with the lesson pre-selected and preloaded
   return (
     <BootcampLearningClient
       bootcamp={bootcamp}
