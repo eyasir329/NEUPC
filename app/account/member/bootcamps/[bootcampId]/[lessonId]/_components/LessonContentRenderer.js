@@ -224,7 +224,7 @@ const MD_STYLES = `
 
 // ─── Multi-video playlist ─────────────────────────────────────────────────────
 
-function MultiVideoPlaylist({ videos, lessonId }) {
+function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const activeVid = videos[activeIdx];
 
@@ -233,12 +233,15 @@ function MultiVideoPlaylist({ videos, lessonId }) {
       {/* Featured player area */}
       <div className="flex-1 min-w-0 bg-black flex flex-col relative">
         <VideoPlayer
+          key={activeIdx}
           lesson={{
             id: lessonId,
             video_source: activeVid.video_source || 'drive',
             video_id: activeVid.video_id,
             video_url: activeVid.video_url,
           }}
+          onProgress={onProgress}
+          onComplete={onComplete}
         />
         {/* Title bar for active video overlaying the top */}
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 pb-12 pointer-events-none z-10 flex justify-between items-start">
@@ -320,7 +323,7 @@ function MultiVideoPlaylist({ videos, lessonId }) {
 
 // ─── Main renderer ────────────────────────────────────────────────────────────
 
-export default function LessonContentRenderer({ content, lessonId }) {
+export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
@@ -497,6 +500,8 @@ export default function LessonContentRenderer({ content, lessonId }) {
                     video_id: vid.video_id,
                     video_url: vid.video_url,
                   }}
+                  onProgress={onProgress}
+                  onComplete={onComplete}
                 />
                 {vid.label && (
                   <div className="px-4 py-3 border-t border-white/8 bg-[#0a0d14]">
@@ -513,6 +518,8 @@ export default function LessonContentRenderer({ content, lessonId }) {
               key={block.id}
               videos={videos}
               lessonId={lessonId}
+              onProgress={onProgress}
+              onComplete={onComplete}
             />
           );
         }
@@ -526,7 +533,7 @@ export default function LessonContentRenderer({ content, lessonId }) {
               <h4 className="text-lg font-bold text-[#c0c1ff] mb-6 flex items-center gap-3">
                 <BookOpen className="h-5 w-5" /> Lesson Plan
               </h4>
-              <LessonContentRenderer content={block.content} lessonId={lessonId} />
+              <LessonContentRenderer content={block.content} lessonId={lessonId} onProgress={onProgress} onComplete={onComplete} />
             </div>
           );
         }

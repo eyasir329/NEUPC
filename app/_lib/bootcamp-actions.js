@@ -1338,8 +1338,9 @@ export async function updateWatchTimeDelta(lessonId, deltaSeconds, lastPosition,
   if (!userId) throw new Error('Not authenticated');
 
   const delta = Math.max(0, Math.floor(Number(deltaSeconds) || 0));
-  const pos = Math.max(0, Math.floor(Number(lastPosition) || 0));
-  if (delta === 0 && pos === 0) return null;
+  const posKnown = lastPosition != null && Number.isFinite(Number(lastPosition));
+  const pos = posKnown ? Math.max(0, Math.floor(Number(lastPosition))) : null;
+  if (delta === 0 && !posKnown) return null;
 
   // Resolve bootcampId from DB only if not provided by caller
   if (!bootcampId) {
@@ -1352,28 +1353,16 @@ export async function updateWatchTimeDelta(lessonId, deltaSeconds, lastPosition,
     bootcampId = lesson.modules.courses.bootcamp_id;
   }
 
-  const { data: existing } = await supabaseAdmin
-    .from('user_progress')
-    .select('watch_time, is_completed')
-    .eq('user_id', userId)
-    .eq('lesson_id', lessonId)
-    .maybeSingle();
-
-  const { data, error } = await supabaseAdmin
-    .from('user_progress')
-    .upsert(
-      {
-        user_id: userId,
-        lesson_id: lessonId,
-        bootcamp_id: bootcampId,
-        watch_time: (existing?.watch_time ?? 0) + delta,
-        last_position: pos,
-        is_completed: existing?.is_completed ?? false,
-      },
-      { onConflict: 'user_id,lesson_id' }
-    )
-    .select()
-    .single();
+  const { data, error } = await supabaseAdmin.rpc(
+    'increment_user_progress_watch_time',
+    {
+      p_user_id: userId,
+      p_lesson_id: lessonId,
+      p_bootcamp_id: bootcampId,
+      p_delta: delta,
+      p_last_position: pos,
+    }
+  );
 
   if (error) throw error;
   return data;
@@ -1389,6 +1378,7 @@ export async function recordLearningActivity({
   deltaSeconds = 0,
   completedLessonId = null,
   completedModuleId = null,
+  activityDate = null,
 }) {
   const userId = await getCurrentUserId();
   if (!userId || !bootcampId) return null;
@@ -1396,39 +1386,30 @@ export async function recordLearningActivity({
   const delta = Math.max(0, Math.floor(Number(deltaSeconds) || 0));
   if (delta === 0 && !completedLessonId && !completedModuleId) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Validate YYYY-MM-DD if provided. Server falls back to UTC date if null.
+  const dateArg =
+    typeof activityDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activityDate)
+      ? activityDate
+      : null;
 
-  const { data: existing } = await supabaseAdmin
-    .from('learning_activity_daily')
-    .select('id, watch_time, completed_lesson_ids, completed_module_ids')
-    .eq('user_id', userId)
-    .eq('bootcamp_id', bootcampId)
-    .eq('activity_date', today)
-    .maybeSingle();
-
-  const mergedLessons = new Set(existing?.completed_lesson_ids || []);
-  if (completedLessonId) mergedLessons.add(completedLessonId);
-  const mergedModules = new Set(existing?.completed_module_ids || []);
-  if (completedModuleId) mergedModules.add(completedModuleId);
-
-  const payload = {
-    user_id: userId,
-    bootcamp_id: bootcampId,
-    activity_date: today,
-    watch_time: (existing?.watch_time ?? 0) + delta,
-    completed_lesson_ids: Array.from(mergedLessons),
-    completed_module_ids: Array.from(mergedModules),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data, error } = await supabaseAdmin
-    .from('learning_activity_daily')
-    .upsert(payload, { onConflict: 'user_id,bootcamp_id,activity_date' })
-    .select()
-    .single();
+  const { data, error } = await supabaseAdmin.rpc(
+    'record_learning_activity_atomic',
+    {
+      p_user_id: userId,
+      p_bootcamp_id: bootcampId,
+      p_delta: delta,
+      p_completed_lesson_id: completedLessonId,
+      p_completed_module_id: completedModuleId,
+      p_activity_date: dateArg,
+    }
+  );
 
   if (error) throw error;
-  revalidatePath('/account/member/bootcamps');
+  // Only invalidate the bootcamps page cache when a completion lands.
+  // Per-tick revalidation would invalidate every 30s during active watching.
+  if (completedLessonId || completedModuleId) {
+    revalidatePath('/account/member/bootcamps');
+  }
   return data;
 }
 
@@ -1475,27 +1456,41 @@ export async function markLessonComplete(lessonId, bootcampId) {
     bootcampId = lesson.modules.courses.bootcamp_id;
   }
 
+  // Use UPDATE if the row exists so we don't clobber watch_time from an
+  // in-flight tick's increment. Only INSERT (with zeros) when first-time.
   const { data: existing } = await supabaseAdmin
     .from('user_progress')
-    .select('watch_time, last_position')
+    .select('id')
     .eq('user_id', userId)
     .eq('lesson_id', lessonId)
     .maybeSingle();
 
+  const completionPatch = {
+    is_completed: true,
+    completed_at: new Date().toISOString(),
+  };
+
+  if (existing) {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .update(completionPatch)
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('user_progress')
-    .upsert(
-      {
-        user_id: userId,
-        lesson_id: lessonId,
-        bootcamp_id: bootcampId,
-        watch_time: existing?.watch_time ?? 0,
-        last_position: existing?.last_position ?? 0,
-        is_completed: true,
-        completed_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,lesson_id' }
-    )
+    .insert({
+      user_id: userId,
+      lesson_id: lessonId,
+      bootcamp_id: bootcampId,
+      watch_time: 0,
+      last_position: 0,
+      ...completionPatch,
+    })
     .select()
     .single();
 

@@ -46,6 +46,7 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
   const iframeRef = useRef(null);
   const playingRef = useRef(false);
   const lastTickRef = useRef({ time: null, at: null });
+  const currentTimeRef = useRef(0);
   const timerRef = useRef(null);
 
   const extractedId =
@@ -62,22 +63,26 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
 
   const startTick = useCallback(() => {
     if (timerRef.current) return;
-    lastTickRef.current = { time: null, at: Date.now() };
+    lastTickRef.current = { time: currentTimeRef.current || null, at: Date.now() };
     timerRef.current = setInterval(() => {
       if (!onProgress) return;
-      // Ask player for current time; response handled in message listener
-      postToPlayer('listening');
-      // Fallback: compute delta from wall clock if we don't have currentTime
       const now = Date.now();
       const prev = lastTickRef.current;
+      const curr = currentTimeRef.current;
+      let delta = 0;
       if (prev.at != null) {
-        const wallDelta = Math.round((now - prev.at) / 1000);
-        const delta = Math.min(wallDelta, TICK_MS / 1000 + 2);
-        if (delta > 0) onProgress({ deltaSeconds: delta, currentTime: 0 });
+        const wallDelta = (now - prev.at) / 1000;
+        // Prefer playDelta when both endpoints known — clamps seeks naturally.
+        // Negative playDelta (rewind) → 0. Fall back to wallDelta if no time.
+        const playDelta = prev.time != null && curr > 0 ? curr - prev.time : wallDelta;
+        delta = Math.max(0, Math.min(playDelta, wallDelta, TICK_MS / 1000 + 2));
       }
-      lastTickRef.current = { time: null, at: now };
+      lastTickRef.current = { time: curr || null, at: now };
+      if (delta > 0) {
+        onProgress({ deltaSeconds: delta, currentTime: curr > 0 ? curr : null });
+      }
     }, TICK_MS);
-  }, [onProgress, postToPlayer]);
+  }, [onProgress]);
 
   const stopTick = useCallback(() => {
     clearInterval(timerRef.current);
@@ -91,6 +96,11 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
       let data;
       try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
       if (!data) return;
+
+      // Track current playhead from infoDelivery events
+      if (data.event === 'infoDelivery' && data.info?.currentTime != null) {
+        currentTimeRef.current = Number(data.info.currentTime) || 0;
+      }
 
       // Player state: 1=playing, 2=paused, 0=ended
       if (data.event === 'onStateChange') {
@@ -263,25 +273,25 @@ function DriveVideoPlayer({
   useEffect(() => {
     const save = () => {
       const video = videoRef.current;
-      console.log('[player] save tick', { hasVideo: !!video, hasOnProgress: !!onProgress, currentTime: video?.currentTime });
-      if (!video || !onProgress || !(video.currentTime > 0)) return;
+      if (!video || !onProgress) return;
       const now = Date.now();
       const prev = lastTickRef.current;
       let delta = 0;
       if (prev.time != null && prev.at != null) {
         const playDelta = video.currentTime - prev.time;
         const wallDelta = (now - prev.at) / 1000;
+        // Coalesce ticks closer than 1s (e.g. interval + visibility race).
+        if (wallDelta < 1) return;
         delta = Math.max(0, Math.min(playDelta, wallDelta, TICK_MS / 1000 + 2));
       }
       lastTickRef.current = { time: video.currentTime, at: now };
       onProgress({
-        currentTime: video.currentTime,
+        currentTime: video.currentTime > 0 ? video.currentTime : null,
         duration: video.duration,
         deltaSeconds: delta,
       });
     };
 
-    console.log('[player] effect', { playing: state.playing, hasOnProgress: !!onProgress });
     if (state.playing && onProgress) {
       lastTickRef.current = {
         time: videoRef.current?.currentTime ?? 0,

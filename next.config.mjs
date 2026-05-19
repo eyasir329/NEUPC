@@ -80,8 +80,7 @@ const nextConfig = {
   // Compress responses (Vercel CDN handles this, but useful for local prod)
   compress: true,
 
-  // Enable React strict mode for catching potential issues
-  reactStrictMode: true,
+  reactStrictMode: false,
 
   // ── Security Headers ──────────────────────────────────────────────────────
   async headers() {
@@ -152,12 +151,10 @@ const nextConfig = {
 
   // ── Experimental ──────────────────────────────────────────────────────────
   experimental: {
-    // Server actions body size limit (allow large uploads)
     serverActions: {
-      bodySizeLimit: '2gb',
+      bodySizeLimit: '100mb',
     },
-    // Proxy request body size limit
-    proxyClientMaxBodySize: '2gb',
+    proxyClientMaxBodySize: '100mb',
   },
 };
 

@@ -664,6 +664,20 @@ CREATE TABLE public.leaderboard_cache (
   CONSTRAINT leaderboard_cache_pkey PRIMARY KEY (user_id),
   CONSTRAINT leaderboard_cache_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.learning_activity_daily (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  bootcamp_id uuid NOT NULL,
+  activity_date date NOT NULL DEFAULT ((now() AT TIME ZONE 'utc'::text))::date,
+  watch_time integer NOT NULL DEFAULT 0 CHECK (watch_time >= 0),
+  completed_module_ids ARRAY NOT NULL DEFAULT '{}'::uuid[],
+  completed_lesson_ids ARRAY NOT NULL DEFAULT '{}'::uuid[],
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT learning_activity_daily_pkey PRIMARY KEY (id),
+  CONSTRAINT learning_activity_daily_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT learning_activity_daily_bootcamp_id_fkey FOREIGN KEY (bootcamp_id) REFERENCES public.bootcamps(id)
+);
 CREATE TABLE public.lessons (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   module_id uuid NOT NULL,
@@ -1287,7 +1301,7 @@ CREATE TABLE public.user_progress (
   bootcamp_id uuid NOT NULL,
   is_completed boolean DEFAULT false,
   completed_at timestamp with time zone,
-  watch_time integer DEFAULT 0,
+  watch_time integer DEFAULT 0 CHECK (watch_time >= 0) NOT VALI),
   last_position integer DEFAULT 0,
   notes text,
   created_at timestamp with time zone DEFAULT now(),

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import {
   BookOpen, Clock, Search, ArrowRight, Loader2,
   GraduationCap, Zap, CheckCircle2, X, House, Play, Trophy,
   Flame, TrendingUp, Sparkles, PlayCircle, CheckCircle, Calendar,
-  ChevronLeft, ChevronRight, Video, FileText,
+  ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
 } from 'lucide-react';
 import { enrollUser } from '@/app/_lib/bootcamp-actions';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +28,17 @@ function formatDuration(minutes) {
   if (!minutes || minutes <= 0) return null;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return `${m}m`;
+}
+
+// Format seconds with sub-minute precision so short sessions don't display as 0.
+function formatWatchSeconds(seconds) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (s === 0) return null;
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
   if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
   return `${m}m`;
 }
@@ -480,25 +491,28 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
     }
   }
 
-  // Fill buckets from learning_activity_daily rows
+  // Fill buckets from learning_activity_daily rows.
+  // Accumulate as seconds, convert to minutes at the end — otherwise rows with
+  // <30s are silently rounded to 0 minutes and dropped.
   learningActivity.forEach((row) => {
     const d = new Date(row.activity_date + 'T00:00:00');
     if (d < from || d > to) return;
-    const mins = Math.round((row.watch_time || 0) / 60);
-    if (mins === 0) return;
+    const secs = Math.max(0, Number(row.watch_time) || 0);
+    if (secs === 0) return;
     if (groupBy === 'day') {
       const k = row.activity_date;
-      if (buckets[k]) buckets[k].duration += mins;
+      if (buckets[k]) buckets[k].duration += secs;
     } else if (groupBy === 'week') {
       for (const b of Object.values(buckets)) {
-        if (d >= b.start && d <= b.end) { b.duration += mins; break; }
+        if (d >= b.start && d <= b.end) { b.duration += secs; break; }
       }
     } else {
       const k = `${d.getFullYear()}-${d.getMonth()}`;
-      if (buckets[k]) buckets[k].duration += mins;
+      if (buckets[k]) buckets[k].duration += secs;
     }
   });
 
+  // `duration` is seconds — formatters and tooltip handle display.
   return Object.values(buckets);
 }
 
@@ -506,14 +520,26 @@ function WatchTimeChart({ learningActivity }) {
   const [preset, setPreset] = useState('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [menuOpen]);
   const chartData = useMemo(
     () => buildWatchChartData(learningActivity, preset, customFrom, customTo),
     [learningActivity, preset, customFrom, customTo]
   );
 
-  const totalMins = chartData.reduce((s, d) => s + d.duration, 0);
+  // chartData.duration is in SECONDS
+  const totalSecs = chartData.reduce((s, d) => s + d.duration, 0);
   const activeDays = chartData.filter(d => d.duration > 0).length;
-  const avgMins = activeDays > 0 ? Math.round(totalMins / activeDays) : 0;
+  const avgSecs = activeDays > 0 ? Math.round(totalSecs / activeDays) : 0;
   const topBar = chartData.reduce((a, b) => b.duration > a.duration ? b : a, { name: '-', duration: 0 });
 
   const presetLabel = {
@@ -531,7 +557,7 @@ function WatchTimeChart({ learningActivity }) {
           <p className="text-gray-500 text-xs font-medium mb-1">{label}</p>
           <p className="text-white font-semibold text-sm flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
-            {payload[0].value} mins
+            {formatWatchSeconds(payload[0].value) || '0s'}
           </p>
         </div>
       );
@@ -549,27 +575,53 @@ function WatchTimeChart({ learningActivity }) {
           </h3>
           <p className="text-sm text-gray-500">{presetLabel}</p>
         </div>
-        <div className="bg-violet-500/10 text-violet-300 px-3 py-1 rounded-lg text-sm font-semibold border border-violet-500/20 shrink-0">
-          {formatDuration(totalMins) || '0m'}
-        </div>
-      </div>
-
-      {/* Filter pills */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-3">
-        {WATCH_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setPreset(p.id)}
-            className={cn(
-              'px-3 py-1 rounded-lg text-xs font-semibold border transition-all',
-              preset === p.id
-                ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
-                : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:text-white hover:border-white/10'
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <div className="bg-violet-500/10 text-violet-300 px-3 py-1 rounded-lg text-sm font-semibold border border-violet-500/20">
+            {formatWatchSeconds(totalSecs) || '0m'}
+          </div>
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={menuOpen}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all',
+                menuOpen
+                  ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                  : 'bg-white/[0.03] border-white/[0.06] text-gray-300 hover:text-white hover:border-white/10'
+              )}
+            >
+              <span>{WATCH_PRESETS.find((p) => p.id === preset)?.label || 'Range'}</span>
+              <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', menuOpen && 'rotate-180')} />
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-1.5 z-20 min-w-[140px] bg-[#0a0e15] border border-white/[0.08] rounded-xl shadow-xl py-1"
+              >
+                {WATCH_PRESETS.map((p) => {
+                  const active = preset === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => { setPreset(p.id); setMenuOpen(false); }}
+                      className={cn(
+                        'w-full flex items-center justify-between gap-3 px-3 py-1.5 text-xs font-medium transition-colors',
+                        active ? 'text-violet-300' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                      )}
+                    >
+                      <span>{p.label}</span>
+                      {active && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
             )}
-          >
-            {p.label}
-          </button>
-        ))}
+          </div>
+        </div>
       </div>
 
       {/* Custom date inputs */}
@@ -596,11 +648,11 @@ function WatchTimeChart({ learningActivity }) {
           <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barSize={Math.max(8, Math.min(32, Math.floor(320 / Math.max(chartData.length, 1))))}>
             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#1e2535" opacity={0.8} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 500 }} dy={10} interval={chartData.length > 12 ? 'preserveStartEnd' : 0} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={(v) => `${v}m`} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} tickFormatter={(v) => v >= 60 ? `${Math.round(v / 60)}m` : `${v}s`} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139,92,246,0.05)' }} />
             <Bar dataKey="duration" radius={[6, 6, 0, 0]}>
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.duration > 60 ? '#a855f7' : '#8b5cf6'} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                <Cell key={`cell-${index}`} fill={entry.duration > 3600 ? '#a855f7' : '#8b5cf6'} className="hover:opacity-80 transition-opacity cursor-pointer" />
               ))}
             </Bar>
           </BarChart>
@@ -610,7 +662,7 @@ function WatchTimeChart({ learningActivity }) {
       <div className="grid grid-cols-2 gap-3 mt-4">
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
           <span className="text-xs text-gray-500 font-medium mb-1">Avg / active day</span>
-          <span className="text-lg font-bold text-white">{avgMins} <span className="text-sm font-medium text-gray-500">min</span></span>
+          <span className="text-lg font-bold text-white">{formatWatchSeconds(avgSecs) || '0s'}</span>
         </div>
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
           <span className="text-xs text-gray-500 font-medium mb-1">Top Period</span>
@@ -1062,9 +1114,6 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
 
   const totalLessonsCompleted = enrolledBootcamps.reduce(
     (sum, e) => sum + (e.enrollment?.completed_lessons || 0), 0
-  );
-  const totalWatchedMins = enrolledBootcamps.reduce(
-    (sum, e) => sum + Math.round(((e.enrollment?.progress_percent || 0) / 100) * (e.bootcamp?.total_duration || 0)), 0
   );
   const streak = useMemo(() => computeStreak(enrolledBootcamps), [enrolledBootcamps]);
 

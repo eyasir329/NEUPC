@@ -920,22 +920,36 @@ const LessonPanel = memo(function LessonPanel({
     if (contentAreaRef.current) contentAreaRef.current.scrollTop = 0;
   }, [lesson.id]);
 
+  // Serialize per-lesson ticks: if a previous save is still flying, queue this
+  // delta onto it so we never read-modify-write the same row in parallel.
+  const pendingSaveRef = useRef(Promise.resolve());
   const handleProgress = useCallback(
-    async (progressData) => {
+    (progressData) => {
       const delta = Math.floor(progressData.deltaSeconds || 0);
-      const pos = Math.floor(progressData.currentTime || 0);
-      console.log('[watch] tick', { lessonId: lesson.id, bootcampId, delta, pos });
-      try {
-        await Promise.all([
-          updateWatchTimeDelta(lesson.id, delta, pos, bootcampId),
-          delta > 0 && bootcampId
-            ? recordLearningActivity({ bootcampId, deltaSeconds: delta })
-            : null,
-        ]);
-        console.log('[watch] saved ok', { delta });
-      } catch (err) {
-        console.error('[watch] save failed', err);
-      }
+      const ct = progressData.currentTime;
+      const pos = ct == null ? null : Math.floor(Number(ct) || 0);
+      const lessonId = lesson.id;
+      const bId = bootcampId;
+      // Local-date string so the chart's local-day bucketing matches what gets
+      // written. Without this, late-night sessions land on yesterday's UTC date.
+      const d = new Date();
+      const activityDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const next = pendingSaveRef.current
+        .catch(() => {})
+        .then(async () => {
+          try {
+            await Promise.all([
+              updateWatchTimeDelta(lessonId, delta, pos, bId),
+              delta > 0 && bId
+                ? recordLearningActivity({ bootcampId: bId, deltaSeconds: delta, activityDate })
+                : null,
+            ]);
+          } catch {
+            // Swallow — next tick will retry the increment.
+          }
+        });
+      pendingSaveRef.current = next;
+      return next;
     },
     [lesson.id, bootcampId]
   );
@@ -1055,6 +1069,8 @@ const LessonPanel = memo(function LessonPanel({
                   key={lesson.id}
                   content={lesson.content}
                   lessonId={lesson.id}
+                  onProgress={handleProgress}
+                  onComplete={handleVideoComplete}
                 />
               </Suspense>
             ) : lesson._pendingContent ? (
@@ -1494,10 +1510,13 @@ export default function BootcampLearningClient({
           if (allDone) completedModuleId = moduleId;
         }
         if (bootcamp?.id) {
+          const d = new Date();
+          const activityDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           recordLearningActivity({
             bootcampId: bootcamp.id,
             completedLessonId: lessonId,
             completedModuleId,
+            activityDate,
           }).catch(() => {});
         }
       });
