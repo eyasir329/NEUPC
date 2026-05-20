@@ -805,33 +805,96 @@ function MemberTasksPanel({ bootcampId }) {
   );
 }
 
-function MemberSessionRow({ s, variant }) {
+const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
+
+function MemberSessionRow({ s }) {
+  const [open, setOpen] = useState(false);
   const mentorName = s.mentor?.full_name || '—';
-  const date = new Date(s.session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const dt = new Date(s.scheduled_at || s.session_date);
+  const isUpcoming = s.status === 'scheduled' && dt >= new Date();
+  const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div className={`flex items-center gap-3 rounded-xl border p-4 ${variant === 'upcoming' ? 'border-violet-500/20 bg-violet-500/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}`}>
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variant === 'upcoming' ? 'bg-violet-500/15' : 'bg-emerald-500/10'}`}>
-        <Video className={`h-4 w-4 ${variant === 'upcoming' ? 'text-violet-400' : 'text-emerald-400'}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-white truncate">{s.topic}</p>
-        <p className="text-[11px] text-gray-500">{date} · {s.duration}min · {mentorName}</p>
-        {s.notes && <p className="mt-1 text-[11px] text-gray-500 italic">{s.notes}</p>}
-      </div>
-      {variant === 'upcoming'
-        ? <span className="shrink-0 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
-        : s.attended === true
-          ? <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
-          : s.attended === false
-            ? <span className="shrink-0 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
-            : <span className="shrink-0 rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
-      }
+    <div className={`rounded-xl border overflow-hidden transition-all ${isUpcoming ? 'border-violet-500/25 bg-violet-500/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+      {/* Row header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isUpcoming ? 'bg-violet-500/15' : 'bg-white/[0.04]'}`}>
+          <Video className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold text-white truncate">{s.topic || 'Session'}</p>
+          <p className="text-[11px] text-gray-500">{dateStr}{isUpcoming ? ` · ${timeStr}` : ''} · {s.duration ?? '—'}min · {mentorName}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {s.target_type && (
+            <span className="hidden sm:inline-block rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
+              {TARGET_LABEL[s.target_type] ?? s.target_type}
+            </span>
+          )}
+          {isUpcoming ? (
+            <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+          ) : s.attended === true ? (
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+          ) : s.attended === false ? (
+            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+          ) : (
+            <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+          )}
+          <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {/* Expanded detail */}
+      {open && (
+        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+          {s.description && (
+            <p className="text-[12px] text-gray-400 leading-relaxed">{s.description}</p>
+          )}
+          {s.notes && (
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Mentor notes</p>
+              <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{s.notes}</p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {s.meet_link && (
+              <a
+                href={s.meet_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"
+              >
+                <Video className="h-3 w-3" />
+                {isUpcoming ? 'Join Meet' : 'Open Meet'}
+                <ChevronRight className="h-3 w-3 opacity-70" />
+              </a>
+            )}
+            {s.recording_url && (
+              <a
+                href={s.recording_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 text-[11px] font-semibold text-violet-300 transition-colors"
+              >
+                <CircleDot className="h-3 w-3" />
+                Watch recording
+                <ChevronRight className="h-3 w-3 opacity-70" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function MemberSessionsPanel({ bootcampId }) {
   const [sessions, setSessions] = useState(null);
+  const [filter, setFilter] = useState('all'); // 'all' | 'upcoming' | 'past'
 
   useEffect(() => {
     if (!bootcampId) return;
@@ -839,24 +902,49 @@ function MemberSessionsPanel({ bootcampId }) {
   }, [bootcampId]);
 
   if (sessions === null) return <PanelLoader />;
-
   if (sessions.length === 0) return <PanelEmpty message="No sessions scheduled yet." />;
 
-  const upcoming = sessions.filter(s => new Date(s.session_date) >= new Date());
-  const past     = sessions.filter(s => new Date(s.session_date) <  new Date());
+  const now = new Date();
+  const upcoming = sessions.filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
+  const past     = sessions.filter(s => s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now);
+
+  const visible = filter === 'upcoming' ? upcoming : filter === 'past' ? past : sessions;
 
   return (
-    <div className="space-y-6">
-      {upcoming.length > 0 && (
-        <div>
-          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Upcoming ({upcoming.length})</p>
-          <div className="space-y-2">{upcoming.map(s => <MemberSessionRow key={s.id} s={s} variant="upcoming" />)}</div>
-        </div>
-      )}
-      {past.length > 0 && (
-        <div>
-          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Past ({past.length})</p>
-          <div className="space-y-2">{past.map(s => <MemberSessionRow key={s.id} s={s} variant="past" />)}</div>
+    <div className="space-y-4">
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Total', value: sessions.length, color: 'text-white' },
+          { label: 'Upcoming', value: upcoming.length, color: 'text-violet-400' },
+          { label: 'Attended', value: sessions.filter(s => s.attended).length, color: 'text-emerald-400' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-center">
+            <p className={`text-lg font-bold ${color}`}>{value}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1.5">
+        {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => setFilter(v)}
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${filter === v ? 'bg-violet-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white border border-white/[0.07]'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Session list */}
+      {visible.length === 0 ? (
+        <PanelEmpty message={`No ${filter} sessions.`} />
+      ) : (
+        <div className="space-y-2">
+          {visible.map(s => <MemberSessionRow key={s.id} s={s} />)}
         </div>
       )}
     </div>

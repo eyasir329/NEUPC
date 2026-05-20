@@ -3710,7 +3710,8 @@ export async function getMentorshipsByMentor(mentorId) {
     .select(
       `
       *,
-      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, academic_session))
+      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, academic_session)),
+      mentorship_sessions(*)
     `
     )
     .eq('mentor_id', mentorId)

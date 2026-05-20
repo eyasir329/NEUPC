@@ -2982,36 +2982,82 @@ export async function getMemberBootcampSessions(bootcampId) {
     .maybeSingle();
   if (!enr) return [];
 
-  // Find mentorships where this user is the mentee and mentor is assigned to this bootcamp
+  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by';
+
+  // 1. Bootcamp-wide sessions (broadcast or group) tied to this bootcamp
+  const { data: bcSessions } = await supabaseAdmin
+    .from('mentorship_sessions')
+    .select(COLS)
+    .eq('bootcamp_id', bootcampId)
+    .neq('status', 'cancelled')
+    .order('session_date', { ascending: false });
+
+  // Filter sessions to only those this member can see
+  const visibleBcSessions = (bcSessions || []).filter((s) => {
+    if (s.target_type === 'all-bootcamp') return true;
+    if (s.target_type === 'selected-group') return (s.target_student_ids || []).includes(userId);
+    if (s.target_type === 'one-on-one') return (s.target_student_ids || []).includes(userId);
+    return true; // no target_type set — show to all enrolled members
+  });
+
+  // 2. 1:1 mentorship sessions for mentorships within this bootcamp
   const { data: mentorRows } = await supabaseAdmin
     .from('bootcamp_mentors')
     .select('user_id')
     .eq('bootcamp_id', bootcampId);
 
   const mentorIds = (mentorRows || []).map((r) => r.user_id);
-  if (mentorIds.length === 0) return [];
 
-  const { data: mentorships } = await supabaseAdmin
-    .from('mentorships')
-    .select('id, mentor_id, users!mentorships_mentor_id_fkey(id, full_name, avatar_url)')
-    .eq('mentee_id', userId)
-    .in('mentor_id', mentorIds);
+  let mentorshipSessions = [];
+  let mentorMap = {};
 
-  if (!mentorships?.length) return [];
+  if (mentorIds.length > 0) {
+    const { data: mentorships } = await supabaseAdmin
+      .from('mentorships')
+      .select('id, mentor_id, users!mentorships_mentor_id_fkey(id, full_name, avatar_url)')
+      .eq('mentee_id', userId)
+      .in('mentor_id', mentorIds);
 
-  const mentorshipIds = mentorships.map((m) => m.id);
-  const mentorMap = Object.fromEntries(mentorships.map((m) => [m.id, m['users!mentorships_mentor_id_fkey']]));
+    if (mentorships?.length) {
+      const mentorshipIds = mentorships.map((m) => m.id);
+      mentorMap = Object.fromEntries(
+        mentorships.map((m) => [m.id, m['users!mentorships_mentor_id_fkey']])
+      );
 
-  const { data: sessions, error } = await supabaseAdmin
-    .from('mentorship_sessions')
-    .select('id, topic, session_date, duration, attended, notes')
-    .in('mentorship_id', mentorshipIds)
-    .order('session_date', { ascending: false });
+      const { data: msSessions } = await supabaseAdmin
+        .from('mentorship_sessions')
+        .select(COLS)
+        .in('mentorship_id', mentorshipIds)
+        .neq('status', 'cancelled')
+        .order('session_date', { ascending: false });
 
-  if (error) return [];
+      mentorshipSessions = (msSessions || []).map((s) => ({
+        ...s,
+        mentor: mentorMap[s.mentorship_id] || null,
+      }));
+    }
+  }
 
-  return (sessions || []).map((s) => ({
+  // Fetch mentor info for bootcamp sessions (created_by)
+  const creatorIds = [...new Set(visibleBcSessions.map((s) => s.created_by).filter(Boolean))];
+  let creatorMap = {};
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', creatorIds);
+    creatorMap = Object.fromEntries((creators || []).map((u) => [u.id, u]));
+  }
+
+  const bcSessionsMapped = visibleBcSessions.map((s) => ({
     ...s,
-    mentor: mentorMap[s.mentorship_id] || null,
+    mentor: creatorMap[s.created_by] || null,
   }));
+
+  // Merge, deduplicate by id, sort by session_date desc
+  const all = [...bcSessionsMapped, ...mentorshipSessions];
+  const seen = new Set();
+  const deduped = all.filter((s) => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+  deduped.sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+  return deduped;
 }

@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
   Lock, HourglassIcon, Archive,
 } from 'lucide-react';
-import { enrollUser } from '@/app/_lib/bootcamp-actions';
+import { enrollUser, getMemberBootcampSessions } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
@@ -21,6 +21,7 @@ function cn(...c) { return c.filter(Boolean).join(' '); }
 const TABS = [
   { id: 'overview', label: 'Overview', icon: House },
   { id: 'mylearning', label: 'My Learning', icon: GraduationCap },
+  { id: 'sessions', label: 'Sessions', icon: Video },
   { id: 'catalog', label: 'Catalog', icon: BookOpen },
 ];
 
@@ -1188,6 +1189,199 @@ function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, 
   );
 }
 
+// ─── Sessions Tab ─────────────────────────────────────────────────────────────
+
+const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
+
+function SessionCard({ session: s }) {
+  const [open, setOpen] = useState(false);
+  const dt = new Date(s.scheduled_at || s.session_date);
+  const isUpcoming = s.status === 'scheduled' && dt >= new Date();
+  const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const mentorName = s.mentor?.full_name || '—';
+
+  return (
+    <div className={`rounded-xl border overflow-hidden transition-all ${isUpcoming ? 'border-violet-500/25 bg-violet-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isUpcoming ? 'bg-violet-500/15' : 'bg-white/[0.04]'}`}>
+          <Video className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold text-white truncate">{s.topic || 'Session'}</p>
+          <p className="text-[11px] text-gray-500">
+            {s.bootcampTitle && <span className="text-violet-400">{s.bootcampTitle} · </span>}
+            {dateStr}{isUpcoming ? ` · ${timeStr}` : ''} · {s.duration ?? '—'}min · {mentorName}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {s.target_type && (
+            <span className="hidden sm:inline-block rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
+              {TARGET_LABEL[s.target_type] ?? s.target_type}
+            </span>
+          )}
+          {isUpcoming ? (
+            <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+          ) : s.attended === true ? (
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+          ) : s.attended === false ? (
+            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+          ) : (
+            <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+          )}
+          <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+          {s.description && <p className="text-[12px] text-gray-400 leading-relaxed">{s.description}</p>}
+          {s.notes && (
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Mentor notes</p>
+              <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{s.notes}</p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {s.meet_link && (
+              <a href={s.meet_link} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors">
+                <Video className="h-3 w-3" />
+                {isUpcoming ? 'Join Meet' : 'Open Meet'}
+                <ChevronRight className="h-3 w-3 opacity-70" />
+              </a>
+            )}
+            {s.recording_url && (
+              <a href={s.recording_url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 text-[11px] font-semibold text-violet-300 transition-colors">
+                <PlayCircle className="h-3 w-3" />
+                Watch recording
+                <ChevronRight className="h-3 w-3 opacity-70" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SessionsTab({ enrolledBootcamps }) {
+  const [allSessions, setAllSessions] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!enrolledBootcamps.length) { setAllSessions([]); return; }
+    Promise.all(
+      enrolledBootcamps.map(({ bootcamp }) =>
+        getMemberBootcampSessions(bootcamp.id)
+          .then(sessions => sessions.map(s => ({ ...s, bootcampTitle: bootcamp.title.split(':')[0] })))
+          .catch(() => [])
+      )
+    ).then(results => {
+      const merged = results.flat();
+      const seen = new Set();
+      const deduped = merged.filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+      deduped.sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+      setAllSessions(deduped);
+    });
+  }, [enrolledBootcamps]);
+
+  const now = new Date();
+  const upcoming = (allSessions || []).filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
+  const past = (allSessions || []).filter(s => s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now);
+
+  const visible = (allSessions || []).filter(s => {
+    const inFilter = filter === 'upcoming'
+      ? s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now
+      : filter === 'past'
+      ? s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now
+      : true;
+    const inSearch = !search.trim() ||
+      s.topic?.toLowerCase().includes(search.toLowerCase()) ||
+      s.bootcampTitle?.toLowerCase().includes(search.toLowerCase()) ||
+      s.mentor?.full_name?.toLowerCase().includes(search.toLowerCase());
+    return inFilter && inSearch;
+  });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Sessions</h1>
+          <p className="text-gray-500 mt-1 text-sm">All mentorship sessions across your bootcamps</p>
+        </div>
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search sessions…"
+            className="h-9 w-full bg-white/[0.03] border border-white/10 rounded-lg pl-9 pr-9 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/40 transition-colors"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {allSessions === null ? (
+        <div className="flex items-center justify-center py-20 text-gray-500">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading sessions…</span>
+        </div>
+      ) : allSessions.length === 0 ? (
+        <EmptyState icon={Video} title="No sessions yet" description="Your mentor hasn't scheduled any sessions for your bootcamps." />
+      ) : (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Total', value: allSessions.length, color: 'text-white' },
+              { label: 'Upcoming', value: upcoming.length, color: 'text-violet-400' },
+              { label: 'Attended', value: allSessions.filter(s => s.attended).length, color: 'text-emerald-400' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3 text-center">
+                <p className={`text-xl font-bold ${color}`}>{value}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-2">
+            {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setFilter(v)}
+                className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${filter === v ? 'bg-violet-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white border border-white/[0.07]'}`}
+              >
+                {label}
+                {v === 'upcoming' && upcoming.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-violet-500/20 px-1.5 text-[10px] text-violet-300">{upcoming.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* List */}
+          {visible.length === 0 ? (
+            <EmptyState icon={Search} title="No matches" description="Try adjusting the filter or search." />
+          ) : (
+            <div className="space-y-2">
+              {visible.map(s => <SessionCard key={s.id} session={s} />)}
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {}, archivedEnrollmentMap = {}, learningActivity = [] }) {
@@ -1298,6 +1492,8 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
             onTab={handleTabChange}
           />
         );
+      case 'sessions':
+        return <SessionsTab enrolledBootcamps={enrolledBootcamps} />;
       case 'catalog':
         return (
           <CatalogTab
