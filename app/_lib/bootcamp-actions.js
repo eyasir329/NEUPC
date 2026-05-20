@@ -403,7 +403,21 @@ export async function getBootcampCurriculumLight(idOrSlug) {
         .from('user_roles').select('roles(name)').eq('user_id', u.id);
       isAdmin = roles?.some((r) => r.roles?.name === 'admin');
     }
-    if (!isAdmin) throw new Error('Not found');
+    // Enrolled members may continue accessing their archived bootcamp
+    if (!isAdmin) {
+      if (data.status === 'archived' && u) {
+        const { data: enrollment } = await supabaseAdmin
+          .from('enrollments')
+          .select('id')
+          .eq('user_id', u.id)
+          .eq('bootcamp_id', data.id)
+          .in('status', ['active', 'completed'])
+          .maybeSingle();
+        if (!enrollment) throw new Error('Not found');
+      } else {
+        throw new Error('Not found');
+      }
+    }
   }
 
   if (data?.courses) {

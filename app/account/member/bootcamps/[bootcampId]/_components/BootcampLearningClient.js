@@ -12,7 +12,6 @@ import {
   lazy,
 } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -55,6 +54,29 @@ import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 const LessonContentRenderer = lazy(
   () => import('../[lessonId]/_components/LessonContentRenderer')
 );
+
+// Native History API cache to bypass Next.js monkey-patched router and prevent reloads
+let nativePushState = null;
+let nativeReplaceState = null;
+
+function getNativeHistory() {
+  if (typeof window === 'undefined') return { pushState: null, replaceState: null };
+  if (nativePushState && nativeReplaceState) {
+    return { pushState: nativePushState, replaceState: nativeReplaceState };
+  }
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    nativePushState = iframe.contentWindow.history.pushState;
+    nativeReplaceState = iframe.contentWindow.history.replaceState;
+    document.body.removeChild(iframe);
+  } catch (e) {
+    nativePushState = window.history.pushState;
+    nativeReplaceState = window.history.replaceState;
+  }
+  return { pushState: nativePushState, replaceState: nativeReplaceState };
+}
 
 function ChunkFallback({ label = 'Loading…' }) {
   return (
@@ -1234,37 +1256,33 @@ function LessonSkeleton({ title, hasVideo }) {
 
 // ─── Main SPA Shell ───────────────────────────────────────────────────────────
 
+// Extract lessonId from the current URL path (client-side only)
+function getLessonIdFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const m = window.location.pathname.match(/\/bootcamps\/[^/]+\/([^/]+)$/);
+  return m ? m[1] : null;
+}
+
 export default function BootcampLearningClient({
   bootcamp,
   lessonProgress: initialProgress = {},
-  initialLessonId = null,
-  initialLesson = null,
 }) {
-  const router = useRouter();
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
-  const [activeLessonId, setActiveLessonId] = useState(initialLessonId);
-  const [loadedLesson, setLoadedLesson] = useState(initialLesson);
+  // activeLessonId: what the sidebar highlights (set immediately on click)
+  const [activeLessonId, setActiveLessonId] = useState(null);
+  // loadedLesson: what is actually rendered in the main panel
+  const [loadedLesson, setLoadedLesson] = useState(null);
   const [loading, startLoading] = useTransition();
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
 
-  useEffect(() => {
-    setActiveLessonId(initialLessonId);
-    if (initialLesson) {
-      setLoadedLesson(initialLesson);
-    }
-  }, [initialLessonId, initialLesson]);
-
-  const lessonCacheRef = useRef(
-    initialLesson ? { [initialLesson.id]: initialLesson } : {}
-  );
+  const lessonCacheRef = useRef({});
   const prefetchInflightRef = useRef(new Set());
   const navTokenRef = useRef(0);
-  const activeLessonIdRef = useRef(activeLessonId);
-  useEffect(() => {
-    activeLessonIdRef.current = activeLessonId;
-  }, [activeLessonId]);
+  const activeLessonIdRef = useRef(null);
+  // Sync ref on every render — no useEffect lag
+  activeLessonIdRef.current = activeLessonId;
 
   const allLessons = useMemo(() => {
     const out = [];
@@ -1322,122 +1340,111 @@ export default function BootcampLearningClient({
     [allLessons, loadedLesson?.id]
   );
 
+  // Stable refs so all callbacks below can have [] deps
   const allLessonsRef = useRef(allLessons);
-  useEffect(() => {
-    allLessonsRef.current = allLessons;
-  }, [allLessons]);
+  allLessonsRef.current = allLessons; // sync inline, no useEffect needed
 
-  // Merge stub metadata (from curriculum) with content-only delta from server.
-  const mergeStubAndContent = useCallback((stub, content) => {
-    if (!content) return stub;
-    if (!stub) return content;
-    return { ...stub, ...content };
-  }, []);
+  const bootcampRef = useRef(bootcamp);
+  bootcampRef.current = bootcamp;
 
-  const loadFullLesson = useCallback(
-    async (lessonId) => {
-      const cached = lessonCacheRef.current[lessonId];
-      if (cached) return cached;
-      const stub = allLessonsRef.current.find((l) => l.id === lessonId);
-      // Stub missing (deep link before curriculum loads, unlikely) → full fetch.
-      if (!stub) {
-        const full = await getLesson(lessonId);
-        lessonCacheRef.current[lessonId] = full;
-        return full;
-      }
-      const content = await getLessonContent(lessonId);
-      const merged = mergeStubAndContent(stub, content);
-      lessonCacheRef.current[lessonId] = merged;
-      return merged;
-    },
-    [mergeStubAndContent]
-  );
+  // These never recreate — they read everything through stable refs
+  const loadFullLesson = useCallback(async (lessonId) => {
+    const cached = lessonCacheRef.current[lessonId];
+    if (cached && cached.content !== undefined) return cached;
+    const stub = allLessonsRef.current.find((l) => l.id === lessonId);
+    if (!stub) {
+      const full = await getLesson(lessonId);
+      lessonCacheRef.current[lessonId] = full;
+      return full;
+    }
+    const content = await getLessonContent(lessonId);
+    const merged = content ? { ...stub, ...content } : stub;
+    lessonCacheRef.current[lessonId] = merged;
+    return merged;
+  }, []); // stable — only reads refs
 
-  const prefetchLesson = useCallback(
-    (lesson) => {
-      if (!lesson?.id) return;
-      if (lessonCacheRef.current[lesson.id]) return;
-      if (prefetchInflightRef.current.has(lesson.id)) return;
-      prefetchInflightRef.current.add(lesson.id);
-      const stub =
-        allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
-      getLessonContent(lesson.id)
-        .then((content) => {
-          lessonCacheRef.current[lesson.id] = mergeStubAndContent(stub, content);
-        })
-        .catch(() => {})
-        .finally(() => {
-          prefetchInflightRef.current.delete(lesson.id);
-        });
-    },
-    [mergeStubAndContent]
-  );
+  const prefetchLesson = useCallback((lesson) => {
+    if (!lesson?.id) return;
+    if (lessonCacheRef.current[lesson.id]?.content !== undefined) return;
+    if (prefetchInflightRef.current.has(lesson.id)) return;
+    prefetchInflightRef.current.add(lesson.id);
+    const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+    getLessonContent(lesson.id)
+      .then((content) => {
+        lessonCacheRef.current[lesson.id] = content ? { ...stub, ...content } : stub;
+      })
+      .catch(() => {})
+      .finally(() => { prefetchInflightRef.current.delete(lesson.id); });
+  }, []); // stable — only reads refs
 
   // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
   // 'replace' (lesson-to-lesson switch), 'none' (browser popstate — URL already set).
+  // Fully stable ([] deps) — reads everything through refs.
   const navigateToLesson = useCallback(
     (lesson, mode = 'push') => {
       const token = ++navTokenRef.current;
+      const bootcampId = bootcampRef.current?.id;
+      const nativeHistory = getNativeHistory();
+      const pushState = nativeHistory.pushState ? nativeHistory.pushState.bind(window.history) : window.history.pushState.bind(window.history);
+      const replaceState = nativeHistory.replaceState ? nativeHistory.replaceState.bind(window.history) : window.history.replaceState.bind(window.history);
 
       if (!lesson) {
         setActiveLessonId(null);
         setLoadedLesson(null);
         setLoadError(null);
         if (mode !== 'none') {
-          const url = `/account/member/bootcamps/${bootcamp.id}`;
-          if (mode === 'replace') router.replace(url, { scroll: false });
-          else router.push(url, { scroll: false });
+          const url = `/account/member/bootcamps/${bootcampId}`;
+          if (mode === 'replace') replaceState(null, '', url);
+          else pushState(null, '', url);
         }
         return;
       }
 
-      const url = `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`;
-      if (mode === 'push') router.push(url, { scroll: false });
-      else if (mode === 'replace') router.replace(url, { scroll: false });
+      const url = `/account/member/bootcamps/${bootcampId}/${lesson.id}`;
+      // Use History API directly to avoid Next.js server re-render on dynamic segment change
+      if (mode === 'push') pushState(null, '', url);
+      else if (mode === 'replace') replaceState(null, '', url);
 
       setActiveLessonId(lesson.id);
       setLoadError(null);
 
-      // Fast path: cached (full lesson with content)
+      // Fast path: already have full content in cache
       const cached = lessonCacheRef.current[lesson.id];
       if (cached && cached.content !== undefined) {
         setLoadedLesson(cached);
         return;
       }
-      // Stub already has content (e.g. SSR-passed initial lesson)
+      // Lesson object already carries content (e.g. SSR initial lesson passed directly)
       if (lesson.content !== undefined) {
         lessonCacheRef.current[lesson.id] = lesson;
         setLoadedLesson(lesson);
         return;
       }
 
-      // Instant render path: show the stub immediately so the title bar,
-      // video, and metadata render with zero wait. The body content (markdown,
-      // attachments) streams in when the small content fetch resolves.
+      // Instant render: show stub immediately (title, video metadata available from
+      // curriculum) so the header and video mount with zero wait. Content body
+      // (markdown, attachments) streams in when the small content fetch resolves.
       const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
-      setLoadedLesson({ ...stub, content: undefined, _pendingContent: true });
+      const optimisticLesson = { ...stub, content: undefined, _pendingContent: true };
+      setLoadedLesson(optimisticLesson);
 
-      // Async load — ignore result if user navigated again
       startLoading(async () => {
         try {
           const full = await loadFullLesson(lesson.id);
           if (navTokenRef.current !== token) return;
-          if (!full) {
-            setLoadError('Lesson not found.');
-            return;
-          }
+          if (!full) { setLoadError('Lesson not found.'); return; }
           setLoadedLesson(full);
-        } catch (e) {
+        } catch {
           if (navTokenRef.current !== token) return;
           setLoadError('Failed to load lesson. Please try again.');
         }
       });
     },
-    [bootcamp?.id, loadFullLesson]
+    [] // stable — reads everything through refs
   );
 
   // Wrapper used by UI: smart-detect push vs replace, skip no-op.
-  // Stable identity (reads activeLessonId via ref) so memoized children don't re-render.
+  // Stable identity (reads everything via refs) so memoized children never re-render due to this.
   const selectLesson = useCallback(
     (lesson) => {
       const current = activeLessonIdRef.current;
@@ -1446,9 +1453,9 @@ export default function BootcampLearningClient({
         return navigateToLesson(null, 'push');
       }
       if (lesson.id === current) return;
-      // Check if lesson (or its parent module) is locked
       if (lesson.is_locked) return;
-      const parentCourse = bootcamp?.courses?.find((c) =>
+      const bc = bootcampRef.current;
+      const parentCourse = bc?.courses?.find((c) =>
         (c.modules || []).some((m) => (m.lessons || []).some((l) => l.id === lesson.id))
       );
       if (parentCourse?.is_locked) return;
@@ -1459,31 +1466,26 @@ export default function BootcampLearningClient({
       const mode = current ? 'replace' : 'push';
       navigateToLesson(lesson, mode);
     },
-    [navigateToLesson, bootcamp]
+    [navigateToLesson]
   );
 
-  // Initial hydration: if URL has a lessonId but no preloaded lesson, fetch it
+  // On mount: if URL already contains a lessonId (direct link / page refresh),
+  // navigate to it immediately client-side. The layout no longer passes SSR lesson data
+  // since it's shared across all lesson URLs — the client fetches it.
   useEffect(() => {
-    if (initialLessonId && !loadedLesson) {
-      startLoading(async () => {
-        try {
-          const full = await loadFullLesson(initialLessonId);
-          setLoadedLesson(full);
-        } catch {
-          setLoadError('Failed to load lesson. Please try again.');
-        }
-      });
+    const lessonId = getLessonIdFromUrl();
+    if (lessonId) {
+      navigateToLesson({ id: lessonId }, 'none');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefetch neighbor lessons when active lesson changes
+  // Prefetch neighbors whenever the loaded lesson changes (reads allLessons via ref — stable dep)
   useEffect(() => {
     if (!loadedLesson?.id) return;
-    const idx = allLessons.findIndex((l) => l.id === loadedLesson.id);
+    const lessons = allLessonsRef.current;
+    const idx = lessons.findIndex((l) => l.id === loadedLesson.id);
     if (idx < 0) return;
-    const next = allLessons[idx + 1];
-    const prev = allLessons[idx - 1];
     const schedule = (cb) => {
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         window.requestIdleCallback(cb, { timeout: 1500 });
@@ -1491,11 +1493,9 @@ export default function BootcampLearningClient({
         setTimeout(cb, 300);
       }
     };
-    const next2 = allLessons[idx + 2];
-    if (next) schedule(() => prefetchLesson(next));
-    if (prev) schedule(() => prefetchLesson(prev));
-    if (next2) schedule(() => prefetchLesson(next2));
-  }, [loadedLesson?.id, allLessons, prefetchLesson]);
+    const neighbors = [lessons[idx - 1], lessons[idx + 1], lessons[idx + 2]].filter(Boolean);
+    neighbors.forEach((l) => schedule(() => prefetchLesson(l)));
+  }, [loadedLesson?.id, prefetchLesson]);
 
   // Browser back/forward — DO NOT push, just sync state
   useEffect(() => {

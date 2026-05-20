@@ -433,10 +433,10 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
                                 </span>
                               </div>
                             ) : (
-                              <a href={l.href} className="flex items-start gap-1.5 text-violet-300 hover:text-violet-100 transition-colors">
+                              <Link href={l.href} className="flex items-start gap-1.5 text-violet-300 hover:text-violet-100 transition-colors">
                                 <span className="shrink-0 w-1 h-1 rounded-full bg-violet-400 mt-1.5" />
                                 <span className="line-clamp-2 leading-snug">{l.title}</span>
-                              </a>
+                              </Link>
                             )}
                           </li>
                         ))}
