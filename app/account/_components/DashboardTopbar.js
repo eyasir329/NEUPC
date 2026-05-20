@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bell, ChevronRight, Search } from 'lucide-react';
-import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils';
 import { buildBreadcrumbs } from './breadcrumbConfig';
 import { getRoleTheme } from './roleTheme';
 
-export default function DashboardTopbar({ activeRole, notificationCount = 0, session }) {
+export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
   const pathname = usePathname();
   const crumbs = buildBreadcrumbs(pathname);
   const theme = getRoleTheme(activeRole);
@@ -22,9 +22,6 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0, ses
   }, []);
 
   const notifHref = activeRole ? `/account/${activeRole}/notifications` : '/account';
-  const avatarSrc = driveImageUrl(session?.avatar_url || session?.image || '');
-  const hasAvatar = avatarSrc && !/^[A-Z?]{1,3}$/.test(avatarSrc);
-  const initials = getInitials(session?.name || 'U');
 
   return (
     <header
@@ -33,7 +30,7 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0, ses
         scrolled
           ? 'border-[#1E293B] bg-[#0B1121]/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]'
           : 'border-[#1E293B] bg-[#0B1121]/80',
-        'pl-14 pr-3 sm:pl-16 sm:pr-4 lg:pl-6 lg:pr-6 xl:pl-8 xl:pr-8 2xl:pl-10 2xl:pr-10',
+        'pl-14 pr-3 sm:pl-16 sm:pr-4 md:pl-5 md:pr-5 lg:pl-6 lg:pr-6 xl:pl-8 xl:pr-8 2xl:pl-10 2xl:pr-10',
         'sm:gap-3'
       )}
     >
@@ -95,28 +92,6 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0, ses
             {notificationCount > 9 ? '9+' : notificationCount}
           </span>
         )}
-      </Link>
-
-      {/* User avatar pill */}
-      <Link
-        href={activeRole ? `/account/${activeRole}/profile` : '/account'}
-        className="flex items-center gap-3 bg-[#131B2C] border border-[#1E293B] pl-3 pr-1.5 py-1.5 rounded-full ml-1 hover:border-[#334155] transition-colors"
-      >
-        <div className="text-right hidden sm:block">
-          <p className={cn('text-[9px] font-bold uppercase tracking-widest leading-none mb-1', theme.accentText)}>
-            {activeRole ?? 'User'}
-          </p>
-          <p className="text-xs font-bold text-slate-100 leading-none truncate max-w-25">
-            {session?.name || 'User'}
-          </p>
-        </div>
-        <div className={cn('w-7 h-7 rounded-full border border-white/10 overflow-hidden shrink-0 flex items-center justify-center text-[11px] font-bold text-white bg-linear-to-br', theme.gradient)}>
-          {hasAvatar ? (
-            <img src={avatarSrc} alt={session?.name || 'User'} className="w-full h-full object-cover" />
-          ) : (
-            initials
-          )}
-        </div>
       </Link>
     </header>
   );

@@ -1,13 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireRole } from '@/app/_lib/auth-guard';
-import {
-  getBootcampWithCurriculum,
-  getMentorBootcampMembers,
-  getMentorBootcampSessions,
-  getMentorBootcampMentorships,
-  getBootcampTasks,
-  getBootcampHelpTickets,
-} from '@/app/_lib/bootcamp-actions';
+import { getBootcampWithCurriculum } from '@/app/_lib/bootcamp-actions';
 import MentorBootcampDetailClient from './_components/MentorBootcampDetailClient';
 
 export async function generateMetadata({ params }) {
@@ -46,24 +39,5 @@ export default async function MentorBootcampDetailPage({ params }) {
     );
   }
 
-  // Fetch all bootcamp-scoped data in parallel; fail gracefully per section
-  const [membersResult, sessions, mentorships, tasks, helpTickets] = await Promise.all([
-    getMentorBootcampMembers(bootcampId).catch(() => ({ members: [], totalLessons: 0 })),
-    getMentorBootcampSessions(bootcampId).catch(() => []),
-    getMentorBootcampMentorships(bootcampId).catch(() => []),
-    getBootcampTasks(bootcampId).catch(() => []),
-    getBootcampHelpTickets(bootcampId).catch(() => []),
-  ]);
-
-  return (
-    <MentorBootcampDetailClient
-      bootcamp={bootcamp}
-      members={membersResult.members}
-      totalLessons={membersResult.totalLessons}
-      sessions={sessions}
-      mentorships={mentorships}
-      tasks={tasks}
-      helpTickets={helpTickets}
-    />
-  );
+  return <MentorBootcampDetailClient bootcamp={bootcamp} />;
 }

@@ -1,10 +1,3 @@
-/**
- * @file Assigned Members error boundary — catches runtime errors on the
- *   assigned members page and presents recovery options.
- *
- * @module MentorAssignedMembersError
- */
-
 'use client';
 
 import AccountError from '../../_components/AccountError';

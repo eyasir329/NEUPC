@@ -1,10 +1,3 @@
-/**
- * @file Assigned Members not-found page — shown when a resource within the
- *   assigned members section cannot be located.
- *
- * @module MentorAssignedMembersNotFound
- */
-
 'use client';
 
 import AccountNotFoundState from '../../_components/AccountNotFoundState';

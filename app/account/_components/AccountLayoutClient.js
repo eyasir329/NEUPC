@@ -75,12 +75,21 @@ function useHeartbeat() {
 
 export default function AccountLayoutClient({ children, session, userRoles }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Lazy init from localStorage to prevent post-mount layout shift
-  const [collapsed, setCollapsed] = useState(() => {
+  // User preference for collapse on desktop (lg+). On tablet we force-collapse.
+  const [userCollapsed, setUserCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebar-collapsed') === 'true';
   });
   const [collapsePrefLoaded, setCollapsePrefLoaded] = useState(false);
+  // Tablet detection: md (768) ≤ width < lg (1024). On tablet sidebar auto-collapses.
+  const [isTablet, setIsTablet] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)').matches;
+  });
+  const collapsed = isTablet ? true : userCollapsed;
+  const setCollapsed = (next) => {
+    setUserCollapsed((prev) => (typeof next === 'function' ? next(prev) : next));
+  };
   const pathname = usePathname();
 
   // Hide the public site header and footer on sub-dashboard routes (not /account itself)
@@ -94,11 +103,20 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   // Mark prefs as loaded post-mount (init was eager via lazy useState)
   useEffect(() => { setCollapsePrefLoaded(true); }, []);
 
-  // Persist collapse preference
+  // Persist collapse preference (only the user-driven one, not the tablet auto-collapse)
   useEffect(() => {
     if (!collapsePrefLoaded) return;
-    localStorage.setItem('sidebar-collapsed', String(collapsed));
-  }, [collapsed, collapsePrefLoaded]);
+    localStorage.setItem('sidebar-collapsed', String(userCollapsed));
+  }, [userCollapsed, collapsePrefLoaded]);
+
+  // Track tablet breakpoint to auto-collapse rail
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)');
+    const onChange = (e) => setIsTablet(e.matches);
+    setIsTablet(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   useHeartbeat();
 
@@ -174,7 +192,6 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
           <DashboardTopbar
             activeRole={currentRole}
             notificationCount={SIDEBAR_STATS.notifications}
-            session={session}
           />
         )}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">{children}</div>

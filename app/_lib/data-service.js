@@ -5039,3 +5039,32 @@ export async function getPublicJourneyItems() {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+// Get all members enrolled in bootcamps assigned to this mentor.
+export async function getMentorAssignedMembers(mentorId) {
+  const { data: bootcampRows, error: bErr } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .select('bootcamp_id, bootcamps(id, title, slug)')
+    .eq('user_id', mentorId);
+  if (bErr) throw new Error(bErr.message);
+
+  const bootcampIds = (bootcampRows || []).map((r) => r.bootcamp_id);
+  if (bootcampIds.length === 0) return [];
+
+  const bootcampMap = {};
+  (bootcampRows || []).forEach((r) => {
+    if (r.bootcamps) bootcampMap[r.bootcamp_id] = r.bootcamps;
+  });
+
+  const { data: enrollments, error: eErr } = await supabaseAdmin
+    .from('enrollments')
+    .select('id, user_id, bootcamp_id, status, enrolled_at, users(id, full_name, email, avatar_url, member_profiles(academic_session, student_id, department, semester))')
+    .in('bootcamp_id', bootcampIds)
+    .order('enrolled_at', { ascending: false });
+  if (eErr) throw new Error(eErr.message);
+
+  return (enrollments || []).map((e) => ({
+    ...e,
+    bootcamp: bootcampMap[e.bootcamp_id] || null,
+  }));
+}
