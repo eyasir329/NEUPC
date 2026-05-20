@@ -185,8 +185,8 @@ export function getSidebarNavigation(activeRole, stats, session) {
           },
           {
             id: 'participation',
-            label: 'History',
-            icon: CheckSquare,
+            label: 'My Participation',
+            icon: Trophy,
             href: '/account/member/participation',
           },
         ],
@@ -490,17 +490,11 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: MessageSquare,
             href: '/account/mentor/discussions',
           },
-        ],
-      },
-      {
-        key: 'bootcamps',
-        label: 'Bootcamps',
-        items: [
           {
-            id: 'bootcamps',
-            label: 'My Bootcamps',
-            icon: GraduationCap,
-            href: '/account/mentor/bootcamps',
+            id: 'events',
+            label: 'Events',
+            icon: Calendar,
+            href: '/account/mentor/events',
           },
         ],
       },
@@ -508,6 +502,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
         key: 'mentorship',
         label: 'Mentorship',
         items: [
+          {
+            id: 'bootcamps',
+            label: 'My Bootcamps',
+            icon: GraduationCap,
+            href: '/account/mentor/bootcamps',
+          },
           {
             id: 'assigned-members',
             label: 'Assigned Members',
@@ -545,12 +545,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Resources',
             icon: BookOpen,
             href: '/account/mentor/resources',
-          },
-          {
-            id: 'events',
-            label: 'Events',
-            icon: Calendar,
-            href: '/account/mentor/events',
           },
         ],
       },
