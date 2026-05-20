@@ -47,6 +47,7 @@ import {
   markLessonComplete,
   markLessonIncomplete,
   saveLessonNotes,
+  touchLessonAccess,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
@@ -950,6 +951,7 @@ const LessonPanel = memo(function LessonPanel({
   isCompleted,
   currentIndex,
   bootcampId,
+  onProgressUpdate,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -978,6 +980,23 @@ const LessonPanel = memo(function LessonPanel({
       const pos = ct == null ? null : Math.floor(Number(ct) || 0);
       const lessonId = lesson.id;
       const bId = bootcampId;
+
+      // Update client state immediately so navigations and stats sync in real time
+      if (onProgressUpdate) {
+        onProgressUpdate((prev) => {
+          const currentProgress = prev[lessonId] || {};
+          const currentWatchTime = Number(currentProgress.watch_time) || 0;
+          return {
+            ...prev,
+            [lessonId]: {
+              ...currentProgress,
+              last_position: pos !== null ? pos : currentProgress.last_position,
+              watch_time: currentWatchTime + delta,
+            },
+          };
+        });
+      }
+
       // Local-date string so the chart's local-day bucketing matches what gets
       // written. Without this, late-night sessions land on yesterday's UTC date.
       const d = new Date();
@@ -992,14 +1011,14 @@ const LessonPanel = memo(function LessonPanel({
                 ? recordLearningActivity({ bootcampId: bId, lessonId, deltaSeconds: delta, activityDate })
                 : null,
             ]);
-          } catch {
-            // Swallow — next tick will retry the increment.
+          } catch (err) {
+            console.error('[Progress Tracking Error]: Failed to update user watch time:', err);
           }
         });
       pendingSaveRef.current = next;
       return next;
     },
-    [lesson.id, bootcampId]
+    [lesson.id, bootcampId, onProgressUpdate]
   );
 
   const handleVideoComplete = useCallback(async () => {
@@ -1307,12 +1326,22 @@ export default function BootcampLearningClient({
     totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
   const isComplete = completedCount === totalLessons && totalLessons > 0;
 
-  const resumeLesson = useMemo(
-    () =>
-      allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) ||
-      allLessons[0],
-    [allLessons, lessonProgress]
-  );
+  const resumeLesson = useMemo(() => {
+    // Find the most recently accessed lesson (by updated_at)
+    let lastAccessedLesson = null;
+    let lastAccessedAt = null;
+    for (const l of allLessons) {
+      const p = lessonProgress?.[l.id];
+      if (!p?.updated_at) continue;
+      if (!lastAccessedAt || p.updated_at > lastAccessedAt) {
+        lastAccessedAt = p.updated_at;
+        lastAccessedLesson = l;
+      }
+    }
+    if (lastAccessedLesson) return lastAccessedLesson;
+    // No history: return first uncompleted lesson or first lesson
+    return allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) || allLessons[0];
+  }, [allLessons, lessonProgress]);
   const resumeIndex = useMemo(
     () =>
       resumeLesson ? allLessons.findIndex((l) => l.id === resumeLesson.id) : -1,
@@ -1407,6 +1436,14 @@ export default function BootcampLearningClient({
 
       setActiveLessonId(lesson.id);
       setLoadError(null);
+
+      // Fire-and-forget so resume tracking works for non-video lessons too
+      touchLessonAccess(lesson.id, bootcampId).catch(() => {});
+      // Optimistically update updated_at so resumeLesson re-computes in this session
+      setLessonProgress((prev) => ({
+        ...prev,
+        [lesson.id]: { ...prev[lesson.id], updated_at: new Date().toISOString() },
+      }));
 
       // Fast path: already have full content in cache
       const cached = lessonCacheRef.current[lesson.id];
@@ -1772,6 +1809,7 @@ export default function BootcampLearningClient({
                 isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
                 currentIndex={currentIndex}
                 bootcampId={bootcamp?.id}
+                onProgressUpdate={setLessonProgress}
               />
             </div>
           ) : (

@@ -1492,6 +1492,54 @@ export async function updateLessonProgress(lessonId, progressData) {
 }
 
 /**
+ * Touch a lesson's progress row so updated_at advances — enables resume tracking.
+ * No-op if the row already exists and was updated within the last 30 seconds.
+ */
+export async function touchLessonAccess(lessonId, bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data: existing } = await supabaseAdmin
+    .from('user_progress')
+    .select('id, updated_at')
+    .eq('user_id', userId)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  if (existing) {
+    const age = Date.now() - new Date(existing.updated_at).getTime();
+    if (age < 30_000) return null; // already fresh
+    await supabaseAdmin
+      .from('user_progress')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+    return null;
+  }
+
+  // First time opening this lesson — create a stub row
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    bootcampId = lesson?.modules?.courses?.bootcamp_id;
+  }
+  if (!bootcampId) return null;
+
+  await supabaseAdmin.from('user_progress').upsert({
+    user_id: userId,
+    lesson_id: lessonId,
+    bootcamp_id: bootcampId,
+    watch_time: 0,
+    last_position: 0,
+    is_completed: false,
+  }, { onConflict: 'user_id,lesson_id', ignoreDuplicates: true });
+
+  return null;
+}
+
+/**
  * Increment cumulative watch_time for a lesson and update last_position.
  * Use this for periodic ticks from the player. `deltaSeconds` is how many
  * seconds of *new* playback have elapsed since the last tick.

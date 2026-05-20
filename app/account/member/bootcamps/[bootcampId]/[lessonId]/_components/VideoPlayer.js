@@ -39,7 +39,7 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-const TICK_MS = 30000;
+const TICK_MS = 10000;
 
 // Module-level singleton — ensures a single Promise regardless of StrictMode double-invoke
 // or multiple YouTubePlayer instances on the same page.
@@ -305,7 +305,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
     }).catch(() => {
       if (destroyed) return;
       clearTimeout(loadingTimer);
-      setState((s) => ({ ...s, loading: false, error: 'YouTube player blocked or failed to load API.' }));
+      setState((s) => ({
+        ...s,
+        loading: false,
+        error: 'YouTube player blocked or failed to load API. If you are using an ad blocker (e.g. uBlock Origin or Brave Shields), please disable it for this site to load the player.',
+      }));
     });
 
     return () => {
@@ -343,7 +347,8 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
 
   // watch-time ticks
   useEffect(() => {
-    const save = () => {
+    // force=true bypasses the 1s coalesce guard used for periodic ticks.
+    const save = (force = false) => {
       if (!onProgress) return;
       const p = playerRef.current;
       if (!p) return;
@@ -354,17 +359,17 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       let delta = 0;
       if (prev.time != null && prev.at != null) {
         const wallDelta = (now - prev.at) / 1000;
-        if (wallDelta < 1) return;
+        // Periodic ticks: skip if fired too soon (interval + visibility race).
+        if (!force && wallDelta < 1) return;
         delta = Math.max(0, Math.min(curr - prev.time, wallDelta, TICK_MS / 1000 + 2));
       }
       lastTickRef.current = { time: curr, at: now };
-      if (delta > 0) {
-        onProgress({
-          deltaSeconds: delta,
-          currentTime: curr > 0 ? curr : null,
-          duration: p.getDuration?.() ?? 0
-        });
-      }
+      // Always report so last_position updates even when delta is 0 (e.g. instant pause).
+      onProgress({
+        deltaSeconds: delta,
+        currentTime: curr > 0 ? curr : null,
+        duration: p.getDuration?.() ?? 0,
+      });
     };
 
     saveRef.current = save;
@@ -375,22 +380,23 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       lastTickRef.current = { time: curr, at: Date.now() };
       progressTickRef.current = setInterval(save, TICK_MS);
     } else {
-      // Pause or completed: save remaining time immediately
+      // Pause or ended: flush remaining watch time immediately.
       if (lastTickRef.current.time !== null) {
-        save();
+        save(true);
       }
       lastTickRef.current = { time: null, at: null };
     }
     const onHide = () => {
       if (document.visibilityState === 'hidden') {
-        save();
+        save(true);
       }
     };
     document.addEventListener('visibilitychange', onHide);
     return () => {
-      // Unmount: save remaining time immediately
+      // Unmount / effect re-run: flush before tearing down.
       if (lastTickRef.current.time !== null) {
-        save();
+        save(true);
+        lastTickRef.current = { time: null, at: null };
       }
       clearInterval(progressTickRef.current);
       progressTickRef.current = null;
@@ -831,6 +837,7 @@ function DriveVideoPlayer({
   initialPosition,
   onProgress,
   onComplete,
+  onError,
 }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -953,7 +960,8 @@ function DriveVideoPlayer({
   // deltaSeconds = real playback advanced since last save, clamped to [0, TICK]
   // so seeks/scrubs don't inflate watch time.
   useEffect(() => {
-    const save = () => {
+    // force=true bypasses the 1s coalesce guard used for periodic ticks.
+    const save = (force = false) => {
       const video = videoRef.current;
       if (!video || !onProgress) return;
       const now = Date.now();
@@ -962,8 +970,8 @@ function DriveVideoPlayer({
       if (prev.time != null && prev.at != null) {
         const playDelta = video.currentTime - prev.time;
         const wallDelta = (now - prev.at) / 1000;
-        // Coalesce ticks closer than 1s (e.g. interval + visibility race).
-        if (wallDelta < 1) return;
+        // Periodic ticks: skip if fired too soon (interval + visibility race).
+        if (!force && wallDelta < 1) return;
         delta = Math.max(0, Math.min(playDelta, wallDelta, TICK_MS / 1000 + 2));
       }
       lastTickRef.current = { time: video.currentTime, at: now };
@@ -983,22 +991,23 @@ function DriveVideoPlayer({
       };
       progressTimerRef.current = setInterval(save, TICK_MS);
     } else {
-      // Pause or completed: save remaining time immediately
+      // Pause or ended: flush remaining watch time immediately.
       if (lastTickRef.current.time !== null) {
-        save();
+        save(true);
       }
       lastTickRef.current = { time: null, at: null };
     }
     const onHide = () => {
       if (document.visibilityState === 'hidden') {
-        save();
+        save(true);
       }
     };
     document.addEventListener('visibilitychange', onHide);
     return () => {
-      // Unmount: save remaining time immediately
+      // Unmount / effect re-run: flush before tearing down.
       if (lastTickRef.current.time !== null) {
-        save();
+        save(true);
+        lastTickRef.current = { time: null, at: null };
       }
       if (progressTimerRef.current) {
         clearInterval(progressTimerRef.current);
@@ -1293,6 +1302,10 @@ function DriveVideoPlayer({
     onError: (e) => {
       const code = e.target?.error?.code;
       const isNetwork = code === 2;
+      if (onError) {
+        onError(e);
+        return;
+      }
       // Auto-retry transient network errors with exp backoff: 1s, 2s, 4s
       if (isNetwork && errorRetryRef.current < 3) {
         const delay = 1000 * Math.pow(2, errorRetryRef.current);
@@ -1684,7 +1697,14 @@ export default function VideoPlayer({
   }
 
   if (video_source === 'youtube') {
-    return <YouTubePlayer videoId={video_id || video_url} initialPosition={initialPosition} onProgress={onProgress} onComplete={onComplete} />;
+    return (
+      <YouTubePlayer
+        videoId={video_id || video_url}
+        initialPosition={initialPosition}
+        onProgress={onProgress}
+        onComplete={onComplete}
+      />
+    );
   }
 
   if (video_source === 'drive' || video_source === 'upload') {
