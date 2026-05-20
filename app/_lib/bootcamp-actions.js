@@ -51,6 +51,37 @@ async function requireAdmin() {
 }
 
 /**
+ * Check if current user is admin or any mentor.
+ */
+async function requireAdminOrMentor() {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+  const { data: user } = await supabaseAdmin.from('users').select('id').eq('email', session.user.email).single();
+  if (!user) throw new Error('User not found');
+  const { data: roles } = await supabaseAdmin.from('user_roles').select('roles(name)').eq('user_id', user.id);
+  const hasAccess = roles?.some((r) => r.roles?.name === 'admin' || r.roles?.name === 'mentor');
+  if (!hasAccess) throw new Error('Access denied');
+  return user.id;
+}
+
+/**
+ * Check if current user is admin or a mentor assigned to this specific bootcamp.
+ */
+async function requireAdminOrBootcampMentor(bootcampId) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+  const { data: user } = await supabaseAdmin.from('users').select('id').eq('email', session.user.email).single();
+  if (!user) throw new Error('User not found');
+  const { data: roles } = await supabaseAdmin.from('user_roles').select('roles(name)').eq('user_id', user.id);
+  if (roles?.some((r) => r.roles?.name === 'admin')) return user.id;
+  if (bootcampId) {
+    const { data: mentorRow } = await supabaseAdmin.from('bootcamp_mentors').select('id').eq('bootcamp_id', bootcampId).eq('user_id', user.id).single();
+    if (mentorRow) return user.id;
+  }
+  throw new Error('Access denied');
+}
+
+/**
  * Get current user ID.
  */
 async function getCurrentUserId() {
@@ -162,7 +193,7 @@ export async function getMemberBootcamps() {
     .select(
       `
       id, title, slug, description, thumbnail, price, batch_info,
-      start_date, end_date, total_duration, total_lessons, is_featured,
+      start_date, end_date, total_duration, total_lessons, is_featured, enrollment_type,
       courses:courses (count)
     `
     )
@@ -225,7 +256,7 @@ export async function uploadBootcampThumbnailAction(formData) {
  * Upload an image for a lesson content block.
  */
 export async function uploadLessonImageAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrMentor();
 
   const file = formData.get('file');
   if (!file || !(file instanceof File) || file.size === 0) {
@@ -278,12 +309,12 @@ export async function getBootcampWithCurriculum(idOrSlug) {
       *,
       users:created_by (id, full_name, avatar_url),
       courses (
-        id, title, description, order_index, is_published, total_lessons, total_duration,
+        id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
         modules (
-          id, title, description, order_index, is_published, total_lessons, total_duration,
+          id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
-            id, title, description, content, video_source, video_id, video_url, duration, order_index, 
-            is_free_preview, is_published
+            id, title, description, content, video_source, video_id, video_url, duration, order_index,
+            is_free_preview, is_published, is_locked
           )
         )
       )
@@ -295,17 +326,24 @@ export async function getBootcampWithCurriculum(idOrSlug) {
 
   if (error) throw error;
 
-  // Non-admins cannot read draft/archived bootcamps via this action
+  // Non-admins cannot read draft/archived bootcamps unless they are an assigned mentor
   if (data && data.status !== 'published') {
     const { data: u } = await supabaseAdmin
       .from('users').select('id').eq('email', session.user.email).single();
-    let isAdmin = false;
+    let hasAccess = false;
     if (u) {
       const { data: roles } = await supabaseAdmin
         .from('user_roles').select('roles(name)').eq('user_id', u.id);
-      isAdmin = roles?.some((r) => r.roles?.name === 'admin');
+      const isAdmin = roles?.some((r) => r.roles?.name === 'admin');
+      if (isAdmin) {
+        hasAccess = true;
+      } else {
+        const { data: mentorRow } = await supabaseAdmin
+          .from('bootcamp_mentors').select('id').eq('bootcamp_id', data.id).eq('user_id', u.id).single();
+        hasAccess = !!mentorRow;
+      }
     }
-    if (!isAdmin) throw new Error('Not found');
+    if (!hasAccess) throw new Error('Not found');
   }
 
   // Sort nested items by order_index
@@ -339,12 +377,12 @@ export async function getBootcampCurriculumLight(idOrSlug) {
       *,
       users:created_by (id, full_name, avatar_url),
       courses (
-        id, title, description, order_index, is_published, total_lessons, total_duration,
+        id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
         modules (
-          id, title, description, order_index, is_published, total_lessons, total_duration,
+          id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, video_source, video_id, duration, order_index,
-            is_free_preview, is_published
+            is_free_preview, is_published, is_locked
           )
         )
       )
@@ -464,6 +502,7 @@ export async function updateBootcamp(id, formData) {
     'end_date',
     'max_students',
     'is_featured',
+    'enrollment_type',
   ];
 
   for (const field of fields) {
@@ -477,12 +516,16 @@ export async function updateBootcamp(id, formData) {
       updates[field] = value === 'true';
     } else if (field === 'start_date' || field === 'end_date') {
       updates[field] = value || null;
+    } else if (field === 'enrollment_type') {
+      if (value === 'open' || value === 'approval') updates[field] = value;
     } else if (field === 'description' || field === 'batch_info' || field === 'thumbnail' || field === 'subtitle' || field === 'category' || field === 'difficulty') {
       updates[field] = value === '' ? null : value;
     } else {
       updates[field] = value;
     }
   }
+
+  console.log('[updateBootcamp] id:', id, 'updates:', updates);
 
   const { data, error } = await supabaseAdmin
     .from('bootcamps')
@@ -491,7 +534,12 @@ export async function updateBootcamp(id, formData) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('[updateBootcamp] Supabase error:', error, { id, updates });
+    throw error;
+  }
+
+  console.log('[updateBootcamp] saved:', data?.title, data?.status);
 
   revalidatePath('/account/admin/bootcamps');
   revalidatePath(`/account/admin/bootcamps/${id}`);
@@ -550,7 +598,7 @@ export async function toggleBootcampFeatured(id) {
  * Create a new course within a bootcamp.
  */
 export async function createCourse(bootcampId, data) {
-  await requireAdmin();
+  await requireAdminOrBootcampMentor(bootcampId);
 
   // Get max order_index
   const { data: existing } = await supabaseAdmin
@@ -570,6 +618,7 @@ export async function createCourse(bootcampId, data) {
       description: data.description || null,
       order_index: orderIndex,
       is_published: data.is_published !== false,
+      is_locked: data.is_locked === true,
     })
     .select()
     .single();
@@ -585,7 +634,8 @@ export async function createCourse(bootcampId, data) {
  * Update a course.
  */
 export async function updateCourse(courseId, data) {
-  await requireAdmin();
+  const { data: courseCheck } = await supabaseAdmin.from('courses').select('bootcamp_id').eq('id', courseId).single();
+  await requireAdminOrBootcampMentor(courseCheck?.bootcamp_id);
 
   const { data: course, error } = await supabaseAdmin
     .from('courses')
@@ -593,6 +643,7 @@ export async function updateCourse(courseId, data) {
       title: data.title?.trim(),
       description: data.description,
       is_published: data.is_published,
+      is_locked: data.is_locked,
     })
     .eq('id', courseId)
     .select('*, bootcamp_id')
@@ -609,13 +660,12 @@ export async function updateCourse(courseId, data) {
  * Delete a course.
  */
 export async function deleteCourse(courseId) {
-  await requireAdmin();
-
   const { data: course } = await supabaseAdmin
     .from('courses')
     .select('bootcamp_id')
     .eq('id', courseId)
     .single();
+  await requireAdminOrBootcampMentor(course?.bootcamp_id);
 
   const { error } = await supabaseAdmin
     .from('courses')
@@ -637,7 +687,7 @@ export async function deleteCourse(courseId) {
  * Reorder courses within a bootcamp.
  */
 export async function reorderCourses(bootcampId, courseIds) {
-  await requireAdmin();
+  await requireAdminOrBootcampMentor(bootcampId);
 
   // Use Promise.all for parallel updates (much faster than sequential)
   const updates = courseIds.map(
@@ -656,6 +706,27 @@ export async function reorderCourses(bootcampId, courseIds) {
   return { success: true };
 }
 
+/**
+ * Toggle locked state for a course.
+ */
+export async function toggleCourseLock(courseId, isLocked) {
+  const { data: courseCheck } = await supabaseAdmin.from('courses').select('bootcamp_id').eq('id', courseId).single();
+  await requireAdminOrBootcampMentor(courseCheck?.bootcamp_id);
+
+  const { data: course, error } = await supabaseAdmin
+    .from('courses')
+    .update({ is_locked: isLocked })
+    .eq('id', courseId)
+    .select('*, bootcamp_id')
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+  revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
+  return course;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -664,14 +735,13 @@ export async function reorderCourses(bootcampId, courseIds) {
  * Create a new module within a course.
  */
 export async function createModule(courseId, data) {
-  await requireAdmin();
-
   // Get course's bootcamp_id and max order_index
   const { data: course } = await supabaseAdmin
     .from('courses')
     .select('bootcamp_id')
     .eq('id', courseId)
     .single();
+  await requireAdminOrBootcampMentor(course?.bootcamp_id);
 
   const { data: existing } = await supabaseAdmin
     .from('modules')
@@ -690,6 +760,7 @@ export async function createModule(courseId, data) {
       description: data.description || null,
       order_index: orderIndex,
       is_published: data.is_published !== false,
+      is_locked: data.is_locked === true,
     })
     .select()
     .single();
@@ -708,7 +779,8 @@ export async function createModule(courseId, data) {
  * Update a module.
  */
 export async function updateModule(moduleId, data) {
-  await requireAdmin();
+  const { data: modCheck } = await supabaseAdmin.from('modules').select('courses(bootcamp_id)').eq('id', moduleId).single();
+  await requireAdminOrBootcampMentor(modCheck?.courses?.bootcamp_id);
 
   const { data: module, error } = await supabaseAdmin
     .from('modules')
@@ -716,6 +788,7 @@ export async function updateModule(moduleId, data) {
       title: data.title?.trim(),
       description: data.description,
       is_published: data.is_published,
+      is_locked: data.is_locked,
     })
     .eq('id', moduleId)
     .select('*, course_id')
@@ -742,14 +815,13 @@ export async function updateModule(moduleId, data) {
  * Delete a module.
  */
 export async function deleteModule(moduleId) {
-  await requireAdmin();
-
   // Get course and bootcamp for revalidation
   const { data: module } = await supabaseAdmin
     .from('modules')
     .select('course_id, courses(bootcamp_id)')
     .eq('id', moduleId)
     .single();
+  await requireAdminOrBootcampMentor(module?.courses?.bootcamp_id);
 
   const { error } = await supabaseAdmin
     .from('modules')
@@ -771,7 +843,8 @@ export async function deleteModule(moduleId) {
  * Reorder modules within a course.
  */
 export async function reorderModules(courseId, moduleIds) {
-  await requireAdmin();
+  const { data: courseCheck } = await supabaseAdmin.from('courses').select('bootcamp_id').eq('id', courseId).single();
+  await requireAdminOrBootcampMentor(courseCheck?.bootcamp_id);
 
   // Use Promise.all for parallel updates
   const updates = moduleIds.map(
@@ -800,6 +873,36 @@ export async function reorderModules(courseId, moduleIds) {
   return { success: true };
 }
 
+/**
+ * Toggle locked state for a module.
+ */
+export async function toggleModuleLock(moduleId, isLocked) {
+  const { data: modCheck } = await supabaseAdmin.from('modules').select('courses(bootcamp_id)').eq('id', moduleId).single();
+  await requireAdminOrBootcampMentor(modCheck?.courses?.bootcamp_id);
+
+  const { data: module, error } = await supabaseAdmin
+    .from('modules')
+    .update({ is_locked: isLocked })
+    .eq('id', moduleId)
+    .select('*, course_id')
+    .single();
+
+  if (error) throw error;
+
+  const { data: course } = await supabaseAdmin
+    .from('courses')
+    .select('bootcamp_id')
+    .eq('id', module.course_id)
+    .single();
+
+  if (course?.bootcamp_id) {
+    revalidatePath(`/account/admin/bootcamps/${course.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${course.bootcamp_id}`);
+  }
+
+  return module;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LESSON ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -808,7 +911,8 @@ export async function reorderModules(courseId, moduleIds) {
  * Create a new lesson within a module.
  */
 export async function createLesson(moduleId, data) {
-  await requireAdmin();
+  const { data: modCheck } = await supabaseAdmin.from('modules').select('courses(bootcamp_id)').eq('id', moduleId).single();
+  await requireAdminOrBootcampMentor(modCheck?.courses?.bootcamp_id);
 
   // Get max order_index
   const { data: existing } = await supabaseAdmin
@@ -854,6 +958,7 @@ export async function createLesson(moduleId, data) {
       order_index: orderIndex,
       is_free_preview: data.is_free_preview === true,
       is_published: data.is_published !== false,
+      is_locked: data.is_locked === true,
       attachments: data.attachments || [],
     })
     .select()
@@ -881,7 +986,8 @@ export async function createLesson(moduleId, data) {
  * Update a lesson.
  */
 export async function updateLesson(lessonId, data) {
-  await requireAdmin();
+  const { data: lesCheck } = await supabaseAdmin.from('lessons').select('modules(courses(bootcamp_id))').eq('id', lessonId).single();
+  await requireAdminOrBootcampMentor(lesCheck?.modules?.courses?.bootcamp_id);
 
   let duration = data.duration;
   let videoId = data.video_id;
@@ -912,6 +1018,7 @@ export async function updateLesson(lessonId, data) {
     duration: duration !== undefined ? parseInt(duration) || 0 : undefined,
     is_free_preview: data.is_free_preview,
     is_published: data.is_published,
+    is_locked: data.is_locked,
     attachments: data.attachments,
   };
 
@@ -954,14 +1061,13 @@ export async function updateLesson(lessonId, data) {
  * Delete a lesson.
  */
 export async function deleteLesson(lessonId) {
-  await requireAdmin();
-
   // Get module and bootcamp for revalidation
   const { data: lesson } = await supabaseAdmin
     .from('lessons')
     .select('module_id, modules(course_id, courses(bootcamp_id))')
     .eq('id', lessonId)
     .single();
+  await requireAdminOrBootcampMentor(lesson?.modules?.courses?.bootcamp_id);
 
   const { error } = await supabaseAdmin
     .from('lessons')
@@ -987,7 +1093,8 @@ export async function deleteLesson(lessonId) {
  * Reorder lessons within a module.
  */
 export async function reorderLessons(moduleId, lessonIds) {
-  await requireAdmin();
+  const { data: modCheck } = await supabaseAdmin.from('modules').select('courses(bootcamp_id)').eq('id', moduleId).single();
+  await requireAdminOrBootcampMentor(modCheck?.courses?.bootcamp_id);
 
   // Use Promise.all for parallel updates
   const updates = lessonIds.map(
@@ -1014,6 +1121,36 @@ export async function reorderLessons(moduleId, lessonIds) {
   }
 
   return { success: true };
+}
+
+/**
+ * Toggle locked state for a lesson.
+ */
+export async function toggleLessonLock(lessonId, isLocked) {
+  const { data: lesCheck } = await supabaseAdmin.from('lessons').select('modules(courses(bootcamp_id))').eq('id', lessonId).single();
+  await requireAdminOrBootcampMentor(lesCheck?.modules?.courses?.bootcamp_id);
+
+  const { data: lesson, error } = await supabaseAdmin
+    .from('lessons')
+    .update({ is_locked: isLocked })
+    .eq('id', lessonId)
+    .select('*, module_id')
+    .single();
+
+  if (error) throw error;
+
+  const { data: module } = await supabaseAdmin
+    .from('modules')
+    .select('course_id, courses(bootcamp_id)')
+    .eq('id', lesson.module_id)
+    .single();
+
+  if (module?.courses?.bootcamp_id) {
+    revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    revalidatePath(`/account/member/bootcamps/${module.courses.bootcamp_id}`);
+  }
+
+  return lesson;
 }
 
 /**
@@ -1058,7 +1195,7 @@ export async function getLessonContent(lessonId) {
  * Validate a Google Drive video ID and return metadata.
  */
 export async function validateDriveVideo(videoId) {
-  await requireAdmin();
+  await requireAdminOrMentor();
   try {
     const fileId = extractDriveFileId(videoId);
     if (!fileId) {
@@ -1095,7 +1232,7 @@ export async function validateDriveVideo(videoId) {
  * Get all enrollments for a bootcamp (admin).
  */
 export async function getBootcampEnrollments(bootcampId) {
-  await requireAdmin();
+  await requireAdminOrBootcampMentor(bootcampId);
 
   const { data, error } = await supabaseAdmin
     .from('enrollments')
@@ -1125,12 +1262,12 @@ export async function getMyEnrollments() {
       `
       *,
       bootcamps (
-        id, title, slug, thumbnail, total_lessons, total_duration
+        id, title, slug, thumbnail, total_lessons, total_duration, status
       )
     `
     )
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .in('status', ['active', 'completed'])
     .order('last_accessed_at', { ascending: false, nullsFirst: false });
 
   if (error) throw error;
@@ -1150,6 +1287,15 @@ export async function enrollUser(bootcampId, userId = null) {
     await requireAdmin();
   }
 
+  // Get bootcamp enrollment_type
+  const { data: bootcamp } = await supabaseAdmin
+    .from('bootcamps')
+    .select('enrollment_type')
+    .eq('id', bootcampId)
+    .single();
+  const enrollmentType = bootcamp?.enrollment_type || 'approval';
+  const newStatus = enrollmentType === 'open' ? 'active' : 'pending';
+
   // Check if already enrolled
   const { data: existing } = await supabaseAdmin
     .from('enrollments')
@@ -1162,16 +1308,20 @@ export async function enrollUser(bootcampId, userId = null) {
     if (existing.status === 'active') {
       return { success: false, error: 'Already enrolled' };
     }
-    // Reactivate cancelled enrollment
+    if (existing.status === 'pending') {
+      return { success: false, error: 'Enrollment request already pending' };
+    }
+    // Reactivate cancelled/expired enrollment
     const { data, error } = await supabaseAdmin
       .from('enrollments')
-      .update({ status: 'active', enrolled_at: new Date().toISOString() })
+      .update({ status: newStatus, enrolled_at: new Date().toISOString() })
       .eq('id', existing.id)
       .select()
       .single();
 
     if (error) throw error;
-    return { success: true, enrollment: data };
+    revalidatePath('/account/member/bootcamps');
+    return { success: true, enrollment: data, status: newStatus };
   }
 
   const { data, error } = await supabaseAdmin
@@ -1179,7 +1329,7 @@ export async function enrollUser(bootcampId, userId = null) {
     .insert({
       user_id: userId,
       bootcamp_id: bootcampId,
-      status: 'active',
+      status: newStatus,
     })
     .select()
     .single();
@@ -1187,7 +1337,7 @@ export async function enrollUser(bootcampId, userId = null) {
   if (error) throw error;
 
   revalidatePath('/account/member/bootcamps');
-  return { success: true, enrollment: data };
+  return { success: true, enrollment: data, status: newStatus };
 }
 
 /**
@@ -1248,7 +1398,7 @@ export async function checkEnrollment(bootcampId) {
     .single();
 
   return {
-    enrolled: data?.status === 'active',
+    enrolled: data?.status === 'active' || data?.status === 'completed',
     enrollment: data,
   };
 }
@@ -1375,6 +1525,7 @@ export async function updateWatchTimeDelta(lessonId, deltaSeconds, lastPosition,
  */
 export async function recordLearningActivity({
   bootcampId,
+  lessonId = null,
   deltaSeconds = 0,
   completedLessonId = null,
   completedModuleId = null,
@@ -1401,6 +1552,7 @@ export async function recordLearningActivity({
       p_completed_lesson_id: completedLessonId,
       p_completed_module_id: completedModuleId,
       p_activity_date: dateArg,
+      p_lesson_id: lessonId,
     }
   );
 
@@ -1434,7 +1586,29 @@ export async function getLearningActivity(bootcampId = null, days = 30) {
 
   const { data, error } = await q;
   if (error) throw error;
-  return data || [];
+  const rows = data || [];
+
+  // Resolve lesson titles from lesson_watch_times (watched lessons) keyed by lesson_id
+  const allLessonIds = [...new Set(rows.flatMap(r => Object.keys(r.lesson_watch_times || {})))];
+  if (allLessonIds.length > 0) {
+    const { data: lessons } = await supabaseAdmin
+      .from('lessons')
+      .select('id, title')
+      .in('id', allLessonIds);
+    const titleMap = Object.fromEntries((lessons || []).map(l => [l.id, l.title]));
+    rows.forEach(r => {
+      const lwt = r.lesson_watch_times || {};
+      r.completed_lessons = Object.entries(lwt).map(([id, secs]) => ({
+        id,
+        title: titleMap[id] || 'Lesson',
+        watch_time: secs,
+      }));
+    });
+  } else {
+    rows.forEach(r => { r.completed_lessons = []; });
+  }
+
+  return rows;
 }
 
 /**
@@ -1579,7 +1753,7 @@ export async function saveLessonNotes(lessonId, notes) {
  * Search users for enrollment (admin only).
  */
 export async function searchUsersForEnrollment(bootcampId, query) {
-  await requireAdmin();
+  await requireAdminOrBootcampMentor(bootcampId);
 
   if (!query || query.length < 2) return [];
 
@@ -1613,7 +1787,7 @@ export async function searchUsersForEnrollment(bootcampId, query) {
  * Admin add enrollment (can add multiple users at once).
  */
 export async function adminAddEnrollment(bootcampId, userIds) {
-  await requireAdmin();
+  await requireAdminOrBootcampMentor(bootcampId);
 
   const ids = Array.isArray(userIds) ? userIds : [userIds];
 
@@ -1643,7 +1817,8 @@ export async function adminAddEnrollment(bootcampId, userIds) {
  * Admin update enrollment status.
  */
 export async function adminUpdateEnrollmentStatus(enrollmentId, status) {
-  await requireAdmin();
+  const { data: enrCheck } = await supabaseAdmin.from('enrollments').select('bootcamp_id').eq('id', enrollmentId).single();
+  await requireAdminOrBootcampMentor(enrCheck?.bootcamp_id);
 
   const validStatuses = [
     'active',
@@ -1677,10 +1852,55 @@ export async function adminUpdateEnrollmentStatus(enrollmentId, status) {
 }
 
 /**
+ * Admin approve a pending enrollment request.
+ */
+export async function adminApproveEnrollment(enrollmentId) {
+  const { data: enrCheck } = await supabaseAdmin.from('enrollments').select('bootcamp_id').eq('id', enrollmentId).single();
+  await requireAdminOrBootcampMentor(enrCheck?.bootcamp_id);
+
+  const { data, error } = await supabaseAdmin
+    .from('enrollments')
+    .update({ status: 'active' })
+    .eq('id', enrollmentId)
+    .eq('status', 'pending')
+    .select('*, users (id, full_name, email, avatar_url)')
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath(`/account/admin/bootcamps/${data.bootcamp_id}`);
+  revalidatePath('/account/member/bootcamps');
+  return { success: true, enrollment: data };
+}
+
+/**
+ * Admin reject (cancel) a pending enrollment request.
+ */
+export async function adminRejectEnrollment(enrollmentId) {
+  const { data: enrCheck } = await supabaseAdmin.from('enrollments').select('bootcamp_id').eq('id', enrollmentId).single();
+  await requireAdminOrBootcampMentor(enrCheck?.bootcamp_id);
+
+  const { data, error } = await supabaseAdmin
+    .from('enrollments')
+    .update({ status: 'cancelled' })
+    .eq('id', enrollmentId)
+    .eq('status', 'pending')
+    .select('bootcamp_id')
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath(`/account/admin/bootcamps/${data.bootcamp_id}`);
+  revalidatePath('/account/member/bootcamps');
+  return { success: true };
+}
+
+/**
  * Admin remove enrollment (hard delete).
  */
 export async function adminRemoveEnrollment(enrollmentId) {
-  await requireAdmin();
+  const { data: enrCheck } = await supabaseAdmin.from('enrollments').select('bootcamp_id').eq('id', enrollmentId).single();
+  await requireAdminOrBootcampMentor(enrCheck?.bootcamp_id);
 
   // Get bootcamp_id before deletion for revalidation
   const { data: enrollment } = await supabaseAdmin
@@ -1779,6 +1999,54 @@ export async function getEnrollmentsWithProgress(bootcampId) {
 }
 
 /**
+ * Get a specific student's lesson-level progress for a bootcamp (admin).
+ */
+export async function adminGetStudentProgress(bootcampId, userId) {
+  await requireAdmin();
+
+  const [{ data: curriculum }, { data: progressRows }] = await Promise.all([
+    supabaseAdmin
+      .from('bootcamps')
+      .select(`
+        title,
+        courses (
+          id, title, order_index,
+          modules (
+            id, title, order_index,
+            lessons (id, title, order_index, duration, is_published, video_source, video_id)
+          )
+        )
+      `)
+      .eq('id', bootcampId)
+      .single(),
+    supabaseAdmin
+      .from('user_progress')
+      .select('lesson_id, is_completed, completed_at, watch_time, last_position')
+      .eq('bootcamp_id', bootcampId)
+      .eq('user_id', userId),
+  ]);
+
+  const progressMap = {};
+  progressRows?.forEach((p) => { progressMap[p.lesson_id] = p; });
+
+  if (curriculum?.courses) {
+    curriculum.courses.sort((a, b) => a.order_index - b.order_index);
+    curriculum.courses.forEach((course) => {
+      course.modules?.sort((a, b) => a.order_index - b.order_index);
+      course.modules?.forEach((module) => {
+        module.lessons?.sort((a, b) => a.order_index - b.order_index);
+        module.lessons = module.lessons?.map((lesson) => ({
+          ...lesson,
+          progress: progressMap[lesson.id] || null,
+        }));
+      });
+    });
+  }
+
+  return curriculum;
+}
+
+/**
  * Export enrollments to CSV format.
  */
 export async function exportEnrollmentsCSV(bootcampId) {
@@ -1872,4 +2140,281 @@ export async function getEnrollmentStats(bootcampId) {
   });
 
   return stats;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOTCAMP MENTORS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function getBootcampMentors(bootcampId) {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .select('id, assigned_at, users(id, full_name, avatar_url, email)')
+    .eq('bootcamp_id', bootcampId)
+    .order('assigned_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addBootcampMentor(bootcampId, userId) {
+  await requireAdmin();
+  const { error } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .insert({ bootcamp_id: bootcampId, user_id: userId });
+  if (error) throw error;
+  revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+}
+
+export async function removeBootcampMentor(bootcampId, userId) {
+  await requireAdmin();
+  const { error } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .delete()
+    .eq('bootcamp_id', bootcampId)
+    .eq('user_id', userId);
+  if (error) throw error;
+  revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+}
+
+export async function searchMentorUsers(query) {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('user_roles')
+    .select('users!user_roles_user_id_fkey(id, full_name, avatar_url, email), roles!inner(name)')
+    .eq('roles.name', 'mentor');
+  if (error) throw error;
+  const q = query.toLowerCase();
+  return (data || [])
+    .map((r) => r.users)
+    .filter((u) => u?.full_name?.toLowerCase().includes(q))
+    .slice(0, 10);
+}
+
+/**
+ * Get bootcamps assigned to the current mentor user.
+ */
+export async function getMentorAssignedBootcamps() {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
+  const { data: user } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('email', session.user.email)
+    .single();
+  if (!user) throw new Error('User not found');
+
+  const { data, error } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .select('assigned_at, bootcamps(id, title, slug, description, thumbnail, status, batch_info, start_date, end_date, total_lessons, total_duration, is_featured)')
+    .eq('user_id', user.id)
+    .order('assigned_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || [])
+    .map((r) => r.bootcamps)
+    .filter(Boolean);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BATCH LIFECYCLE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get a summary of the current batch: enrollment stats + completion breakdown + history.
+ */
+export async function getBatchSummary(bootcampId) {
+  await requireAdmin();
+
+  const [{ data: bootcamp }, { data: enrollments }, { data: lessons }, historyResult] = await Promise.all([
+    supabaseAdmin.from('bootcamps').select('title, batch_info, start_date, end_date, total_lessons').eq('id', bootcampId).single(),
+    supabaseAdmin.from('enrollments').select('status, user_id').eq('bootcamp_id', bootcampId),
+    supabaseAdmin.from('user_progress').select('user_id, is_completed').eq('bootcamp_id', bootcampId).eq('is_completed', true),
+    supabaseAdmin.from('batch_history').select('*, bootcamps:new_bootcamp_id(id, title, batch_info, status)').eq('source_bootcamp_id', bootcampId).order('archived_at', { ascending: false }).limit(5),
+  ]);
+  const history = historyResult?.error ? [] : (historyResult?.data || []);
+
+  const total = enrollments?.length ?? 0;
+  const active = enrollments?.filter((e) => e.status === 'active').length ?? 0;
+  const pending = enrollments?.filter((e) => e.status === 'pending').length ?? 0;
+  const completed = enrollments?.filter((e) => e.status === 'completed').length ?? 0;
+  const cancelled = enrollments?.filter((e) => e.status === 'cancelled').length ?? 0;
+
+  const totalLessons = bootcamp?.total_lessons ?? 0;
+  const lessonsByUser = {};
+  lessons?.forEach((p) => { lessonsByUser[p.user_id] = (lessonsByUser[p.user_id] || 0) + 1; });
+  const graduatedCount = Object.values(lessonsByUser).filter(
+    (n) => totalLessons === 0 || n / totalLessons >= 0.8
+  ).length;
+
+  return {
+    bootcamp,
+    stats: { total, active, pending, completed, cancelled, graduated: graduatedCount },
+    history,
+  };
+}
+
+/**
+ * Archive the current bootcamp batch and create a new one copying its structure.
+ * The new batch gets a fresh slug, incremented batch_info, reset dates, and no enrollments.
+ * Curriculum (courses → modules → lessons) is deep-copied.
+ */
+export async function finishBatchAndStartNew(bootcampId, newBatchData) {
+  const userId = await requireAdmin();
+
+  // 1. Archive current bootcamp
+  const { error: archiveErr } = await supabaseAdmin
+    .from('bootcamps')
+    .update({ status: 'archived' })
+    .eq('id', bootcampId);
+  if (archiveErr) throw archiveErr;
+
+  // 2. Fetch current bootcamp for cloning
+  const { data: source, error: fetchErr } = await supabaseAdmin
+    .from('bootcamps')
+    .select(`
+      title, description, subtitle, thumbnail, price, category, difficulty, is_featured, enrollment_type, total_lessons, total_duration,
+      courses (
+        title, description, order_index, is_published, is_locked,
+        modules (
+          title, description, order_index, is_published, is_locked,
+          lessons (
+            title, description, content, video_source, video_id, video_url,
+            duration, order_index, is_free_preview, is_published, is_locked, attachments
+          )
+        )
+      )
+    `)
+    .eq('id', bootcampId)
+    .single();
+  if (fetchErr) throw fetchErr;
+
+  // 3. Build new slug (unique)
+  const baseSlug = generateSlug(newBatchData.title || source.title);
+  let slug = baseSlug;
+  const { data: slugConflict } = await supabaseAdmin.from('bootcamps').select('id').eq('slug', slug).single();
+  if (slugConflict) slug = `${baseSlug}-${Date.now()}`;
+
+  // 4. Insert new bootcamp
+  const { data: newBootcamp, error: insertErr } = await supabaseAdmin
+    .from('bootcamps')
+    .insert({
+      title: newBatchData.title || source.title,
+      slug,
+      description: source.description,
+      subtitle: source.subtitle,
+      thumbnail: source.thumbnail,
+      price: newBatchData.price !== '' && newBatchData.price != null ? parseFloat(newBatchData.price) : (source.price ?? 0),
+      status: 'draft',
+      batch_info: newBatchData.batch_info || null,
+      start_date: newBatchData.start_date || null,
+      end_date: newBatchData.end_date || null,
+      max_students: newBatchData.max_students !== '' && newBatchData.max_students != null ? parseInt(newBatchData.max_students) : null,
+      category: source.category,
+      difficulty: source.difficulty,
+      is_featured: false,
+      enrollment_type: source.enrollment_type || 'approval',
+      created_by: userId,
+      total_lessons: source.total_lessons,
+      total_duration: source.total_duration,
+    })
+    .select()
+    .single();
+  if (insertErr) throw insertErr;
+
+  // 5. Deep copy curriculum
+  const sortedCourses = (source.courses || []).sort((a, b) => a.order_index - b.order_index);
+  for (const course of sortedCourses) {
+    const { data: newCourse } = await supabaseAdmin
+      .from('courses')
+      .insert({
+        bootcamp_id: newBootcamp.id,
+        title: course.title,
+        description: course.description,
+        order_index: course.order_index,
+        is_published: course.is_published,
+        is_locked: course.is_locked,
+      })
+      .select()
+      .single();
+    if (!newCourse) continue;
+
+    const sortedModules = (course.modules || []).sort((a, b) => a.order_index - b.order_index);
+    for (const mod of sortedModules) {
+      const { data: newModule } = await supabaseAdmin
+        .from('modules')
+        .insert({
+          course_id: newCourse.id,
+          title: mod.title,
+          description: mod.description,
+          order_index: mod.order_index,
+          is_published: mod.is_published,
+          is_locked: mod.is_locked,
+        })
+        .select()
+        .single();
+      if (!newModule) continue;
+
+      const sortedLessons = (mod.lessons || []).sort((a, b) => a.order_index - b.order_index);
+      if (sortedLessons.length > 0) {
+        await supabaseAdmin.from('lessons').insert(
+          sortedLessons.map((l) => ({
+            module_id: newModule.id,
+            title: l.title,
+            description: l.description,
+            content: l.content,
+            video_source: l.video_source,
+            video_id: l.video_id,
+            video_url: l.video_url,
+            duration: l.duration,
+            order_index: l.order_index,
+            is_free_preview: l.is_free_preview,
+            is_published: l.is_published,
+            is_locked: l.is_locked,
+            attachments: l.attachments,
+          }))
+        );
+      }
+    }
+  }
+
+  // 6. Record batch history snapshot
+  const { data: archivedEnrollments } = await supabaseAdmin
+    .from('enrollments').select('status, user_id').eq('bootcamp_id', bootcampId);
+  const { data: archivedProgress } = await supabaseAdmin
+    .from('user_progress').select('user_id').eq('bootcamp_id', bootcampId).eq('is_completed', true);
+  const { data: archivedBootcamp } = await supabaseAdmin
+    .from('bootcamps').select('total_lessons, batch_info, start_date, end_date').eq('id', bootcampId).single();
+
+  const enTotal = archivedEnrollments?.length ?? 0;
+  const enActive = archivedEnrollments?.filter((e) => e.status === 'active').length ?? 0;
+  const enCompleted = archivedEnrollments?.filter((e) => e.status === 'completed').length ?? 0;
+  const enCancelled = archivedEnrollments?.filter((e) => e.status === 'cancelled').length ?? 0;
+  const tl = archivedBootcamp?.total_lessons ?? 0;
+  const progressByUser = {};
+  archivedProgress?.forEach((p) => { progressByUser[p.user_id] = (progressByUser[p.user_id] || 0) + 1; });
+  const graduated = Object.values(progressByUser).filter((n) => tl === 0 || n / tl >= 0.8).length;
+
+  // Non-fatal: batch_history table may not exist yet on older deployments
+  await supabaseAdmin.from('batch_history').insert({
+    source_bootcamp_id: bootcampId,
+    new_bootcamp_id: newBootcamp.id,
+    archived_by: userId,
+    enrollment_total: enTotal,
+    enrollment_active: enActive,
+    enrollment_completed: enCompleted,
+    enrollment_cancelled: enCancelled,
+    graduated_count: graduated,
+    total_lessons: tl,
+    batch_info: archivedBootcamp?.batch_info,
+    start_date: archivedBootcamp?.start_date,
+    end_date: archivedBootcamp?.end_date,
+  }).then(() => {}).catch(() => {});
+
+  revalidatePath('/account/admin/bootcamps');
+  revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+
+  return { success: true, newBootcampId: newBootcamp.id };
 }

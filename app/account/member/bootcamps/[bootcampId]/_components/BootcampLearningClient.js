@@ -132,23 +132,33 @@ const LessonRow = memo(function LessonRow({
   onPrefetch,
   index,
   activeRef,
+  moduleLocked,
 }) {
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
   const duration = formatDurationSecs(lesson.duration);
+  const effectiveLocked = moduleLocked || lesson.is_locked;
+
   return (
     <button
       ref={isActive ? activeRef : null}
-      onClick={() => onSelect(lesson)}
-      onMouseEnter={() => onPrefetch?.(lesson)}
-      onFocus={() => onPrefetch?.(lesson)}
+      onClick={() => {
+        if (effectiveLocked) return;
+        onSelect(lesson);
+      }}
+      onMouseEnter={() => !effectiveLocked && onPrefetch?.(lesson)}
+      onFocus={() => !effectiveLocked && onPrefetch?.(lesson)}
       className={`group flex w-full items-start gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors ${
-        isActive
-          ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
-          : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
+        effectiveLocked
+          ? 'cursor-not-allowed opacity-60'
+          : isActive
+            ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
+            : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
       }`}
     >
       <div className="mt-0.5 shrink-0">
-        {isCompleted ? (
+        {effectiveLocked ? (
+          <Lock className="h-4 w-4 text-gray-600" />
+        ) : isCompleted ? (
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         ) : isActive ? (
           <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
@@ -163,17 +173,16 @@ const LessonRow = memo(function LessonRow({
       <div className="min-w-0 flex-1">
         <div
           className={`flex items-start gap-1.5 text-[12.5px] leading-snug ${
-            isCompleted
-              ? 'text-gray-500 line-through decoration-white/15'
-              : isActive
-                ? 'font-medium text-white'
-                : 'text-gray-300 group-hover:text-white'
+            effectiveLocked
+              ? 'text-gray-600'
+              : isCompleted
+                ? 'text-gray-500 line-through decoration-white/15'
+                : isActive
+                  ? 'font-medium text-white'
+                  : 'text-gray-300 group-hover:text-white'
           }`}
         >
           <span className="line-clamp-2">{lesson.title}</span>
-          {lesson.is_locked && (
-            <Lock className="mt-0.5 h-3 w-3 shrink-0 text-gray-600" />
-          )}
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[10.5px] text-gray-500">
           {hasVideo ? (
@@ -187,6 +196,9 @@ const LessonRow = memo(function LessonRow({
               <span className="text-gray-700">·</span>
               <span>{duration}</span>
             </>
+          )}
+          {effectiveLocked && (
+            <span className="ml-auto text-[10px] text-amber-600/80">Locked</span>
           )}
         </div>
       </div>
@@ -203,7 +215,9 @@ function ModuleGroup({
   onPrefetch,
   activeRef,
   forceOpen,
+  courseLocked,
 }) {
+  const effectiveModuleLocked = courseLocked || module.is_locked;
   const containsActive = module.lessons?.some((l) => l.id === activeLessonId);
   const containsResume = module.lessons?.some((l) => l.id === resumeLessonId);
   const [open, setOpen] = useState(containsActive || containsResume);
@@ -231,15 +245,19 @@ function ModuleGroup({
           className={`h-3 w-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
         <span
-          className={`flex-1 truncate text-[12px] font-medium ${allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}
+          className={`flex-1 truncate text-[12px] font-medium ${effectiveModuleLocked ? 'text-gray-600' : allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}
         >
           {module.title}
         </span>
-        <span
-          className={`shrink-0 text-[10px] tabular-nums ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}
-        >
-          {done}/{total}
-        </span>
+        {effectiveModuleLocked ? (
+          <Lock className="h-3 w-3 shrink-0 text-amber-600/70" />
+        ) : (
+          <span
+            className={`shrink-0 text-[10px] tabular-nums ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}
+          >
+            {done}/{total}
+          </span>
+        )}
       </button>
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -261,6 +279,7 @@ function ModuleGroup({
                   onPrefetch={onPrefetch}
                   activeRef={activeRef}
                   index={i}
+                  moduleLocked={effectiveModuleLocked}
                 />
               ))}
             </div>
@@ -321,20 +340,26 @@ function CourseGroup({
           className={`h-3.5 w-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-violet-300">
+          <div className={`truncate text-[13px] font-semibold transition-colors group-hover:text-violet-300 ${course.is_locked ? 'text-gray-500' : 'text-white'}`}>
             {course.title}
           </div>
-          <div className="mt-1 flex items-center gap-2">
-            <div className="h-1 max-w-[120px] flex-1 overflow-hidden rounded-full bg-white/5">
-              <div
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${pct}%` }}
-              />
+          {course.is_locked ? (
+            <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600/80">
+              <Lock className="h-2.5 w-2.5" /> Locked
             </div>
-            <span className="text-[10px] text-gray-500 tabular-nums">
-              {done}/{total}
-            </span>
-          </div>
+          ) : (
+            <div className="mt-1 flex items-center gap-2">
+              <div className="h-1 max-w-[120px] flex-1 overflow-hidden rounded-full bg-white/5">
+                <div
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 tabular-nums">
+                {done}/{total}
+              </span>
+            </div>
+          )}
         </div>
       </button>
       <AnimatePresence initial={false}>
@@ -358,6 +383,7 @@ function CourseGroup({
                   onPrefetch={onPrefetch}
                   activeRef={activeRef}
                   forceOpen={forceOpen}
+                  courseLocked={course.is_locked}
                 />
               ))}
             </div>
@@ -941,7 +967,7 @@ const LessonPanel = memo(function LessonPanel({
             await Promise.all([
               updateWatchTimeDelta(lessonId, delta, pos, bId),
               delta > 0 && bId
-                ? recordLearningActivity({ bootcampId: bId, deltaSeconds: delta, activityDate })
+                ? recordLearningActivity({ bootcampId: bId, lessonId, deltaSeconds: delta, activityDate })
                 : null,
             ]);
           } catch {
@@ -1071,6 +1097,7 @@ const LessonPanel = memo(function LessonPanel({
                   lessonId={lesson.id}
                   onProgress={handleProgress}
                   onComplete={handleVideoComplete}
+                  initialPosition={initialPosition}
                 />
               </Suspense>
             ) : lesson._pendingContent ? (
@@ -1419,10 +1446,20 @@ export default function BootcampLearningClient({
         return navigateToLesson(null, 'push');
       }
       if (lesson.id === current) return;
+      // Check if lesson (or its parent module) is locked
+      if (lesson.is_locked) return;
+      const parentCourse = bootcamp?.courses?.find((c) =>
+        (c.modules || []).some((m) => (m.lessons || []).some((l) => l.id === lesson.id))
+      );
+      if (parentCourse?.is_locked) return;
+      const parentModule = (parentCourse?.modules || []).find(
+        (m) => (m.lessons || []).some((l) => l.id === lesson.id)
+      );
+      if (parentModule?.is_locked) return;
       const mode = current ? 'replace' : 'push';
       navigateToLesson(lesson, mode);
     },
-    [navigateToLesson]
+    [navigateToLesson, bootcamp]
   );
 
   // Initial hydration: if URL has a lessonId but no preloaded lesson, fetch it

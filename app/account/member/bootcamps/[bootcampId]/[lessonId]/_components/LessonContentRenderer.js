@@ -224,9 +224,20 @@ const MD_STYLES = `
 
 // ─── Multi-video playlist ─────────────────────────────────────────────────────
 
-function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete }) {
-  const [activeIdx, setActiveIdx] = useState(0);
+function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialPosition = 0 }) {
+  const storageKey = `neupc-vid-idx-${lessonId}`;
+  const [activeIdx, setActiveIdx] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem(storageKey), 10);
+      return Number.isFinite(saved) && saved >= 0 && saved < videos.length ? saved : 0;
+    } catch { return 0; }
+  });
   const activeVid = videos[activeIdx];
+
+  const handleSetActive = (idx) => {
+    setActiveIdx(idx);
+    try { localStorage.setItem(storageKey, String(idx)); } catch {}
+  };
 
   return (
     <div className="rounded-2xl overflow-hidden border border-[#273647] bg-[#051424] shadow-2xl flex flex-col lg:flex-row">
@@ -240,6 +251,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete }) {
             video_id: activeVid.video_id,
             video_url: activeVid.video_url,
           }}
+          initialPosition={initialPosition}
           onProgress={onProgress}
           onComplete={onComplete}
         />
@@ -275,7 +287,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete }) {
             return (
               <button
                 key={vid.id ?? idx}
-                onClick={() => hasVideo && setActiveIdx(idx)}
+                onClick={() => hasVideo && handleSetActive(idx)}
                 disabled={!hasVideo}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all relative overflow-hidden group ${
                   isActive
@@ -323,7 +335,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete }) {
 
 // ─── Main renderer ────────────────────────────────────────────────────────────
 
-export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete }) {
+export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0 }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
@@ -500,6 +512,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                     video_id: vid.video_id,
                     video_url: vid.video_url,
                   }}
+                  initialPosition={initialPosition}
                   onProgress={onProgress}
                   onComplete={onComplete}
                 />
@@ -520,6 +533,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
               lessonId={lessonId}
               onProgress={onProgress}
               onComplete={onComplete}
+              initialPosition={initialPosition}
             />
           );
         }

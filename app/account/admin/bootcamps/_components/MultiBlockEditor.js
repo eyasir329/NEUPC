@@ -41,8 +41,8 @@ export function parseContentBlocks(content) {
     if (Array.isArray(parsed)) {
       // Ensure all blocks have an ID
       return parsed.map(block => ({
+        id: block.id || crypto.randomUUID(),
         ...block,
-        id: block.id || crypto.randomUUID()
       }));
     }
   } catch (e) {
@@ -300,28 +300,32 @@ const VIDEO_ICONS = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function MultiBlockEditor({ value, onChange, uploadImageAction: uploadImageActionProp }) {
+export default function MultiBlockEditor({ value, onChange, uploadImageAction: uploadImageActionProp, lessonSerial, lessonTitle }) {
   const uploadImageAction = uploadImageActionProp || uploadLessonImageAction;
   const [blocks, setBlocks] = useState(() => parseContentBlocks(value));
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragHandleActive, setDragHandleActive] = useState(null);
 
-  // Sync value changes from outside (e.g. when changing selected lesson).
-  // Compare by reference first (cheap); only re-parse if reference differs.
+  // Track the last value received from outside to detect external changes.
+  const lastReceivedRef = useRef(value);
+
+  // Sync value changes from outside (e.g. when switching selected lesson).
+  // Only re-parse when the incoming value actually differs from what we last received.
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
+    lastReceivedRef.current = value;
     setBlocks(parseContentBlocks(value));
   }
 
   // Sync local blocks back to the parent (onChange).
-  // Cache last-emitted serialization so we don't re-emit unchanged content.
-  const lastEmittedRef = useRef(value);
+  // Skip emit when the serialized content matches what we last received from outside
+  // (prevents the receive→emit→receive loop).
   useEffect(() => {
     const serialized = JSON.stringify(blocks);
-    if (serialized !== lastEmittedRef.current) {
-      lastEmittedRef.current = serialized;
+    if (serialized !== lastReceivedRef.current) {
+      lastReceivedRef.current = serialized;
       onChange(serialized);
     }
   }, [blocks, onChange]);
@@ -460,7 +464,11 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
         updateBlock(block.id, (b) => {
           const bData = b.data || {};
           const bVideos = bData.videos || [];
-          return { data: { videos: [...bVideos, { id: crypto.randomUUID(), video_source: 'drive', video_id: '' }] } };
+          const vidNum = bVideos.length > 0 ? `.${bVideos.length + 1}` : '';
+          const base = lessonSerial
+            ? `Class ${lessonSerial}${vidNum}${lessonTitle ? `: ${lessonTitle}` : ''}`
+            : `Video ${bVideos.length + 1}`;
+          return { data: { videos: [...bVideos, { id: crypto.randomUUID(), video_source: 'drive', video_id: '', label: base }] } };
         });
       };
 

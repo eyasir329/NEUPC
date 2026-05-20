@@ -1,37 +1,37 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, BookOpen, BarChart3, FileText, ArrowRight } from 'lucide-react';
+import { Target, BookOpen, BarChart3, FileText, GraduationCap, ArrowRight } from 'lucide-react';
 import { GlassCard, IconChip } from './_ui';
 
 const LINKS = [
   {
+    href: '/account/mentor/bootcamps',
+    icon: GraduationCap,
+    accent: 'violet',
+    title: 'My Bootcamps',
+    desc: 'Manage assigned bootcamps',
+  },
+  {
     href: '/account/mentor/assigned-members',
     icon: Target,
-    accent: 'violet',
+    accent: 'cyan',
     title: 'Assigned Members',
     desc: 'Manage and track mentees',
   },
   {
     href: '/account/mentor/resources',
     icon: BookOpen,
-    accent: 'cyan',
+    accent: 'amber',
     title: 'Resources',
     desc: 'Upload materials & guides',
   },
   {
     href: '/account/mentor/sessions',
     icon: BarChart3,
-    accent: 'amber',
+    accent: 'pink',
     title: 'Sessions',
     desc: 'Log and review sessions',
-  },
-  {
-    href: '/account/mentor/notices',
-    icon: FileText,
-    accent: 'pink',
-    title: 'Notices',
-    desc: 'Announcements & reminders',
   },
 ];
 
@@ -40,6 +40,7 @@ const ARROW_TEXT = {
   cyan: 'text-cyan-400',
   amber: 'text-amber-400',
   pink: 'text-pink-400',
+  emerald: 'text-emerald-400',
 };
 
 export default function QuickAccessGrid() {

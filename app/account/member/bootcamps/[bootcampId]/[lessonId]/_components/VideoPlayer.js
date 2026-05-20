@@ -41,13 +41,14 @@ function formatTime(seconds) {
 
 const TICK_MS = 30000;
 
-function YouTubeEmbed({ videoId, onProgress, onComplete }) {
+function YouTubeEmbed({ videoId, onProgress, onComplete, initialPosition = 0 }) {
   const [loading, setLoading] = useState(true);
   const iframeRef = useRef(null);
   const playingRef = useRef(false);
   const lastTickRef = useRef({ time: null, at: null });
   const currentTimeRef = useRef(0);
   const timerRef = useRef(null);
+  const seekedRef = useRef(false);
 
   const extractedId =
     videoId?.match(
@@ -102,9 +103,14 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
         currentTimeRef.current = Number(data.info.currentTime) || 0;
       }
 
-      // Player state: 1=playing, 2=paused, 0=ended
+      // Player state: -1=unstarted, 0=ended, 1=playing, 2=paused, 5=cued
       if (data.event === 'onStateChange') {
         const state = data.info;
+        // Seek to saved position once when player first becomes ready (cued or paused)
+        if (!seekedRef.current && initialPosition > 5 && (state === 5 || state === 2 || state === -1)) {
+          seekedRef.current = true;
+          postToPlayer('command', { func: 'seekTo', args: [Math.floor(initialPosition), true] });
+        }
         if (state === 1) {
           playingRef.current = true;
           startTick();
@@ -128,6 +134,8 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
     postToPlayer('listening');
   }, [postToPlayer]);
 
+  const startParam = initialPosition > 5 ? `&start=${Math.floor(initialPosition)}` : '';
+
   return (
     <div className="relative aspect-video max-h-[85vh] w-full overflow-hidden rounded-xl bg-black">
       {loading && (
@@ -137,7 +145,7 @@ function YouTubeEmbed({ videoId, onProgress, onComplete }) {
       )}
       <iframe
         ref={iframeRef}
-        src={`https://www.youtube-nocookie.com/embed/${extractedId}?rel=0&modestbranding=1&enablejsapi=1`}
+        src={`https://www.youtube-nocookie.com/embed/${extractedId}?rel=0&modestbranding=1&enablejsapi=1${startParam}`}
         title="Video player"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
@@ -990,7 +998,7 @@ export default function VideoPlayer({
   }
 
   if (video_source === 'youtube') {
-    return <YouTubeEmbed videoId={video_id || video_url} onProgress={onProgress} onComplete={onComplete} />;
+    return <YouTubeEmbed videoId={video_id || video_url} initialPosition={initialPosition} onProgress={onProgress} onComplete={onComplete} />;
   }
 
   if (video_source === 'drive' || video_source === 'upload') {

@@ -13,8 +13,12 @@ import {
   Zap,
   BookOpen,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
 } from 'lucide-react';
+
+const PAGE_SIZE = 12;
 import BootcampCard from './BootcampCard';
 import BootcampFormModal from './BootcampFormModal';
 import BootcampTableRow from './BootcampTableRow';
@@ -40,6 +44,7 @@ export default function BootcampManagementClient({ initialBootcamps }) {
   const [formModal, setFormModal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [deletedIds, setDeletedIds] = useState(() => new Set());
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setBootcamps((initialBootcamps ?? []).filter((b) => !deletedIds.has(b.id)));
@@ -98,6 +103,12 @@ export default function BootcampManagementClient({ initialBootcamps }) {
     });
     return sortBootcamps(result, sortKey);
   }, [bootcamps, statusFilter, search, sortKey]);
+
+  // Reset to page 1 when filters/sort change
+  useEffect(() => { setPage(1); }, [search, statusFilter, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const statusTabs = STATUS_TABS.map((t) => ({
     ...t,
@@ -240,17 +251,20 @@ export default function BootcampManagementClient({ initialBootcamps }) {
 
         {/* Grid view */}
         {filtered.length > 0 && viewMode === 'grid' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((b) => (
-              <BootcampCard
-                key={b.id}
-                bootcamp={b}
-                onToggleFeatured={handleToggleFeatured}
-                onDelete={handleDelete}
-                deleteLoading={deleteLoading === b.id}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paginated.map((b) => (
+                <BootcampCard
+                  key={b.id}
+                  bootcamp={b}
+                  onToggleFeatured={handleToggleFeatured}
+                  onDelete={handleDelete}
+                  deleteLoading={deleteLoading === b.id}
+                />
+              ))}
+            </div>
+            <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} />
+          </>
         )}
 
         {/* List view */}
@@ -269,7 +283,7 @@ export default function BootcampManagementClient({ initialBootcamps }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/4">
-                  {filtered.map((b) => (
+                  {paginated.map((b) => (
                     <BootcampTableRow
                       key={b.id}
                       bootcamp={b}
@@ -281,10 +295,11 @@ export default function BootcampManagementClient({ initialBootcamps }) {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-white/6 px-5 py-3">
+            <div className="border-t border-white/6 px-5 py-3 flex items-center justify-between gap-4">
               <span className="text-xs text-gray-500">
                 {filtered.length} track{filtered.length !== 1 ? 's' : ''}
               </span>
+              <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} compact />
             </div>
           </div>
         )}
@@ -298,5 +313,88 @@ export default function BootcampManagementClient({ initialBootcamps }) {
         />
       )}
     </>
+  );
+}
+
+function Pagination({ page, totalPages, total, onPage, compact = false }) {
+  if (totalPages <= 1) return null;
+
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, total);
+
+  // Build page number list with ellipsis
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-xs text-gray-400 px-1">{page} / {totalPages}</span>
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+      <span className="text-xs text-gray-500">
+        Showing <span className="text-white font-medium">{start}–{end}</span> of{' '}
+        <span className="text-white font-medium">{total}</span> tracks
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        {pages.map((p, i) =>
+          p === '…' ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-600 select-none">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPage(p)}
+              className={`min-w-7.5 h-7.5 rounded-lg text-xs font-medium transition-all ${
+                p === page
+                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                  : 'text-gray-500 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
   );
 }
