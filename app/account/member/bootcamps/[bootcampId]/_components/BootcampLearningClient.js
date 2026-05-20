@@ -12,7 +12,6 @@ import {
   lazy,
 } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -39,6 +38,7 @@ import {
   Loader2,
   AlertCircle,
   ArrowLeft,
+  Send,
 } from 'lucide-react';
 import {
   getLesson,
@@ -48,6 +48,11 @@ import {
   markLessonComplete,
   markLessonIncomplete,
   saveLessonNotes,
+  touchLessonAccess,
+  submitHelpTicketAction,
+  getMemberHelpTickets,
+  getMemberBootcampTasks,
+  getMemberBootcampSessions,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
@@ -55,6 +60,29 @@ import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 const LessonContentRenderer = lazy(
   () => import('../[lessonId]/_components/LessonContentRenderer')
 );
+
+// Native History API cache to bypass Next.js monkey-patched router and prevent reloads
+let nativePushState = null;
+let nativeReplaceState = null;
+
+function getNativeHistory() {
+  if (typeof window === 'undefined') return { pushState: null, replaceState: null };
+  if (nativePushState && nativeReplaceState) {
+    return { pushState: nativePushState, replaceState: nativeReplaceState };
+  }
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    nativePushState = iframe.contentWindow.history.pushState;
+    nativeReplaceState = iframe.contentWindow.history.replaceState;
+    document.body.removeChild(iframe);
+  } catch (e) {
+    nativePushState = window.history.pushState;
+    nativeReplaceState = window.history.replaceState;
+  }
+  return { pushState: nativePushState, replaceState: nativeReplaceState };
+}
 
 function ChunkFallback({ label = 'Loading…' }) {
   return (
@@ -132,23 +160,33 @@ const LessonRow = memo(function LessonRow({
   onPrefetch,
   index,
   activeRef,
+  moduleLocked,
 }) {
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
   const duration = formatDurationSecs(lesson.duration);
+  const effectiveLocked = moduleLocked || lesson.is_locked;
+
   return (
     <button
       ref={isActive ? activeRef : null}
-      onClick={() => onSelect(lesson)}
-      onMouseEnter={() => onPrefetch?.(lesson)}
-      onFocus={() => onPrefetch?.(lesson)}
+      onClick={() => {
+        if (effectiveLocked) return;
+        onSelect(lesson);
+      }}
+      onMouseEnter={() => !effectiveLocked && onPrefetch?.(lesson)}
+      onFocus={() => !effectiveLocked && onPrefetch?.(lesson)}
       className={`group flex w-full items-start gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors ${
-        isActive
-          ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
-          : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
+        effectiveLocked
+          ? 'cursor-not-allowed opacity-60'
+          : isActive
+            ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
+            : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
       }`}
     >
       <div className="mt-0.5 shrink-0">
-        {isCompleted ? (
+        {effectiveLocked ? (
+          <Lock className="h-4 w-4 text-gray-600" />
+        ) : isCompleted ? (
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         ) : isActive ? (
           <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
@@ -163,17 +201,16 @@ const LessonRow = memo(function LessonRow({
       <div className="min-w-0 flex-1">
         <div
           className={`flex items-start gap-1.5 text-[12.5px] leading-snug ${
-            isCompleted
-              ? 'text-gray-500 line-through decoration-white/15'
-              : isActive
-                ? 'font-medium text-white'
-                : 'text-gray-300 group-hover:text-white'
+            effectiveLocked
+              ? 'text-gray-600'
+              : isCompleted
+                ? 'text-gray-500 line-through decoration-white/15'
+                : isActive
+                  ? 'font-medium text-white'
+                  : 'text-gray-300 group-hover:text-white'
           }`}
         >
           <span className="line-clamp-2">{lesson.title}</span>
-          {lesson.is_locked && (
-            <Lock className="mt-0.5 h-3 w-3 shrink-0 text-gray-600" />
-          )}
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[10.5px] text-gray-500">
           {hasVideo ? (
@@ -187,6 +224,9 @@ const LessonRow = memo(function LessonRow({
               <span className="text-gray-700">·</span>
               <span>{duration}</span>
             </>
+          )}
+          {effectiveLocked && (
+            <span className="ml-auto text-[10px] text-amber-600/80">Locked</span>
           )}
         </div>
       </div>
@@ -203,7 +243,9 @@ function ModuleGroup({
   onPrefetch,
   activeRef,
   forceOpen,
+  courseLocked,
 }) {
+  const effectiveModuleLocked = courseLocked || module.is_locked;
   const containsActive = module.lessons?.some((l) => l.id === activeLessonId);
   const containsResume = module.lessons?.some((l) => l.id === resumeLessonId);
   const [open, setOpen] = useState(containsActive || containsResume);
@@ -231,15 +273,19 @@ function ModuleGroup({
           className={`h-3 w-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
         <span
-          className={`flex-1 truncate text-[12px] font-medium ${allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}
+          className={`flex-1 truncate text-[12px] font-medium ${effectiveModuleLocked ? 'text-gray-600' : allDone ? 'text-gray-500' : 'text-gray-300'} group-hover:text-white`}
         >
           {module.title}
         </span>
-        <span
-          className={`shrink-0 text-[10px] tabular-nums ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}
-        >
-          {done}/{total}
-        </span>
+        {effectiveModuleLocked ? (
+          <Lock className="h-3 w-3 shrink-0 text-amber-600/70" />
+        ) : (
+          <span
+            className={`shrink-0 text-[10px] tabular-nums ${allDone ? 'text-emerald-500' : 'text-gray-600'}`}
+          >
+            {done}/{total}
+          </span>
+        )}
       </button>
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -261,6 +307,7 @@ function ModuleGroup({
                   onPrefetch={onPrefetch}
                   activeRef={activeRef}
                   index={i}
+                  moduleLocked={effectiveModuleLocked}
                 />
               ))}
             </div>
@@ -321,20 +368,26 @@ function CourseGroup({
           className={`h-3.5 w-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-violet-300">
+          <div className={`truncate text-[13px] font-semibold transition-colors group-hover:text-violet-300 ${course.is_locked ? 'text-gray-500' : 'text-white'}`}>
             {course.title}
           </div>
-          <div className="mt-1 flex items-center gap-2">
-            <div className="h-1 max-w-[120px] flex-1 overflow-hidden rounded-full bg-white/5">
-              <div
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${pct}%` }}
-              />
+          {course.is_locked ? (
+            <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600/80">
+              <Lock className="h-2.5 w-2.5" /> Locked
             </div>
-            <span className="text-[10px] text-gray-500 tabular-nums">
-              {done}/{total}
-            </span>
-          </div>
+          ) : (
+            <div className="mt-1 flex items-center gap-2">
+              <div className="h-1 max-w-[120px] flex-1 overflow-hidden rounded-full bg-white/5">
+                <div
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 tabular-nums">
+                {done}/{total}
+              </span>
+            </div>
+          )}
         </div>
       </button>
       <AnimatePresence initial={false}>
@@ -358,6 +411,7 @@ function CourseGroup({
                   onPrefetch={onPrefetch}
                   activeRef={activeRef}
                   forceOpen={forceOpen}
+                  courseLocked={course.is_locked}
                 />
               ))}
             </div>
@@ -683,7 +737,209 @@ function TableOfContents({ contentRef }) {
   );
 }
 
+// ─── Overview tabs: Tasks, Sessions, Help Desk ────────────────────────────────
+
+const DIFF_COLOR = {
+  easy:   'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  medium: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  hard:   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+};
+
+function PanelLoader() {
+  return (
+    <div className="flex items-center justify-center py-12 text-gray-500">
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <span className="text-[12px]">Loading…</span>
+    </div>
+  );
+}
+
+function PanelEmpty({ message }) {
+  return <p className="py-10 text-center text-[13px] text-gray-500">{message}</p>;
+}
+
+function MemberTasksPanel({ bootcampId }) {
+  const [tasks, setTasks] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberBootcampTasks(bootcampId).then(setTasks).catch(() => setTasks([]));
+  }, [bootcampId]);
+
+  if (tasks === null) return <PanelLoader />;
+
+  if (tasks.length === 0) return <PanelEmpty message="No tasks assigned yet." />;
+
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <div key={task.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+          <button className="flex w-full items-center gap-3 p-4 text-left" onClick={() => setExpanded(expanded === task.id ? null : task.id)}>
+            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>{task.difficulty}</span>
+            <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
+            {task.deadline && (
+              <span className="shrink-0 text-[11px] text-gray-500">
+                {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+            {expanded === task.id ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
+          </button>
+          {expanded === task.id && (
+            <div className="border-t border-white/[0.06] px-4 pb-4 pt-3">
+              {task.description && <p className="mb-3 text-[13px] text-gray-400">{task.description}</p>}
+              {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {task.problem_links.map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
+                      <Download className="h-3 w-3" />Problem {i + 1}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MemberSessionRow({ s, variant }) {
+  const mentorName = s.mentor?.full_name || '—';
+  const date = new Date(s.session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border p-4 ${variant === 'upcoming' ? 'border-violet-500/20 bg-violet-500/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variant === 'upcoming' ? 'bg-violet-500/15' : 'bg-emerald-500/10'}`}>
+        <Video className={`h-4 w-4 ${variant === 'upcoming' ? 'text-violet-400' : 'text-emerald-400'}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-medium text-white truncate">{s.topic}</p>
+        <p className="text-[11px] text-gray-500">{date} · {s.duration}min · {mentorName}</p>
+        {s.notes && <p className="mt-1 text-[11px] text-gray-500 italic">{s.notes}</p>}
+      </div>
+      {variant === 'upcoming'
+        ? <span className="shrink-0 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+        : s.attended === true
+          ? <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+          : s.attended === false
+            ? <span className="shrink-0 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+            : <span className="shrink-0 rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+      }
+    </div>
+  );
+}
+
+function MemberSessionsPanel({ bootcampId }) {
+  const [sessions, setSessions] = useState(null);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberBootcampSessions(bootcampId).then(setSessions).catch(() => setSessions([]));
+  }, [bootcampId]);
+
+  if (sessions === null) return <PanelLoader />;
+
+  if (sessions.length === 0) return <PanelEmpty message="No sessions scheduled yet." />;
+
+  const upcoming = sessions.filter(s => new Date(s.session_date) >= new Date());
+  const past     = sessions.filter(s => new Date(s.session_date) <  new Date());
+
+  return (
+    <div className="space-y-6">
+      {upcoming.length > 0 && (
+        <div>
+          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Upcoming ({upcoming.length})</p>
+          <div className="space-y-2">{upcoming.map(s => <MemberSessionRow key={s.id} s={s} variant="upcoming" />)}</div>
+        </div>
+      )}
+      {past.length > 0 && (
+        <div>
+          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Past ({past.length})</p>
+          <div className="space-y-2">{past.map(s => <MemberSessionRow key={s.id} s={s} variant="past" />)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberHelpDeskPanel({ bootcampId }) {
+  const [tickets, setTickets] = useState(null);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberHelpTickets(bootcampId).then(setTickets).catch(() => setTickets([]));
+  }, [bootcampId]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!subject.trim() || !body.trim()) return;
+    setSending(true);
+    const fd = new FormData();
+    fd.set('bootcamp_id', bootcampId);
+    fd.set('subject', subject);
+    fd.set('body', body);
+    const result = await submitHelpTicketAction(fd);
+    if (!result.error) {
+      setTickets(prev => [{ id: `h${Date.now()}`, subject, body, status: 'open', created_at: new Date().toISOString() }, ...(prev || [])]);
+      setSubject('');
+      setBody('');
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
+        <p className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">Ask for help</p>
+        <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
+        <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
+        <button type="submit" disabled={sending} className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+          {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          {sending ? 'Sending…' : 'Submit'}
+        </button>
+      </form>
+
+      {tickets === null ? (
+        <PanelLoader />
+      ) : tickets.length === 0 ? (
+        <PanelEmpty message="No help requests yet." />
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Your tickets</p>
+          {tickets.map(t => (
+            <div key={t.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex-1 text-[13px] font-medium text-white truncate">{t.subject}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.status === 'open' ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'}`}>{t.status}</span>
+              </div>
+              <p className="mt-1 text-[12px] text-gray-500 line-clamp-2">{t.body}</p>
+              {t.reply && (
+                <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                  <p className="text-[10px] font-semibold text-emerald-400 uppercase mb-1">Mentor reply</p>
+                  <p className="text-[12px] text-gray-300">{t.reply}</p>
+                </div>
+              )}
+              <p className="mt-1 text-[10px] text-gray-600">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Overview Panel ───────────────────────────────────────────────────────────
+
+const OVERVIEW_TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'tasks', label: 'Tasks' },
+  { value: 'sessions', label: 'Sessions' },
+  { value: 'helpdesk', label: 'Help Desk' },
+];
 
 const OverviewPanel = memo(function OverviewPanel({
   bootcamp,
@@ -701,6 +957,7 @@ const OverviewPanel = memo(function OverviewPanel({
   coursesCount,
   modulesCount,
 }) {
+  const [activeTab, setActiveTab] = useState('overview');
   const ctaLabel = isComplete
     ? 'Review'
     : completedCount > 0
@@ -711,6 +968,7 @@ const OverviewPanel = memo(function OverviewPanel({
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
       {/* Title + meta */}
       <div className="space-y-3">
+
         {bootcamp?.difficulty_level && (
           <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-violet-300 uppercase ring-1 ring-violet-500/20">
             {bootcamp.difficulty_level}
@@ -743,6 +1001,37 @@ const OverviewPanel = memo(function OverviewPanel({
           )}
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div className="mt-6 flex gap-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-1">
+        {OVERVIEW_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`flex-1 rounded-lg py-2 text-[12px] font-semibold transition-colors ${activeTab === tab.value ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'tasks' && (
+        <div className="mt-6">
+          <MemberTasksPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+      {activeTab === 'sessions' && (
+        <div className="mt-6">
+          <MemberSessionsPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+      {activeTab === 'helpdesk' && (
+        <div className="mt-6">
+          <MemberHelpDeskPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+
+      {activeTab === 'overview' && <>
 
       {/* Continue card */}
       {resumeLesson && (
@@ -884,6 +1173,7 @@ const OverviewPanel = memo(function OverviewPanel({
       )}
 
       <div className="h-8" />
+      </>}
     </div>
   );
 });
@@ -902,6 +1192,7 @@ const LessonPanel = memo(function LessonPanel({
   isCompleted,
   currentIndex,
   bootcampId,
+  onProgressUpdate,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -930,6 +1221,23 @@ const LessonPanel = memo(function LessonPanel({
       const pos = ct == null ? null : Math.floor(Number(ct) || 0);
       const lessonId = lesson.id;
       const bId = bootcampId;
+
+      // Update client state immediately so navigations and stats sync in real time
+      if (onProgressUpdate) {
+        onProgressUpdate((prev) => {
+          const currentProgress = prev[lessonId] || {};
+          const currentWatchTime = Number(currentProgress.watch_time) || 0;
+          return {
+            ...prev,
+            [lessonId]: {
+              ...currentProgress,
+              last_position: pos !== null ? pos : currentProgress.last_position,
+              watch_time: currentWatchTime + delta,
+            },
+          };
+        });
+      }
+
       // Local-date string so the chart's local-day bucketing matches what gets
       // written. Without this, late-night sessions land on yesterday's UTC date.
       const d = new Date();
@@ -941,17 +1249,17 @@ const LessonPanel = memo(function LessonPanel({
             await Promise.all([
               updateWatchTimeDelta(lessonId, delta, pos, bId),
               delta > 0 && bId
-                ? recordLearningActivity({ bootcampId: bId, deltaSeconds: delta, activityDate })
+                ? recordLearningActivity({ bootcampId: bId, lessonId, deltaSeconds: delta, activityDate })
                 : null,
             ]);
-          } catch {
-            // Swallow — next tick will retry the increment.
+          } catch (err) {
+            console.error('[Progress Tracking Error]: Failed to update user watch time:', err);
           }
         });
       pendingSaveRef.current = next;
       return next;
     },
-    [lesson.id, bootcampId]
+    [lesson.id, bootcampId, onProgressUpdate]
   );
 
   const handleVideoComplete = useCallback(async () => {
@@ -1071,6 +1379,7 @@ const LessonPanel = memo(function LessonPanel({
                   lessonId={lesson.id}
                   onProgress={handleProgress}
                   onComplete={handleVideoComplete}
+                  initialPosition={initialPosition}
                 />
               </Suspense>
             ) : lesson._pendingContent ? (
@@ -1207,37 +1516,33 @@ function LessonSkeleton({ title, hasVideo }) {
 
 // ─── Main SPA Shell ───────────────────────────────────────────────────────────
 
+// Extract lessonId from the current URL path (client-side only)
+function getLessonIdFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const m = window.location.pathname.match(/\/bootcamps\/[^/]+\/([^/]+)$/);
+  return m ? m[1] : null;
+}
+
 export default function BootcampLearningClient({
   bootcamp,
   lessonProgress: initialProgress = {},
-  initialLessonId = null,
-  initialLesson = null,
 }) {
-  const router = useRouter();
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
-  const [activeLessonId, setActiveLessonId] = useState(initialLessonId);
-  const [loadedLesson, setLoadedLesson] = useState(initialLesson);
+  // activeLessonId: what the sidebar highlights (set immediately on click)
+  const [activeLessonId, setActiveLessonId] = useState(null);
+  // loadedLesson: what is actually rendered in the main panel
+  const [loadedLesson, setLoadedLesson] = useState(null);
   const [loading, startLoading] = useTransition();
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
 
-  useEffect(() => {
-    setActiveLessonId(initialLessonId);
-    if (initialLesson) {
-      setLoadedLesson(initialLesson);
-    }
-  }, [initialLessonId, initialLesson]);
-
-  const lessonCacheRef = useRef(
-    initialLesson ? { [initialLesson.id]: initialLesson } : {}
-  );
+  const lessonCacheRef = useRef({});
   const prefetchInflightRef = useRef(new Set());
   const navTokenRef = useRef(0);
-  const activeLessonIdRef = useRef(activeLessonId);
-  useEffect(() => {
-    activeLessonIdRef.current = activeLessonId;
-  }, [activeLessonId]);
+  const activeLessonIdRef = useRef(null);
+  // Sync ref on every render — no useEffect lag
+  activeLessonIdRef.current = activeLessonId;
 
   const allLessons = useMemo(() => {
     const out = [];
@@ -1262,12 +1567,22 @@ export default function BootcampLearningClient({
     totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
   const isComplete = completedCount === totalLessons && totalLessons > 0;
 
-  const resumeLesson = useMemo(
-    () =>
-      allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) ||
-      allLessons[0],
-    [allLessons, lessonProgress]
-  );
+  const resumeLesson = useMemo(() => {
+    // Find the most recently accessed lesson (by updated_at)
+    let lastAccessedLesson = null;
+    let lastAccessedAt = null;
+    for (const l of allLessons) {
+      const p = lessonProgress?.[l.id];
+      if (!p?.updated_at) continue;
+      if (!lastAccessedAt || p.updated_at > lastAccessedAt) {
+        lastAccessedAt = p.updated_at;
+        lastAccessedLesson = l;
+      }
+    }
+    if (lastAccessedLesson) return lastAccessedLesson;
+    // No history: return first uncompleted lesson or first lesson
+    return allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) || allLessons[0];
+  }, [allLessons, lessonProgress]);
   const resumeIndex = useMemo(
     () =>
       resumeLesson ? allLessons.findIndex((l) => l.id === resumeLesson.id) : -1,
@@ -1295,122 +1610,119 @@ export default function BootcampLearningClient({
     [allLessons, loadedLesson?.id]
   );
 
+  // Stable refs so all callbacks below can have [] deps
   const allLessonsRef = useRef(allLessons);
-  useEffect(() => {
-    allLessonsRef.current = allLessons;
-  }, [allLessons]);
+  allLessonsRef.current = allLessons; // sync inline, no useEffect needed
 
-  // Merge stub metadata (from curriculum) with content-only delta from server.
-  const mergeStubAndContent = useCallback((stub, content) => {
-    if (!content) return stub;
-    if (!stub) return content;
-    return { ...stub, ...content };
-  }, []);
+  const bootcampRef = useRef(bootcamp);
+  bootcampRef.current = bootcamp;
 
-  const loadFullLesson = useCallback(
-    async (lessonId) => {
-      const cached = lessonCacheRef.current[lessonId];
-      if (cached) return cached;
-      const stub = allLessonsRef.current.find((l) => l.id === lessonId);
-      // Stub missing (deep link before curriculum loads, unlikely) → full fetch.
-      if (!stub) {
-        const full = await getLesson(lessonId);
-        lessonCacheRef.current[lessonId] = full;
-        return full;
-      }
-      const content = await getLessonContent(lessonId);
-      const merged = mergeStubAndContent(stub, content);
-      lessonCacheRef.current[lessonId] = merged;
-      return merged;
-    },
-    [mergeStubAndContent]
-  );
+  // These never recreate — they read everything through stable refs
+  const loadFullLesson = useCallback(async (lessonId) => {
+    const cached = lessonCacheRef.current[lessonId];
+    if (cached && cached.content !== undefined) return cached;
+    const stub = allLessonsRef.current.find((l) => l.id === lessonId);
+    if (!stub) {
+      const full = await getLesson(lessonId);
+      lessonCacheRef.current[lessonId] = full;
+      return full;
+    }
+    const content = await getLessonContent(lessonId);
+    const merged = content ? { ...stub, ...content } : stub;
+    lessonCacheRef.current[lessonId] = merged;
+    return merged;
+  }, []); // stable — only reads refs
 
-  const prefetchLesson = useCallback(
-    (lesson) => {
-      if (!lesson?.id) return;
-      if (lessonCacheRef.current[lesson.id]) return;
-      if (prefetchInflightRef.current.has(lesson.id)) return;
-      prefetchInflightRef.current.add(lesson.id);
-      const stub =
-        allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
-      getLessonContent(lesson.id)
-        .then((content) => {
-          lessonCacheRef.current[lesson.id] = mergeStubAndContent(stub, content);
-        })
-        .catch(() => {})
-        .finally(() => {
-          prefetchInflightRef.current.delete(lesson.id);
-        });
-    },
-    [mergeStubAndContent]
-  );
+  const prefetchLesson = useCallback((lesson) => {
+    if (!lesson?.id) return;
+    if (lessonCacheRef.current[lesson.id]?.content !== undefined) return;
+    if (prefetchInflightRef.current.has(lesson.id)) return;
+    prefetchInflightRef.current.add(lesson.id);
+    const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+    getLessonContent(lesson.id)
+      .then((content) => {
+        lessonCacheRef.current[lesson.id] = content ? { ...stub, ...content } : stub;
+      })
+      .catch(() => {})
+      .finally(() => { prefetchInflightRef.current.delete(lesson.id); });
+  }, []); // stable — only reads refs
 
   // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
   // 'replace' (lesson-to-lesson switch), 'none' (browser popstate — URL already set).
+  // Fully stable ([] deps) — reads everything through refs.
   const navigateToLesson = useCallback(
     (lesson, mode = 'push') => {
       const token = ++navTokenRef.current;
+      const bootcampId = bootcampRef.current?.id;
+      const nativeHistory = getNativeHistory();
+      const pushState = nativeHistory.pushState ? nativeHistory.pushState.bind(window.history) : window.history.pushState.bind(window.history);
+      const replaceState = nativeHistory.replaceState ? nativeHistory.replaceState.bind(window.history) : window.history.replaceState.bind(window.history);
 
       if (!lesson) {
         setActiveLessonId(null);
         setLoadedLesson(null);
         setLoadError(null);
         if (mode !== 'none') {
-          const url = `/account/member/bootcamps/${bootcamp.id}`;
-          if (mode === 'replace') router.replace(url, { scroll: false });
-          else router.push(url, { scroll: false });
+          const url = `/account/member/bootcamps/${bootcampId}`;
+          if (mode === 'replace') replaceState(null, '', url);
+          else pushState(null, '', url);
         }
         return;
       }
 
-      const url = `/account/member/bootcamps/${bootcamp.id}/${lesson.id}`;
-      if (mode === 'push') router.push(url, { scroll: false });
-      else if (mode === 'replace') router.replace(url, { scroll: false });
+      const url = `/account/member/bootcamps/${bootcampId}/${lesson.id}`;
+      // Use History API directly to avoid Next.js server re-render on dynamic segment change
+      if (mode === 'push') pushState(null, '', url);
+      else if (mode === 'replace') replaceState(null, '', url);
 
       setActiveLessonId(lesson.id);
       setLoadError(null);
 
-      // Fast path: cached (full lesson with content)
+      // Fire-and-forget so resume tracking works for non-video lessons too
+      touchLessonAccess(lesson.id, bootcampId).catch(() => {});
+      // Optimistically update updated_at so resumeLesson re-computes in this session
+      setLessonProgress((prev) => ({
+        ...prev,
+        [lesson.id]: { ...prev[lesson.id], updated_at: new Date().toISOString() },
+      }));
+
+      // Fast path: already have full content in cache
       const cached = lessonCacheRef.current[lesson.id];
       if (cached && cached.content !== undefined) {
         setLoadedLesson(cached);
         return;
       }
-      // Stub already has content (e.g. SSR-passed initial lesson)
+      // Lesson object already carries content (e.g. SSR initial lesson passed directly)
       if (lesson.content !== undefined) {
         lessonCacheRef.current[lesson.id] = lesson;
         setLoadedLesson(lesson);
         return;
       }
 
-      // Instant render path: show the stub immediately so the title bar,
-      // video, and metadata render with zero wait. The body content (markdown,
-      // attachments) streams in when the small content fetch resolves.
+      // Instant render: show stub immediately (title, video metadata available from
+      // curriculum) so the header and video mount with zero wait. Content body
+      // (markdown, attachments) streams in when the small content fetch resolves.
       const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
-      setLoadedLesson({ ...stub, content: undefined, _pendingContent: true });
+      const optimisticLesson = { ...stub, content: undefined, _pendingContent: true };
+      setLoadedLesson(optimisticLesson);
 
-      // Async load — ignore result if user navigated again
       startLoading(async () => {
         try {
           const full = await loadFullLesson(lesson.id);
           if (navTokenRef.current !== token) return;
-          if (!full) {
-            setLoadError('Lesson not found.');
-            return;
-          }
+          if (!full) { setLoadError('Lesson not found.'); return; }
           setLoadedLesson(full);
-        } catch (e) {
+        } catch {
           if (navTokenRef.current !== token) return;
           setLoadError('Failed to load lesson. Please try again.');
         }
       });
     },
-    [bootcamp?.id, loadFullLesson]
+    [] // stable — reads everything through refs
   );
 
   // Wrapper used by UI: smart-detect push vs replace, skip no-op.
-  // Stable identity (reads activeLessonId via ref) so memoized children don't re-render.
+  // Stable identity (reads everything via refs) so memoized children never re-render due to this.
   const selectLesson = useCallback(
     (lesson) => {
       const current = activeLessonIdRef.current;
@@ -1419,34 +1731,39 @@ export default function BootcampLearningClient({
         return navigateToLesson(null, 'push');
       }
       if (lesson.id === current) return;
+      if (lesson.is_locked) return;
+      const bc = bootcampRef.current;
+      const parentCourse = bc?.courses?.find((c) =>
+        (c.modules || []).some((m) => (m.lessons || []).some((l) => l.id === lesson.id))
+      );
+      if (parentCourse?.is_locked) return;
+      const parentModule = (parentCourse?.modules || []).find(
+        (m) => (m.lessons || []).some((l) => l.id === lesson.id)
+      );
+      if (parentModule?.is_locked) return;
       const mode = current ? 'replace' : 'push';
       navigateToLesson(lesson, mode);
     },
     [navigateToLesson]
   );
 
-  // Initial hydration: if URL has a lessonId but no preloaded lesson, fetch it
+  // On mount: if URL already contains a lessonId (direct link / page refresh),
+  // navigate to it immediately client-side. The layout no longer passes SSR lesson data
+  // since it's shared across all lesson URLs — the client fetches it.
   useEffect(() => {
-    if (initialLessonId && !loadedLesson) {
-      startLoading(async () => {
-        try {
-          const full = await loadFullLesson(initialLessonId);
-          setLoadedLesson(full);
-        } catch {
-          setLoadError('Failed to load lesson. Please try again.');
-        }
-      });
+    const lessonId = getLessonIdFromUrl();
+    if (lessonId) {
+      navigateToLesson({ id: lessonId }, 'none');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefetch neighbor lessons when active lesson changes
+  // Prefetch neighbors whenever the loaded lesson changes (reads allLessons via ref — stable dep)
   useEffect(() => {
     if (!loadedLesson?.id) return;
-    const idx = allLessons.findIndex((l) => l.id === loadedLesson.id);
+    const lessons = allLessonsRef.current;
+    const idx = lessons.findIndex((l) => l.id === loadedLesson.id);
     if (idx < 0) return;
-    const next = allLessons[idx + 1];
-    const prev = allLessons[idx - 1];
     const schedule = (cb) => {
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         window.requestIdleCallback(cb, { timeout: 1500 });
@@ -1454,11 +1771,9 @@ export default function BootcampLearningClient({
         setTimeout(cb, 300);
       }
     };
-    const next2 = allLessons[idx + 2];
-    if (next) schedule(() => prefetchLesson(next));
-    if (prev) schedule(() => prefetchLesson(prev));
-    if (next2) schedule(() => prefetchLesson(next2));
-  }, [loadedLesson?.id, allLessons, prefetchLesson]);
+    const neighbors = [lessons[idx - 1], lessons[idx + 1], lessons[idx + 2]].filter(Boolean);
+    neighbors.forEach((l) => schedule(() => prefetchLesson(l)));
+  }, [loadedLesson?.id, prefetchLesson]);
 
   // Browser back/forward — DO NOT push, just sync state
   useEffect(() => {
@@ -1532,7 +1847,7 @@ export default function BootcampLearningClient({
         [lessonId]: { ...prev[lessonId], is_completed: false },
       }));
     });
-  }, []);
+  }, [bootcamp?.id]);
 
   const handleSaveNotes = useCallback(async (lessonId, notes) => {
     await saveLessonNotes(lessonId, notes);
@@ -1735,6 +2050,7 @@ export default function BootcampLearningClient({
                 isCompleted={lessonProgress[loadedLesson.id]?.is_completed}
                 currentIndex={currentIndex}
                 bootcampId={bootcamp?.id}
+                onProgressUpdate={setLessonProgress}
               />
             </div>
           ) : (

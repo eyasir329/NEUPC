@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { X, Clock, Play, Save, Loader2, GripVertical, BookOpen, ChevronRight, AlertCircle } from 'lucide-react';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import VideoPlayer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/VideoPlayer';
@@ -17,19 +18,31 @@ function formatDuration(seconds) {
 }
 
 export default function LessonFullscreenEditorModal({
+  lessonId,
   form,
+  contentRef,
   set,
   handleChange,
+  handleContentChange,
   errors,
   durationMins,
   handleSave,
   saving,
   onClose,
   syllabusUI,
+  lessonSerial,
 }) {
   if (typeof document !== 'undefined') {
     document.body.style.overflow = 'hidden';
   }
+
+  // Local preview state so the right-pane preview updates as the user edits.
+  const [previewContent, setPreviewContent] = useState(contentRef.current);
+
+  const handleContentChangeWithPreview = useCallback((val) => {
+    handleContentChange(val);
+    setPreviewContent(val);
+  }, [handleContentChange]);
 
   const handleClose = () => {
     if (typeof document !== 'undefined') {
@@ -39,7 +52,7 @@ export default function LessonFullscreenEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-[#080b11] overflow-hidden">
+    <div className="fixed inset-0 z-100 flex flex-col bg-[#080b11] overflow-hidden">
       {/* Header */}
       <div className="shrink-0 z-50 flex items-center justify-between border-b border-white/10 bg-[#0d1117] px-4 py-3 sm:px-6 sm:py-4 shadow-md">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -85,12 +98,12 @@ export default function LessonFullscreenEditorModal({
       <div className="flex-1 flex overflow-hidden">
         
         {/* Leftmost Side: Syllabus */}
-        <div className="w-80 lg:w-96 xl:w-[28rem] 2xl:w-[32rem] shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
+        <div className="w-80 lg:w-96 xl:w-md 2xl:w-lg shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
           {syllabusUI}
         </div>
 
         {/* Middle Side: Editor */}
-        <div className="flex-[3] min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-3 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
             {/* Header card */}
             <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-4">
@@ -174,8 +187,10 @@ export default function LessonFullscreenEditorModal({
                   </label>
                   <div className="rounded-lg overflow-hidden">
                     <MultiBlockEditor
-                      value={form.content}
-                      onChange={(val) => set('content', val)}
+                      value={contentRef.current}
+                      onChange={handleContentChangeWithPreview}
+                      lessonSerial={lessonSerial}
+                      lessonTitle={form.title}
                     />
                   </div>
                 </div>
@@ -185,7 +200,7 @@ export default function LessonFullscreenEditorModal({
         </div>
 
         {/* Rightmost Side: Preview */}
-        <div className="flex-[2] min-w-0 overflow-y-auto overflow-x-hidden bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-2 min-w-0 overflow-y-auto overflow-x-hidden bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-3xl mx-auto pb-20">
             {/* Title */}
             <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white lg:text-3xl mb-4">
@@ -206,8 +221,8 @@ export default function LessonFullscreenEditorModal({
             )}
 
             {/* Content Blocks — no wrapping styles */}
-            {form.content ? (
-              <LessonContentRenderer content={form.content} lessonId={form.id} />
+            {previewContent ? (
+              <LessonContentRenderer content={previewContent} lessonId={lessonId} />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center border border-white/10 border-dashed rounded-3xl bg-white/2">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 mb-4">

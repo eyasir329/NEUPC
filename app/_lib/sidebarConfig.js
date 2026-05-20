@@ -508,6 +508,18 @@ export function getSidebarNavigation(activeRole, stats, session) {
         ],
       },
       {
+        key: 'bootcamps',
+        label: 'Bootcamps',
+        items: [
+          {
+            id: 'bootcamps',
+            label: 'My Bootcamps',
+            icon: GraduationCap,
+            href: '/account/mentor/bootcamps',
+          },
+        ],
+      },
+      {
         key: 'mentorship',
         label: 'Mentorship',
         items: [

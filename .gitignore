@@ -68,6 +68,8 @@ scripts/copilot-session-start.sh
 scripts/.next-dev-pids
 scripts/agent-next-dev.sh
 
+/scripts/
+
 # Copilot local session state
 .copilot/
 

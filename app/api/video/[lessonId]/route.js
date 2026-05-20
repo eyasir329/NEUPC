@@ -123,6 +123,11 @@ async function canAccessLesson(lessonId, userEmail) {
     lesson = data;
   }
 
+  // In local development, bypass enrollment and authentication checks to allow easy testing
+  if (process.env.NODE_ENV === 'development') {
+    return { allowed: true, lesson: lesson || {}, isAdmin: true };
+  }
+
   // Admins bypass all checks (enrollment, published status, even existence if previewing)
   if (isAdmin) {
     return { allowed: true, lesson: lesson || {}, isAdmin: true };
@@ -271,17 +276,23 @@ export async function GET(request, { params }) {
       }
 
       case 'youtube': {
-        // For YouTube, return the embed URL (client handles embedding)
-        const embedUrl = getYouTubeEmbedUrl(
-          lesson.video_id || lesson.video_url
-        );
-        if (!embedUrl) {
+        const videoId = extractYouTubeId(targetVideoId || lesson.video_id || lesson.video_url);
+        if (!videoId) {
           return NextResponse.json(
-            { error: 'Invalid YouTube video' },
+            { error: 'Invalid YouTube video ID' },
             { status: 400 }
           );
         }
-        return NextResponse.json({ type: 'youtube', embedUrl });
+        
+        const directUrl = await resolveYouTubeStreamUrl(videoId);
+        if (directUrl) {
+          return NextResponse.redirect(directUrl);
+        }
+        
+        return NextResponse.json(
+          { error: 'Failed to resolve direct YouTube stream URL' },
+          { status: 400 }
+        );
       }
 
       case 'upload': {
@@ -367,5 +378,94 @@ export async function HEAD(request, { params }) {
   } catch {
     return new NextResponse(null, { status: 500 });
   }
+}
+
+/**
+ * Extracts YouTube video ID from various YouTube URL formats.
+ */
+function extractYouTubeId(urlOrId) {
+  if (!urlOrId) return '';
+  const cleanId = String(urlOrId).trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
+    return cleanId;
+  }
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/;
+  const match = cleanId.match(regExp);
+  if (match && match[2].length === 11) {
+    return match[2];
+  }
+  return cleanId;
+}
+
+/**
+ * Dynamically resolves YouTube stream URL by calling the player API.
+ */
+async function resolveYouTubeStreamUrl(videoId) {
+  if (!videoId) return null;
+  
+  const clients = [
+    {
+      clientName: 'ANDROID_TESTSUITE',
+      clientVersion: '1.9',
+    },
+    {
+      clientName: 'ANDROID',
+      clientVersion: '19.00.00',
+    },
+    {
+      clientName: 'TVHTML5',
+      clientVersion: '7.20250101',
+    }
+  ];
+
+  for (const client of clients) {
+    try {
+      const response = await fetch('https://www.youtube.com/youtubei/v1/player', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+        },
+        body: JSON.stringify({
+          videoId: videoId,
+          context: {
+            client: {
+              clientName: client.clientName,
+              clientVersion: client.clientVersion,
+              hl: 'en',
+              gl: 'US',
+              utcOffsetMinutes: 0,
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const streamingData = data.streamingData || {};
+      
+      const formats = streamingData.formats || [];
+      const adaptiveFormats = streamingData.adaptiveFormats || [];
+
+      // Find the highest quality muxed stream (mp4 with video and audio)
+      const muxedStream = formats
+        .filter(f => f.url && f.mimeType?.includes('video/mp4'))
+        .sort((a, b) => (b.width || 0) - (a.width || 0))[0];
+
+      if (muxedStream?.url) {
+        return muxedStream.url;
+      }
+
+      // Check adaptive formats as fallback (find any with video and audio or just any with a url)
+      const anyStream = [...formats, ...adaptiveFormats].find(f => f.url);
+      if (anyStream?.url) {
+        return anyStream.url;
+      }
+    } catch (err) {
+      console.error(`Failed resolving YouTube stream with client ${client.clientName}:`, err);
+    }
+  }
+  return null;
 }
 

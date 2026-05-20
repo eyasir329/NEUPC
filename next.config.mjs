@@ -116,6 +116,8 @@ const nextConfig = {
                 "script-src 'self' 'unsafe-inline'",
                 isDev ? "'unsafe-eval'" : null,
                 'https://giscus.app',
+                'https://www.youtube.com',
+                'https://s.ytimg.com',
               ]
                 .filter(Boolean)
                 .join(' '),

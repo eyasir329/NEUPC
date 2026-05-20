@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Plus,
   Loader2,
@@ -22,6 +23,8 @@ import {
   Eye,
   EyeOff,
   Maximize2,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import {
   createCourse,
@@ -37,6 +40,9 @@ import {
   deleteLesson,
   reorderLessons,
   validateDriveVideo,
+  toggleCourseLock,
+  toggleModuleLock,
+  toggleLessonLock,
 } from '@/app/_lib/bootcamp-actions';
 import {
   VIDEO_SOURCES,
@@ -88,12 +94,13 @@ const VIDEO_ICONS = {
 
 // ─── Lesson editor (right panel) ───────────────────────────────────────────────
 
-function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setIsFullscreen }) {
+function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFullscreen, setIsFullscreen, lessonSaveRef }) {
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [driveValidation, setDriveValidation] = useState(null);
   const [errors, setErrors] = useState({});
   const [deleting, setDeleting] = useState(false);
+
 
   const [form, setForm] = useState(() => {
     let content = lesson.content || '';
@@ -156,10 +163,18 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setI
     };
   });
 
-  const set = (name, value) => {
+  // Content is managed separately via a ref so MultiBlockEditor edits don't
+  // cause parent re-renders (which would reset the editor state on every keystroke).
+  const contentRef = useRef(form.content);
+
+  const set = useCallback((name, value) => {
     setForm((p) => ({ ...p, [name]: value }));
-    if (errors[name]) setErrors((p) => ({ ...p, [name]: null }));
-  };
+    setErrors((p) => (p[name] ? { ...p, [name]: null } : p));
+  }, []);
+
+  const handleContentChange = useCallback((val) => {
+    contentRef.current = val;
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -188,21 +203,38 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setI
     }
   };
 
-  const handleSave = async () => {
-    const validation = validateLessonData(form);
+  // Core save — throws on error, no toasts. Used both by the button and externally via lessonSaveRef.
+  const saveLesson = useCallback(async () => {
+    const payload = { ...form, content: contentRef.current };
+    const validation = validateLessonData(payload);
     if (!validation.isValid) {
       setErrors(validation.errors);
-      return;
+      throw new Error('Validation failed');
     }
     setSaving(true);
     try {
-      const updated = await updateLesson(lesson.id, form);
-      toast.success('Lesson saved');
+      const updated = await updateLesson(lesson.id, payload);
       onSaved(updated);
-    } catch (err) {
-      toast.error(err.message || 'Failed to save');
+      return updated;
     } finally {
       setSaving(false);
+    }
+  }, [form, lesson.id, onSaved]);
+
+  // Register with parent so the top-level "Save Changes" button can trigger it
+  useEffect(() => {
+    if (lessonSaveRef) lessonSaveRef.current = saveLesson;
+    return () => { if (lessonSaveRef) lessonSaveRef.current = null; };
+  }, [lessonSaveRef, saveLesson]);
+
+  const handleSave = async () => {
+    try {
+      await saveLesson();
+      toast.success('Lesson saved');
+    } catch (err) {
+      if (err.message !== 'Validation failed') {
+        toast.error(err.message || 'Failed to save');
+      }
     }
   };
 
@@ -312,7 +344,9 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setI
             <div className="rounded-lg overflow-hidden">
               <MultiBlockEditor
                 value={form.content}
-                onChange={(val) => set('content', val)}
+                onChange={handleContentChange}
+                lessonSerial={lessonSerial}
+                lessonTitle={form.title}
               />
             </div>
           </div>
@@ -350,15 +384,19 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setI
 
       {isFullscreen && (
         <LessonFullscreenEditorModal
+          lessonId={lesson.id}
           form={form}
+          contentRef={contentRef}
           set={set}
           handleChange={handleChange}
+          handleContentChange={handleContentChange}
           errors={errors}
           durationMins={durationMins}
           handleSave={handleSave}
           saving={saving}
           onClose={() => setIsFullscreen(false)}
           syllabusUI={syllabusUI}
+          lessonSerial={lessonSerial}
         />
       )}
     </div>
@@ -376,17 +414,22 @@ function ModuleRow({
   onAddLesson,
   onDeleteModule,
   onRenameModule,
+  onToggleModuleLock,
   onDeleteLesson,
   onRenameLesson,
+  onToggleLessonLock,
   onDragStart,
   onDrop,
   draggedItem,
   courseId,
+  courseLocked,
 }) {
   const [expanded, setExpanded] = useState(true);
   const [renaming, setRenaming] = useState(false);
   const [addingLesson, setAddingLesson] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [togglingLock, setTogglingLock] = useState(false);
+  const effectiveModuleLocked = courseLocked || module.is_locked;
 
   const lessons = (module.lessons || []).sort((a, b) => a.order_index - b.order_index);
   const isDragged = draggedItem?.id === module.id && draggedItem?.type === 'module';
@@ -422,10 +465,32 @@ function ModuleRow({
           </h3>
         )}
 
+        {effectiveModuleLocked && (
+          <span className="shrink-0 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 rounded font-semibold flex items-center gap-0.5">
+            <Lock className="h-2.5 w-2.5" /> {courseLocked && !module.is_locked ? 'CRS' : 'LOCKED'}
+          </span>
+        )}
+
         {!expanded && lessons.length > 0 && (
           <span className="bg-[#273647] text-[#908fa0] text-[10px] font-semibold px-1.5 rounded shrink-0">
             {lessons.length}
           </span>
+        )}
+
+        {/* Lock toggle — only when course is not locked */}
+        {!courseLocked && (
+          <button
+            onClick={async () => {
+              setTogglingLock(true);
+              await onToggleModuleLock(module.id, !module.is_locked);
+              setTogglingLock(false);
+            }}
+            disabled={togglingLock}
+            title={module.is_locked ? 'Unlock module' : 'Lock module'}
+            className={`opacity-0 group-hover/mod:opacity-100 transition-all p-0.5 rounded disabled:opacity-50 shrink-0 ${module.is_locked ? 'text-amber-400 hover:text-amber-300 opacity-100' : 'text-[#908fa0] hover:text-amber-400'}`}
+          >
+            {togglingLock ? <Loader2 className="h-4 w-4 animate-spin" /> : module.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+          </button>
         )}
 
         {/* Menu */}
@@ -472,10 +537,12 @@ function ModuleRow({
                 onSelect={() => onSelectLesson(lesson)}
                 onDelete={() => onDeleteLesson(lesson.id, module.id)}
                 onRename={(title) => onRenameLesson(lesson.id, title)}
+                onToggleLock={(isLocked) => onToggleLessonLock(lesson.id, isLocked)}
                 onDragStart={onDragStart}
                 onDrop={onDrop}
                 draggedItem={draggedItem}
                 moduleId={module.id}
+                moduleLocked={effectiveModuleLocked}
               />
             );
           })}
@@ -503,12 +570,14 @@ function ModuleRow({
 
 // ─── Lesson row ────────────────────────────────────────────────────────────────
 
-function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onDragStart, onDrop, draggedItem, moduleId }) {
+function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onToggleLock, onDragStart, onDrop, draggedItem, moduleId, moduleLocked }) {
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [togglingLock, setTogglingLock] = useState(false);
 
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
   const isDragged = draggedItem?.id === lesson.id && draggedItem?.type === 'lesson';
+  const effectiveLocked = moduleLocked || lesson.is_locked;
 
   return (
     <div
@@ -558,6 +627,29 @@ function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onDr
           FREE
         </span>
       )}
+      {effectiveLocked && (
+        <span className="shrink-0 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 rounded font-semibold flex items-center gap-0.5">
+          <Lock className="h-2.5 w-2.5" />
+          {moduleLocked && !lesson.is_locked ? 'MOD' : 'LOCK'}
+        </span>
+      )}
+
+      {/* Lock toggle — only for lesson-level lock; module lock is handled on the module */}
+      {!moduleLocked && (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            setTogglingLock(true);
+            await onToggleLock(!lesson.is_locked);
+            setTogglingLock(false);
+          }}
+          disabled={togglingLock}
+          title={lesson.is_locked ? 'Unlock lesson' : 'Lock lesson'}
+          className={`opacity-0 group-hover/lesson:opacity-100 transition-all p-0.5 rounded disabled:opacity-50 shrink-0 ${lesson.is_locked ? 'text-amber-400 hover:text-amber-300 opacity-100' : 'text-[#908fa0] hover:text-amber-400'}`}
+        >
+          {togglingLock ? <Loader2 className="h-3 w-3 animate-spin" /> : lesson.is_locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+        </button>
+      )}
 
       {/* Context menu */}
       <div className="relative shrink-0">
@@ -606,6 +698,9 @@ function CourseRow({
   onRenameCourse,
   onRenameModule,
   onRenameLesson,
+  onToggleCourseLock,
+  onToggleModuleLock,
+  onToggleLessonLock,
   onDragStart,
   onDrop,
   draggedItem,
@@ -614,6 +709,7 @@ function CourseRow({
   const [expanded, setExpanded] = useState(true);
   const [addingModule, setAddingModule] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [togglingLock, setTogglingLock] = useState(false);
 
   const modules = (course.modules || []).sort((a, b) => a.order_index - b.order_index);
   const isDragged = draggedItem?.id === course.id && draggedItem?.type === 'course';
@@ -649,6 +745,12 @@ function CourseRow({
           </h3>
         )}
 
+        {course.is_locked && (
+          <span className="shrink-0 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 rounded font-semibold flex items-center gap-0.5">
+            <Lock className="h-2.5 w-2.5" /> LOCKED
+          </span>
+        )}
+
         <button
           onClick={async () => {
             setAddingModule(true);
@@ -660,6 +762,20 @@ function CourseRow({
         >
           {addingModule ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           Module
+        </button>
+
+        {/* Course lock toggle */}
+        <button
+          onClick={async () => {
+            setTogglingLock(true);
+            await onToggleCourseLock(course.id, !course.is_locked);
+            setTogglingLock(false);
+          }}
+          disabled={togglingLock}
+          title={course.is_locked ? 'Unlock course' : 'Lock course'}
+          className={`opacity-0 group-hover/course:opacity-100 transition-all p-0.5 rounded disabled:opacity-50 shrink-0 ${course.is_locked ? 'text-amber-400 hover:text-amber-300 opacity-100' : 'text-[#908fa0] hover:text-amber-400'}`}
+        >
+          {togglingLock ? <Loader2 className="h-4 w-4 animate-spin" /> : course.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
         </button>
 
         <div className="relative shrink-0">
@@ -710,12 +826,15 @@ function CourseRow({
               onAddLesson={onAddLesson}
               onDeleteModule={onDeleteModule}
               onRenameModule={onRenameModule}
+              onToggleModuleLock={onToggleModuleLock}
               onDeleteLesson={onDeleteLesson}
               onRenameLesson={onRenameLesson}
+              onToggleLessonLock={onToggleLessonLock}
               onDragStart={onDragStart}
               onDrop={onDrop}
               draggedItem={draggedItem}
               courseId={course.id}
+              courseLocked={course.is_locked}
             />
           ))}
         </div>
@@ -726,7 +845,8 @@ function CourseRow({
 
 // ─── Main CurriculumBuilder ────────────────────────────────────────────────────
 
-export default function CurriculumBuilder({ bootcampId, initialCourses = [], onCoursesChange }) {
+export default function CurriculumBuilder({ bootcampId, initialCourses = [], onCoursesChange, lessonSaveRef }) {
+  const router = useRouter();
   const [courses, setCourses] = useState(
     initialCourses.sort((a, b) => a.order_index - b.order_index)
   );
@@ -734,6 +854,11 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
   const [addingCourse, setAddingCourse] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Keep lessonSaveRef clear when no lesson is active
+  useEffect(() => {
+    if (!activeLesson && lessonSaveRef) lessonSaveRef.current = null;
+  }, [activeLesson, lessonSaveRef]);
 
   const handleDragStart = (type, id, parentId) => {
     setDraggedItem({ type, id, parentId });
@@ -815,6 +940,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
         lessons: (m.lessons || []).map((l) => l.id === updated.id ? updated : l),
       })),
     })));
+    router.refresh();
   };
 
   // ── Add course ──────────────────────────────────────────────────────────────
@@ -948,6 +1074,48 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
     }
   };
 
+  // ── Toggle course lock ──────────────────────────────────────────────────────
+  const handleToggleCourseLock = async (courseId, isLocked) => {
+    try {
+      await toggleCourseLock(courseId, isLocked);
+      sync(courses.map((c) => c.id === courseId ? { ...c, is_locked: isLocked } : c));
+      toast.success(isLocked ? 'Course locked' : 'Course unlocked');
+    } catch (err) {
+      toast.error('Failed to update lock');
+    }
+  };
+
+  // ── Toggle module lock ──────────────────────────────────────────────────────
+  const handleToggleModuleLock = async (moduleId, isLocked) => {
+    try {
+      await toggleModuleLock(moduleId, isLocked);
+      sync(courses.map((c) => ({
+        ...c,
+        modules: (c.modules || []).map((m) => m.id === moduleId ? { ...m, is_locked: isLocked } : m),
+      })));
+      toast.success(isLocked ? 'Module locked' : 'Module unlocked');
+    } catch (err) {
+      toast.error('Failed to update lock');
+    }
+  };
+
+  // ── Toggle lesson lock ──────────────────────────────────────────────────────
+  const handleToggleLessonLock = async (lessonId, isLocked) => {
+    try {
+      await toggleLessonLock(lessonId, isLocked);
+      sync(courses.map((c) => ({
+        ...c,
+        modules: (c.modules || []).map((m) => ({
+          ...m,
+          lessons: (m.lessons || []).map((l) => l.id === lessonId ? { ...l, is_locked: isLocked } : l),
+        })),
+      })));
+      toast.success(isLocked ? 'Lesson locked' : 'Lesson unlocked');
+    } catch (err) {
+      toast.error('Failed to update lock');
+    }
+  };
+
   // ── Delete lesson ───────────────────────────────────────────────────────────
   const handleDeleteLesson = async (lessonId, moduleId) => {
     if (!confirm('Delete this lesson?')) return;
@@ -1015,6 +1183,9 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
                 onRenameCourse={handleRenameCourse}
                 onRenameModule={handleRenameModule}
                 onRenameLesson={handleRenameLesson}
+                onToggleCourseLock={handleToggleCourseLock}
+                onToggleModuleLock={handleToggleModuleLock}
+                onToggleLessonLock={handleToggleLessonLock}
                 onDragStart={handleDragStart}
                 onDrop={handleDrop}
                 draggedItem={draggedItem}
@@ -1037,11 +1208,18 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
         <LessonEditor
           key={activeLesson.id}
           lesson={activeLesson}
+          lessonSerial={(() => {
+            const allLessons = courses.flatMap(c => (c.modules || []).sort((a,b) => a.order_index - b.order_index).flatMap(m => (m.lessons || []).sort((a,b) => a.order_index - b.order_index)));
+            const videoLessons = allLessons.filter(l => { try { return Array.isArray(JSON.parse(l.content)) && JSON.parse(l.content).some(b => b.type === 'video'); } catch { return false; } });
+            const idx = videoLessons.findIndex(l => l.id === activeLesson.id);
+            return idx >= 0 ? idx + 1 : allLessons.findIndex(l => l.id === activeLesson.id) + 1;
+          })()}
           onSaved={handleLessonSaved}
           onClose={() => setActiveLesson(null)}
           syllabusUI={syllabusUI}
           isFullscreen={isFullscreen}
           setIsFullscreen={setIsFullscreen}
+          lessonSaveRef={lessonSaveRef}
         />
       ) : (
         <div className="xl:col-span-8">

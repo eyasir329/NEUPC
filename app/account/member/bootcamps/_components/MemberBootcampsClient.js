@@ -8,8 +8,10 @@ import {
   GraduationCap, Zap, CheckCircle2, X, House, Play, Trophy,
   Flame, TrendingUp, Sparkles, PlayCircle, CheckCircle, Calendar,
   ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
+  Lock, HourglassIcon, Archive,
 } from 'lucide-react';
 import { enrollUser } from '@/app/_lib/bootcamp-actions';
+import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
@@ -252,7 +254,10 @@ function CompletedCard({ bootcamp, enrollment }) {
   );
 }
 
-function CatalogCard({ bootcamp, onEnroll, isEnrolling }) {
+function CatalogCard({ bootcamp, onEnroll, isEnrolling, pendingEnrollment }) {
+  const isPending = pendingEnrollment?.status === 'pending';
+  const needsApproval = bootcamp.enrollment_type === 'approval';
+
   return (
     <div className="group flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-colors hover:border-violet-500/30">
       <Thumbnail bootcamp={bootcamp} size="lg" />
@@ -267,6 +272,11 @@ function CatalogCard({ bootcamp, onEnroll, isEnrolling }) {
             {bootcamp.is_featured && (
               <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-500/10 ring-1 ring-amber-500/20 px-2 py-0.5 rounded">
                 Featured
+              </span>
+            )}
+            {needsApproval && (
+              <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-white/5 ring-1 ring-white/10 px-2 py-0.5 rounded">
+                Approval Required
               </span>
             )}
           </div>
@@ -284,14 +294,21 @@ function CatalogCard({ bootcamp, onEnroll, isEnrolling }) {
           )}
         </div>
 
-        <button
-          onClick={() => onEnroll(bootcamp.id)}
-          disabled={isEnrolling}
-          className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 hover:bg-violet-400 px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-50 transition-colors shadow-sm shadow-violet-500/20"
-        >
-          {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-          {isEnrolling ? 'Enrolling…' : 'Enroll free'}
-        </button>
+        {isPending ? (
+          <div className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-2 text-[13px] font-semibold text-amber-400">
+            <HourglassIcon className="w-3.5 h-3.5" />
+            Pending Approval
+          </div>
+        ) : (
+          <button
+            onClick={() => onEnroll(bootcamp.id)}
+            disabled={isEnrolling}
+            className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 hover:bg-violet-400 px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-50 transition-colors shadow-sm shadow-violet-500/20"
+          >
+            {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : needsApproval ? <Lock className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+            {isEnrolling ? (needsApproval ? 'Requesting…' : 'Enrolling…') : needsApproval ? 'Request Access' : 'Enroll free'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -299,7 +316,7 @@ function CatalogCard({ bootcamp, onEnroll, isEnrolling }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-function LearningCalendar({ enrolledBootcamps }) {
+function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -313,6 +330,7 @@ function LearningCalendar({ enrolledBootcamps }) {
 
   const completedByDate = useMemo(() => {
     const map = {};
+    // Active bootcamp completions — lessons are clickable
     enrolledBootcamps.forEach(({ bootcamp, enrollment }) => {
       const progress = enrollment?.progressData?.lessonProgress || {};
       Object.values(progress).forEach((p) => {
@@ -323,13 +341,31 @@ function LearningCalendar({ enrolledBootcamps }) {
           map[key].count += 1;
           map[key].lessons.push({
             title: p.lesson_title || 'Lesson',
+            bootcampTitle: bootcamp.title,
             href: `/account/member/bootcamps/${bootcamp.id}/${p.lesson_id}`,
           });
         }
       });
     });
+    // Archived bootcamp completions — no lesson links (content inaccessible)
+    archivedBootcamps.forEach(({ bootcamp, enrollment }) => {
+      const progress = enrollment?.progressData?.lessonProgress || {};
+      Object.values(progress).forEach((p) => {
+        if (p.is_completed && p.completed_at) {
+          const d = new Date(p.completed_at);
+          const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+          if (!map[key]) map[key] = { count: 0, lessons: [] };
+          map[key].count += 1;
+          map[key].lessons.push({
+            title: p.lesson_title || 'Lesson',
+            bootcampTitle: bootcamp.title,
+            archived: true,
+          });
+        }
+      });
+    });
     return map;
-  }, [enrolledBootcamps]);
+  }, [enrolledBootcamps, archivedBootcamps]);
 
   const getIntensityClass = (count, isToday) => {
     if (count === 0) return isToday
@@ -389,10 +425,19 @@ function LearningCalendar({ enrolledBootcamps }) {
                       <ul className="space-y-1.5">
                         {lessons.map((l, li) => (
                           <li key={li}>
-                            <a href={l.href} className="flex items-start gap-1.5 text-violet-300 hover:text-violet-100 transition-colors">
-                              <span className="mt-0.5 shrink-0 w-1 h-1 rounded-full bg-violet-400 mt-1.5" />
-                              <span className="line-clamp-2 leading-snug">{l.title}</span>
-                            </a>
+                            {l.archived ? (
+                              <div className="flex items-start gap-1.5 text-gray-400">
+                                <span className="shrink-0 w-1 h-1 rounded-full bg-gray-500 mt-1.5" />
+                                <span className="line-clamp-2 leading-snug">{l.title}
+                                  {l.bootcampTitle && <span className="block text-[10px] text-gray-600 mt-0.5">{l.bootcampTitle} · archived</span>}
+                                </span>
+                              </div>
+                            ) : (
+                              <Link href={l.href} className="flex items-start gap-1.5 text-violet-300 hover:text-violet-100 transition-colors">
+                                <span className="shrink-0 w-1 h-1 rounded-full bg-violet-400 mt-1.5" />
+                                <span className="line-clamp-2 leading-snug">{l.title}</span>
+                              </Link>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -466,7 +511,7 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
   if (groupBy === 'day') {
     const cur = new Date(from);
     while (cur <= to) {
-      buckets[toDateStr(cur)] = { name: DAY_ABBR[cur.getDay()], duration: 0 };
+      buckets[toDateStr(cur)] = { name: DAY_ABBR[cur.getDay()], duration: 0, lessons: [] };
       cur.setDate(cur.getDate() + 1);
     }
   } else if (groupBy === 'week') {
@@ -477,7 +522,7 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
       const key = `w${weekNum}`;
       const endOfWeek = new Date(cur); endOfWeek.setDate(cur.getDate() + 6);
       const label = `${cur.getDate()} ${MONTH_ABBR[cur.getMonth()]}`;
-      buckets[key] = { name: label, start: new Date(cur), end: new Date(Math.min(endOfWeek, to)), duration: 0 };
+      buckets[key] = { name: label, start: new Date(cur), end: new Date(Math.min(endOfWeek, to)), duration: 0, lessons: [] };
       cur.setDate(cur.getDate() + 7);
       weekNum++;
     }
@@ -486,7 +531,7 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
     const cur = new Date(from.getFullYear(), from.getMonth(), 1);
     while (cur <= to) {
       const key = `${cur.getFullYear()}-${cur.getMonth()}`;
-      buckets[key] = { name: MONTH_ABBR[cur.getMonth()], year: cur.getFullYear(), month: cur.getMonth(), duration: 0 };
+      buckets[key] = { name: MONTH_ABBR[cur.getMonth()], year: cur.getFullYear(), month: cur.getMonth(), duration: 0, lessons: [] };
       cur.setMonth(cur.getMonth() + 1);
     }
   }
@@ -498,17 +543,21 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
     const d = new Date(row.activity_date + 'T00:00:00');
     if (d < from || d > to) return;
     const secs = Math.max(0, Number(row.watch_time) || 0);
-    if (secs === 0) return;
+    const lessons = row.completed_lessons || [];
+    const addToBucket = (b) => {
+      if (secs > 0) b.duration += secs;
+      lessons.forEach(l => { if (!b.lessons.some(x => x.id === l.id)) b.lessons.push(l); });
+    };
     if (groupBy === 'day') {
       const k = row.activity_date;
-      if (buckets[k]) buckets[k].duration += secs;
+      if (buckets[k]) addToBucket(buckets[k]);
     } else if (groupBy === 'week') {
       for (const b of Object.values(buckets)) {
-        if (d >= b.start && d <= b.end) { b.duration += secs; break; }
+        if (d >= b.start && d <= b.end) { addToBucket(b); break; }
       }
     } else {
       const k = `${d.getFullYear()}-${d.getMonth()}`;
-      if (buckets[k]) buckets[k].duration += secs;
+      if (buckets[k]) addToBucket(buckets[k]);
     }
   });
 
@@ -551,18 +600,37 @@ function WatchTimeChart({ learningActivity }) {
   }[preset];
 
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#0a0e15] border border-white/[0.08] p-3 rounded-xl shadow-xl">
-          <p className="text-gray-500 text-xs font-medium mb-1">{label}</p>
-          <p className="text-white font-semibold text-sm flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+    if (!active || !payload?.length) return null;
+    const { lessons = [] } = payload[0].payload;
+    return (
+      <div className="bg-[#0a0e15] border border-white/[0.08] p-3 rounded-xl shadow-xl min-w-48 max-w-72">
+        <p className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2">{label}</p>
+        {lessons.length > 0 && (
+          <div className="space-y-1.5 mb-2">
+            {lessons.map((l) => (
+              <div key={l.id} className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0" />
+                  <span className="text-xs text-gray-300 leading-tight">{l.title}</span>
+                </div>
+                {l.watch_time > 0 && (
+                  <span className="text-xs font-semibold text-violet-400 whitespace-nowrap shrink-0">
+                    {formatWatchSeconds(l.watch_time)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className={`flex items-center justify-between gap-4 ${lessons.length > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}`}>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest">Watch time</span>
+          <span className="text-xs font-bold text-violet-400 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
             {formatWatchSeconds(payload[0].value) || '0s'}
-          </p>
+          </span>
         </div>
-      );
-    }
-    return null;
+      </div>
+    );
   };
 
   return (
@@ -673,7 +741,7 @@ function WatchTimeChart({ learningActivity }) {
   );
 }
 
-function OverviewTab({ user, enrolledBootcamps, totalLessonsCompleted, streak, availableBootcamps, learningActivity, onTab }) {
+function OverviewTab({ user, enrolledBootcamps, archivedBootcamps, totalLessonsCompleted, streak, availableBootcamps, learningActivity, onTab }) {
   const firstName = user?.full_name?.split(' ')[0] || 'there';
   const continueBootcamp = enrolledBootcamps.find((e) => {
     const total = e.bootcamp?.total_lessons || 0;
@@ -732,7 +800,7 @@ function OverviewTab({ user, enrolledBootcamps, totalLessonsCompleted, streak, a
 
       {/* Calendar + Watch Time */}
       <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="flex flex-col h-full"><LearningCalendar enrolledBootcamps={enrolledBootcamps} /></div>
+        <div className="flex flex-col h-full"><LearningCalendar enrolledBootcamps={enrolledBootcamps} archivedBootcamps={archivedBootcamps} /></div>
         <div className="flex flex-col h-full"><WatchTimeChart learningActivity={learningActivity} /></div>
       </motion.div>
 
@@ -910,7 +978,7 @@ function MyLearningEnrolledRow({ bootcamp, enrollment }) {
   );
 }
 
-function MyLearningTab({ enrolledBootcamps, filteredEnrolled, search, setSearch, onTab }) {
+function MyLearningTab({ enrolledBootcamps, archivedBootcamps = [], filteredEnrolled, search, setSearch, onTab }) {
   const inProgress = filteredEnrolled.filter(({ bootcamp, enrollment }) => {
     const total = bootcamp?.total_lessons || 0;
     const done = enrollment?.completed_lessons || 0;
@@ -991,6 +1059,59 @@ function MyLearningTab({ enrolledBootcamps, filteredEnrolled, search, setSearch,
           )}
         </>
       )}
+
+      {/* Past / Archived Bootcamps */}
+      {archivedBootcamps.length > 0 && (
+        <div className="pt-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Archive className="w-5 h-5 text-gray-500" />
+            <h2 className="text-xl font-semibold tracking-tight text-white">Past Bootcamps</h2>
+            <span className="text-xs text-gray-600 bg-white/5 border border-white/10 rounded-full px-2 py-0.5">{archivedBootcamps.length}</span>
+          </div>
+          <p className="text-sm text-gray-500 -mt-2">These batches have ended. Your progress is preserved but the content is no longer accessible.</p>
+          <div className="space-y-3">
+            {archivedBootcamps.map(({ bootcamp, enrollment }) => {
+              const completedLessons = enrollment?.completed_lessons || 0;
+              const totalLessons = bootcamp?.total_lessons || 0;
+              const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+              const enrolledDate = enrollment?.enrolled_at
+                ? new Date(enrollment.enrolled_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+                : null;
+              return (
+                <div key={bootcamp.id} className="flex items-center gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 opacity-75">
+                  <div className="h-12 w-12 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                    {bootcamp.thumbnail ? (
+                      <SafeImg src={bootcamp.thumbnail} alt={bootcamp.title} className="w-full h-full object-cover grayscale" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Archive className="w-5 h-5 text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-gray-300 truncate">{bootcamp.title}</h3>
+                      {bootcamp.batch_info && (
+                        <span className="text-[10px] font-medium text-gray-600 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 flex-shrink-0">{bootcamp.batch_info}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-600">
+                      <span>{completedLessons}/{totalLessons} lessons</span>
+                      {enrolledDate && <span>· Enrolled {enrolledDate}</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-gray-600 rounded-full" style={{ width: `${progress}%` }} />
+                      </div>
+                      <span className="text-[11px] text-gray-600 w-8 text-right">{progress}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -1037,7 +1158,7 @@ function MyLearningCompletedCard({ bootcamp, enrollment }) {
   );
 }
 
-function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, handleEnroll, enrollingId }) {
+function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, handleEnroll, enrollingId, enrollmentMap }) {
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -1059,7 +1180,7 @@ function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, 
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAvailable.map((b) => (
-            <CatalogCard key={b.id} bootcamp={b} onEnroll={handleEnroll} isEnrolling={enrollingId === b.id} />
+            <CatalogCard key={b.id} bootcamp={b} onEnroll={handleEnroll} isEnrolling={enrollingId === b.id} pendingEnrollment={enrollmentMap?.[b.id]} />
           ))}
         </div>
       )}
@@ -1069,7 +1190,7 @@ function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, 
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {}, learningActivity = [] }) {
+export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {}, archivedEnrollmentMap = {}, learningActivity = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [, startTransition] = useTransition();
@@ -1083,8 +1204,12 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
     const available = [];
     for (const b of bootcamps) {
       const enrollment = localEnrollmentMap[b.id];
-      if (enrollment) enrolled.push({ bootcamp: b, enrollment });
-      else available.push(b);
+      // Only active/completed enrollments count as "enrolled" (show in My Learning)
+      if (enrollment && enrollment.status !== 'pending' && enrollment.status !== 'cancelled') {
+        enrolled.push({ bootcamp: b, enrollment });
+      } else {
+        available.push(b);
+      }
     }
     enrolled.sort(
       (a, b) =>
@@ -1093,6 +1218,14 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
     );
     return { enrolledBootcamps: enrolled, availableBootcamps: available };
   }, [bootcamps, localEnrollmentMap]);
+
+  // Archived bootcamps — historical data only, no content access
+  const archivedBootcamps = useMemo(() =>
+    Object.values(archivedEnrollmentMap).map((enrollment) => ({
+      bootcamp: enrollment.bootcamps,
+      enrollment,
+    })).sort((a, b) => new Date(b.enrollment?.enrolled_at || 0) - new Date(a.enrollment?.enrolled_at || 0)),
+  [archivedEnrollmentMap]);
 
   const filteredEnrolled = useMemo(() => {
     if (!search) return enrolledBootcamps;
@@ -1127,6 +1260,11 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
             ...prev,
             [bootcampId]: { ...result.enrollment, progress_percent: 0, completed_lessons: 0 },
           }));
+          if (result.status === 'pending') {
+            toast.success('Enrollment request submitted! Waiting for admin approval.');
+          }
+        } else {
+          toast.error(result.error || 'Could not enroll');
         }
       } finally {
         setEnrollingId(null);
@@ -1141,6 +1279,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
           <OverviewTab
             user={user}
             enrolledBootcamps={enrolledBootcamps}
+            archivedBootcamps={archivedBootcamps}
             totalLessonsCompleted={totalLessonsCompleted}
             streak={streak}
             availableBootcamps={availableBootcamps}
@@ -1152,6 +1291,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
         return (
           <MyLearningTab
             enrolledBootcamps={enrolledBootcamps}
+            archivedBootcamps={archivedBootcamps}
             filteredEnrolled={filteredEnrolled}
             search={search}
             setSearch={setSearch}
@@ -1167,6 +1307,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
             setSearch={setSearch}
             handleEnroll={handleEnroll}
             enrollingId={enrollingId}
+            enrollmentMap={localEnrollmentMap}
           />
         );
       default:
