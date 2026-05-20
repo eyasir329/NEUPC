@@ -38,6 +38,7 @@ import {
   Loader2,
   AlertCircle,
   ArrowLeft,
+  Send,
 } from 'lucide-react';
 import {
   getLesson,
@@ -48,6 +49,10 @@ import {
   markLessonIncomplete,
   saveLessonNotes,
   touchLessonAccess,
+  submitHelpTicketAction,
+  getMemberHelpTickets,
+  getMemberBootcampTasks,
+  getMemberBootcampSessions,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
@@ -732,7 +737,209 @@ function TableOfContents({ contentRef }) {
   );
 }
 
+// ─── Overview tabs: Tasks, Sessions, Help Desk ────────────────────────────────
+
+const DIFF_COLOR = {
+  easy:   'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  medium: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  hard:   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+};
+
+function PanelLoader() {
+  return (
+    <div className="flex items-center justify-center py-12 text-gray-500">
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <span className="text-[12px]">Loading…</span>
+    </div>
+  );
+}
+
+function PanelEmpty({ message }) {
+  return <p className="py-10 text-center text-[13px] text-gray-500">{message}</p>;
+}
+
+function MemberTasksPanel({ bootcampId }) {
+  const [tasks, setTasks] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberBootcampTasks(bootcampId).then(setTasks).catch(() => setTasks([]));
+  }, [bootcampId]);
+
+  if (tasks === null) return <PanelLoader />;
+
+  if (tasks.length === 0) return <PanelEmpty message="No tasks assigned yet." />;
+
+  return (
+    <div className="space-y-2">
+      {tasks.map((task) => (
+        <div key={task.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+          <button className="flex w-full items-center gap-3 p-4 text-left" onClick={() => setExpanded(expanded === task.id ? null : task.id)}>
+            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>{task.difficulty}</span>
+            <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
+            {task.deadline && (
+              <span className="shrink-0 text-[11px] text-gray-500">
+                {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+            {expanded === task.id ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
+          </button>
+          {expanded === task.id && (
+            <div className="border-t border-white/[0.06] px-4 pb-4 pt-3">
+              {task.description && <p className="mb-3 text-[13px] text-gray-400">{task.description}</p>}
+              {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {task.problem_links.map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
+                      <Download className="h-3 w-3" />Problem {i + 1}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MemberSessionRow({ s, variant }) {
+  const mentorName = s.mentor?.full_name || '—';
+  const date = new Date(s.session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border p-4 ${variant === 'upcoming' ? 'border-violet-500/20 bg-violet-500/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variant === 'upcoming' ? 'bg-violet-500/15' : 'bg-emerald-500/10'}`}>
+        <Video className={`h-4 w-4 ${variant === 'upcoming' ? 'text-violet-400' : 'text-emerald-400'}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-medium text-white truncate">{s.topic}</p>
+        <p className="text-[11px] text-gray-500">{date} · {s.duration}min · {mentorName}</p>
+        {s.notes && <p className="mt-1 text-[11px] text-gray-500 italic">{s.notes}</p>}
+      </div>
+      {variant === 'upcoming'
+        ? <span className="shrink-0 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+        : s.attended === true
+          ? <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+          : s.attended === false
+            ? <span className="shrink-0 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+            : <span className="shrink-0 rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+      }
+    </div>
+  );
+}
+
+function MemberSessionsPanel({ bootcampId }) {
+  const [sessions, setSessions] = useState(null);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberBootcampSessions(bootcampId).then(setSessions).catch(() => setSessions([]));
+  }, [bootcampId]);
+
+  if (sessions === null) return <PanelLoader />;
+
+  if (sessions.length === 0) return <PanelEmpty message="No sessions scheduled yet." />;
+
+  const upcoming = sessions.filter(s => new Date(s.session_date) >= new Date());
+  const past     = sessions.filter(s => new Date(s.session_date) <  new Date());
+
+  return (
+    <div className="space-y-6">
+      {upcoming.length > 0 && (
+        <div>
+          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Upcoming ({upcoming.length})</p>
+          <div className="space-y-2">{upcoming.map(s => <MemberSessionRow key={s.id} s={s} variant="upcoming" />)}</div>
+        </div>
+      )}
+      {past.length > 0 && (
+        <div>
+          <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Past ({past.length})</p>
+          <div className="space-y-2">{past.map(s => <MemberSessionRow key={s.id} s={s} variant="past" />)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberHelpDeskPanel({ bootcampId }) {
+  const [tickets, setTickets] = useState(null);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!bootcampId) return;
+    getMemberHelpTickets(bootcampId).then(setTickets).catch(() => setTickets([]));
+  }, [bootcampId]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!subject.trim() || !body.trim()) return;
+    setSending(true);
+    const fd = new FormData();
+    fd.set('bootcamp_id', bootcampId);
+    fd.set('subject', subject);
+    fd.set('body', body);
+    const result = await submitHelpTicketAction(fd);
+    if (!result.error) {
+      setTickets(prev => [{ id: `h${Date.now()}`, subject, body, status: 'open', created_at: new Date().toISOString() }, ...(prev || [])]);
+      setSubject('');
+      setBody('');
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
+        <p className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">Ask for help</p>
+        <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
+        <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
+        <button type="submit" disabled={sending} className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+          {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          {sending ? 'Sending…' : 'Submit'}
+        </button>
+      </form>
+
+      {tickets === null ? (
+        <PanelLoader />
+      ) : tickets.length === 0 ? (
+        <PanelEmpty message="No help requests yet." />
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Your tickets</p>
+          {tickets.map(t => (
+            <div key={t.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex-1 text-[13px] font-medium text-white truncate">{t.subject}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.status === 'open' ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'}`}>{t.status}</span>
+              </div>
+              <p className="mt-1 text-[12px] text-gray-500 line-clamp-2">{t.body}</p>
+              {t.reply && (
+                <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                  <p className="text-[10px] font-semibold text-emerald-400 uppercase mb-1">Mentor reply</p>
+                  <p className="text-[12px] text-gray-300">{t.reply}</p>
+                </div>
+              )}
+              <p className="mt-1 text-[10px] text-gray-600">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Overview Panel ───────────────────────────────────────────────────────────
+
+const OVERVIEW_TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'tasks', label: 'Tasks' },
+  { value: 'sessions', label: 'Sessions' },
+  { value: 'helpdesk', label: 'Help Desk' },
+];
 
 const OverviewPanel = memo(function OverviewPanel({
   bootcamp,
@@ -750,6 +957,7 @@ const OverviewPanel = memo(function OverviewPanel({
   coursesCount,
   modulesCount,
 }) {
+  const [activeTab, setActiveTab] = useState('overview');
   const ctaLabel = isComplete
     ? 'Review'
     : completedCount > 0
@@ -760,6 +968,7 @@ const OverviewPanel = memo(function OverviewPanel({
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
       {/* Title + meta */}
       <div className="space-y-3">
+
         {bootcamp?.difficulty_level && (
           <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-violet-300 uppercase ring-1 ring-violet-500/20">
             {bootcamp.difficulty_level}
@@ -792,6 +1001,37 @@ const OverviewPanel = memo(function OverviewPanel({
           )}
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div className="mt-6 flex gap-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-1">
+        {OVERVIEW_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`flex-1 rounded-lg py-2 text-[12px] font-semibold transition-colors ${activeTab === tab.value ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'tasks' && (
+        <div className="mt-6">
+          <MemberTasksPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+      {activeTab === 'sessions' && (
+        <div className="mt-6">
+          <MemberSessionsPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+      {activeTab === 'helpdesk' && (
+        <div className="mt-6">
+          <MemberHelpDeskPanel bootcampId={bootcamp?.id} />
+        </div>
+      )}
+
+      {activeTab === 'overview' && <>
 
       {/* Continue card */}
       {resumeLesson && (
@@ -933,6 +1173,7 @@ const OverviewPanel = memo(function OverviewPanel({
       )}
 
       <div className="h-8" />
+      </>}
     </div>
   );
 });
@@ -1606,7 +1847,7 @@ export default function BootcampLearningClient({
         [lessonId]: { ...prev[lessonId], is_completed: false },
       }));
     });
-  }, []);
+  }, [bootcamp?.id]);
 
   const handleSaveNotes = useCallback(async (lessonId, notes) => {
     await saveLessonNotes(lessonId, notes);

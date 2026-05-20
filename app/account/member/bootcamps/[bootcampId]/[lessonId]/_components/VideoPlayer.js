@@ -1363,9 +1363,22 @@ function DriveVideoPlayer({
     },
     onRateChange: (e) =>
       setState((s) => ({ ...s, rate: e.target.playbackRate })),
-    onEnterPictureInPicture: () => setState((s) => ({ ...s, pip: true })),
-    onLeavePictureInPicture: () => setState((s) => ({ ...s, pip: false })),
   };
+
+  // React doesn't support onEnterPictureInPicture / onLeavePictureInPicture —
+  // attach them directly on the DOM element.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onEnter = () => setState((s) => ({ ...s, pip: true }));
+    const onLeave = () => setState((s) => ({ ...s, pip: false }));
+    v.addEventListener('enterpictureinpicture', onEnter);
+    v.addEventListener('leavepictureinpicture', onLeave);
+    return () => {
+      v.removeEventListener('enterpictureinpicture', onEnter);
+      v.removeEventListener('leavepictureinpicture', onLeave);
+    };
+  }, []);
 
   if (state.error) {
     return (

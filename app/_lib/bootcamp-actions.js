@@ -2480,3 +2480,538 @@ export async function finishBatchAndStartNew(bootcampId, newBatchData) {
 
   return { success: true, newBootcampId: newBootcamp.id };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MENTOR BOOTCAMP ACTIONS
+// All queries are gated by requireAdminOrBootcampMentor(bootcampId).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get enrolled members with progress for a specific bootcamp (mentor access).
+ */
+export async function getMentorBootcampMembers(bootcampId) {
+  await requireAdminOrBootcampMentor(bootcampId);
+
+  const { data: bootcamp } = await supabaseAdmin
+    .from('bootcamps')
+    .select('total_lessons')
+    .eq('id', bootcampId)
+    .single();
+
+  const totalLessons = bootcamp?.total_lessons || 0;
+
+  const { data: enrollments, error } = await supabaseAdmin
+    .from('enrollments')
+    .select('id, user_id, status, enrolled_at, users(id, full_name, email, avatar_url, member_profiles(academic_session, student_id, department, semester))')
+    .eq('bootcamp_id', bootcampId)
+    .order('enrolled_at', { ascending: false });
+
+  if (error) throw error;
+
+  const userIds = (enrollments || []).map((e) => e.user_id);
+  if (userIds.length === 0) return { members: [], totalLessons };
+
+  const { data: progressRows } = await supabaseAdmin
+    .from('user_progress')
+    .select('user_id, is_completed')
+    .eq('bootcamp_id', bootcampId)
+    .eq('is_completed', true)
+    .in('user_id', userIds);
+
+  const completedMap = {};
+  (progressRows || []).forEach((p) => {
+    completedMap[p.user_id] = (completedMap[p.user_id] || 0) + 1;
+  });
+
+  const members = (enrollments || []).map((e) => ({
+    ...e,
+    completed_lessons: completedMap[e.user_id] || 0,
+    progress_percent: totalLessons > 0
+      ? Math.round(((completedMap[e.user_id] || 0) / totalLessons) * 100)
+      : 0,
+  }));
+
+  return { members, totalLessons };
+}
+
+/**
+ * Get mentorships + sessions for members enrolled in a specific bootcamp.
+ * Links: enrollments(bootcamp_id) → user_id → mentorships(mentee_id) where mentor = current user.
+ */
+export async function getMentorBootcampSessions(bootcampId) {
+  const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+
+  // All mentorships this mentor has (not limited to bootcamp enrollments)
+  const { data: mentorships } = await supabaseAdmin
+    .from('mentorships')
+    .select('id, mentee_id, users!mentorships_mentee_id_fkey(id, full_name, avatar_url)')
+    .eq('mentor_id', mentorId);
+
+  if (!mentorships?.length) return [];
+
+  const mentorshipIds = mentorships.map((m) => m.id);
+  const menteeMap = Object.fromEntries(mentorships.map((m) => [m.id, m['users!mentorships_mentee_id_fkey']]));
+
+  const { data: sessions, error } = await supabaseAdmin
+    .from('mentorship_sessions')
+    .select('*')
+    .in('mentorship_id', mentorshipIds)
+    .order('session_date', { ascending: false });
+
+  if (error) throw error;
+
+  return (sessions || []).map((s) => ({
+    ...s,
+    mentee: menteeMap[s.mentorship_id] || null,
+  }));
+}
+
+/**
+ * Get mentorships (with notes + progress) for enrolled members of a bootcamp.
+ */
+export async function getMentorBootcampMentorships(bootcampId) {
+  const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+
+  const { data: enrollments } = await supabaseAdmin
+    .from('enrollments')
+    .select('user_id, users(id, full_name, email, member_profiles(academic_session, student_id, department, skills))')
+    .eq('bootcamp_id', bootcampId);
+
+  const userIds = (enrollments || []).map((e) => e.user_id);
+  if (userIds.length === 0) return [];
+
+  // Existing mentorships for this mentor with these enrolled members
+  const { data: mentorships } = await supabaseAdmin
+    .from('mentorships')
+    .select('id, mentee_id, status, focus_area, notes')
+    .eq('mentor_id', mentorId)
+    .in('mentee_id', userIds);
+
+  const mentorshipByMentee = Object.fromEntries((mentorships || []).map((m) => [m.mentee_id, m]));
+
+  // Collect all mentee IDs (enrolled members, regardless of having a mentorship)
+  const menteeIds = userIds;
+
+  const { data: progressRows } = await supabaseAdmin
+    .from('member_progress')
+    .select('user_id, period, problems_solved, contests_participated, mentor_notes')
+    .in('user_id', menteeIds)
+    .order('period', { ascending: false });
+
+  const progressByMentee = {};
+  (progressRows || []).forEach((p) => {
+    if (!progressByMentee[p.user_id]) progressByMentee[p.user_id] = [];
+    progressByMentee[p.user_id].push(p);
+  });
+
+  // Return one record per enrolled member — using mentorship if it exists, else synthetic stub
+  return (enrollments || []).map((e) => {
+    const u = e.users;
+    const ms = mentorshipByMentee[e.user_id];
+    return {
+      id: ms?.id || `enr_${e.user_id}`,
+      mentee_id: e.user_id,
+      status: ms?.status || 'none',
+      focus_area: ms?.focus_area || null,
+      notes: ms?.notes || null,
+      'users!mentorships_mentee_id_fkey': u,
+      users: u,
+      member_progress: progressByMentee[e.user_id] || [],
+      _no_mentorship: !ms,
+    };
+  });
+}
+
+/**
+ * Get tasks scoped to a bootcamp.
+ * Requires bootcamp_id column on weekly_tasks table.
+ * Migration: ALTER TABLE weekly_tasks ADD COLUMN IF NOT EXISTS bootcamp_id uuid REFERENCES bootcamps(id);
+ */
+export async function getBootcampTasks(bootcampId) {
+  await requireAdminOrBootcampMentor(bootcampId);
+  const { data, error } = await supabaseAdmin
+    .from('weekly_tasks')
+    .select('*')
+    .eq('bootcamp_id', bootcampId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function createBootcampTaskAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const title = formData.get('title')?.trim();
+    const description = formData.get('description')?.trim() || null;
+    const difficulty = formData.get('difficulty') || 'medium';
+    const deadline = formData.get('deadline');
+    const problem_links = (() => {
+      try { return JSON.parse(formData.get('problem_links') || '[]'); }
+      catch { return []; }
+    })();
+
+    if (!title || !deadline) return { error: 'Title and deadline are required' };
+
+    const { data, error } = await supabaseAdmin
+      .from('weekly_tasks')
+      .insert([{ title, description, difficulty, deadline: new Date(deadline).toISOString(), assigned_by: mentorId, problem_links, bootcamp_id: bootcampId }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Task created', data };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export async function updateBootcampTaskAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const id = formData.get('id');
+    const title = formData.get('title')?.trim();
+    const description = formData.get('description')?.trim() || null;
+    const difficulty = formData.get('difficulty') || 'medium';
+    const deadline = formData.get('deadline');
+    const problem_links = (() => {
+      try { return JSON.parse(formData.get('problem_links') || '[]'); }
+      catch { return []; }
+    })();
+
+    if (!id || !title || !deadline) return { error: 'Missing required fields' };
+
+    const { data: existing } = await supabaseAdmin
+      .from('weekly_tasks').select('assigned_by').eq('id', id).single();
+    if (existing?.assigned_by !== mentorId) return { error: 'Not authorized' };
+
+    const { error } = await supabaseAdmin
+      .from('weekly_tasks')
+      .update({ title, description, difficulty, deadline: new Date(deadline).toISOString(), problem_links, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Task updated' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export async function deleteBootcampTaskAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const id = formData.get('id');
+
+    const { data: existing } = await supabaseAdmin
+      .from('weekly_tasks').select('assigned_by').eq('id', id).single();
+    if (existing?.assigned_by !== mentorId) return { error: 'Not authorized' };
+
+    const { error } = await supabaseAdmin.from('weekly_tasks').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Task deleted' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Create a mentorship session linked to a bootcamp member.
+ */
+export async function createBootcampSessionAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    // member_user_id: the enrolled member's user ID (from the dropdown)
+    const member_user_id = formData.get('member_user_id');
+    const topic = formData.get('topic')?.trim();
+    const session_date = formData.get('session_date');
+    const duration = parseInt(formData.get('duration') || '60') || null;
+    const notes = formData.get('notes')?.trim() || null;
+
+    if (!member_user_id || !topic || !session_date) return { error: 'Member, topic and date are required' };
+
+    // Upsert a mentorship for this mentor→member pair (create if missing)
+    let mentorshipId;
+    const { data: existing } = await supabaseAdmin
+      .from('mentorships')
+      .select('id')
+      .eq('mentor_id', mentorId)
+      .eq('mentee_id', member_user_id)
+      .maybeSingle();
+
+    if (existing) {
+      mentorshipId = existing.id;
+    } else {
+      const { data: created, error: createErr } = await supabaseAdmin
+        .from('mentorships')
+        .insert([{ mentor_id: mentorId, mentee_id: member_user_id, status: 'active', start_date: new Date().toISOString().slice(0, 10) }])
+        .select('id')
+        .single();
+      if (createErr) throw new Error(createErr.message);
+      mentorshipId = created.id;
+    }
+
+    const { data: session, error } = await supabaseAdmin
+      .from('mentorship_sessions')
+      .insert([{ mentorship_id: mentorshipId, topic, session_date: new Date(session_date).toISOString(), duration, notes, created_by: mentorId }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Session scheduled', data: session, mentorshipId };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Update session attendance + notes.
+ */
+export async function updateBootcampSessionAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const sessionId = formData.get('session_id');
+    const notes = formData.get('notes')?.trim() || null;
+    const attended = formData.get('attended') === 'true';
+
+    // Verify mentor owns the mentorship linked to this session
+    const { data: session } = await supabaseAdmin
+      .from('mentorship_sessions')
+      .select('mentorship_id, mentorships(mentor_id)')
+      .eq('id', sessionId)
+      .single();
+    if (session?.mentorships?.mentor_id !== mentorId) return { error: 'Not authorized' };
+
+    const { error } = await supabaseAdmin
+      .from('mentorship_sessions').update({ notes, attended }).eq('id', sessionId);
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Session updated' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Save mentor notes/recommendation for a mentorship (bootcamp context).
+ * Migration needed for bootcamp_help_requests table (see below).
+ */
+export async function saveBootcampMentorshipNotesAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const menteeUserId = formData.get('mentee_user_id');
+    const notes = formData.get('notes')?.trim() || '';
+
+    if (!menteeUserId) return { error: 'Missing mentee' };
+
+    // Upsert mentorship so notes can always be saved regardless of prior mentorship existence
+    const { data: existing } = await supabaseAdmin
+      .from('mentorships')
+      .select('id, mentor_id')
+      .eq('mentor_id', mentorId)
+      .eq('mentee_id', menteeUserId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from('mentorships').update({ notes }).eq('id', existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from('mentorships')
+        .insert([{ mentor_id: mentorId, mentee_id: menteeUserId, notes, status: 'active', start_date: new Date().toISOString().slice(0, 10) }]);
+      if (error) throw new Error(error.message);
+    }
+
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Notes saved' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Fetch help tickets for a bootcamp.
+ * Requires table: bootcamp_help_requests(id, bootcamp_id, user_id, subject, body, status, reply, created_at)
+ * Migration: CREATE TABLE IF NOT EXISTS bootcamp_help_requests (
+ *   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ *   bootcamp_id uuid REFERENCES bootcamps(id) ON DELETE CASCADE,
+ *   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+ *   subject text NOT NULL,
+ *   body text,
+ *   status text DEFAULT 'open',
+ *   reply text,
+ *   replied_by uuid REFERENCES users(id),
+ *   created_at timestamptz DEFAULT now(),
+ *   updated_at timestamptz DEFAULT now()
+ * );
+ */
+export async function getBootcampHelpTickets(bootcampId) {
+  await requireAdminOrBootcampMentor(bootcampId);
+  const { data, error } = await supabaseAdmin
+    .from('bootcamp_help_requests')
+    .select('*, users(id, full_name, avatar_url)')
+    .eq('bootcamp_id', bootcampId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function replyAndResolveHelpTicketAction(formData) {
+  'use server';
+  try {
+    const bootcampId = formData.get('bootcamp_id');
+    const mentorId = await requireAdminOrBootcampMentor(bootcampId);
+    const ticketId = formData.get('ticket_id');
+    const reply = formData.get('reply')?.trim() || null;
+    const status = formData.get('status') || 'resolved';
+
+    const { error } = await supabaseAdmin
+      .from('bootcamp_help_requests')
+      .update({ reply, status, replied_by: mentorId, updated_at: new Date().toISOString() })
+      .eq('id', ticketId)
+      .eq('bootcamp_id', bootcampId);
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/mentor/bootcamps/${bootcampId}`);
+    return { success: 'Ticket updated' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Member: submit a help request for a bootcamp.
+ */
+export async function submitHelpTicketAction(formData) {
+  'use server';
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const bootcampId = formData.get('bootcamp_id');
+    const subject = formData.get('subject')?.trim();
+    const body = formData.get('body')?.trim();
+
+    if (!bootcampId || !subject) return { error: 'Subject is required' };
+
+    const { error } = await supabaseAdmin
+      .from('bootcamp_help_requests')
+      .insert([{ bootcamp_id: bootcampId, user_id: userId, subject, body, status: 'open' }]);
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+    return { success: 'Help request submitted' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * Member: get own help tickets for a bootcamp.
+ */
+export async function getMemberHelpTickets(bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const { data, error } = await supabaseAdmin
+    .from('bootcamp_help_requests')
+    .select('id, subject, body, status, reply, created_at')
+    .eq('bootcamp_id', bootcampId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+/**
+ * Member: get tasks assigned to a bootcamp they are enrolled in.
+ */
+export async function getMemberBootcampTasks(bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  // Verify member is enrolled
+  const { data: enr } = await supabaseAdmin
+    .from('enrollments')
+    .select('id')
+    .eq('bootcamp_id', bootcampId)
+    .eq('user_id', userId)
+    .in('status', ['active', 'completed'])
+    .maybeSingle();
+  if (!enr) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('weekly_tasks')
+    .select('id, title, description, difficulty, deadline, problem_links, created_at')
+    .eq('bootcamp_id', bootcampId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+/**
+ * Member: get mentorship sessions for their mentorship(s) related to a bootcamp.
+ * Finds mentorships where the member is the mentee, then returns sessions from those.
+ */
+export async function getMemberBootcampSessions(bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  // Member must be enrolled
+  const { data: enr } = await supabaseAdmin
+    .from('enrollments')
+    .select('id')
+    .eq('bootcamp_id', bootcampId)
+    .eq('user_id', userId)
+    .in('status', ['active', 'completed'])
+    .maybeSingle();
+  if (!enr) return [];
+
+  // Find mentorships where this user is the mentee and mentor is assigned to this bootcamp
+  const { data: mentorRows } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .select('user_id')
+    .eq('bootcamp_id', bootcampId);
+
+  const mentorIds = (mentorRows || []).map((r) => r.user_id);
+  if (mentorIds.length === 0) return [];
+
+  const { data: mentorships } = await supabaseAdmin
+    .from('mentorships')
+    .select('id, mentor_id, users!mentorships_mentor_id_fkey(id, full_name, avatar_url)')
+    .eq('mentee_id', userId)
+    .in('mentor_id', mentorIds);
+
+  if (!mentorships?.length) return [];
+
+  const mentorshipIds = mentorships.map((m) => m.id);
+  const mentorMap = Object.fromEntries(mentorships.map((m) => [m.id, m['users!mentorships_mentor_id_fkey']]));
+
+  const { data: sessions, error } = await supabaseAdmin
+    .from('mentorship_sessions')
+    .select('id, topic, session_date, duration, attended, notes')
+    .in('mentorship_id', mentorshipIds)
+    .order('session_date', { ascending: false });
+
+  if (error) return [];
+
+  return (sessions || []).map((s) => ({
+    ...s,
+    mentor: mentorMap[s.mentorship_id] || null,
+  }));
+}
