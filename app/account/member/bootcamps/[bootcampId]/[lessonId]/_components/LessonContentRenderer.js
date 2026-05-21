@@ -335,7 +335,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
 
 // ─── Main renderer ────────────────────────────────────────────────────────────
 
-export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0 }) {
+export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0, viewerMode = false }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
@@ -387,7 +387,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           return (
             <div
               key={block.id}
-              className="tiptap-editor-content"
+              className={viewerMode ? 'tiptap-viewer-content' : 'tiptap-editor-content'}
               dangerouslySetInnerHTML={{ __html: block.content }}
             />
           );

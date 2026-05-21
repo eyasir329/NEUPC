@@ -20,6 +20,7 @@ import {
   scheduleSessionAction,
   cancelSessionAction,
   endSessionAction,
+  saveSessionAttendanceAction,
   uploadSessionRecordingAction,
 } from '@/app/_lib/mentor-actions';
 import { useScrollLock } from '@/app/_lib/hooks';
@@ -69,35 +70,63 @@ export default function MentorSessionsClient({
           mentorship_id: m.id,
         }));
     });
-    const bootcampPast = pastScheduledSessions.map((s) => ({
-      id: s.id,
-      topic: s.topic,
-      session_date: s.scheduled_at,
-      duration: s.duration,
-      attended: true,
-      notes: s.description || null,
-      meet_link: s.meet_link || null,
-      menteeName: s.targetStudentName || s.targetStudentNames?.join(', ') || s.targetStudentNamesAll?.join(', ') || s.bootcampTitle || 'Group',
-      menteeAvatar: s.targetStudentAvatar ?? null,
-      mentorship_id: null,
-    }));
+    const bootcampPast = pastScheduledSessions.map((s) => {
+      const ad = s.attendance_data ?? [];
+      const anyPresent = ad.some((r) => r.attended);
+      return {
+        id: s.id,
+        topic: s.topic,
+        session_date: s.scheduled_at,
+        duration: s.duration,
+        attended: ad.length > 0 ? anyPresent : true,
+        notes: s.description || null,
+        meet_link: null,
+        targetType: s.targetType,
+        bootcampTitle: s.bootcampTitle || '',
+        menteeName: s.targetType === 'one-on-one'
+          ? (s.targetStudentName || 'Unknown')
+          : s.targetType === 'selected-group'
+          ? (s.targetStudentNames?.join(', ') || 'Group')
+          : (s.bootcampTitle ? `${s.bootcampTitle} — All` : 'All enrolled'),
+        menteeAvatars: s.targetType === 'one-on-one'
+          ? (s.targetStudentAvatar ? [s.targetStudentAvatar] : [])
+          : (s.targetStudentAvatars ?? []),
+        menteeAvatar: s.targetStudentAvatar ?? null,
+        mentorship_id: null,
+        attendance_data: ad,
+      };
+    });
     return [...mentorshipPast, ...bootcampPast].sort(
       (a, b) => new Date(b.session_date) - new Date(a.session_date)
     );
   });
 
-  const scheduledToPast = (s, attended) => ({
-    id: s.id,
-    topic: s.topic,
-    session_date: s.scheduled_at,
-    duration: s.duration,
-    attended,
-    notes: s.description || null,
-    meet_link: s.meet_link || null,
-    menteeName: s.targetStudentName || (s.targetStudentNamesAll?.join(', ') ?? 'Group'),
-    menteeAvatar: s.targetStudentAvatar ?? null,
-    mentorship_id: null,
-  });
+  const scheduledToPast = (s, attendanceData) => {
+    const ad = attendanceData ?? [];
+    const anyPresent = ad.some((r) => r.attended);
+    return {
+      id: s.id,
+      topic: s.topic,
+      session_date: s.scheduled_at,
+      duration: s.duration,
+      attended: ad.length > 0 ? anyPresent : false,
+      notes: s.description || null,
+      meet_link: null,
+      targetType: s.targetType,
+      bootcampTitle: s.bootcampTitle || '',
+      menteeName: s.targetType === 'one-on-one'
+        ? (s.targetStudentName || 'Unknown')
+        : s.targetType === 'selected-group'
+        ? (s.targetStudentNames?.join(', ') || 'Group')
+        : (s.bootcampTitle ? `${s.bootcampTitle} — All` : 'All enrolled'),
+      menteeAvatars: s.targetType === 'one-on-one'
+        ? (s.targetStudentAvatar ? [s.targetStudentAvatar] : [])
+        : (s.targetStudentAvatars ?? []),
+      menteeAvatar: s.targetStudentAvatar ?? null,
+      mentorship_id: null,
+      attendance_data: ad,
+    };
+  };
 
   // Auto-expire: move sessions past their end time into past sessions list
   useEffect(() => {
@@ -110,7 +139,7 @@ export default function MentorSessionsClient({
         });
         if (expired.length === 0) return prev;
         setSessions((prevSessions) => [
-          ...expired.map((s) => scheduledToPast(s, false)),
+          ...expired.map((s) => scheduledToPast(s, [])),
           ...prevSessions,
         ]);
         return prev.filter((s) => {
@@ -124,9 +153,9 @@ export default function MentorSessionsClient({
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleEndSession = (session) => {
+  const handleEndSession = (session, attendanceData) => {
     setScheduled((prev) => prev.filter((s) => s.id !== session.id));
-    setSessions((prev) => [scheduledToPast(session, true), ...prev]);
+    setSessions((prev) => [scheduledToPast(session, attendanceData ?? []), ...prev]);
   };
 
   const allSessions = sessions;
@@ -134,7 +163,9 @@ export default function MentorSessionsClient({
   const now = new Date();
   const pastStats = {
     total: allSessions.length,
-    attended: allSessions.filter((s) => s.attended).length,
+    attended: allSessions.filter((s) =>
+      s.attendance_data?.length > 0 ? s.attendance_data.some((r) => r.attended) : s.attended
+    ).length,
     thisMonth: allSessions.filter((s) => {
       const d = new Date(s.session_date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -347,7 +378,7 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
       {/* Scheduler */}
-      <GlassCard padding="p-0" className="lg:col-span-5 overflow-hidden">
+      <GlassCard padding="p-0" className={`${scheduled.length === 0 ? 'lg:col-span-12' : 'lg:col-span-6'} overflow-hidden`}>
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-violet-400" />
@@ -589,8 +620,8 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
         </form>
       </GlassCard>
 
-      {/* Scheduled list */}
-      <GlassCard padding="p-0" className="lg:col-span-7 overflow-hidden">
+      {/* Scheduled list — only rendered once there's something to show */}
+      {scheduled.length > 0 && <GlassCard padding="p-0" className="lg:col-span-6 overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/[0.06] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-gray-200">Scheduled rooms</h3>
@@ -622,8 +653,10 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
               <ScheduledRow
                 key={s.id}
                 session={s}
+                bootcamps={bootcamps}
                 onCancel={() => handleCancel(s.id)}
-                onEnd={() => onEndSession(s)}
+                onEnd={(attendanceData) => onEndSession(s, attendanceData)}
+                onEndOnly={() => onEndSession(s, [])}
                 onRecordingUploaded={(id, url) =>
                   setScheduled((prev) => prev.map((r) => r.id === id ? { ...r, recording_url: url } : r))
                 }
@@ -631,17 +664,18 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
             ))
           )}
         </div>
-      </GlassCard>
+      </GlassCard>}
     </div>
   );
 }
 
-function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
+function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploaded, bootcamps }) {
   const [now, setNow] = useState(() => Date.now());
-  const [ending, setEnding] = useState(false);
+  const [showAttendance, setShowAttendance] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 15_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
 
@@ -649,6 +683,18 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
   const endMs = scheduledMs !== null ? scheduledMs + (s.duration || 60) * 60_000 : null;
   const hasStarted = scheduledMs !== null && now >= scheduledMs;
   const hasEnded = endMs !== null && now >= endMs;
+
+  const countdown = useMemo(() => {
+    if (hasStarted || scheduledMs === null) return null;
+    const diff = scheduledMs - now;
+    const d = Math.floor(diff / 86_400_000);
+    const h = Math.floor((diff % 86_400_000) / 3_600_000);
+    const m = Math.floor((diff % 3_600_000) / 60_000);
+    const s = Math.floor((diff % 60_000) / 1_000);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m ${s}s`;
+  }, [now, scheduledMs, hasStarted]);
 
   const isOneOnOne  = s.targetType === 'one-on-one';
   const isGroup     = s.targetType === 'selected-group';
@@ -660,17 +706,17 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
     ? { label: 'Group', icon: Users, tone: 'amber' }
     : { label: 'Broadcast', icon: GraduationCap, tone: 'sky' };
 
-  const handleEnd = async () => {
-    if (!confirm('End this session and move it to past sessions?')) return;
-    setEnding(true);
-    const fd = new FormData();
-    fd.set('sessionId', s.id);
-    const result = await endSessionAction(fd);
-    if (result?.error) { toast.error(result.error); setEnding(false); return; }
-    onEnd?.();
-  };
+  // Resolve full student list for this session (for the attendance modal)
+  const bc = bootcamps?.find((b) => b.id === s.bootcampId);
+  const allStudents = bc?.students ?? [];
+  const sessionStudents = isOneOnOne
+    ? allStudents.filter((u) => u.id === s.targetStudentId)
+    : isGroup
+    ? allStudents.filter((u) => (s.targetStudentIds ?? []).includes(u.id))
+    : allStudents;
 
   return (
+    <>
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-white/[0.1]">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0 space-y-2">
@@ -679,7 +725,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
             <Pill tone={target.tone} icon={target.icon}>{target.label}</Pill>
             {hasStarted
               ? <Pill tone="emerald" icon={Video}>Live</Pill>
-              : <Pill tone="amber" icon={Clock}>Not started yet</Pill>
+              : <Pill tone="amber" icon={Clock}>{countdown ?? 'Scheduled'}</Pill>
             }
           </div>
 
@@ -784,20 +830,36 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
                 </span>
               )}
               <button
-                onClick={handleEnd}
-                disabled={ending}
+                onClick={() => setShowAttendance(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 text-xs font-semibold text-violet-300 transition-colors"
+                title="Record attendance"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Attendance
+              </button>
+              <button
+                disabled={endingSession}
+                onClick={async () => {
+                  setEndingSession(true);
+                  const fd = new FormData();
+                  fd.set('sessionId', s.id);
+                  const res = await endSessionAction(fd);
+                  if (res?.error) { toast.error(res.error); setEndingSession(false); return; }
+                  toast.success('Session ended');
+                  onEndOnly?.();
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-300 transition-colors disabled:opacity-50"
                 title="End session"
               >
-                {ending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                {ending ? 'Ending…' : 'End session'}
+                {endingSession ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                End session
               </button>
             </>
           ) : (
             <>
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300">
                 <Clock className="h-3.5 w-3.5" />
-                Not started yet
+                {countdown ?? 'Scheduled'}
               </span>
               <button
                 onClick={onCancel}
@@ -811,6 +873,21 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
         </div>
       </div>
     </div>
+
+    <AnimatePresence>
+      {showAttendance && (
+        <AttendanceModal
+          session={s}
+          students={sessionStudents}
+          onClose={() => setShowAttendance(false)}
+          onSaved={(attendanceData) => {
+            setShowAttendance(false);
+            onEnd?.(attendanceData);
+          }}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
@@ -859,8 +936,11 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
     const q = search.toLowerCase();
     return sessions
       .filter((s) => {
-        if (filter === 'attended' && !s.attended) return false;
-        if (filter === 'missed' && s.attended) return false;
+        const effectiveAttended = s.attendance_data?.length > 0
+          ? s.attendance_data.some((r) => r.attended)
+          : s.attended;
+        if (filter === 'attended' && !effectiveAttended) return false;
+        if (filter === 'missed' && effectiveAttended) return false;
         if (q && !s.topic?.toLowerCase().includes(q) && !s.menteeName?.toLowerCase().includes(q)) return false;
         return true;
       })
@@ -1001,9 +1081,17 @@ function PastSessionCard({ session: s, editing, editNotes, setEditNotes, onSaveN
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-white">{s.topic}</h3>
-            <Pill tone={s.attended ? 'emerald' : 'rose'} icon={s.attended ? CheckCircle2 : XCircle}>
-              {s.attended ? 'Attended' : 'Missed'}
-            </Pill>
+            {s.attendance_data?.length > 0 ? (() => {
+              const present = s.attendance_data.filter((r) => r.attended).length;
+              const total = s.attendance_data.length;
+              const tone = present === total ? 'emerald' : present === 0 ? 'rose' : 'amber';
+              const icon = present === total ? CheckCircle2 : present === 0 ? XCircle : AlertCircle;
+              return <Pill tone={tone} icon={icon}>{present}/{total} present</Pill>;
+            })() : (
+              <Pill tone={s.attended ? 'emerald' : 'rose'} icon={s.attended ? CheckCircle2 : XCircle}>
+                {s.attended ? 'Attended' : 'Missed'}
+              </Pill>
+            )}
             {s.meet_link && (
               <a
                 href={s.meet_link}
@@ -1018,8 +1106,21 @@ function PastSessionCard({ session: s, editing, editNotes, setEditNotes, onSaveN
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
             <span className="flex items-center gap-1.5">
-              <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" />
-              <span className="text-gray-300">{s.menteeName}</span>
+              {s.menteeAvatars?.length > 1 ? (
+                <div className="flex -space-x-1">
+                  {s.menteeAvatars.slice(0, 3).map((av, i) => (
+                    <Avatar key={i} name={s.menteeName} src={av} size="sm" />
+                  ))}
+                  {s.menteeAvatars.length > 3 && (
+                    <div className="h-5 w-5 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center text-[8px] font-bold text-gray-300">
+                      +{s.menteeAvatars.length - 3}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" />
+              )}
+              <span className="text-gray-300 truncate max-w-[180px]" title={s.menteeName}>{s.menteeName}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-gray-500" />
@@ -1032,10 +1133,13 @@ function PastSessionCard({ session: s, editing, editNotes, setEditNotes, onSaveN
               </span>
             )}
           </div>
-          {!editing && s.notes && (
+          {!editing && s.attendance_data?.length > 0 && (
+            <AttendanceSummary data={s.attendance_data} />
+          )}
+          {!editing && s.notes && descriptionPreview(s.notes) && (
             <div className="mt-3 flex gap-2 rounded-lg border border-white/[0.04] bg-white/[0.02] p-2.5 text-xs text-gray-400">
               <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-600" />
-              <p className="whitespace-pre-wrap leading-relaxed">{s.notes}</p>
+              <p className="whitespace-pre-wrap leading-relaxed">{descriptionPreview(s.notes)}</p>
             </div>
           )}
           {!editing && (
@@ -1268,6 +1372,232 @@ function Field({ label, required, children }) {
         {label}{required && <span className="text-rose-400"> *</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+// ─── Attendance Summary (inline in PastSessionCard) ──────────────────────────
+
+function AttendanceSummary({ data }) {
+  const total = data.length;
+  const attended = data.filter((r) => r.attended).length;
+  const withPoints = data.filter((r) => r.points > 0);
+  const avgPoints = withPoints.length
+    ? Math.round((withPoints.reduce((acc, r) => acc + r.points, 0) / withPoints.length) * 10) / 10
+    : null;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.04] bg-white/[0.02] px-3 py-2">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Attendance</span>
+      <span className={`text-xs font-semibold ${attended === total ? 'text-emerald-300' : attended === 0 ? 'text-rose-300' : 'text-amber-300'}`}>
+        {attended}/{total} present
+      </span>
+      {avgPoints !== null && (
+        <span className="flex items-center gap-1 text-xs text-violet-300 font-semibold">
+          avg {avgPoints} pts
+        </span>
+      )}
+      <div className="flex flex-wrap gap-1.5 ml-auto">
+        {data.map((r) => (
+          <div
+            key={r.user_id}
+            title={`${r.attended ? 'Present' : 'Absent'}${r.points ? ` · ${r.points} pts` : ''}`}
+            className={`h-5 w-5 rounded-full border flex items-center justify-center text-[8px] font-bold ${
+              r.attended ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300' : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+            }`}
+          >
+            {r.attended ? r.points || '✓' : '✗'}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Attendance Modal ─────────────────────────────────────────────────────────
+
+function AttendanceModal({ session, students, onClose, onSaved }) {
+  useScrollLock();
+  const [rows, setRows] = useState(() =>
+    students.map((s) => ({ user_id: s.id, name: s.name, avatar_url: s.avatar_url, attended: false, points: '' }))
+  );
+  const [saving, setSaving] = useState(false);
+
+  const setRow = (userId, patch) =>
+    setRows((prev) => prev.map((r) => (r.user_id === userId ? { ...r, ...patch } : r)));
+
+  const handleSave = async () => {
+    setSaving(true);
+
+    // End the session first
+    const endFd = new FormData();
+    endFd.set('sessionId', session.id);
+    const endResult = await endSessionAction(endFd);
+    if (endResult?.error) { toast.error(endResult.error); setSaving(false); return; }
+
+    // Save attendance
+    const attendance_data = rows.map((r) => ({
+      user_id: r.user_id,
+      attended: r.attended,
+      points: parseInt(r.points) || 0,
+    }));
+    const fd = new FormData();
+    fd.set('sessionId', session.id);
+    fd.set('attendance_data', JSON.stringify(attendance_data));
+    const result = await saveSessionAttendanceAction(fd);
+    if (result?.error) { toast.error(result.error); setSaving(false); return; }
+
+    toast.success('Session ended & attendance saved');
+    onSaved(attendance_data);
+  };
+
+  const attendedCount = rows.filter((r) => r.attended).length;
+
+  const absentCount = rows.length - attendedCount;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        className="relative z-10 w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.08] bg-[#0f1117] shadow-2xl overflow-hidden max-h-[90dvh]"
+      >
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 border-b border-white/[0.06]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-400 mb-1">Attendance</p>
+              <h2 className="text-base font-bold text-white leading-tight truncate">{session.topic}</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Stats bar */}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { label: 'Invited', value: students.length, color: 'text-gray-300' },
+              { label: 'Present', value: attendedCount, color: 'text-emerald-400' },
+              { label: 'Absent', value: absentCount, color: 'text-rose-400' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 text-center">
+                <p className={`text-lg font-bold ${color}`}>{value}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bulk actions */}
+        <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/[0.04]">
+          <span className="text-[11px] text-gray-500">
+            {attendedCount === students.length && students.length > 0 ? 'All present' : `${attendedCount} of ${students.length} marked`}
+          </span>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setRows((prev) => prev.map((r) => ({ ...r, attended: true })))}
+              className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              All present
+            </button>
+            <span className="text-gray-700">·</span>
+            <button
+              type="button"
+              onClick={() => setRows((prev) => prev.map((r) => ({ ...r, attended: false })))}
+              className="text-[11px] font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Student list */}
+        {students.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-500">
+            No students were targeted for this session.
+          </div>
+        ) : (
+          <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+            {rows.map((r) => (
+              <div
+                key={r.user_id}
+                className={`group flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all cursor-pointer select-none ${
+                  r.attended
+                    ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                    : 'border-white/[0.05] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]'
+                }`}
+                onClick={() => setRow(r.user_id, { attended: !r.attended })}
+              >
+                {/* Toggle */}
+                <div className={`shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  r.attended
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-white/20 bg-transparent group-hover:border-white/40'
+                }`}>
+                  {r.attended && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </div>
+
+                <Avatar name={r.name} src={r.avatar_url} size="sm" />
+
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate transition-colors ${r.attended ? 'text-white' : 'text-gray-400'}`}>
+                    {r.name}
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${r.attended ? 'text-emerald-400' : 'text-gray-600'}`}>
+                    {r.attended ? 'Present' : 'Absent'}
+                  </p>
+                </div>
+
+                {/* Points */}
+                <div
+                  className="shrink-0 flex items-center gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={r.points}
+                    onChange={(e) => setRow(r.user_id, { points: e.target.value })}
+                    placeholder="0"
+                    className={`w-12 rounded-lg border px-2 py-1 text-center text-xs font-semibold outline-none transition-all ${
+                      r.attended
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 focus:border-emerald-500/60'
+                        : 'border-white/[0.06] bg-white/[0.02] text-gray-500 focus:border-white/20'
+                    }`}
+                  />
+                  <span className="text-[10px] text-gray-600">pts</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="px-4 py-4 border-t border-white/[0.06] flex gap-2">
+          <ActionButton tone="ghost" onClick={onClose} className="flex-1 justify-center">Cancel</ActionButton>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-colors"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            {saving ? 'Saving…' : 'Save attendance'}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -10,7 +10,6 @@ import {
   Shield,
   FileText,
   BookOpen,
-  Target,
   BarChart,
   Briefcase,
   MessageSquare,
@@ -146,8 +145,8 @@ export function getSidebarNavigation(activeRole, stats, session) {
         label: 'Activities',
         items: [
           {
-            id: 'daily-activity',
-            label: 'Daily Activity',
+            id: 'todo-list',
+            label: 'Todo List',
             icon: CheckSquare,
             href: '/account/member/daily-activity',
           },
@@ -528,12 +527,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Video,
             href: '/account/mentor/sessions',
           },
-          {
-            id: 'recommendations',
-            label: 'Recommendations',
-            icon: Target,
-            href: '/account/mentor/recommendations',
-          },
+
         ],
       },
       {

@@ -56,3 +56,25 @@ export async function createMeetEvent({ title } = {}) {
   // spaceId is the resource name, e.g. "spaces/abc123"
   return { meetLink, spaceId: data.name, eventId: data.name };
 }
+
+/**
+ * Ends the active conference on a Meet space, making the link invalid.
+ * Non-fatal if the space has no active conference or already ended.
+ *
+ * @param {string} spaceId - resource name e.g. "spaces/abc123"
+ */
+export async function endMeetConference(spaceId) {
+  if (!spaceId) return;
+  const auth = getAuth();
+  const { token } = await auth.getAccessToken();
+
+  await fetch(`https://meet.googleapis.com/v2/${spaceId}:endActiveConference`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  });
+  // Ignore errors — space may already be inactive
+}

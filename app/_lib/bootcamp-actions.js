@@ -2969,7 +2969,7 @@ export async function getMemberBootcampTasks(bootcampId) {
   const taskIds = tasks.map((t) => t.id);
   const { data: subs } = await supabaseAdmin
     .from('task_submissions')
-    .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+    .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
     .eq('user_id', userId)
     .in('task_id', taskIds);
 
@@ -2980,6 +2980,43 @@ export async function getMemberBootcampTasks(bootcampId) {
 /**
  * Member: submit (or resubmit) a task.
  */
+/**
+ * Upload a file (image, pdf, doc, archive) as an attachment for a member's
+ * task submission. Returns { url, name, size, type } on success.
+ */
+const MAX_TASK_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+export async function uploadTaskAttachmentAction(formData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const file = formData.get('file');
+    if (!file || !(file instanceof File) || file.size === 0) {
+      return { error: 'No file provided.' };
+    }
+    if (file.size > MAX_TASK_ATTACHMENT_SIZE) {
+      return { error: `File exceeds ${MAX_TASK_ATTACHMENT_SIZE / (1024 * 1024)}MB limit.` };
+    }
+
+    const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const ext = safeName.includes('.') ? safeName.split('.').pop() : 'bin';
+    const filename = `task_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const { fileId } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type || 'application/octet-stream',
+      'task-submissions'
+    );
+    const url = `https://drive.google.com/file/d/${fileId}/view`;
+    return { success: true, url, name: file.name || safeName, size: file.size, type: file.type || '' };
+  } catch (err) {
+    console.error('Task attachment upload error:', err);
+    return { error: err.message || 'Failed to upload file.' };
+  }
+}
+
 export async function submitTaskAction(formData) {
   try {
     const userId = await getCurrentUserId();
@@ -2988,9 +3025,17 @@ export async function submitTaskAction(formData) {
     const taskId = formData.get('task_id');
     const submissionUrl = formData.get('submission_url')?.trim() || null;
     const notes = formData.get('notes')?.trim() || null;
+    const attachmentsRaw = formData.get('attachments');
+    let attachments = null;
+    if (attachmentsRaw) {
+      try {
+        const parsed = JSON.parse(attachmentsRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) attachments = parsed;
+      } catch {}
+    }
 
     if (!taskId) return { error: 'Missing task ID' };
-    if (!submissionUrl && !notes) return { error: 'Provide a submission link or notes' };
+    if (!submissionUrl && !notes && !attachments) return { error: 'Provide content or a file.' };
 
     // Check if already submitted
     const { data: existing } = await supabaseAdmin
@@ -3007,22 +3052,24 @@ export async function submitTaskAction(formData) {
       }
       const { data, error } = await supabaseAdmin
         .from('task_submissions')
-        .update({ submission_url: submissionUrl, notes, status: 'pending', submitted_at: new Date().toISOString(), feedback: null })
+        .update({ submission_url: submissionUrl, notes, attachments, status: 'pending', submitted_at: new Date().toISOString(), feedback: null })
         .eq('id', existing.id)
-        .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+        .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
         .single();
       if (error) return { error: error.message };
       revalidatePath('/account/member/bootcamps');
+      revalidatePath('/account/mentor/tasks');
       return { success: 'Resubmission sent!', data };
     }
 
     const { data, error } = await supabaseAdmin
       .from('task_submissions')
-      .insert({ task_id: taskId, user_id: userId, submission_url: submissionUrl, notes, status: 'pending' })
-      .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+      .insert({ task_id: taskId, user_id: userId, submission_url: submissionUrl, notes, attachments, status: 'pending', submitted_at: new Date().toISOString() })
+      .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
       .single();
     if (error) return { error: error.message };
     revalidatePath('/account/member/bootcamps');
+    revalidatePath('/account/mentor/tasks');
     return { success: 'Task submitted!', data };
   } catch (err) {
     return { error: err.message };

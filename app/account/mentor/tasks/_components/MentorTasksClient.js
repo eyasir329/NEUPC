@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardList, Search, Plus, Edit2, Trash2, X, Link as LinkIcon,
   Clock, Award, BookOpen,
-  Sparkles, ClipboardCheck, Code
+  Sparkles, ClipboardCheck, Code, Paperclip,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 
@@ -61,6 +60,38 @@ function descriptionPreview(desc) {
   return desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function formatBytes(b) {
+  if (!b) return '';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function resolveAttachmentUrl(url) {
+  if (!url) return url;
+  const m = url.match(/^\/api\/image\/([a-zA-Z0-9_-]+)$/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
+  return url;
+}
+
+function AttachmentList({ files }) {
+  if (!files?.length) return null;
+  return (
+    <ul className="space-y-1.5">
+      {files.map((f, i) => (
+        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5">
+          <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
+          <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
+            className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
+            {f.name || `Attachment ${i + 1}`}
+          </a>
+          {f.size && <span className="text-[10px] text-gray-500 tabular-nums">{formatBytes(f.size)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 const REVIEW_STATUSES = [
   { value: 'pending', label: 'Pending' },
   { value: 'completed', label: 'Completed' },
@@ -92,6 +123,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   // Evaluation inputs
   const [reviewStatusInput, setReviewStatusInput] = useState('completed');
   const [reviewFeedbackInput, setReviewFeedbackInput] = useState('');
+  const [reviewPointsInput, setReviewPointsInput] = useState('');
   
   // Task form state
   const [taskFormTitle, setTaskFormTitle] = useState('');
@@ -104,11 +136,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   const [taskFormDueDate, setTaskFormDueDate] = useState('');
   const [taskFormBootcamp, setTaskFormBootcamp] = useState(bootcamps[0]?.id ?? '');
 
-  // Edit Task modal state
   const [editingTask, setEditingTask] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  // Stable desc state for MultiBlockEditor — only reset when modal opens, not on every keystroke
-  const [editingDesc, setEditingDesc] = useState('');
 
   const [actionLoading, setActionLoading] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
@@ -124,9 +152,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
     if (activeSubmission) {
       setReviewStatusInput(activeSubmission.status || 'completed');
       setReviewFeedbackInput(activeSubmission.feedback || '');
+      setReviewPointsInput(activeSubmission.points_earned != null ? String(activeSubmission.points_earned) : '');
     } else {
       setReviewStatusInput('completed');
       setReviewFeedbackInput('');
+      setReviewPointsInput('');
     }
   }, [activeSubmission]);
 
@@ -230,13 +260,14 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
     if (isSimulated) {
       // Local updates for simulator
-      setSubmissions(prev => 
+      setSubmissions(prev =>
         prev.map(sub => {
           if (sub.id === activeSubmission.id) {
             return {
               ...sub,
               status: reviewStatusInput,
               feedback: reviewFeedbackInput,
+              points_earned: reviewPointsInput !== '' ? Number(reviewPointsInput) : null,
               reviewed_by: mentorId
             };
           }
@@ -254,6 +285,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
     fd.set('submissionId', activeSubmission.id);
     fd.set('status', reviewStatusInput);
     fd.set('feedback', reviewFeedbackInput);
+    if (reviewPointsInput !== '') fd.set('points_earned', reviewPointsInput);
 
     const result = await reviewTaskSubmissionAction(fd);
     setActionLoading(false);
@@ -263,13 +295,14 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
     } else {
       showToast(result.success || 'Submission graded successfully!');
       // Update submissions state locally
-      setSubmissions(prev => 
+      setSubmissions(prev =>
         prev.map(sub => {
           if (sub.id === activeSubmission.id) {
             return {
               ...sub,
               status: reviewStatusInput,
               feedback: reviewFeedbackInput,
+              points_earned: reviewPointsInput !== '' ? Number(reviewPointsInput) : null,
               reviewed_by: mentorId
             };
           }
@@ -342,14 +375,8 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
       ...task,
       deadlineFormatted: task.deadline ? task.deadline.slice(0, 16) : '',
     });
-    setEditingDesc(task.description || '');
-    setIsEditModalOpen(true);
+    setTaskDeskSubTab('assign');
   };
-
-  const handleEditDescChange = useCallback((v) => {
-    setEditingDesc(v);
-    setEditingTask(prev => ({ ...prev, description: v }));
-  }, []);
 
   const handleUpdateTaskSubmit = async (e) => {
     e.preventDefault();
@@ -386,7 +413,6 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
           deadline: new Date(editingTask.deadlineFormatted).toISOString(),
         })
       );
-      setIsEditModalOpen(false);
       setEditingTask(null);
     }
   };
@@ -445,7 +471,6 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
       <TabBar
         tabs={[
           { value: 'submissions', label: 'Received Submissions', icon: ClipboardCheck, count: stats.pendingReview },
-          { value: 'tasks', label: 'All Tasks', icon: BookOpen, count: tasks.length },
           { value: 'assign', label: 'Issue New Task', icon: Plus }
         ]}
         value={taskDeskSubTab}
@@ -594,18 +619,25 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       <div className="text-[11px] font-bold text-violet-450 truncate">{taskTitle}</div>
                       {sub.notes && (
                         <div className="text-[10px] text-slate-400 line-clamp-1 italic font-mono">
-                          "{sub.notes}"
+                          {descriptionPreview(sub.notes)}
                         </div>
                       )}
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] text-slate-500">
                       <span>Bootcamp: <span className="text-slate-350 font-bold">{bootcampMap[sub.weekly_tasks?.target_audience] || 'N/A'}</span></span>
-                      {sub.submission_url && (
-                        <span className="font-mono text-violet-400 font-bold hover:underline flex items-center gap-0.5">
-                          <LinkIcon className="w-2.5 h-2.5" /> repo
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {sub.points_earned != null && (
+                          <span className="font-bold text-amber-400 tabular-nums">
+                            {sub.points_earned}/{sub.weekly_tasks?.points ?? '?'} pts
+                          </span>
+                        )}
+                        {sub.submission_url && (
+                          <span className="font-mono text-violet-400 font-bold hover:underline flex items-center gap-0.5">
+                            <LinkIcon className="w-2.5 h-2.5" /> repo
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </GlassCard>
                 );
@@ -690,50 +722,35 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       )}
                     </div>
 
-                    {/* Explanation */}
-                    {sub.notes && (
-                      <div className="space-y-1.5 p-3.5 bg-violet-950/10 border-l-4 border-violet-500/40 rounded-r-2xl">
-                        <span className="text-[9px] font-extrabold text-violet-300 uppercase tracking-widest block font-mono">Student's Notes</span>
-                        <p className="text-[11px] text-slate-350 leading-relaxed font-semibold italic">
-                          "{sub.notes}"
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Submission content panel */}
+                    {/* Student's submission content */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center bg-[#05080e]/80 px-4 py-2.5 border border-white/5 border-b-0 rounded-t-2xl text-[10px]">
                         <span className="font-mono text-gray-500 font-bold flex items-center gap-1.5">
                           <Code className="w-3.5 h-3.5 text-violet-400" />
                           Submission
                         </span>
-                        <div className="flex items-center gap-3">
-                          {sub.submission_url && (
-                            <a
-                              href={sub.submission_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-0.5 hover:underline"
-                            >
-                              <LinkIcon className="w-3.5 h-3.5" /> Submission Link
-                            </a>
-                          )}
-                          {sub.code && (
-                            <button
-                              type="button"
-                              onClick={() => { navigator.clipboard.writeText(sub.code); showToast('Copied!'); }}
-                              className="text-[10px] text-gray-400 hover:text-gray-250 font-bold"
-                            >
-                              Copy
-                            </button>
-                          )}
-                        </div>
+                        {sub.submission_url && (
+                          <a
+                            href={sub.submission_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-0.5 hover:underline"
+                          >
+                            <LinkIcon className="w-3.5 h-3.5" /> External Link
+                          </a>
+                        )}
                       </div>
-                      <div className="bg-[#05080e]/95 p-4 rounded-b-2xl border border-white/5 font-mono text-[10px] text-emerald-400 overflow-x-auto max-h-60 leading-relaxed text-left">
-                        {sub.code ? (
-                          <pre className="whitespace-pre">{sub.code}</pre>
+                      <div className="bg-[#05080e]/95 p-4 rounded-b-2xl border border-white/5 text-left space-y-3">
+                        {sub.notes ? (
+                          <LessonContentRenderer content={sub.notes} lessonId={`sub-${sub.id}`} />
                         ) : (
-                          <div className="text-gray-500 italic py-4 text-center">No inline content. Check the submission link above.</div>
+                          <div className="text-gray-500 italic py-4 text-center text-[10px]">No written content.</div>
+                        )}
+                        {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
+                          <div className="space-y-1.5 pt-3 border-t border-white/5">
+                            <span className="text-[9px] font-extrabold text-violet-300 uppercase tracking-widest block font-mono">Attachments</span>
+                            <AttachmentList files={sub.attachments} />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -787,6 +804,24 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       </div>
 
                       <div className="flex flex-col gap-1.5">
+                        <label className={LABEL_CLS}>
+                          Points Awarded
+                          {activeSubmission?.weekly_tasks?.points != null && (
+                            <span className="ml-1 text-gray-500 font-normal">/ {activeSubmission.weekly_tasks.points} pts</span>
+                          )}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={activeSubmission?.weekly_tasks?.points ?? undefined}
+                          value={reviewPointsInput}
+                          onChange={(e) => setReviewPointsInput(e.target.value)}
+                          placeholder={activeSubmission?.weekly_tasks?.points != null ? `0 – ${activeSubmission.weekly_tasks.points}` : 'Enter points'}
+                          className={INPUT_CLS}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
                         <label className={LABEL_CLS}>Mentor Remarks</label>
                         <textarea
                           rows={3}
@@ -824,138 +859,51 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
           </div>
         </div>
       )}
-      {/* TAB SUB-VIEW 2: ALL TASKS */}
-      {taskDeskSubTab === 'tasks' && (
-        <GlassCard padding="p-6" className="space-y-4 text-left">
-          <div className="flex items-center justify-between border-b border-white/6 pb-3">
-            <h4 className="text-xs font-black uppercase text-violet-400 tracking-wider">All Published Tasks</h4>
-            <span className="text-[9px] bg-[#05080e] border border-white/5 text-gray-400 px-2 py-0.5 rounded-full font-mono font-bold">
-              {tasks.length} total
-            </span>
-          </div>
-
-          <div className="space-y-3 overflow-y-auto pr-1">
-            {tasks.map(t => {
-              const isDeleting = deletingTaskId === t.id;
-              return (
-                <GlassCard key={t.id} padding="p-4" className="bg-white/1 border-white/6 relative overflow-hidden group">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1 text-left flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[8px] font-mono font-bold text-gray-400 bg-slate-900 px-2 py-0.5 rounded border border-white/5 inline-block">
-                          {bootcampMap[t.target_audience] || t.target_audience || 'All'}
-                        </span>
-                        {t.task_type && (
-                          <span className="text-[8px] font-mono font-bold text-violet-400 bg-violet-950/20 px-2 py-0.5 rounded border border-violet-500/15 inline-block">
-                            {t.task_type}
-                          </span>
-                        )}
-                        <Pill tone={t.difficulty === 'easy' ? 'emerald' : t.difficulty === 'hard' ? 'rose' : 'amber'}>
-                          {t.difficulty}
-                        </Pill>
-                      </div>
-                      <h5 className="text-xs font-bold text-slate-100 truncate mt-1">{t.title}</h5>
-                      <p className="text-[10px] text-gray-400 line-clamp-2 mt-1 leading-snug">
-                        {descriptionPreview(t.description)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0 select-none ml-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(t)}
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-white/4 hover:text-violet-400 transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      {confirmDeleteId === t.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTask(t.id)}
-                            disabled={isDeleting}
-                            className="rounded-lg px-2 py-1 bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white text-[10px] font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                          >
-                            {isDeleting ? '...' : 'Confirm'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="rounded-lg px-2 py-1 text-gray-400 hover:text-white text-[10px] font-semibold transition-colors cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(t.id)}
-                          disabled={isDeleting}
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-500">
-                    <span>By: <span className="text-slate-350 font-bold">{t.users?.full_name || 'Self'}</span></span>
-                    <span className="text-amber-400 font-bold font-mono">{t.points ?? 0} pts</span>
-                    <span>Due: <span className="text-slate-350 font-mono font-bold">{t.deadline ? new Date(t.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span></span>
-                  </div>
-                </GlassCard>
-              );
-            })}
-
-            {tasks.length === 0 && (
-              <EmptyState
-                icon={ClipboardList}
-                title="No tasks published yet"
-                description="Switch to Issue New Task to create your first task."
-                accent="violet"
-                action={
-                  <ActionButton tone="ghost" onClick={() => setTaskDeskSubTab('assign')}>
-                    Create Task
-                  </ActionButton>
-                }
-              />
-            )}
-          </div>
-        </GlassCard>
-      )}
-
       {taskDeskSubTab === 'assign' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-left">
-          
-          {/* Create Task Form */}
+
+          {/* Create / Edit Task Form — same panel, mode toggled by editingTask */}
           <GlassCard padding="p-0" className="lg:col-span-6 overflow-hidden">
-            <form onSubmit={handlePublishTask}>
+            <form onSubmit={editingTask ? handleUpdateTaskSubmit : handlePublishTask}>
               <div className="bg-white/5 px-5 py-4 border-b border-white/6 flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase text-violet-400 tracking-widest">Assign New Task</h3>
-                <span className="text-[8px] font-bold text-gray-500 tracking-widest font-mono">MENTOR WORKSPACE</span>
+                <h3 className="text-xs font-black uppercase text-violet-400 tracking-widest">
+                  {editingTask ? 'Edit Task' : 'Assign New Task'}
+                </h3>
+                {editingTask ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white transition font-mono font-bold"
+                  >
+                    <X className="w-3 h-3" /> Cancel Edit
+                  </button>
+                ) : (
+                  <span className="text-[8px] font-bold text-gray-500 tracking-widest font-mono">MENTOR WORKSPACE</span>
+                )}
               </div>
 
               <div className="p-6 space-y-4">
 
-                {/* Bootcamp */}
-                <div className="flex flex-col gap-1.5">
-                  <label className={LABEL_CLS}>Bootcamp <span className="text-rose-500">*</span></label>
-                  {bootcamps.length === 0 ? (
-                    <p className="text-xs text-amber-400">No bootcamps assigned to you yet.</p>
-                  ) : (
-                    <select
-                      required
-                      value={taskFormBootcamp}
-                      onChange={(e) => setTaskFormBootcamp(e.target.value)}
-                      className={INPUT_CLS}
-                    >
-                      {bootcamps.map(b => (
-                        <option key={b.id} value={b.id}>{b.title}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                {/* Bootcamp — only shown when creating */}
+                {!editingTask && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className={LABEL_CLS}>Bootcamp <span className="text-rose-500">*</span></label>
+                    {bootcamps.length === 0 ? (
+                      <p className="text-xs text-amber-400">No bootcamps assigned to you yet.</p>
+                    ) : (
+                      <select
+                        required
+                        value={taskFormBootcamp}
+                        onChange={(e) => setTaskFormBootcamp(e.target.value)}
+                        className={INPUT_CLS}
+                      >
+                        {bootcamps.map(b => (
+                          <option key={b.id} value={b.id}>{b.title}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
 
                 {/* Title */}
                 <div className="flex flex-col gap-1.5">
@@ -963,8 +911,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   <input
                     type="text"
                     required
-                    value={taskFormTitle}
-                    onChange={(e) => setTaskFormTitle(e.target.value)}
+                    value={editingTask ? editingTask.title : taskFormTitle}
+                    onChange={(e) => editingTask
+                      ? setEditingTask({ ...editingTask, title: e.target.value })
+                      : setTaskFormTitle(e.target.value)
+                    }
                     placeholder="e.g. Read chapter 3 and summarize key concepts"
                     className={INPUT_CLS}
                   />
@@ -975,8 +926,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   <div className="flex flex-col gap-1.5">
                     <label className={LABEL_CLS}>Type</label>
                     <select
-                      value={taskFormType}
-                      onChange={(e) => setTaskFormType(e.target.value)}
+                      value={editingTask ? (editingTask.task_type || 'Exercise') : taskFormType}
+                      onChange={(e) => editingTask
+                        ? setEditingTask({ ...editingTask, task_type: e.target.value })
+                        : setTaskFormType(e.target.value)
+                      }
                       className={INPUT_CLS}
                     >
                       {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -986,8 +940,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   <div className="flex flex-col gap-1.5">
                     <label className={LABEL_CLS}>Difficulty</label>
                     <select
-                      value={taskFormDifficulty}
-                      onChange={(e) => setTaskFormDifficulty(e.target.value)}
+                      value={editingTask ? editingTask.difficulty : taskFormDifficulty}
+                      onChange={(e) => editingTask
+                        ? setEditingTask({ ...editingTask, difficulty: e.target.value })
+                        : setTaskFormDifficulty(e.target.value)
+                      }
                       className={INPUT_CLS}
                     >
                       <option value="easy">Easy</option>
@@ -1002,8 +959,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       type="number"
                       required
                       min="1"
-                      value={taskFormPoints}
-                      onChange={(e) => setTaskFormPoints(Number(e.target.value))}
+                      value={editingTask ? (editingTask.points ?? 10) : taskFormPoints}
+                      onChange={(e) => editingTask
+                        ? setEditingTask({ ...editingTask, points: Number(e.target.value) })
+                        : setTaskFormPoints(Number(e.target.value))
+                      }
                       className={INPUT_CLS}
                     />
                   </div>
@@ -1015,30 +975,36 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   <input
                     type="datetime-local"
                     required
-                    value={taskFormDueDate}
-                    onChange={(e) => setTaskFormDueDate(e.target.value)}
+                    value={editingTask ? editingTask.deadlineFormatted : taskFormDueDate}
+                    onChange={(e) => editingTask
+                      ? setEditingTask({ ...editingTask, deadlineFormatted: e.target.value })
+                      : setTaskFormDueDate(e.target.value)
+                    }
                     className={`${INPUT_CLS} scheme-dark`}
                   />
                 </div>
-
 
                 {/* Description */}
                 <div className="flex flex-col gap-1.5">
                   <label className={LABEL_CLS}>Description <span className="text-rose-500">*</span></label>
                   <div className="rounded-xl overflow-hidden">
                     <MultiBlockEditor
-                      value={taskFormDesc}
-                      onChange={setTaskFormDesc}
+                      key={editingTask ? `edit-${editingTask.id}` : 'create'}
+                      value={editingTask ? (editingTask.description || '') : taskFormDesc}
+                      onChange={editingTask
+                        ? (v) => setEditingTask(prev => ({ ...prev, description: v }))
+                        : setTaskFormDesc
+                      }
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={actionLoading || bootcamps.length === 0}
+                  disabled={actionLoading || (!editingTask && bootcamps.length === 0)}
                   className="w-full py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition cursor-pointer"
                 >
-                  {actionLoading ? 'Saving...' : 'Publish Task'}
+                  {actionLoading ? 'Saving...' : editingTask ? 'Save Changes' : 'Publish Task'}
                 </button>
 
               </div>
@@ -1141,126 +1107,6 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
       )}
       </div>
 
-      {/* EDIT TASK MODAL */}
-      <AnimatePresence>
-        {isEditModalOpen && editingTask && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/8 bg-gray-950 shadow-2xl text-left overflow-hidden"
-            >
-              <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
-                <h2 className="text-[15px] font-semibold text-white">Edit Challenge</h2>
-                <button
-                  type="button"
-                  onClick={() => { setIsEditModalOpen(false); setEditingTask(null); }}
-                  className="rounded-md p-1 text-gray-500 hover:text-white transition"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="px-6 py-5">
-              <form onSubmit={handleUpdateTaskSubmit} className="space-y-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className={LABEL_CLS}>Task Title <span className="text-rose-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={editingTask.title}
-                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                    className={INPUT_CLS}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={LABEL_CLS}>Description</label>
-                  <div className="rounded-xl overflow-hidden">
-                    <MultiBlockEditor
-                      value={editingTask.description || ''}
-                      onChange={(v) => setEditingTask(prev => ({ ...prev, description: v }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className={LABEL_CLS}>Type</label>
-                    <select
-                      value={editingTask.task_type || 'Exercise'}
-                      onChange={(e) => setEditingTask({ ...editingTask, task_type: e.target.value })}
-                      className={INPUT_CLS}
-                    >
-                      {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className={LABEL_CLS}>Difficulty</label>
-                    <select
-                      value={editingTask.difficulty}
-                      onChange={(e) => setEditingTask({ ...editingTask, difficulty: e.target.value })}
-                      className={INPUT_CLS}
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className={LABEL_CLS}>Points <span className="text-rose-500">*</span></label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={editingTask.points ?? 10}
-                      onChange={(e) => setEditingTask({ ...editingTask, points: Number(e.target.value) })}
-                      className={INPUT_CLS}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={LABEL_CLS}>Deadline <span className="text-rose-500">*</span></label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editingTask.deadlineFormatted}
-                    onChange={(e) => setEditingTask({ ...editingTask, deadlineFormatted: e.target.value })}
-                    className={`${INPUT_CLS} scheme-dark`}
-                  />
-                </div>
-
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={actionLoading}
-                    className="flex-1 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition cursor-pointer"
-                  >
-                    {actionLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsEditModalOpen(false); setEditingTask(null); }}
-                    className="px-4 py-2 rounded-lg border border-white/8 text-gray-400 hover:text-white text-sm font-medium transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
     </PageShell>
   );

@@ -3891,15 +3891,18 @@ export async function getAllTaskSubmissions() {
       *,
       users!task_submissions_user_id_fkey(
         id, full_name, email, avatar_url,
-        member_profiles(student_id, academic_session)
+        member_profiles!member_profiles_user_id_fkey(student_id, academic_session)
       ),
       weekly_tasks(
-        id, title, difficulty, deadline, target_audience, description
+        id, title, difficulty, deadline, target_audience, description, points
       )
     `
     )
-    .order('submitted_at', { ascending: false });
-  if (error) throw new Error(error.message);
+    .order('submitted_at', { ascending: false, nullsFirst: false });
+  if (error) {
+    console.error('[getAllTaskSubmissions] query error:', error);
+    throw new Error(error.message);
+  }
   return data;
 }
 

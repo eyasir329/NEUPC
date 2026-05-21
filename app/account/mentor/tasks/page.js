@@ -8,9 +8,9 @@ export const metadata = { title: 'Tasks | Mentor | NEUPC' };
 export default async function MentorTasksPage() {
   const [{ user }, tasks, submissions, bootcamps] = await Promise.all([
     requireRole('mentor'),
-    getAllWeeklyTasks().catch(() => []),
-    getAllTaskSubmissions().catch(() => []),
-    getMentorAssignedBootcamps().catch(() => []),
+    getAllWeeklyTasks().catch((e) => { console.error('getAllWeeklyTasks failed:', e); return []; }),
+    getAllTaskSubmissions().catch((e) => { console.error('getAllTaskSubmissions failed:', e); return []; }),
+    getMentorAssignedBootcamps().catch((e) => { console.error('getMentorAssignedBootcamps failed:', e); return []; }),
   ]);
 
   return (

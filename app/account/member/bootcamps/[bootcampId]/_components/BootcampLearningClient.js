@@ -1,6 +1,12 @@
 'use client';
 
 import { marked } from 'marked';
+import dynamic from 'next/dynamic';
+
+const MultiBlockEditor = dynamic(
+  () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/[0.03]" /> }
+);
 
 import {
   useState,
@@ -41,6 +47,9 @@ import {
   AlertCircle,
   ArrowLeft,
   Send,
+  Paperclip,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import {
   getLesson,
@@ -56,6 +65,7 @@ import {
   getMemberBootcampTasks,
   getMemberBootcampSessions,
   submitTaskAction,
+  uploadTaskAttachmentAction,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
@@ -115,6 +125,26 @@ function MarkdownDesc({ text, className = '' }) {
       <style dangerouslySetInnerHTML={{ __html: MD_DESC_STYLES }} />
       <div className={`md-desc ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
     </>
+  );
+}
+
+// Inline renderer for task/session descriptions stored as richText JSON blocks
+function TaskDescriptionRenderer({ content }) {
+  if (!content) return null;
+  let html = '';
+  try {
+    const blocks = typeof content === 'string' ? JSON.parse(content) : content;
+    if (Array.isArray(blocks)) {
+      html = blocks.map(b => b.content || '').join('');
+    } else {
+      html = content;
+    }
+  } catch {
+    html = content;
+  }
+  if (!html) return null;
+  return (
+    <div className="tiptap-viewer-content" dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
 
@@ -829,14 +859,75 @@ const STATUS_STYLE = {
   'bonus deserved':      'text-violet-400 bg-violet-500/10 ring-violet-500/20',
 };
 
+function formatBytes(b) {
+  if (!b) return '';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function resolveAttachmentUrl(url) {
+  if (!url) return url;
+  const m = url.match(/^\/api\/image\/([a-zA-Z0-9_-]+)$/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
+  return url;
+}
+
+function AttachmentList({ files, onRemove }) {
+  if (!files?.length) return null;
+  return (
+    <ul className="space-y-1.5">
+      {files.map((f, i) => (
+        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5">
+          <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
+          <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
+            className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
+            {f.name || `Attachment ${i + 1}`}
+          </a>
+          {f.size && <span className="text-[10px] text-gray-500 tabular-nums">{formatBytes(f.size)}</span>}
+          {onRemove && (
+            <button type="button" onClick={() => onRemove(i)} className="rounded p-0.5 text-gray-500 hover:bg-white/5 hover:text-rose-400">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function TaskSubmitForm({ task, onSubmitted }) {
-  const [url, setUrl] = useState(task.mySubmission?.submission_url || '');
-  const [notes, setNotes] = useState(task.mySubmission?.notes || '');
+  const [content, setContent] = useState(
+    () => task.mySubmission?.notes
+      || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
+  );
+  const [attachments, setAttachments] = useState(
+    () => Array.isArray(task.mySubmission?.attachments) ? task.mySubmission.attachments : []
+  );
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   const isRedo = task.mySubmission?.status === 'redo action required';
   const canSubmit = !task.mySubmission || isRedo;
+
+  const handleFiles = async (files) => {
+    if (!files?.length) return;
+    setError('');
+    setUploading(true);
+    const uploaded = [];
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await uploadTaskAttachmentAction(fd);
+      if (res.error) { setError(res.error); continue; }
+      uploaded.push({ url: res.url, name: res.name, size: res.size, type: res.type });
+    }
+    setAttachments(prev => [...prev, ...uploaded]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -844,49 +935,54 @@ function TaskSubmitForm({ task, onSubmitted }) {
     setLoading(true);
     const fd = new FormData();
     fd.set('task_id', task.id);
-    fd.set('submission_url', url);
-    fd.set('notes', notes);
+    fd.set('submission_url', '');
+    fd.set('notes', content);
+    fd.set('attachments', JSON.stringify(attachments));
     const result = await submitTaskAction(fd);
     setLoading(false);
     if (result.error) { setError(result.error); return; }
     onSubmitted(task.id, result.data);
   };
 
+  if (!canSubmit) return null;
+
   return (
     <form onSubmit={handleSubmit} className="mt-3 space-y-3">
       <div>
-        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Submission Link</label>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://github.com/you/solution"
-          disabled={!canSubmit}
-          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
-        />
+        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</label>
+        <div className="rounded-xl overflow-hidden border border-white/10">
+          <MultiBlockEditor value={content} onChange={setContent} />
+        </div>
       </div>
       <div>
-        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Notes</label>
-        <textarea
-          rows={2}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Briefly describe your approach or any questions..."
-          disabled={!canSubmit}
-          className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
+        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Attachments</label>
+        <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={(e) => handleFiles(Array.from(e.target.files || []))}
+          className="hidden"
         />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="mt-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/[0.08] disabled:opacity-40"
+        >
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {uploading ? 'Uploading…' : 'Add files'}
+        </button>
       </div>
       {error && <p className="text-[11px] text-rose-400">{error}</p>}
-      {canSubmit && (
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40"
-        >
-          <Send className="h-3 w-3" />
-          {loading ? 'Submitting…' : isRedo ? 'Resubmit' : 'Submit'}
-        </button>
-      )}
+      <button
+        type="submit"
+        disabled={loading || uploading}
+        className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40"
+      >
+        <Send className="h-3 w-3" />
+        {loading ? 'Submitting…' : isRedo ? 'Resubmit' : 'Submit'}
+      </button>
     </form>
   );
 }
@@ -947,9 +1043,7 @@ function MemberTasksPanel({ bootcampId }) {
             {isExpanded && (
               <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
                 {task.description && (
-                  <Suspense fallback={<ChunkFallback />}>
-                    <LessonContentRenderer content={task.description} lessonId={task.id} />
-                  </Suspense>
+                  <TaskDescriptionRenderer content={task.description} />
                 )}
                 {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -966,13 +1060,18 @@ function MemberTasksPanel({ bootcampId }) {
                 {sub && (
                   <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
-                    {sub.submission_url && (
-                      <a href={sub.submission_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[12px] text-violet-400 hover:underline truncate">
-                        <Send className="h-3 w-3 shrink-0" />{sub.submission_url}
-                      </a>
+                    {sub.notes && <TaskDescriptionRenderer content={sub.notes} />}
+                    {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
+                      <AttachmentList files={sub.attachments} />
                     )}
-                    {sub.notes && <p className="text-[12px] text-gray-400 italic">"{sub.notes}"</p>}
+                    {sub.points_earned != null && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Points:</span>
+                        <span className="text-[12px] font-bold text-amber-300 tabular-nums">
+                          {sub.points_earned}{task.points != null ? ` / ${task.points}` : ''}
+                        </span>
+                      </div>
+                    )}
                     {sub.feedback && (
                       <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Mentor Feedback</p>
@@ -1039,9 +1138,7 @@ function MemberSessionRow({ s }) {
       {open && (
         <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
           {s.description && (
-            <Suspense fallback={<ChunkFallback />}>
-              <LessonContentRenderer content={s.description} lessonId={s.id} />
-            </Suspense>
+            <TaskDescriptionRenderer content={s.description} />
           )}
           {s.notes && (
             <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
@@ -1211,13 +1308,6 @@ function MemberHelpDeskPanel({ bootcampId }) {
 
 // ─── Overview Panel ───────────────────────────────────────────────────────────
 
-const OVERVIEW_TABS = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'tasks', label: 'Tasks' },
-  { value: 'sessions', label: 'Sessions' },
-  { value: 'help', label: 'Help Desk' },
-];
-
 const OverviewPanel = memo(function OverviewPanel({
   bootcamp,
   allLessons,
@@ -1234,7 +1324,6 @@ const OverviewPanel = memo(function OverviewPanel({
   coursesCount,
   modulesCount,
 }) {
-  const [activeTab, setActiveTab] = useState('overview');
   const ctaLabel = isComplete
     ? 'Review'
     : completedCount > 0
@@ -1278,47 +1367,6 @@ const OverviewPanel = memo(function OverviewPanel({
           )}
         </div>
       </div>
-
-      {/* Tab nav */}
-      <div className="mt-6 flex gap-1 border-b border-white/[0.06]">
-        {OVERVIEW_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`px-3 py-2 text-[12px] font-semibold transition-colors border-b-2 -mb-px ${
-              activeTab === tab.value
-                ? 'border-violet-500 text-white'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Tasks */}
-      {activeTab === 'tasks' && (
-        <div className="mt-6">
-          <MemberTasksPanel bootcampId={bootcamp?.id} />
-        </div>
-      )}
-
-      {/* Tab: Sessions */}
-      {activeTab === 'sessions' && (
-        <div className="mt-6">
-          <MemberSessionsPanel bootcampId={bootcamp?.id} />
-        </div>
-      )}
-
-      {/* Tab: Help Desk */}
-      {activeTab === 'help' && (
-        <div className="mt-6">
-          <MemberHelpDeskPanel bootcampId={bootcamp?.id} />
-        </div>
-      )}
-
-      {/* Overview content */}
-      {activeTab === 'overview' && <>
 
       {/* Continue card */}
       {resumeLesson && (
@@ -1460,7 +1508,6 @@ const OverviewPanel = memo(function OverviewPanel({
       )}
 
       <div className="h-8" />
-      </>}
     </div>
   );
 });

@@ -9,7 +9,7 @@ import { auth } from './auth';
 import { getUserRoles, getUserByEmail } from './data-service';
 import { supabaseAdmin as supabase } from './supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { createMeetEvent } from './google-meet';
+import { createMeetEvent, endMeetConference } from './google-meet';
 import { uploadRecordingToDrive } from './gdrive';
 
 // --- Auth Helper ---
@@ -164,12 +164,17 @@ export async function reviewTaskSubmissionAction(formData) {
     const submissionId = formData.get('submissionId');
     const status = formData.get('status');
     const feedback = formData.get('feedback')?.trim();
+    const pointsRaw = formData.get('points_earned');
+    const points_earned = pointsRaw !== null && pointsRaw !== '' ? Number(pointsRaw) : null;
 
     if (!submissionId || !status) return { error: 'Missing required fields' };
 
+    const updatePayload = { reviewed_by: reviewer.id, status, feedback };
+    if (points_earned !== null) updatePayload.points_earned = points_earned;
+
     const { error } = await supabase
       .from('task_submissions')
-      .update({ reviewed_by: reviewer.id, status, feedback })
+      .update(updatePayload)
       .eq('id', submissionId);
 
     if (error) throw new Error(error.message);
@@ -507,25 +512,76 @@ export async function endSessionAction(formData) {
 
     const { data: session } = await supabase
       .from('mentorship_sessions')
-      .select('created_by, scheduled_at, duration, topic, target_type, target_student_ids, bootcamp_id, meet_link, description')
+      .select('created_by, scheduled_at, duration, topic, target_type, target_student_ids, bootcamp_id, meet_link, meet_space_id, description')
+      .eq('id', sessionId)
+      .single();
+    if (session?.created_by !== mentor.id) return { error: 'Not authorized' };
+
+    // Initialize attendance_data with one entry per invited student (all absent, 0 pts)
+    const studentIds = session.target_student_ids ?? [];
+    const attendance_data = studentIds.map((uid) => ({ user_id: uid, attended: false, points: 0 }));
+
+    const { error } = await supabase
+      .from('mentorship_sessions')
+      .update({ status: 'completed', attendance_data, meet_link: null, meet_space_id: null })
+      .eq('id', sessionId);
+
+    if (error) throw new Error(error.message);
+
+    // End the Google Meet conference so the link becomes invalid
+    if (session.meet_space_id) {
+      await endMeetConference(session.meet_space_id).catch(() => {});
+    }
+
+    revalidatePath('/account/mentor/sessions');
+    return { success: true, session, attendance_data };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export async function saveSessionAttendanceAction(formData) {
+  try {
+    const mentor = await requireMentor();
+    const sessionId = formData.get('sessionId');
+    const attendance_data = JSON.parse(formData.get('attendance_data'));
+
+    const { data: session } = await supabase
+      .from('mentorship_sessions')
+      .select('created_by')
       .eq('id', sessionId)
       .single();
     if (session?.created_by !== mentor.id) return { error: 'Not authorized' };
 
     const { error } = await supabase
       .from('mentorship_sessions')
-      .update({ status: 'completed' })
+      .update({ attendance_data })
       .eq('id', sessionId);
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/sessions');
-    return { success: true, session };
+    return { success: true };
   } catch (err) {
     return { error: err.message };
   }
 }
 
 // --- Recommendations / Progress Notes ---
+
+export async function getMemberProgressAction(menteeId) {
+  try {
+    await requireMentor();
+    const { data, error } = await supabase
+      .from('member_progress')
+      .select('*')
+      .eq('user_id', menteeId)
+      .order('start_date', { ascending: false });
+    if (error) throw new Error(error.message);
+    return { progress: data ?? [] };
+  } catch (err) {
+    return { error: err.message, progress: [] };
+  }
+}
 
 export async function saveMentorNotesAction(formData) {
   try {
@@ -571,7 +627,7 @@ export async function saveMentorNotesAction(formData) {
     }
 
     if (error) throw new Error(error.message);
-    revalidatePath('/account/mentor/recommendations');
+    revalidatePath('/account/mentor/assigned-members');
     return { success: 'Notes saved successfully' };
   } catch (err) {
     return { error: err.message };

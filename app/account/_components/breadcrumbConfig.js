@@ -48,7 +48,6 @@ export const SEGMENT_LABELS = {
   approvals: 'Approvals',
   'club-overview': 'Club Overview',
   'assigned-members': 'Assigned Members',
-  recommendations: 'Recommendations',
   sessions: 'Sessions',
   tasks: 'Tasks',
   export: 'Export',

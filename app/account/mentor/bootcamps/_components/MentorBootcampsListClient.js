@@ -11,7 +11,7 @@ function BootcampCard({ bootcamp }) {
   const hours = bootcamp.total_duration ? Math.round(bootcamp.total_duration / 60) : null;
 
   return (
-    <Link href={`/account/mentor/bootcamps/${bootcamp.id}`}>
+    <Link href={`/account/mentor/bootcamps/${bootcamp.id}`} className="block">
       <GlassCard hover className="flex gap-4 p-4">
         {bootcamp.thumbnail ? (
           <img
@@ -83,7 +83,7 @@ export default function MentorBootcampsListClient({ bootcamps }) {
           description="You haven't been assigned to any bootcamps yet. Contact an admin to get assigned."
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {bootcamps.map((bc) => (
             <BootcampCard key={bc.id} bootcamp={bc} />
           ))}
