@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Award, MessageSquare, CheckCircle2, Circle,
-  TrendingUp, Star, BookOpen, Plus, Loader2,
+  X, Award, MessageSquare, CheckCircle2,
+  TrendingUp, Star, BookOpen, Plus, Loader2, Calendar,
 } from 'lucide-react';
 import { getMemberProgressAction, saveMentorNotesAction } from '@/app/_lib/mentor-actions';
 
@@ -64,55 +64,70 @@ function ProgressLogForm({ menteeId, onDone }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-white/6 bg-white/2 p-4">
-      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">New Progress Entry</p>
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 p-5 backdrop-blur-md">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
+        <p className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">New Progress Entry</p>
+      </div>
+
       <div>
-        <label className="mb-1 block text-xs text-gray-500">Period (e.g. May 2026)</label>
+        <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wider text-gray-500">Period (e.g. May 2026)</label>
         <input
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
-          className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/40"
+          className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Problems Solved</label>
+          <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wider text-gray-500">Problems Solved</label>
           <input
             type="number" min="0"
             value={problems}
             onChange={(e) => setProblems(e.target.value)}
             placeholder="0"
-            className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/40"
+            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Contests</label>
+          <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wider text-gray-500">Contests</label>
           <input
             type="number" min="0"
             value={contests}
             onChange={(e) => setContests(e.target.value)}
             placeholder="0"
-            className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/40"
+            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
           />
         </div>
       </div>
+
       <div>
-        <label className="mb-1 block text-xs text-gray-500">Notes</label>
+        <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wider text-gray-500">Monthly Performance Notes</label>
         <textarea
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="What did the mentee accomplish this month?"
-          className="w-full resize-none rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/40"
+          placeholder="What key learning benchmarks did the student reach?"
+          className="w-full resize-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
         />
       </div>
-      {error && <p className="text-xs text-rose-400">{error}</p>}
-      <div className="flex gap-2">
-        <button type="button" onClick={() => onDone?.()} className="flex-1 rounded-lg border border-white/8 bg-white/2 py-1.5 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+
+      {error && <p className="text-xs text-rose-400 font-mono">{error}</p>}
+
+      <div className="flex gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={() => onDone?.()}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
+        >
           Cancel
         </button>
-        <button type="submit" className="flex-1 rounded-lg bg-violet-500/15 border border-violet-500/30 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-500/25 transition-colors">
-          {saving ? 'Saving…' : 'Save Entry'}
+        <button
+          type="submit"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/20 bg-violet-500/10 hover:bg-violet-500/25 text-[10px] font-bold uppercase tracking-wider text-violet-300 py-2.5 transition duration-300 cursor-pointer"
+        >
+          {saving ? 'Saving…' : 'Save Log'}
         </button>
       </div>
     </form>
@@ -145,20 +160,29 @@ function RecommendationForm({ menteeId, currentNote, onDone }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <textarea
         rows={6}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Write a recommendation covering this mentee's strengths, areas of improvement, and readiness for opportunities…"
-        className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-amber-500/40"
+        className="w-full resize-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/40 transition-all duration-300"
       />
-      {error && <p className="text-xs text-rose-400">{error}</p>}
-      <div className="flex gap-2">
-        <button type="button" onClick={() => onDone?.()} className="flex-1 rounded-lg border border-white/8 bg-white/2 py-1.5 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+
+      {error && <p className="text-xs text-rose-400 font-mono">{error}</p>}
+
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => onDone?.()}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
+        >
           Cancel
         </button>
-        <button type="submit" className="flex-1 rounded-lg bg-amber-500/15 border border-amber-500/30 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25 transition-colors">
+        <button
+          type="submit"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/25 text-[10px] font-bold uppercase tracking-wider text-amber-300 py-2.5 transition duration-300 cursor-pointer"
+        >
           {saving ? 'Saving…' : 'Save Recommendation'}
         </button>
       </div>
@@ -180,6 +204,7 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
 
   useEffect(() => {
     if (!menteeId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgressLoading(true);
     getMemberProgressAction(menteeId).then(({ progress: p }) => {
       const entries = p || [];
@@ -211,51 +236,52 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
       <div className="fixed inset-0 z-50 flex justify-end">
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm"
           onClick={onClose}
         />
         <motion.div
           initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative w-full max-w-md bg-[#0d1117] border-l border-white/6 shadow-2xl flex flex-col z-10 text-gray-300"
+          className="relative w-full max-w-md bg-[#0a0c10]/95 backdrop-blur-xl border-l border-white/[0.06] shadow-2xl flex flex-col z-10 text-gray-300"
         >
           {/* Header */}
-          <div className="px-5 py-4 border-b border-white/6 flex items-center justify-between shrink-0">
+          <div className="px-5 py-4.5 border-b border-white/[0.06] bg-white/[0.01] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               {user?.avatar_url ? (
-                <img src={user.avatar_url} alt={name} className="w-9 h-9 rounded-lg object-cover border border-white/10" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatar_url} alt={name} className="w-9 h-9 rounded-xl object-cover border border-white/10" />
               ) : (
-                <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center font-bold text-violet-400 text-sm">
+                <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center font-bold text-violet-400 text-xs">
                   {initials}
                 </div>
               )}
               <div>
-                <p className="text-sm font-bold text-white">{name}</p>
-                <p className="text-xs text-gray-500 truncate max-w-55">{user?.email}</p>
+                <p className="text-xs font-bold text-slate-200">{name}</p>
+                <p className="text-[10px] text-gray-500 truncate max-w-55 mt-0.5">{user?.email}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <button onClick={onClose} className="p-2 text-gray-500 hover:text-slate-200 hover:bg-white/[0.04] rounded-xl transition duration-300">
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Stats strip */}
-          <div className="grid grid-cols-4 divide-x divide-white/6 border-b border-white/6 shrink-0">
+          {/* Stats cockpit cards */}
+          <div className="grid grid-cols-4 border-b border-white/[0.06] bg-white/[0.01] shrink-0 p-3 gap-2">
             {[
-              { label: 'Progress', value: `${pct}%`, color: 'text-violet-400' },
-              { label: 'Logs', value: progress.length, color: 'text-blue-400' },
-              { label: 'Problems', value: totalProblems, color: 'text-emerald-400' },
-              { label: 'Contests', value: totalContests, color: 'text-amber-400' },
+              { label: 'Progress', value: `${pct}%`, color: 'text-violet-400', bg: 'bg-violet-500/[0.03] border-violet-500/10' },
+              { label: 'Logs', value: progress.length, color: 'text-blue-400', bg: 'bg-blue-500/[0.03] border-blue-500/10' },
+              { label: 'Problems', value: totalProblems, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.03] border-emerald-500/10' },
+              { label: 'Contests', value: totalContests, color: 'text-amber-400', bg: 'bg-amber-500/[0.03] border-amber-500/10' },
             ].map((s) => (
-              <div key={s.label} className="py-3 text-center">
-                <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
-                <p className="text-[10px] text-gray-600">{s.label}</p>
+              <div key={s.label} className={`py-2 px-1 rounded-xl border ${s.bg} text-center`}>
+                <p className={`text-xs font-bold font-mono tracking-tight ${s.color}`}>{s.value}</p>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold mt-0.5">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Tab bar */}
-          <div className="flex border-b border-white/6 shrink-0">
+          <div className="flex gap-1.5 p-2 border-b border-white/[0.06] bg-white/[0.01] shrink-0">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -263,16 +289,16 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                     active
-                      ? 'border-b-2 border-violet-400 text-violet-300'
-                      : 'text-gray-500 hover:text-gray-300'
+                      ? 'bg-violet-500/10 border border-violet-500/30 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.06)]'
+                      : 'bg-transparent border border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#0c0d12]/30'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  {t.label}
+                  <span>{t.label}</span>
                   {t.id === 'recommendation' && recNote && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
                   )}
                 </button>
               );
@@ -280,54 +306,65 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-16">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
 
             {/* Syllabus tab */}
             {tab === 'syllabus' && (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg bg-white/3 border border-white/6 p-2.5">
-                    <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[10px]">Status</span>
-                    <span className="text-white font-semibold capitalize">{student.status}</span>
+                  <div className="rounded-xl bg-[#090b10]/40 border border-white/[0.06] p-3">
+                    <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Status</span>
+                    <span className="text-violet-300 font-bold capitalize text-xs">{student.status}</span>
                   </div>
-                  <div className="rounded-lg bg-white/3 border border-white/6 p-2.5">
-                    <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[10px]">Enrolled</span>
-                    <span className="text-white font-semibold">{new Date(student.enrolled_at).toLocaleDateString()}</span>
+                  <div className="rounded-xl bg-[#090b10]/40 border border-white/[0.06] p-3">
+                    <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Enrolled</span>
+                    <span className="text-slate-200 font-bold text-xs">{new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                 </div>
-                <div className="space-y-1.5 px-0.5">
-                  <div className="flex justify-between text-xs text-gray-400">
+
+                <div className="space-y-2 px-0.5">
+                  <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-gray-500">
                     <span>Lesson progress</span>
-                    <span className="text-white font-semibold">{completedCount}/{lessons.length} · {pct}%</span>
+                    <span className="text-slate-300 font-bold">{completedCount}/{lessons.length} · {pct}%</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                    <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden border border-white/[0.04]">
+                    <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
+
                 {lessons.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Syllabus Log</p>
-                    {lessons.map((l) => {
-                      const done = l.progress?.is_completed;
-                      return (
-                        <div key={l.id} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-white/6 bg-white/2 text-xs">
-                          {done
-                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                            : <Circle className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
-                          <span className={done ? 'line-through text-gray-500' : 'text-gray-300'}>{l.title}</span>
-                        </div>
-                      );
-                    })}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-[#090b10] px-4 py-2.5 border border-white/[0.06] border-b-0 rounded-t-2xl text-[9px]">
+                      <span className="font-mono text-gray-400 font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500/60" />
+                        <span className="w-2 h-2 rounded-full bg-amber-500/60" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-500/60" />
+                        <span className="ml-1 font-bold uppercase tracking-widest text-slate-400">Syllabus Logs</span>
+                      </span>
+                    </div>
+                    <div className="bg-[#090b10] p-3.5 rounded-b-2xl border border-white/[0.06] space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                      {lessons.map((l) => {
+                        const done = l.progress?.is_completed;
+                        return (
+                          <div key={l.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs transition hover:border-white/[0.08]">
+                            {done
+                              ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              : <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />}
+                            <span className={`truncate font-mono ${done ? 'text-gray-500 line-through' : 'text-gray-300'}`}>{l.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500 italic text-center py-6">No lesson data</p>
+                  <p className="text-xs text-gray-500 italic text-center py-6 font-mono">No lesson data available</p>
                 )}
               </div>
             )}
 
             {/* Progress tab */}
             {tab === 'progress' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {progressLoading ? (
                   <div className="flex justify-center py-10">
                     <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
@@ -337,38 +374,45 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                     {!showProgressForm && (
                       <button
                         onClick={() => setShowProgressForm(true)}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/2 py-2.5 text-xs font-semibold text-gray-400 hover:text-violet-300 hover:border-violet-500/30 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/2 py-3 text-xs font-bold text-gray-400 hover:text-violet-300 hover:border-violet-500/30 hover:bg-violet-500/[0.02] transition-all duration-300 cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Log Progress Entry
+                        <Plus className="w-4 h-4" /> Log Progress Entry
                       </button>
                     )}
+
                     {showProgressForm && (
                       <ProgressLogForm
                         menteeId={menteeId}
                         onDone={() => {
                           setShowProgressForm(false);
-                          // Re-fetch progress after save
                           getMemberProgressAction(menteeId).then(({ progress: p }) => {
                             setProgress((p || []).filter((e) => e.period !== 'Recommendation'));
                           });
                         }}
                       />
                     )}
+
                     {progress.length === 0 && !showProgressForm && (
-                      <p className="text-xs text-gray-500 italic text-center py-6">No progress logged yet.</p>
+                      <p className="text-xs text-gray-500 italic text-center py-6 font-mono">No progress logged yet.</p>
                     )}
-                    {progress.map((p) => (
-                      <div key={p.id} className="rounded-xl border border-white/6 bg-white/2 p-3.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-semibold text-white">{p.period}</p>
-                          <div className="flex gap-3 text-xs">
-                            <span className="text-blue-400">{p.problems_solved ?? 0} prob</span>
-                            <span className="text-emerald-400">{p.contests_participated ?? 0} cont</span>
+
+                    <div className="space-y-3">
+                      {progress.map((p) => (
+                        <div key={p.id} className="relative rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 p-4 transition-all hover:border-white/[0.12]">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-violet-400" />
+                              <p className="text-xs font-bold text-slate-200">{p.period}</p>
+                            </div>
+                            <div className="flex gap-2.5 text-[10px] font-mono font-bold uppercase tracking-wider">
+                              <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/10">{p.problems_solved ?? 0} prob</span>
+                              <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/10">{p.contests_participated ?? 0} cont</span>
+                            </div>
                           </div>
+                          {p.mentor_notes && <p className="text-xs text-gray-400 leading-relaxed font-mono whitespace-pre-wrap">{p.mentor_notes}</p>}
                         </div>
-                        {p.mentor_notes && <p className="text-xs text-gray-400 leading-relaxed">{p.mentor_notes}</p>}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
@@ -376,19 +420,22 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
 
             {/* Recommendation tab */}
             {tab === 'recommendation' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {!showRecForm ? (
                   <>
                     {recNote ? (
-                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                      <div className="relative rounded-2xl border border-amber-500/20 bg-[#0d0f14]/50 p-4 text-xs font-mono text-amber-200 leading-relaxed whitespace-pre-wrap">
+                        <div className="absolute top-2 right-2 opacity-30">
+                          <Award className="w-8 h-8 text-amber-400" />
+                        </div>
                         {recNote}
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-500 italic text-center py-6">No recommendation written yet.</p>
+                      <p className="text-xs text-gray-500 italic text-center py-6 font-mono">No recommendation written yet.</p>
                     )}
                     <button
                       onClick={() => setShowRecForm(true)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 py-3 text-xs font-bold text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 transition-all duration-300 cursor-pointer uppercase tracking-wider"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       {recNote ? 'Edit Recommendation' : 'Write Recommendation'}
@@ -409,9 +456,12 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
           </div>
 
           {/* Footer */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-white/6 bg-[#0d1117] px-4 py-3 flex items-center justify-between">
-            <span className="text-[10px] text-gray-600 font-mono">ID: {user?.id?.slice(0, 12)}…</span>
-            <button onClick={onClose} className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/[0.08] border border-white/6 text-xs font-semibold text-gray-300 hover:text-white transition-colors">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.06] bg-[#090b10] px-5 py-4 flex items-center justify-between z-20 shadow-lg">
+            <span className="text-[9px] text-gray-600 font-mono tracking-wider">ID: {user?.id?.slice(0, 12)}…</span>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-slate-200 transition duration-300 cursor-pointer"
+            >
               Close
             </button>
           </div>
