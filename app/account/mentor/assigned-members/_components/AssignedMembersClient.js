@@ -200,48 +200,48 @@ export default function AssignedMembersClient({ bootcamps }) {
         }
       />
 
-      {/* Dynamic Statistics Cockpit */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+      {/* Stats overview */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           icon={Users}
-          title="Total Mentees"
+          label="Total Mentees"
           value={allEnrollments.filter(e => e.status !== 'pending').length}
-          tone="violet"
-          description="Enrolled in active cohorts"
+          accent="violet"
+          sublabel="Enrolled in your cohorts"
         />
         <StatCard
           icon={TrendingUp}
-          title="Active Learning"
+          label="Active Learners"
           value={allEnrollments.filter(e => e.status === 'active').length}
-          tone="emerald"
-          description="Actively pursuing tracks"
+          accent="emerald"
+          sublabel="Currently progressing"
         />
         <StatCard
           icon={Award}
-          title="Completed Tracks"
+          label="Completed"
           value={allEnrollments.filter(e => e.status === 'completed').length}
-          tone="fuchsia"
-          description="Graduated track students"
+          accent="fuchsia"
+          sublabel="Finished the track"
         />
         <div className="relative">
           <StatCard
             icon={Clock}
-            title="Awaiting Approval"
+            label="Awaiting Approval"
             value={allEnrollments.filter(e => e.status === 'pending').length}
-            tone="amber"
-            description="Pending cohort requests"
+            accent="amber"
+            sublabel="Pending requests"
           />
           {allEnrollments.filter(e => e.status === 'pending').length > 0 && (
             <span className="absolute top-3 right-3 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
             </span>
           )}
         </div>
       </div>
 
       {/* Bootcamp tabs */}
-      <div className="flex flex-wrap gap-2 mt-6 p-2 bg-white/[0.01] border border-white/[0.04] rounded-2xl">
+      <div className="flex flex-wrap gap-1.5 rounded-2xl border border-white/10 bg-zinc-900/50 p-2 shadow-lg backdrop-blur-xl">
         <FilterTab active={bootcampFilter === 'all'} onClick={() => setBootcampFilter('all')}>
           All bootcamps
         </FilterTab>
@@ -263,23 +263,24 @@ export default function AssignedMembersClient({ bootcamps }) {
 
       {/* Pending requests */}
       {pending.length > 0 && (
-        <GlassCard className="mt-6 border border-white/[0.06] bg-[#0d0f14]/30" padding="p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg backdrop-blur-xl">
+          <div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-amber-500/6 blur-[80px]" />
+          <div className="relative z-10 mb-4 flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                Pending Requests Inbox
-                <span className="ml-2 text-[10px] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+                Pending Requests
+                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-amber-300 uppercase">
                   {pending.length} new
                 </span>
               </h2>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative z-10 grid grid-cols-1 gap-4 md:grid-cols-2">
             {pending.map(req => {
               const name = req.users?.full_name || 'Candidate';
               return (
-                <div key={req.id} className="relative rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 p-4 flex flex-col gap-3.5 transition-all hover:border-white/[0.12]">
+                <div key={req.id} className="relative flex flex-col gap-3.5 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 transition-all hover:border-white/20 hover:bg-zinc-950/80">
                   <div className="flex items-start gap-3">
                     <Avatar name={name} src={req.users?.avatar_url} size="md" />
                     <div className="min-w-0 flex-1">
@@ -299,7 +300,7 @@ export default function AssignedMembersClient({ bootcamps }) {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReject(req.id, name)}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-300 text-[10px] font-bold uppercase tracking-wider py-2 transition duration-300 cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-300 text-[10px] font-bold uppercase tracking-wider py-2 transition duration-300 cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                       Decline
@@ -316,28 +317,28 @@ export default function AssignedMembersClient({ bootcamps }) {
               );
             })}
           </div>
-        </GlassCard>
+        </div>
       )}
 
-      {/* Search and Filters Ribbon */}
-      <GlassCard padding="p-4" className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-white/[0.06] bg-[#0c0d12]/20">
-        <div className="relative w-full md:flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+      {/* Search and filters */}
+      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-900/50 p-3 shadow-lg backdrop-blur-xl md:flex-row">
+        <div className="group relative w-full md:flex-1">
+          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-violet-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search student names, cohort titles, emails..."
-            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 pl-10 pr-4 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+            placeholder="Search by name or email…"
+            className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-violet-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-violet-500/20"
           />
         </div>
 
-        <div className="flex w-full md:w-auto items-center gap-3">
+        <div className="flex w-full items-center gap-3 md:w-auto">
           <div className="relative w-full md:w-44">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer"
+              className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-black/20 px-3.5 py-2.5 pr-8 text-sm text-zinc-200 outline-none transition-all hover:bg-black/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
             >
               <option value="all">All statuses</option>
               <option value="active">Active</option>
@@ -345,15 +346,15 @@ export default function AssignedMembersClient({ bootcamps }) {
               <option value="paused">Paused</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-gray-500">
-              <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-zinc-500">
+              <svg className="h-3 w-3 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
             </div>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
       {/* Student list */}
-      <div className="mt-4">
+      <div>
         {students.length === 0 ? (
           <EmptyState
             icon={BookOpen}
@@ -411,15 +412,15 @@ function FilterTab({ active, onClick, count, children }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+      className={`inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
         active
-          ? 'bg-violet-500/10 border border-violet-500/30 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.06)]'
-          : 'bg-[#0c0d12]/20 border border-white/[0.06] text-gray-400 hover:text-gray-200 hover:bg-[#0c0d12]/60'
+          ? 'bg-violet-500/15 text-violet-200 shadow-[0_0_12px_rgba(139,92,246,0.15)] ring-1 ring-violet-500/30'
+          : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-100'
       }`}
     >
       {children}
       {typeof count === 'number' && (
-        <span className={`rounded-full px-2 py-0.5 text-[9px] font-mono ${active ? 'bg-violet-500/20 text-violet-300' : 'bg-white/[0.05] text-gray-500'}`}>
+        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${active ? 'bg-violet-500/20 text-violet-200' : 'bg-white/5 text-zinc-500'}`}>
           {count}
         </span>
       )}
@@ -439,11 +440,12 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
   ) || [];
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border transition-all duration-300 backdrop-blur-md ${
-      expanded 
-        ? 'border-violet-500/30 bg-violet-500/[0.02] shadow-[0_0_20px_rgba(139,92,246,0.06)]' 
-        : 'border-white/[0.06] bg-[#0d0f14]/30 hover:bg-[#0d0f14]/60 hover:border-white/[0.12]'
+    <div className={`group relative overflow-hidden rounded-2xl border shadow-lg shadow-black/30 backdrop-blur-xl transition-all duration-300 ${
+      expanded
+        ? 'border-violet-500/30 bg-zinc-900/70 shadow-[0_0_24px_rgba(139,92,246,0.12)]'
+        : 'border-white/10 bg-zinc-900/50 hover:border-white/20 hover:bg-zinc-900/70'
     }`}>
+      <div className={`pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full blur-[80px] transition-opacity ${expanded ? 'bg-violet-500/15 opacity-100' : 'bg-violet-500/5 opacity-0 group-hover:opacity-100'}`} />
       {/* Active state stripe */}
       {expanded && (
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-400 to-fuchsia-500" />
@@ -451,71 +453,72 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
 
       <div
         onClick={onExpand}
-        className="px-5 py-4.5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none"
+        className="relative z-10 flex cursor-pointer flex-col justify-between gap-4 px-5 py-4 select-none md:flex-row md:items-center"
       >
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
           <Avatar name={name} src={student.users?.avatar_url} size="md" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-slate-200 truncate">{name}</p>
-            <p className="text-[10px] text-gray-500 truncate mt-0.5">{student.users?.email}</p>
+            <p className="truncate text-sm font-semibold text-white">{name}</p>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-500">{student.users?.email}</p>
           </div>
         </div>
 
-        <div className="hidden md:block min-w-0 max-w-[200px] shrink-0 text-left">
-          <p className="text-xs font-bold text-violet-300 truncate">{student.bootcampTitle.split(':')[0]}</p>
-          <p className="text-[9px] text-gray-500 flex items-center gap-1 mt-1 font-mono">
-            <Clock className="w-2.5 h-2.5 text-gray-500" />
+        <div className="hidden min-w-0 max-w-50 shrink-0 text-left md:block">
+          <p className="truncate text-xs font-semibold text-violet-300">{student.bootcampTitle.split(':')[0]}</p>
+          <p className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
+            <Clock className="h-3 w-3 text-zinc-500" />
             Enrolled {new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        <div className="w-full md:w-48 space-y-1.5 text-left shrink-0">
-          <div className="flex justify-between text-[9px] font-semibold uppercase tracking-wider text-gray-500">
-            <span>Cohort Progress</span>
-            <span className="text-gray-300 font-bold tabular-nums">{pct}% · {completed}/{total} lessons</span>
+        <div className="w-full shrink-0 space-y-1.5 text-left md:w-48">
+          <div className="flex justify-between text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+            <span>Progress</span>
+            <span className="font-bold tabular-nums text-zinc-200">{pct}% · {completed}/{total}</span>
           </div>
           <GradientBar value={pct} tone={student.status === 'completed' ? 'emerald' : 'violet'} height="h-1.5" />
         </div>
 
-        <div className="flex items-center gap-3 justify-between md:justify-end shrink-0">
-          <Pill tone={tone}>{student.status}</Pill>
-          <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${expanded ? 'rotate-90 text-violet-400' : ''}`} />
+        <div className="flex shrink-0 items-center justify-between gap-3 md:justify-end">
+          <Pill tone={tone}>
+            <span className={`mr-1 h-1.5 w-1.5 rounded-full bg-current ${student.status === 'active' ? 'animate-pulse shadow-[0_0_6px_currentColor]' : ''}`} />
+            {student.status}
+          </Pill>
+          <ChevronRight className={`h-4 w-4 text-zinc-500 transition-transform duration-300 ${expanded ? 'rotate-90 text-violet-400' : ''}`} />
         </div>
       </div>
 
       <AnimatePresence>
         {expanded && (
-          <div className="border-t border-white/[0.04] p-5 space-y-5 bg-black/[0.05]">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center bg-[#090b10] px-4 py-3 border border-white/[0.06] border-b-0 rounded-t-2xl text-[10px]">
-                <span className="font-mono text-gray-400 font-bold flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
-                  <span className="ml-1.5 font-bold uppercase tracking-widest text-slate-400">Curriculum Syllabus Logs</span>
-                </span>
-                <span className="text-[10px] text-violet-400 font-bold font-mono">
+          <div className="relative z-10 space-y-5 border-t border-white/5 bg-black/20 p-5">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60">
+              <div className="flex items-center justify-between border-b border-white/5 bg-white/2 px-4 py-3">
+                <h4 className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                  <BookOpen className="h-3.5 w-3.5 text-violet-400" />
+                  Lesson progress
+                </h4>
+                <span className="font-mono text-[11px] font-bold text-violet-300 tabular-nums">
                   {completed}/{total} completed
                 </span>
               </div>
-              
-              <div className="bg-[#090b10] p-4.5 rounded-b-2xl border border-white/[0.06]">
+
+              <div className="p-4">
                 {lessons?.loading ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+                    <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
                   </div>
                 ) : flatLessons.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                  <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                     {flatLessons.map(l => {
                       const done = l.progress?.is_completed;
                       return (
-                        <div key={l.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs transition hover:border-white/[0.08]">
+                        <div key={l.id} className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-xs transition hover:border-white/10 hover:bg-white/4">
                           {done ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
                           ) : (
-                            <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />
+                            <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20" />
                           )}
-                          <span className={`truncate font-mono ${done ? 'text-gray-500 line-through' : 'text-gray-300'}`}>
+                          <span className={`truncate ${done ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
                             {l.title}
                           </span>
                         </div>
@@ -523,21 +526,21 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500 italic text-center py-4 font-mono">No lesson data available in cohort syllabus</p>
+                  <p className="py-6 text-center text-xs text-zinc-500">No lessons available yet.</p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.04]">
-              <ActionButton tone="violet" onClick={onInspect} className="text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl">
-                View Performance Portfolio
+            <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3">
+              <ActionButton tone="violet" onClick={onInspect}>
+                View full profile
               </ActionButton>
               <button
                 onClick={() => onRemove(name)}
-                className="p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-300 transition duration-300 cursor-pointer"
+                className="cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/10 p-2 text-rose-300 transition hover:bg-rose-500/20"
                 title="Remove enrollment"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>

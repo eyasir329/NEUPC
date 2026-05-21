@@ -1,69 +1,84 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { GraduationCap, Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
-import { PageShell, PageHeader, GlassCard, Pill, EmptyState } from '@/app/account/mentor/_components/_ui';
+import { PageShell, PageHeader, EmptyState } from '@/app/account/mentor/_components/_ui';
 
-const STATUS_TONE = { published: 'emerald', draft: 'amber', archived: 'gray' };
+const STATUS_TONE = {
+  published: { dot: 'bg-emerald-400', text: 'text-emerald-300', ring: 'border-emerald-500/20 bg-emerald-500/10', glow: 'shadow-[0_0_8px_rgba(52,211,153,0.6)]', pulse: true },
+  draft:     { dot: 'bg-amber-400',   text: 'text-amber-300',   ring: 'border-amber-500/20 bg-amber-500/10',   glow: '', pulse: false },
+  archived:  { dot: 'bg-zinc-500',    text: 'text-zinc-400',    ring: 'border-white/10 bg-white/5',            glow: '', pulse: false },
+};
 
-function BootcampCard({ bootcamp }) {
-  const tone = STATUS_TONE[bootcamp.status] ?? 'gray';
+function BootcampCard({ bootcamp, index }) {
+  const tone = STATUS_TONE[bootcamp.status] ?? STATUS_TONE.archived;
   const hours = bootcamp.total_duration ? Math.round(bootcamp.total_duration / 60) : null;
 
   return (
-    <Link href={`/account/mentor/bootcamps/${bootcamp.id}`} className="block">
-      <GlassCard hover className="flex gap-4 p-4">
-        {bootcamp.thumbnail ? (
-          <img
-            src={bootcamp.thumbnail}
-            alt={bootcamp.title}
-            className="h-16 w-24 rounded-xl object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="h-16 w-24 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-            <GraduationCap className="h-7 w-7 text-violet-400" />
-          </div>
-        )}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+    >
+      <Link href={`/account/mentor/bootcamps/${bootcamp.id}`} className="block">
+        <div className="group relative flex gap-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-zinc-900/70">
+          <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.07] blur-[60px] transition-opacity group-hover:bg-violet-500/12" />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white truncate">{bootcamp.title}</h3>
-            <ChevronRight className="h-4 w-4 text-gray-600 flex-shrink-0 mt-0.5" />
-          </div>
+          {bootcamp.thumbnail ? (
+            <img
+              src={bootcamp.thumbnail}
+              alt={bootcamp.title}
+              className="relative z-10 h-16 w-24 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+            />
+          ) : (
+            <div className="relative z-10 flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10">
+              <GraduationCap className="h-7 w-7 text-violet-400" />
+            </div>
+          )}
 
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-            <Pill tone={tone}>
-              <span className={`h-1.5 w-1.5 rounded-full bg-current mr-1 ${bootcamp.status === 'published' ? 'animate-pulse' : ''}`} />
-              {bootcamp.status}
-            </Pill>
-            {bootcamp.batch_info && (
-              <span className="text-[11px] text-gray-500">{bootcamp.batch_info}</span>
-            )}
-          </div>
+          <div className="relative z-10 min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="truncate text-sm font-semibold text-white transition-colors group-hover:text-violet-200">
+                {bootcamp.title}
+              </h3>
+              <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600 transition-all group-hover:translate-x-0.5 group-hover:text-violet-300" />
+            </div>
 
-          <div className="flex items-center gap-4 mt-2 text-[11px] text-gray-500">
-            {bootcamp.total_lessons > 0 && (
-              <span className="flex items-center gap-1">
-                <BookOpen className="h-3 w-3" />
-                {bootcamp.total_lessons} lessons
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${tone.ring} ${tone.text}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${tone.dot} ${tone.glow} ${tone.pulse ? 'animate-pulse' : ''}`} />
+                {bootcamp.status}
               </span>
-            )}
-            {hours > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {hours}h
-              </span>
-            )}
-            {bootcamp.start_date && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(bootcamp.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-            )}
+              {bootcamp.batch_info && (
+                <span className="text-[11px] text-zinc-500">{bootcamp.batch_info}</span>
+              )}
+            </div>
+
+            <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-500">
+              {bootcamp.total_lessons > 0 && (
+                <span className="flex items-center gap-1">
+                  <BookOpen className="h-3 w-3 text-indigo-400/80" />
+                  {bootcamp.total_lessons} lessons
+                </span>
+              )}
+              {hours > 0 && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-amber-400/80" />
+                  {hours}h
+                </span>
+              )}
+              {bootcamp.start_date && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-emerald-400/80" />
+                  {new Date(bootcamp.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </GlassCard>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
 
@@ -73,6 +88,7 @@ export default function MentorBootcampsListClient({ bootcamps }) {
       <PageHeader
         icon={GraduationCap}
         title="My Bootcamps"
+        subtitle={bootcamps.length > 0 ? `${bootcamps.length} bootcamp${bootcamps.length === 1 ? '' : 's'} assigned to you` : undefined}
         accent="violet"
       />
 
@@ -81,11 +97,12 @@ export default function MentorBootcampsListClient({ bootcamps }) {
           icon={GraduationCap}
           title="No bootcamps assigned"
           description="You haven't been assigned to any bootcamps yet. Contact an admin to get assigned."
+          accent="violet"
         />
       ) : (
-        <div className="space-y-4">
-          {bootcamps.map((bc) => (
-            <BootcampCard key={bc.id} bootcamp={bc} />
+        <div className="space-y-3">
+          {bootcamps.map((bc, i) => (
+            <BootcampCard key={bc.id} bootcamp={bc} index={i} />
           ))}
         </div>
       )}

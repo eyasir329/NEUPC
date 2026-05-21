@@ -76,7 +76,7 @@ function AttachmentList({ files }) {
   return (
     <ul className="space-y-1.5">
       {files.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5">
+        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
           <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
           <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
             className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
@@ -431,62 +431,41 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   return (
     <PageShell>
       
-      {/* OPERATIONS HEADER BANNER (PageHeader Primitive) */}
       <PageHeader
         icon={ClipboardList}
-        title="Tasks & Evaluation Workspace"
-        subtitle="Assign tasks to bootcamp members, review submissions, and post feedback."
+        title="Tasks & Reviews"
+        subtitle="Assign tasks, review submissions, and give feedback to your bootcamp members."
         accent="violet"
         actions={
-          <ActionButton
-            tone="emerald"
-            icon={Sparkles}
-            onClick={handleSimulateSubmission}
-          >
-            Simulate Submission
+          <ActionButton tone="ghost" icon={Sparkles} onClick={handleSimulateSubmission}>
+            Simulate
           </ActionButton>
         }
       />
 
-      {/* Aggregate Stats Cards (StatCard Primitives) */}
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard
-          icon={BookOpen}
-          label="Total Tasks Given"
-          value={`${stats.totalTasks} Challenges`}
-          accent="blue"
-        />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={BookOpen} label="Total Tasks" value={stats.totalTasks} accent="blue" sublabel="Created by you" />
         <StatCard
           icon={Clock}
-          label="Awaiting Evaluation"
-          value={`${stats.pendingReview} Submissions`}
+          label="Pending Review"
+          value={stats.pendingReview}
           accent="amber"
-          trend={stats.pendingReview > 0 ? { dir: 'up', value: 'Needs Grade' } : null}
+          sublabel="Awaiting grading"
+          trend={stats.pendingReview > 0 ? { dir: 'up', value: 'New' } : null}
         />
-        <StatCard
-          icon={ClipboardCheck}
-          label="Reviewed Homework"
-          value={`${stats.reviewed} Graded`}
-          accent="emerald"
-        />
-        <StatCard
-          icon={Award}
-          label="Success Ratio"
-          value={`${stats.successRate}% Passed`}
-          accent="violet"
-        />
+        <StatCard icon={ClipboardCheck} label="Reviewed" value={stats.reviewed} accent="emerald" sublabel="Graded submissions" />
+        <StatCard icon={Award} label="Success Rate" value={`${stats.successRate}%`} accent="violet" sublabel="Approved on first pass" />
       </div>
 
-      {/* DUAL MODE WORKSPACE SWITCHER (TabBar Primitive) */}
-      <div className="mt-5">
-      <TabBar
-        tabs={[
-          { value: 'submissions', label: 'Received Submissions', icon: ClipboardCheck, count: stats.pendingReview },
-          { value: 'assign', label: 'Issue New Task', icon: Plus }
-        ]}
-        value={taskDeskSubTab}
-        onChange={setTaskDeskSubTab}
-      />
+      <div>
+        <TabBar
+          tabs={[
+            { value: 'submissions', label: 'Submissions', icon: ClipboardCheck, count: stats.pendingReview },
+            { value: 'assign', label: 'Create Task', icon: Plus }
+          ]}
+          value={taskDeskSubTab}
+          onChange={setTaskDeskSubTab}
+        />
       </div>
 
       <div className="mt-5">
@@ -495,7 +474,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
         <div className="space-y-6">
           
           {/* Submissions Filters ribbon */}
-          <GlassCard padding="p-4" className="flex flex-wrap items-center justify-between gap-4 border border-white/[0.06] bg-[#0d0f14]/30">
+          <GlassCard padding="p-4" className="flex flex-wrap items-center justify-between gap-4 border border-white/10 bg-zinc-900/50">
             <div className="flex flex-wrap items-center gap-4 flex-1">
               
               {/* Search filter input */}
@@ -506,7 +485,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   placeholder="Search student or task..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 border border-white/[0.08] rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+                  className="w-full bg-black/20 hover:bg-black/30 border border-white/10 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
                 />
               </div>
 
@@ -521,7 +500,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       setHomeworkTaskFilter('all');
                       setActiveSubmission(null);
                     }}
-                    className="appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer"
+                    className="appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
                   >
                     <option value="all">All Bootcamps</option>
                     {bootcamps.map(b => (
@@ -544,7 +523,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       setHomeworkTaskFilter(e.target.value);
                       setActiveSubmission(null);
                     }}
-                    className="appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer max-w-[150px]"
+                    className="appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer max-w-[150px]"
                   >
                     <option value="all">All Tasks</option>
                     {tasks
@@ -570,7 +549,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       setHomeworkStatusFilter(e.target.value);
                       setActiveSubmission(null);
                     }}
-                    className="appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer"
+                    className="appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 pr-8 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
                   >
                     <option value="all">All Statuses</option>
                     {REVIEW_STATUSES.map(s => (
@@ -620,7 +599,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                     className={`relative cursor-pointer select-none text-left flex flex-col gap-3 border rounded-2xl p-4 transition-all duration-300 backdrop-blur-md ${
                       isSelected 
                         ? 'border-violet-500/30 bg-violet-500/[0.05] shadow-[0_0_20px_rgba(139,92,246,0.06)]' 
-                        : 'border-white/[0.06] bg-[#0d0f14]/30 hover:bg-[#0d0f14]/60 hover:border-white/[0.12]'
+                        : 'border-white/10 bg-zinc-900/50 hover:bg-zinc-900/70 hover:border-white/20'
                     }`}
                   >
                     {/* Active vertical border indicator */}
@@ -662,7 +641,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-white/[0.04] text-[9px] text-slate-500">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-[9px] text-slate-500">
                       <span className="flex items-center gap-1">
                         <span className="h-1 w-1 rounded-full bg-slate-500" />
                         {bootcampMap[sub.weekly_tasks?.target_audience]?.split(':')[0] || 'General'}
@@ -712,8 +691,8 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                 <div className="h-112.5 flex items-center justify-center">
                   <EmptyState
                     icon={BookOpen}
-                    title="Evaluation Workspace Empty"
-                    description="Select a student card from the left homework queue to critique their solution code, inspect repository files, and write diagnostic feedbacks."
+                    title="Select a submission"
+                    description="Pick a submission from the list to review the work, leave feedback, and assign points."
                     accent="gray"
                   />
                 </div>
@@ -727,7 +706,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                 return (
                   <div className="space-y-6">
                                       {/* Inner Student details header */}
-                    <div className="flex items-center justify-between flex-wrap gap-4 p-4.5 bg-gradient-to-r from-violet-500/[0.04] to-fuchsia-500/[0.04] border border-white/[0.06] rounded-2xl">
+                    <div className="flex items-center justify-between flex-wrap gap-4 p-4.5 bg-gradient-to-r from-violet-500/[0.04] to-fuchsia-500/[0.04] border border-white/10 rounded-2xl">
                       <div className="flex items-center gap-3.5">
                         <Avatar src={avatar} name={studentName} size="md" />
                         <div>
@@ -744,7 +723,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                         <button
                           type="button"
                           onClick={() => setActiveSubmission(null)}
-                          className="rounded-full p-1.5 hover:bg-white/5 border border-white/[0.04] text-slate-400 hover:text-white transition-all cursor-pointer"
+                          className="rounded-full p-1.5 hover:bg-white/5 border border-white/5 text-slate-400 hover:text-white transition-all cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -755,7 +734,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <span className="text-[9px] font-bold tracking-widest text-gray-500 uppercase block">ASSIGNED HOMEWORK</span>
+                          <span className="text-[9px] font-bold tracking-widest text-gray-500 uppercase block">Task</span>
                           <h4 className="text-xs font-bold text-slate-200 mt-1">{sub.weekly_tasks?.title}</h4>
                         </div>
                         <div className="text-right shrink-0 select-none">
@@ -766,7 +745,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       </div>
                       
                       {sub.weekly_tasks?.description && (
-                        <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06] text-xs">
+                        <div className="bg-white/2 p-4 rounded-2xl border border-white/10 text-xs">
                           <LessonContentRenderer content={sub.weekly_tasks.description} lessonId={sub.task_id} />
                         </div>
                       )}
@@ -774,12 +753,12 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
                     {/* Student's submission content */}
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-[#090b10] px-4 py-3 border border-white/[0.06] border-b-0 rounded-t-2xl text-[10px]">
+                      <div className="flex justify-between items-center bg-zinc-950/80 px-4 py-3 border border-white/10 border-b-0 rounded-t-2xl text-[10px]">
                         <span className="font-mono text-gray-400 font-bold flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />
                           <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
-                          <span className="ml-1.5 font-bold uppercase tracking-widest text-slate-400">Response Terminal</span>
+                          <span className="ml-1.5 font-bold uppercase tracking-widest text-slate-400">Submission</span>
                         </span>
                         {sub.submission_url && (
                           <a
@@ -788,21 +767,21 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                             rel="noreferrer"
                             className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline transition-all"
                           >
-                            <LinkIcon className="w-3 h-3" /> Source Code Link
+                            <LinkIcon className="w-3 h-3" /> Open submission
                           </a>
                         )}
                       </div>
-                      <div className="bg-[#090b10] p-4.5 rounded-b-2xl border border-white/[0.06] text-left space-y-4">
+                      <div className="bg-zinc-950/80 p-4.5 rounded-b-2xl border border-white/10 text-left space-y-4">
                         {sub.notes ? (
                           <div className="text-xs text-slate-300 leading-relaxed font-mono">
                             <LessonContentRenderer content={sub.notes} lessonId={`sub-${sub.id}`} />
                           </div>
                         ) : (
-                          <div className="text-gray-500 italic py-4 text-center text-[10px] font-mono">No written remarks submitted.</div>
+                          <div className="text-gray-500 italic py-4 text-center text-[10px] font-mono">No notes submitted.</div>
                         )}
                         {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
-                          <div className="space-y-2 pt-4 border-t border-white/[0.04]">
-                            <span className="text-[9px] font-extrabold text-violet-300 uppercase tracking-widest block font-mono">Submitted Attachments</span>
+                          <div className="space-y-2 pt-4 border-t border-white/5">
+                            <span className="text-[9px] font-extrabold text-violet-300 uppercase tracking-widest block font-mono">Attachments</span>
                             <AttachmentList files={sub.attachments} />
                           </div>
                         )}
@@ -810,15 +789,15 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                     </div>
 
                     {/* EVALUATION FORM */}
-                    <form onSubmit={handlePublishReview} className="bg-gradient-to-b from-white/[0.02] to-transparent border border-white/[0.06] rounded-2xl p-5 space-y-5 text-left">
-                      <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
+                    <form onSubmit={handlePublishReview} className="bg-gradient-to-b from-white/[0.02] to-transparent border border-white/10 rounded-2xl p-5 space-y-5 text-left">
+                      <div className="flex items-center gap-2 border-b border-white/10 pb-3">
                         <Award className="w-4 h-4 text-violet-400" />
-                        <h4 className="text-[10px] font-bold uppercase text-violet-400 tracking-wider">Evaluation & Assessment Studio</h4>
+                        <h4 className="text-[10px] font-bold uppercase text-violet-400 tracking-wider">Review</h4>
                       </div>
 
                       {/* Quick feedback macros */}
                       <div className="space-y-2">
-                        <span className="text-[9px] text-gray-500 uppercase font-bold tracking-wider block">One-Click Presets</span>
+                        <span className="text-[9px] text-gray-500 uppercase font-bold tracking-wider block">Quick presets</span>
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
@@ -846,12 +825,12 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Evaluation Status</label>
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</label>
                           <div className="relative">
                             <select
                               value={reviewStatusInput}
                               onChange={(e) => setReviewStatusInput(e.target.value)}
-                              className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer"
+                              className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
                             >
                               {REVIEW_STATUSES.map(s => (
                                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -865,7 +844,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                            Points Awarded
+                            Points
                             {sub.weekly_tasks?.points != null && (
                               <span className="ml-1 text-gray-500 font-normal">/ {sub.weekly_tasks.points} max</span>
                             )}
@@ -877,7 +856,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                             value={reviewPointsInput}
                             onChange={(e) => setReviewPointsInput(e.target.value)}
                             placeholder={sub.weekly_tasks?.points != null ? `0 – ${sub.weekly_tasks.points}` : 'Enter points'}
-                            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+                            className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
                           />
                         </div>
                       </div>
@@ -889,7 +868,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           value={reviewFeedbackInput}
                           onChange={(e) => setReviewFeedbackInput(e.target.value)}
                           placeholder="Provide diagnostic feedback, optimization tips, or correction instructions..."
-                          className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300 resize-none"
+                          className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300 resize-none"
                         />
                       </div>
 
@@ -904,7 +883,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                         <button
                           type="button"
                           onClick={() => setActiveSubmission(null)}
-                          className="px-5 py-3 rounded-xl border border-white/[0.08] text-gray-400 hover:text-white text-xs font-bold uppercase tracking-wider transition hover:bg-white/[0.02]"
+                          className="px-5 py-3 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold uppercase tracking-wider transition hover:bg-white/2"
                         >
                           Dismiss
                         </button>
@@ -924,9 +903,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-left">
 
           {/* Create / Edit Task Form — same panel, mode toggled by editingTask */}
-          <GlassCard padding="p-0" className="lg:col-span-6 overflow-hidden border border-white/[0.06] bg-[#0d0f14]/30">
+          <GlassCard padding="p-0" className="lg:col-span-6 overflow-hidden border border-white/10 bg-zinc-900/50">
             <form onSubmit={editingTask ? handleUpdateTaskSubmit : handlePublishTask}>
-              <div className="bg-gradient-to-r from-violet-500/[0.04] to-fuchsia-500/[0.04] px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="bg-gradient-to-r from-violet-500/[0.04] to-fuchsia-500/[0.04] px-5 py-4 border-b border-white/10 flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase text-violet-400 tracking-widest flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   {editingTask ? 'Edit Task' : 'Task Constructor'}
@@ -961,7 +940,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                               required
                               value={taskFormBootcamp}
                               onChange={(e) => setTaskFormBootcamp(e.target.value)}
-                              className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300 cursor-pointer"
+                              className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300 cursor-pointer"
                             >
                               {bootcamps.map(b => (
                                 <option key={b.id} value={b.id}>{b.title}</option>
@@ -992,7 +971,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                               className={`rounded-xl border p-2.5 text-center transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                                 chosen
                                   ? 'border-violet-500/40 bg-violet-500/[0.06] text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.06)]'
-                                  : 'border-white/[0.06] bg-[#0c0d12]/20 text-gray-400 hover:bg-[#0c0d12]/60 hover:text-gray-200'
+                                  : 'border-white/10 bg-black/20 text-gray-400 hover:bg-black/30 hover:text-gray-200'
                               }`}
                             >
                               <span className="text-[10px] font-bold leading-none">{t}</span>
@@ -1019,14 +998,14 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           : setTaskFormTitle(e.target.value)
                         }
                         placeholder="e.g. Advanced Segment Trees & Bitmasks"
-                        className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
                       />
                     </div>
 
                     {/* Description */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Work Instructions</label>
-                      <div className="rounded-2xl overflow-hidden border border-white/[0.06] bg-[#0c0d12]/40">
+                      <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/30">
                         <MultiBlockEditor
                           key={editingTask ? `edit-${editingTask.id}` : 'create'}
                           value={editingTask ? (editingTask.description || '') : taskFormDesc}
@@ -1052,7 +1031,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                             ? setEditingTask({ ...editingTask, difficulty: e.target.value })
                             : setTaskFormDifficulty(e.target.value)
                           }
-                          className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/40 transition-all cursor-pointer"
+                          className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
                         >
                           <option value="easy">Easy</option>
                           <option value="medium">Medium</option>
@@ -1075,7 +1054,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           ? setEditingTask({ ...editingTask, points: Number(e.target.value) })
                           : setTaskFormPoints(Number(e.target.value))
                         }
-                        className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
                       />
                     </div>
 
@@ -1089,7 +1068,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           ? setEditingTask({ ...editingTask, deadlineFormatted: e.target.value })
                           : setTaskFormDueDate(e.target.value)
                         }
-                        className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300 scheme-dark"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300 scheme-dark"
                       />
                     </div>
                   </div>
@@ -1108,10 +1087,10 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
           </GlassCard>
 
           {/* Published Tasks list */}
-          <GlassCard padding="p-6" className="lg:col-span-6 space-y-5 border border-white/[0.06] bg-[#0d0f14]/30 text-left">
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <GlassCard padding="p-6" className="lg:col-span-6 space-y-5 border border-white/10 bg-zinc-900/50 text-left">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h4 className="text-xs font-black uppercase text-violet-400 tracking-wider">Published Tasks</h4>
-              <span className="text-[9px] bg-[#05080e] border border-white/5 text-gray-400 px-2.5 py-0.5 rounded-full font-mono font-bold">
+              <span className="text-[9px] bg-black/40 border border-white/5 text-gray-400 px-2.5 py-0.5 rounded-full font-mono font-bold">
                 {tasks.length} total
               </span>
             </div>
@@ -1123,12 +1102,12 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                 return (
                   <div
                     key={t.id}
-                    className="relative rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 hover:bg-[#0d0f14]/60 p-4 transition-all duration-300 group flex flex-col gap-3"
+                    className="relative rounded-2xl border border-white/10 bg-zinc-900/50 hover:bg-zinc-900/70 p-4 transition-all duration-300 group flex flex-col gap-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1.5 text-left flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[8px] font-mono font-bold text-gray-400 bg-slate-900 px-2 py-0.5 rounded border border-white/[0.05] inline-block">
+                          <span className="text-[8px] font-mono font-bold text-gray-400 bg-slate-900 px-2 py-0.5 rounded border border-white/5 inline-block">
                             {bootcampMap[t.target_audience]?.split(':')[0] || t.target_audience || 'All'}
                           </span>
                           {t.task_type && (
@@ -1151,7 +1130,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                         <button
                           type="button"
                           onClick={() => openEditModal(t)}
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-white/[0.04] hover:text-violet-400 transition-colors cursor-pointer"
+                          className="rounded-lg p-1.5 text-gray-400 hover:bg-white/5 hover:text-violet-400 transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -1186,7 +1165,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-white/[0.04] flex items-center justify-between text-[9px] text-gray-500">
+                    <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-500">
                       <span className="flex items-center gap-1">
                         <span className="h-1 w-1 rounded-full bg-slate-500" />
                         By {t.users?.full_name?.split(' ')[0] || 'Self'}

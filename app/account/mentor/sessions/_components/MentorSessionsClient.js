@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/[0.08] bg-white/[0.02]" /> }
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/2" /> }
 );
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -177,31 +177,32 @@ export default function MentorSessionsClient({
     <PageShell>
       <PageHeader
         icon={Video}
-        title="Sessions Workspace"
-        subtitle="Schedule interactive mentorship rooms, log discussions, and track candidate presence"
+        title="Sessions"
+        subtitle="Schedule mentorship sessions, take notes, and track attendance."
         accent="emerald"
       />
 
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Scheduled Rooms" value={scheduled.length} accent="violet" delay={0} />
-        <StatCard label="Completed interactions" value={pastStats.total} accent="blue" delay={0.05} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard icon={Tv} label="Scheduled" value={scheduled.length} accent="violet" delay={0} sublabel="Upcoming sessions" />
+        <StatCard icon={CheckCircle2} label="Completed" value={pastStats.total} accent="blue" delay={0.05} sublabel="Past sessions" />
         <StatCard
+          icon={Users}
           label="Attendance rate"
           value={pastStats.total ? `${Math.round((pastStats.attended / pastStats.total) * 100)}%` : '0%'}
           accent="emerald"
           delay={0.1}
-          sublabel={pastStats.total ? `${pastStats.attended} sessions present` : null}
+          sublabel={pastStats.total ? `${pastStats.attended} present` : 'No data yet'}
         />
-        <StatCard label="Total hours logged" value={`${pastStats.totalHours} hrs`} accent="amber" delay={0.15} />
+        <StatCard icon={Clock} label="Hours logged" value={`${pastStats.totalHours}h`} accent="amber" delay={0.15} sublabel="Total session time" />
       </div>
 
-      <div className="mt-6">
+      <div>
         <TabBar
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: 'rooms', label: 'Scheduled rooms', icon: Tv, count: scheduled.length },
-            { value: 'past',  label: 'Past history & logs',   icon: Clock, count: allSessions.length },
+            { value: 'rooms', label: 'Scheduled sessions', icon: Tv, count: scheduled.length },
+            { value: 'past',  label: 'History',            icon: Clock, count: allSessions.length },
           ]}
         />
       </div>
@@ -367,8 +368,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     <div className={`grid grid-cols-1 gap-6 ${hasScheduledRooms ? 'lg:grid-cols-12' : 'max-w-2xl mx-auto'}`}>
       {/* Scheduler Form */}
       <div className={`${hasScheduledRooms ? 'lg:col-span-5' : 'w-full'}`}>
-        <GlassCard padding="p-0" className="overflow-hidden border-white/[0.06]">
-          <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.01] px-5 py-4">
+        <GlassCard padding="p-0" className="overflow-hidden border-white/10">
+          <div className="flex items-center justify-between border-b border-white/10 bg-white/2 px-5 py-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" />
               <h3 className="text-sm font-semibold text-gray-200">Schedule mentorship room</h3>
@@ -394,7 +395,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     setGroupSearch('');
                   }}
                   disabled={bootcamps.length === 0}
-                  className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-sm text-gray-200 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300 cursor-pointer disabled:opacity-50"
+                  className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-sm text-gray-200 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300 cursor-pointer disabled:opacity-50"
                 >
                   {bootcamps.length === 0 ? (
                     <option>None assigned</option>
@@ -421,7 +422,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g. Advanced Segment Trees & Bitmasks"
                 required
-                className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-3 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
+                className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
               />
             </Step>
 
@@ -442,7 +443,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       className={`rounded-xl border p-3 text-center transition-all flex flex-col items-center gap-2 ${
                         chosen
                           ? 'border-emerald-500/40 bg-emerald-500/[0.06] text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.06)]'
-                          : 'border-white/[0.06] bg-[#0c0d12]/20 text-gray-400 hover:bg-[#0c0d12]/60 hover:text-gray-200'
+                          : 'border-white/10 bg-black/20 text-gray-400 hover:bg-black/30 hover:text-gray-200'
                       }`}
                     >
                       <Icon className={`w-4 h-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`} />
@@ -460,7 +461,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                   <motion.div
                     key="one"
                     initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                    className="mt-3 space-y-2 rounded-xl border border-white/[0.06] bg-white/[0.01] p-3"
+                    className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/2 p-3"
                   >
                     {students.length > 0 ? (
                       <>
@@ -468,7 +469,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                           <select
                             value={effectiveSingleId}
                             onChange={(e) => setSingleId(e.target.value)}
-                            className="w-full appearance-none rounded-lg border border-white/[0.08] bg-[#0c0d12]/50 px-3 py-2.5 text-xs text-gray-200 outline-none cursor-pointer focus:border-emerald-500/40"
+                            className="w-full appearance-none rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-gray-200 outline-none cursor-pointer focus:border-emerald-500/40"
                           >
                             {students.map((s) => (
                               <option key={s.id} value={s.id}>{s.name}{s.email ? ` · ${s.email}` : ''}</option>
@@ -482,7 +483,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                           const m = students.find((s) => s.id === effectiveSingleId);
                           if (!m) return null;
                           return (
-                            <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.04] bg-white/[0.02] p-2.5">
+                            <div className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/2 p-2.5">
                               <Avatar name={m.name} src={m.avatar_url} size="sm" />
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-semibold text-gray-200 truncate">{m.name}</p>
@@ -502,7 +503,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                   <motion.div
                     key="group"
                     initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                    className="mt-3 space-y-2 rounded-xl border border-white/[0.06] bg-white/[0.01] p-3"
+                    className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/2 p-3"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Assemble Group</span>
@@ -517,10 +518,10 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                             value={groupSearch}
                             onChange={(e) => setGroupSearch(e.target.value)}
                             placeholder="Filter members by name..."
-                            className="w-full rounded-lg border border-white/[0.08] bg-[#0c0d12]/50 py-2 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+                            className="w-full rounded-lg border border-white/10 bg-black/20 py-2 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
                           />
                         </div>
-                        <div className="max-h-40 overflow-y-auto space-y-1 pr-1 border border-white/[0.04] rounded-lg p-1.5 bg-[#0c0d12]/20">
+                        <div className="max-h-40 overflow-y-auto space-y-1 pr-1 border border-white/5 rounded-lg p-1.5 bg-black/20">
                           {students
                             .filter((s) => !groupSearch.trim() ||
                               s.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
@@ -535,7 +536,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                                   className={`w-full flex items-center justify-between rounded-lg border px-2 py-1.5 text-left transition-all ${
                                     chosen
                                       ? 'border-emerald-500/20 bg-emerald-500/[0.05]'
-                                      : 'border-white/[0.04] bg-[#0c0d12]/10 hover:bg-[#0c0d12]/40'
+                                      : 'border-white/5 bg-black/20 hover:bg-black/30'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0">
@@ -543,7 +544,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                                     <span className="text-xs font-medium text-gray-200 truncate">{s.name}</span>
                                   </div>
                                   <div className={`h-4 w-4 rounded border flex items-center justify-center ${
-                                    chosen ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-white/15 bg-white/[0.02]'
+                                    chosen ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-white/15 bg-white/2'
                                   }`}>
                                     {chosen && <Check className="h-2.5 w-2.5" />}
                                   </div>
@@ -586,7 +587,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     onChange={(e) => setWhen(e.target.value)}
                     required
                     min={new Date().toISOString().slice(0, 16)}
-                    className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 transition-all duration-300"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 transition-all duration-300"
                   />
                 </div>
                 <div className="relative">
@@ -594,7 +595,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                   <select
                     value={duration}
                     onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 cursor-pointer"
+                    className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 cursor-pointer"
                   >
                     {[30, 45, 60, 90, 120].map((m) => (
                       <option key={m} value={m}>{m} minutes</option>
@@ -608,7 +609,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             </Step>
 
             <Step n={5} label="Session description">
-              <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-[#0c0d12]/30">
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
                 <MultiBlockEditor
                   value={description}
                   onChange={setDescription}
@@ -640,8 +641,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
       {/* Scheduled List Panel */}
       {hasScheduledRooms && (
         <div className="lg:col-span-7 flex flex-col gap-4">
-          <GlassCard padding="p-0" className="overflow-hidden border-white/[0.06] flex flex-col h-full">
-            <div className="flex flex-col gap-3 border-b border-white/[0.06] bg-white/[0.01] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <GlassCard padding="p-0" className="overflow-hidden border-white/10 flex flex-col h-full">
+            <div className="flex flex-col gap-3 border-b border-white/10 bg-white/2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-gray-200">Scheduled rooms</h3>
                 <p className="text-[11px] text-gray-500 mt-0.5">Upcoming interactive mentorship channels</p>
@@ -653,7 +654,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter by topic or track..."
-                  className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-1.5 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+                  className="w-full rounded-xl border border-white/10 bg-black/20 py-1.5 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
                 />
               </div>
             </div>
@@ -737,7 +738,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
 
   return (
     <>
-      <div className={`rounded-xl border border-white/[0.06] bg-white/[0.01] p-4 transition-all hover:border-white/[0.1] hover:bg-white/[0.02] relative overflow-hidden border-l-4 ${hasStarted ? 'border-l-emerald-500' : 'border-l-violet-500'}`}>
+      <div className={`rounded-xl border border-white/10 bg-white/2 p-4 transition-all hover:border-white/20 hover:bg-white/2 relative overflow-hidden border-l-4 ${hasStarted ? 'border-l-emerald-500' : 'border-l-violet-500'}`}>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex-1 min-w-0 space-y-2.5">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -745,7 +746,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
               <Pill tone={target.tone} icon={target.icon}>{target.label}</Pill>
               {hasStarted ? (
                 <Pill tone="emerald" icon={Video}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-450 animate-pulse mr-1" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse mr-1" />
                   Live Room
                 </Pill>
               ) : (
@@ -763,12 +764,12 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
             </p>
 
             {s.description && descriptionPreview(s.description) && (
-              <div className="rounded-lg border border-white/[0.04] bg-white/[0.01] px-3 py-2 text-[11px] text-gray-400 leading-relaxed max-w-xl">
+              <div className="rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-[11px] text-gray-400 leading-relaxed max-w-xl">
                 {descriptionPreview(s.description)}
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.04] pt-2">
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-2">
               <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mr-1">Targeted candidates</span>
               {isOneOnOne && (
                 <div className="flex items-center gap-1.5">
@@ -827,7 +828,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
             </div>
 
             {hasStarted && (
-              <div className="border-t border-white/[0.04] pt-2 max-w-md">
+              <div className="border-t border-white/5 pt-2 max-w-md">
                 <RecordingUpload
                   sessionId={s.id}
                   initialUrl={s.recording_url}
@@ -852,13 +853,13 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                     <ExternalLink className="h-3 w-3 opacity-70" />
                   </a>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#0c0d12]/30 px-3.5 py-2 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3.5 py-2 text-xs text-gray-500">
                     {hasEnded ? 'Session Completed' : 'No Meet Link'}
                   </span>
                 )}
                 <button
                   onClick={() => setShowAttendance(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-350 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors"
                   title="Mark attendance sheet"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
@@ -890,7 +891,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                 </span>
                 <button
                   onClick={onCancel}
-                  className="p-2 rounded-lg border border-white/[0.06] bg-[#0c0d12]/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
+                  className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
                   title="Cancel room slot"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -1037,7 +1038,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
       {/* LEFT PANEL: Log history queue (5-cols) */}
       <div className="lg:col-span-5 space-y-4">
         {/* Controls Grid */}
-        <div className="space-y-3 bg-[#0d0f14]/40 border border-white/[0.05] p-3.5 rounded-2xl backdrop-blur-md">
+        <div className="space-y-3 bg-zinc-900/50 border border-white/5 p-3.5 rounded-2xl backdrop-blur-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
@@ -1045,7 +1046,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search topic, candidate..."
-              className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-2 pl-9 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+              className="w-full rounded-xl border border-white/10 bg-black/20 py-2 pl-9 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
             />
           </div>
           <div className="flex gap-2 justify-between items-center flex-wrap sm:flex-nowrap">
@@ -1062,7 +1063,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                   className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
                     filter === t.v
                       ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                      : 'bg-[#0c0d12]/20 border border-white/[0.05] text-gray-400 hover:text-gray-200 hover:bg-white/[0.02]'
+                      : 'bg-black/20 border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/2'
                   }`}
                 >
                   {t.label}
@@ -1078,7 +1079,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
         {/* Grouped session list */}
         <div className="space-y-5 max-h-[580px] overflow-y-auto pr-1">
           {grouped.length === 0 ? (
-            <GlassCard padding="py-12" className="border-white/[0.04]">
+            <GlassCard padding="py-12" className="border-white/5">
               <EmptyState
                 icon={Video}
                 title={search || filter !== 'all' ? 'No matched records' : 'No logs recorded'}
@@ -1096,8 +1097,8 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
               <div key={label} className="space-y-2">
                 <div className="flex items-center gap-2 pl-0.5">
                   <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 font-mono">{label}</span>
-                  <span className="text-[9px] font-black text-gray-650 px-1.5 py-0.2 bg-white/[0.03] border border-white/[0.05] rounded-full">{items.length}</span>
-                  <div className="flex-1 h-px bg-white/[0.04]" />
+                  <span className="text-[9px] font-black text-gray-650 px-1.5 py-0.2 bg-white/5 border border-white/5 rounded-full">{items.length}</span>
+                  <div className="flex-1 h-px bg-white/5" />
                 </div>
                 <div className="space-y-2">
                   {items.map((s) => {
@@ -1115,11 +1116,11 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                         className={`rounded-xl border p-3.5 transition-all text-left flex flex-col gap-2.5 cursor-pointer select-none ${
                           isSelected
                             ? 'border-emerald-500/50 bg-emerald-950/[0.06] shadow-md shadow-emerald-500/5'
-                            : 'border-white/[0.05] bg-white/[0.01] hover:border-white/[0.08] hover:bg-white/[0.02]'
+                            : 'border-white/5 bg-white/2 hover:border-white/10 hover:bg-white/2'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className={`text-xs font-bold leading-snug truncate max-w-[220px] ${isSelected ? 'text-emerald-350' : 'text-gray-105'}`}>{s.topic}</h4>
+                          <h4 className={`text-xs font-bold leading-snug truncate max-w-[220px] ${isSelected ? 'text-emerald-300' : 'text-gray-100'}`}>{s.topic}</h4>
                           {s.attendance_data?.length > 0 ? (
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${presentCount === totalCount ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-405 border border-amber-500/20'}`}>
                               {presentCount}/{totalCount} present
@@ -1158,10 +1159,10 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
 
       {/* RIGHT PANEL: Workspace Inspector (7-cols) */}
       <div className="lg:col-span-7">
-        <GlassCard padding="p-6" className="min-h-[500px] border-white/[0.06] flex flex-col justify-between">
+        <GlassCard padding="p-6" className="min-h-[500px] border-white/10 flex flex-col justify-between">
           {!selectedSession ? (
             <div className="my-auto py-16 flex flex-col items-center justify-center text-center">
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-4 text-gray-500 mb-4 shadow-inner">
+              <div className="rounded-2xl border border-white/10 bg-white/2 p-4 text-gray-500 mb-4 shadow-inner">
                 <Tv className="h-8 w-8 text-emerald-400/40" />
               </div>
               <h3 className="text-sm font-semibold text-gray-300">Inspector Workspace Empty</h3>
@@ -1177,7 +1178,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
             return (
               <div className="space-y-6">
                 {/* Header detail */}
-                <div className="flex items-start justify-between flex-wrap gap-4 border-b border-white/[0.06] pb-4">
+                <div className="flex items-start justify-between flex-wrap gap-4 border-b border-white/10 pb-4">
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                       {s.bootcampTitle && <Pill tone="gray">{s.bootcampTitle}</Pill>}
@@ -1203,14 +1204,14 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                     <button
                       onClick={handleDeleteInspectorSession}
                       disabled={deleting}
-                      className="p-2 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-350 transition-colors disabled:opacity-50"
+                      className="p-2 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-300 transition-colors disabled:opacity-50"
                       title="Delete interaction log"
                     >
                       {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </button>
                     <button
                       onClick={() => setSelectedSessionId(null)}
-                      className="p-2 rounded-lg border border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.05] text-gray-500 hover:text-white transition-colors"
+                      className="p-2 rounded-lg border border-white/5 bg-white/2 hover:bg-white/5 text-gray-500 hover:text-white transition-colors"
                       title="Close workspace"
                     >
                       <X className="h-4 w-4" />
@@ -1221,7 +1222,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                 {/* Drive Recording Section */}
                 <div className="space-y-2">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Drive Video Vault</h4>
-                  <div className="rounded-2xl border border-white/[0.05] bg-[#0c0d12]/30 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="rounded-2xl border border-white/5 bg-black/30 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="rounded-xl border border-violet-500/10 bg-violet-500/5 p-2.5 text-violet-400">
                         <Film className="h-5 w-5" />
@@ -1247,7 +1248,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                 <div className="space-y-2">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Attendance Audit Sheet</h4>
                   {s.attendance_data?.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-[#0c0d12]/20 p-3 border border-white/[0.04] rounded-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/20 p-3 border border-white/5 rounded-2xl">
                       {s.attendance_data.map((r) => {
                         const cand = mentorships.flatMap(m => {
                           const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
@@ -1273,7 +1274,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                             <div className="flex items-center gap-2 shrink-0">
                               {r.points > 0 && <span className="text-[9px] font-extrabold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md">+{r.points} pts</span>}
                               {r.attended ? (
-                                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-450 shrink-0" />
+                                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400 shrink-0" />
                               ) : (
                                 <XCircle className="h-4.5 w-4.5 text-rose-455 shrink-0" />
                               )}
@@ -1283,7 +1284,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                       })}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between rounded-2xl border border-white/[0.04] bg-[#0c0d12]/30 px-4 py-3.5">
+                    <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/30 px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" />
                         <div>
@@ -1299,9 +1300,9 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                 </div>
 
                 {/* Notes logs section */}
-                <div className="space-y-2 border-t border-white/[0.05] pt-4">
+                <div className="space-y-2 border-t border-white/5 pt-4">
                   <div className="flex items-center gap-1.5 text-gray-300">
-                    <MessageSquare className="h-4 w-4 text-emerald-450" />
+                    <MessageSquare className="h-4 w-4 text-emerald-400" />
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Interactive Discussion logs</h4>
                   </div>
 
@@ -1311,7 +1312,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                       value={notesInput}
                       onChange={(e) => setNotesInput(e.target.value)}
                       placeholder="Detail curriculum points covered, milestones checked, algorithms explained..."
-                      className="w-full resize-none rounded-2xl border border-white/[0.08] bg-[#0c0d12]/50 px-4 py-3.5 text-xs text-gray-200 placeholder-gray-650 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
+                      className="w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-xs text-gray-200 placeholder-gray-650 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
                     />
                     <div className="flex justify-end">
                       <button
@@ -1407,11 +1408,11 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0f1115] shadow-2xl"
+        className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-350">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-300">
               <Video className="h-4 w-4" />
             </div>
             <div>
@@ -1419,7 +1420,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
               <p className="text-[10px] text-gray-500">Record a manual interaction slot</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:bg-white/[0.05] hover:text-white">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:bg-white/5 hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1437,7 +1438,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
                 required
                 value={selectedMentorshipId}
                 onChange={(e) => setSelectedMentorshipId(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
+                className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
               >
                 <option value="">Select mentee…</option>
                 {activeMentorships.map((m) => {
@@ -1464,7 +1465,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
                   required
                   defaultValue={new Date().toISOString().slice(0, 10)}
                   max={new Date().toISOString().slice(0, 10)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
+                  className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
                 />
               </div>
             </Field>
@@ -1477,7 +1478,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
                   min="15"
                   step="15"
                   defaultValue="60"
-                  className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
+                  className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
                 />
               </div>
             </Field>
@@ -1490,7 +1491,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
                 name="topic"
                 required
                 placeholder="e.g. Discussing time complexity analyses"
-                className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 py-2.5 pl-9 pr-3 text-xs text-white placeholder-gray-600 outline-none focus:border-emerald-500/40"
+                className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white placeholder-gray-600 outline-none focus:border-emerald-500/40"
               />
             </div>
           </Field>
@@ -1500,11 +1501,11 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
               name="notes"
               rows={3}
               placeholder="What core details did you focus on? Recommended homework guidelines..."
-              className="w-full resize-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 px-3 py-2.5 text-xs text-white placeholder-gray-650 outline-none focus:border-emerald-500/40"
+              className="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-white placeholder-gray-650 outline-none focus:border-emerald-500/40"
             />
           </Field>
 
-          <label className="flex items-center gap-2.5 rounded-xl border border-white/[0.04] bg-[#0c0d12]/20 px-3 py-2.5 cursor-pointer hover:bg-white/[0.02] select-none">
+          <label className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 cursor-pointer hover:bg-white/2 select-none">
             <input
               type="checkbox"
               name="attended"
@@ -1514,7 +1515,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
             <span className="text-xs text-gray-300">Mentee reported presence</span>
           </label>
 
-          <div className="flex gap-3 pt-3 border-t border-white/[0.06]">
+          <div className="flex gap-3 pt-3 border-t border-white/10">
             <ActionButton tone="ghost" onClick={onClose} className="flex-1 justify-center py-2">Cancel</ActionButton>
             <button
               type="submit"
@@ -1594,18 +1595,18 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        className="relative z-10 w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.08] bg-[#0c0d12] shadow-2xl overflow-hidden max-h-[85dvh]"
+        className="relative z-10 w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl overflow-hidden max-h-[85dvh]"
       >
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-white/[0.06]">
+        <div className="px-5 pt-5 pb-4 border-b border-white/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-450 mb-1">Interactive Attendance Sheet</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">Interactive Attendance Sheet</p>
               <h2 className="text-sm font-bold text-white leading-tight truncate">{session.topic}</h2>
             </div>
             <button
               onClick={onClose}
-              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-white/[0.06] hover:text-white transition-colors animate-all"
+              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-white/10 hover:text-white transition-colors animate-all"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1618,7 +1619,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
               { label: 'Attended', value: attendedCount, color: 'text-emerald-400' },
               { label: 'Absent', value: absentCount, color: 'text-rose-405' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-white/[0.04] bg-[#0c0d12]/30 px-3 py-2.5 text-center">
+              <div key={label} className="rounded-xl border border-white/5 bg-black/30 px-3 py-2.5 text-center">
                 <p className={`text-base font-black ${color}`}>{value}</p>
                 <p className="text-[10px] text-gray-500 mt-1 font-medium">{label}</p>
               </div>
@@ -1627,7 +1628,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
         </div>
 
         {/* Bulk Action Strip */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04] bg-[#0c0d12]/20">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-black/20">
           <span className="text-[10px] text-gray-500 font-mono">
             {attendedCount === students.length && students.length > 0 ? 'All candidates marked present' : `${attendedCount} / ${students.length} logged`}
           </span>
@@ -1635,7 +1636,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
             <button
               type="button"
               onClick={() => setRows((prev) => prev.map((r) => ({ ...r, attended: true })))}
-              className="font-bold text-emerald-450 hover:text-emerald-350 transition-colors"
+              className="font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               All Present
             </button>
@@ -1663,7 +1664,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
                 className={`group flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all cursor-pointer select-none ${
                   r.attended
                     ? 'border-emerald-500/20 bg-emerald-500/[0.04]'
-                    : 'border-white/[0.04] bg-[#0c0d12]/20 hover:border-white/[0.08]'
+                    : 'border-white/5 bg-black/20 hover:border-white/10'
                 }`}
                 onClick={() => setRow(r.user_id, { attended: !r.attended })}
               >
@@ -1681,7 +1682,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
                   <p className={`text-xs font-semibold truncate transition-colors ${r.attended ? 'text-white' : 'text-gray-400'}`}>
                     {r.name}
                   </p>
-                  <p className={`text-[9px] font-mono mt-0.5 ${r.attended ? 'text-emerald-450' : 'text-gray-600'}`}>
+                  <p className={`text-[9px] font-mono mt-0.5 ${r.attended ? 'text-emerald-400' : 'text-gray-600'}`}>
                     {r.attended ? 'Present' : 'Absent'}
                   </p>
                 </div>
@@ -1701,7 +1702,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
                     className={`w-10 rounded-lg border px-1.5 py-1 text-center text-xs font-bold outline-none transition-all ${
                       r.attended
                         ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 focus:border-emerald-500/60'
-                        : 'border-white/[0.06] bg-[#0c0d12]/30 text-gray-500 focus:border-white/20'
+                        : 'border-white/10 bg-black/30 text-gray-500 focus:border-white/20'
                     }`}
                   />
                   <span className="text-[9px] text-gray-600 font-bold font-mono">pts</span>
@@ -1712,7 +1713,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
         )}
 
         {/* Footer actions */}
-        <div className="px-4 py-4 border-t border-white/[0.06] bg-[#0c0d12]/40 flex gap-2">
+        <div className="px-4 py-4 border-t border-white/10 bg-black/30 flex gap-2">
           <ActionButton tone="ghost" onClick={onClose} className="flex-1 justify-center py-2.5">Cancel</ActionButton>
           <button
             onClick={handleSave}
@@ -1769,8 +1770,8 @@ function RecordingUpload({ sessionId, initialUrl, onUploaded }) {
       ) : null}
       <label className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-colors ${
         uploading
-          ? 'border-white/10 bg-white/[0.02] text-gray-500 cursor-not-allowed'
-          : 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-350'
+          ? 'border-white/10 bg-white/2 text-gray-500 cursor-not-allowed'
+          : 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300'
       }`}>
         {uploading ? (
           <>

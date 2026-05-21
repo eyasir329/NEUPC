@@ -64,7 +64,7 @@ function ProgressLogForm({ menteeId, onDone }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 p-5 backdrop-blur-md">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-5 backdrop-blur-md">
       <div className="flex items-center gap-2 mb-1">
         <span className="h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
         <p className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">New Progress Entry</p>
@@ -75,7 +75,7 @@ function ProgressLogForm({ menteeId, onDone }) {
         <input
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
-          className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+          className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
         />
       </div>
 
@@ -87,7 +87,7 @@ function ProgressLogForm({ menteeId, onDone }) {
             value={problems}
             onChange={(e) => setProblems(e.target.value)}
             placeholder="0"
-            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+            className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
           />
         </div>
         <div>
@@ -97,7 +97,7 @@ function ProgressLogForm({ menteeId, onDone }) {
             value={contests}
             onChange={(e) => setContests(e.target.value)}
             placeholder="0"
-            className="w-full rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+            className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
           />
         </div>
       </div>
@@ -109,7 +109,7 @@ function ProgressLogForm({ menteeId, onDone }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="What key learning benchmarks did the student reach?"
-          className="w-full resize-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 transition-all duration-300"
+          className="w-full resize-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300"
         />
       </div>
 
@@ -119,7 +119,7 @@ function ProgressLogForm({ menteeId, onDone }) {
         <button
           type="button"
           onClick={() => onDone?.()}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/2 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
         >
           Cancel
         </button>
@@ -166,7 +166,7 @@ function RecommendationForm({ menteeId, currentNote, onDone }) {
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Write a recommendation covering this mentee's strengths, areas of improvement, and readiness for opportunities…"
-        className="w-full resize-none rounded-xl border border-white/[0.08] bg-[#0c0d12]/50 hover:bg-[#0c0d12]/80 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/40 transition-all duration-300"
+        className="w-full resize-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/40 transition-all duration-300"
       />
 
       {error && <p className="text-xs text-rose-400 font-mono">{error}</p>}
@@ -175,7 +175,7 @@ function RecommendationForm({ menteeId, currentNote, onDone }) {
         <button
           type="button"
           onClick={() => onDone?.()}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/2 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider py-2.5 transition duration-300 cursor-pointer text-gray-400 hover:text-white"
         >
           Cancel
         </button>
@@ -242,10 +242,10 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
         <motion.div
           initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative w-full max-w-md bg-[#0a0c10]/95 backdrop-blur-xl border-l border-white/[0.06] shadow-2xl flex flex-col z-10 text-gray-300"
+          className="relative w-full max-w-md bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col z-10 text-gray-300"
         >
           {/* Header */}
-          <div className="px-5 py-4.5 border-b border-white/[0.06] bg-white/[0.01] flex items-center justify-between shrink-0">
+          <div className="px-5 py-4.5 border-b border-white/10 bg-white/2 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               {user?.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -260,13 +260,13 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                 <p className="text-[10px] text-gray-500 truncate max-w-55 mt-0.5">{user?.email}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 text-gray-500 hover:text-slate-200 hover:bg-white/[0.04] rounded-xl transition duration-300">
+            <button onClick={onClose} className="p-2 text-gray-500 hover:text-slate-200 hover:bg-white/5 rounded-xl transition duration-300">
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Stats cockpit cards */}
-          <div className="grid grid-cols-4 border-b border-white/[0.06] bg-white/[0.01] shrink-0 p-3 gap-2">
+          <div className="grid grid-cols-4 border-b border-white/10 bg-white/2 shrink-0 p-3 gap-2">
             {[
               { label: 'Progress', value: `${pct}%`, color: 'text-violet-400', bg: 'bg-violet-500/[0.03] border-violet-500/10' },
               { label: 'Logs', value: progress.length, color: 'text-blue-400', bg: 'bg-blue-500/[0.03] border-blue-500/10' },
@@ -281,7 +281,7 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
           </div>
 
           {/* Tab bar */}
-          <div className="flex gap-1.5 p-2 border-b border-white/[0.06] bg-white/[0.01] shrink-0">
+          <div className="flex gap-1.5 p-2 border-b border-white/10 bg-white/2 shrink-0">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -292,7 +292,7 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                   className={`flex flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                     active
                       ? 'bg-violet-500/10 border border-violet-500/30 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.06)]'
-                      : 'bg-transparent border border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#0c0d12]/30'
+                      : 'bg-transparent border border-transparent text-gray-400 hover:text-gray-200 hover:bg-black/30'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -312,11 +312,11 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
             {tab === 'syllabus' && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl bg-[#090b10]/40 border border-white/[0.06] p-3">
+                  <div className="rounded-xl bg-zinc-950/80/40 border border-white/10 p-3">
                     <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Status</span>
                     <span className="text-violet-300 font-bold capitalize text-xs">{student.status}</span>
                   </div>
-                  <div className="rounded-xl bg-[#090b10]/40 border border-white/[0.06] p-3">
+                  <div className="rounded-xl bg-zinc-950/80/40 border border-white/10 p-3">
                     <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Enrolled</span>
                     <span className="text-slate-200 font-bold text-xs">{new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
@@ -327,14 +327,14 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                     <span>Lesson progress</span>
                     <span className="text-slate-300 font-bold">{completedCount}/{lessons.length} · {pct}%</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden border border-white/[0.04]">
+                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden border border-white/5">
                     <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
 
                 {lessons.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center bg-[#090b10] px-4 py-2.5 border border-white/[0.06] border-b-0 rounded-t-2xl text-[9px]">
+                    <div className="flex justify-between items-center bg-zinc-950/80 px-4 py-2.5 border border-white/10 border-b-0 rounded-t-2xl text-[9px]">
                       <span className="font-mono text-gray-400 font-bold flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-500/60" />
                         <span className="w-2 h-2 rounded-full bg-amber-500/60" />
@@ -342,11 +342,11 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                         <span className="ml-1 font-bold uppercase tracking-widest text-slate-400">Syllabus Logs</span>
                       </span>
                     </div>
-                    <div className="bg-[#090b10] p-3.5 rounded-b-2xl border border-white/[0.06] space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                    <div className="bg-zinc-950/80 p-3.5 rounded-b-2xl border border-white/10 space-y-1.5 max-h-96 overflow-y-auto pr-1">
                       {lessons.map((l) => {
                         const done = l.progress?.is_completed;
                         return (
-                          <div key={l.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs transition hover:border-white/[0.08]">
+                          <div key={l.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/2 border border-white/5 text-xs transition hover:border-white/10">
                             {done
                               ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                               : <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />}
@@ -398,7 +398,7 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
 
                     <div className="space-y-3">
                       {progress.map((p) => (
-                        <div key={p.id} className="relative rounded-2xl border border-white/[0.06] bg-[#0d0f14]/30 p-4 transition-all hover:border-white/[0.12]">
+                        <div key={p.id} className="relative rounded-2xl border border-white/10 bg-zinc-900/50 p-4 transition-all hover:border-white/20">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-1.5">
                               <Calendar className="w-3.5 h-3.5 text-violet-400" />
@@ -424,7 +424,7 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                 {!showRecForm ? (
                   <>
                     {recNote ? (
-                      <div className="relative rounded-2xl border border-amber-500/20 bg-[#0d0f14]/50 p-4 text-xs font-mono text-amber-200 leading-relaxed whitespace-pre-wrap">
+                      <div className="relative rounded-2xl border border-amber-500/20 bg-zinc-900/60 p-4 text-xs font-mono text-amber-200 leading-relaxed whitespace-pre-wrap">
                         <div className="absolute top-2 right-2 opacity-30">
                           <Award className="w-8 h-8 text-amber-400" />
                         </div>
@@ -456,11 +456,11 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
           </div>
 
           {/* Footer */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.06] bg-[#090b10] px-5 py-4 flex items-center justify-between z-20 shadow-lg">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-zinc-950/80 px-5 py-4 flex items-center justify-between z-20 shadow-lg">
             <span className="text-[9px] text-gray-600 font-mono tracking-wider">ID: {user?.id?.slice(0, 12)}…</span>
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-slate-200 transition duration-300 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-white/2 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-slate-200 transition duration-300 cursor-pointer"
             >
               Close
             </button>
