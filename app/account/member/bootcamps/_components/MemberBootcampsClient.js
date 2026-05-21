@@ -1321,80 +1321,135 @@ function TaskCard({ task, onSubmitted }) {
     onSubmitted(task.id, result.data);
   };
 
+  const difficultyGlow = {
+    easy: 'border-l-2 border-l-emerald-500/80 hover:border-l-emerald-400',
+    medium: 'border-l-2 border-l-amber-500/80 hover:border-l-amber-400',
+    hard: 'border-l-2 border-l-rose-500/80 hover:border-l-rose-400',
+  };
+
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+    <div className={cn(
+      "rounded-xl border transition-all duration-300 overflow-hidden bg-[#0c0e15]/40 backdrop-blur-md",
+      open 
+        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)]" 
+        : "border-white/[0.05] hover:border-white/[0.12] hover:bg-[#0f121d]/50",
+      difficultyGlow[task.difficulty] || "border-l-2 border-l-gray-500/80"
+    )}>
       <button
-        className="flex w-full items-center gap-3 p-4 text-left"
+        className="flex w-full items-center gap-3 px-5 py-4 text-left select-none"
         onClick={() => setOpen(o => !o)}
       >
-        <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+        <span className={cn(
+          "shrink-0 rounded-md px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ring-1",
+          DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'
+        )}>
           {task.difficulty}
         </span>
-        <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
-        <span className="shrink-0 text-[10px] font-bold text-gray-500">{task.bootcampTitle}</span>
+        <span className="flex-1 truncate text-[13.5px] font-medium text-white/95 group-hover:text-white transition-colors">{task.title}</span>
+        <span className="shrink-0 text-[10px] font-mono font-bold text-gray-500 bg-white/[0.03] border border-white/[0.05] rounded px-1.5 py-0.5">{task.bootcampTitle}</span>
         {task.points != null && (
-          <span className="shrink-0 text-[10px] font-bold text-amber-400">{task.points} pts</span>
+          <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-mono font-bold text-amber-400/90 bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded">
+            <Trophy className="h-3 w-3 text-amber-400" /> {task.points} pts
+          </span>
         )}
         {task.deadline && (
-          <span className={`shrink-0 text-[11px] ${isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'}`}>
-            {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          <span className={cn(
+            "shrink-0 inline-flex items-center gap-1 text-[11px] font-medium",
+            isPastDue && !sub ? 'text-rose-400' : 'text-gray-400'
+          )}>
+            <Clock className="h-3 w-3 opacity-60" />
+            {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
         )}
         {sub ? (
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ${SUB_STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+          <span className={cn(
+            "shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1",
+            SUB_STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'
+          )}>
             {sub.status}
           </span>
         ) : (
-          <span className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-bold text-gray-500 ring-1 ring-white/10">
+          <span className="shrink-0 rounded-full bg-white/[0.02] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-500 ring-1 ring-white/10">
             not submitted
           </span>
         )}
-        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={cn(
+          "h-4 w-4 shrink-0 text-gray-400 transition-transform duration-300",
+          open ? 'rotate-180 text-violet-400' : ''
+        )} />
       </button>
 
       {open && (
-        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+        <div className="border-t border-white/[0.06] bg-white/[0.01]/10 px-6 pb-6 pt-4 space-y-5">
           {task.description && (
-            <TaskDescriptionRenderer content={task.description} />
+            <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
+              <TaskDescriptionRenderer content={task.description} />
+            </div>
           )}
           {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {task.problem_links.map((link, i) => (
-                <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
-                  <FileText className="h-3 w-3" />Problem {i + 1}
-                </a>
-              ))}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Problem Links</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {task.problem_links.map((link, i) => (
+                  <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] hover:bg-violet-500/[0.08] hover:border-violet-500/40 px-3.5 py-2.5 text-xs text-violet-300 font-semibold transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5">
+                    <FileText className="h-4 w-4 text-violet-400 shrink-0" />
+                    <span className="truncate">Download Problem {i + 1}</span>
+                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-violet-400/60" />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
           {sub && (
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
-              {sub.notes && <TaskDescriptionRenderer content={sub.notes} />}
+            <div className="rounded-xl border border-white/[0.05] bg-[#080a0f]/40 p-4 space-y-3.5">
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
+                <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
+                {sub.submitted_at && (
+                  <span className="text-[10.5px] text-gray-500 font-mono">
+                    Submitted on {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              {sub.notes && (
+                <div className="text-[13px] text-gray-300 leading-relaxed bg-white/[0.01] p-3 rounded-lg border border-white/[0.03]">
+                  <TaskDescriptionRenderer content={sub.notes} />
+                </div>
+              )}
               {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
-                <AttachmentList files={sub.attachments} />
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Submitted Files</p>
+                  <AttachmentList files={sub.attachments} />
+                </div>
               )}
               {sub.feedback && (
-                <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Mentor Feedback</p>
-                  <p className="text-[12px] text-gray-300">{sub.feedback}</p>
+                <div className="mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 shadow-sm shadow-emerald-500/5">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10.5px] mb-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Mentor Feedback & Assessment
+                  </div>
+                  <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{sub.feedback}</p>
                 </div>
               )}
             </div>
           )}
 
           {canSubmit && (
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</label>
-                <div className="rounded-xl overflow-hidden border border-white/10">
+            <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/[0.05] pt-4">
+              <div className="space-y-2">
+                <label className="block text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Your Answer / Notes</label>
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#090b11]/80 backdrop-blur-md shadow-inner transition-colors focus-within:border-violet-500/40">
                   <MultiBlockEditor value={content} onChange={setContent} />
                 </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Attachments</label>
-                <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+              <div className="space-y-2">
+                <label className="block text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Attachments</label>
+                {attachments.length > 0 && (
+                  <div className="mb-2 bg-white/[0.01] p-2.5 rounded-lg border border-white/[0.03]">
+                    <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+                  </div>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1406,20 +1461,20 @@ function TaskCard({ task, onSubmitted }) {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="mt-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/[0.08] disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3.5 py-2 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] hover:border-white/20 transition-all disabled:opacity-40"
                 >
-                  {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                  {uploading ? 'Uploading…' : 'Add files'}
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 text-violet-400" />}
+                  {uploading ? 'Uploading…' : 'Add attachment files'}
                 </button>
               </div>
-              {error && <p className="text-[11px] text-rose-400">{error}</p>}
+              {error && <p className="text-[11px] font-semibold text-rose-400">{error}</p>}
               <button
                 type="submit"
                 disabled={loading || uploading}
-                className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-5 py-2.5 text-[12.5px] font-bold text-white transition-all duration-200 shadow-md shadow-violet-600/10 hover:shadow-violet-600/25 active:scale-[0.98] disabled:opacity-40"
               >
-                <Send className="h-3 w-3" />
-                {loading ? 'Submitting…' : isRedo ? 'Resubmit' : 'Submit'}
+                <Send className="h-3.5 w-3.5" />
+                {loading ? 'Submitting…' : isRedo ? 'Resubmit Solution' : 'Submit Solution'}
               </button>
             </form>
           )}
@@ -1460,8 +1515,9 @@ function TasksTab({ enrolledBootcamps }) {
   }, [allTasks, filter]);
 
   if (allTasks === null) return (
-    <div className="flex items-center justify-center py-16 text-gray-500">
-      <Loader2 className="mr-2 h-5 w-5 animate-spin" /><span className="text-[13px]">Loading tasks…</span>
+    <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+      <Loader2 className="h-7 w-7 animate-spin text-violet-500 mb-3" />
+      <span className="text-[13px] font-semibold">Loading assigned tasks…</span>
     </div>
   );
 
@@ -1473,28 +1529,51 @@ function TasksTab({ enrolledBootcamps }) {
   const submittedCount = allTasks.filter(t => t.mySubmission).length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Tasks', value: allTasks.length, color: 'text-white' },
-          { label: 'Not Submitted', value: pendingCount, color: 'text-rose-400' },
-          { label: 'Submitted', value: submittedCount, color: 'text-emerald-400' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 text-center">
-            <div className={`text-2xl font-bold ${color}`}>{value}</div>
-            <div className="mt-1 text-[11px] text-gray-500">{label}</div>
+          { 
+            label: 'Total Tasks', 
+            value: allTasks.length, 
+            color: 'text-white', 
+            bg: 'bg-white/[0.02] border-white/[0.05]',
+            glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
+          },
+          { 
+            label: 'Not Submitted', 
+            value: pendingCount, 
+            color: 'text-rose-400', 
+            bg: 'bg-rose-500/[0.02] border-rose-500/10',
+            glow: 'shadow-[inset_0_0_12px_rgba(244,63,94,0.02)]'
+          },
+          { 
+            label: 'Submitted', 
+            value: submittedCount, 
+            color: 'text-emerald-400', 
+            bg: 'bg-emerald-500/[0.02] border-emerald-500/10',
+            glow: 'shadow-[inset_0_0_12px_rgba(16,185,129,0.02)]'
+          },
+        ].map(({ label, value, color, bg, glow }) => (
+          <div key={label} className={cn("rounded-2xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5", bg, glow)}>
+            <div className={cn("text-2xl sm:text-3xl font-bold tracking-tight font-mono", color)}>{value}</div>
+            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
         {[['all', 'All'], ['pending', 'Not Submitted'], ['submitted', 'Submitted']].map(([val, label]) => (
           <button
             key={val}
             onClick={() => setFilter(val)}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${filter === val ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white border border-white/10'}`}
+            className={cn(
+              "rounded-lg px-4 py-1.5 text-[12px] font-bold transition-all duration-200",
+              filter === val 
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10' 
+                : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+            )}
           >
             {label}
           </button>
@@ -1503,9 +1582,9 @@ function TasksTab({ enrolledBootcamps }) {
 
       {/* Task list */}
       {filtered.length === 0 ? (
-        <p className="py-10 text-center text-[13px] text-gray-500">No tasks match this filter.</p>
+        <p className="py-12 text-center text-[13.5px] text-gray-500">No tasks match this filter.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map(task => (
             <TaskCard key={task.id} task={task} onSubmitted={handleSubmitted} />
           ))}
@@ -1528,61 +1607,92 @@ function SessionCard({ session: s }) {
   const mentorName = s.mentor?.full_name || '—';
 
   return (
-    <div className={`rounded-xl border overflow-hidden transition-all ${isUpcoming ? 'border-violet-500/25 bg-violet-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isUpcoming ? 'bg-violet-500/15' : 'bg-white/[0.04]'}`}>
-          <Video className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`} />
+    <div className={cn(
+      "rounded-xl border transition-all duration-300 overflow-hidden bg-[#0c0e15]/40 backdrop-blur-md",
+      open 
+        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)]" 
+        : isUpcoming
+        ? "border-violet-500/25 bg-violet-500/[0.03] hover:border-violet-500/40"
+        : "border-white/[0.05] hover:border-white/[0.12] hover:bg-[#0f121d]/50"
+    )}>
+      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-4 px-5 py-4 text-left select-none">
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+          isUpcoming ? "bg-violet-500/10 border border-violet-500/20 text-violet-400" : "bg-white/[0.03] border border-white/5 text-emerald-400"
+        )}>
+          <Video className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-white truncate">{s.topic || 'Session'}</p>
-          <p className="text-[11px] text-gray-500">
-            {s.bootcampTitle && <span className="text-violet-400">{s.bootcampTitle} · </span>}
-            {dateStr}{isUpcoming ? ` · ${timeStr}` : ''} · {s.duration ?? '—'}min · {mentorName}
+          <p className="text-[13.5px] font-semibold text-white/95 truncate">{s.topic || 'Session'}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-medium">
+            {s.bootcampTitle && <span className="text-violet-400 font-bold">{s.bootcampTitle}</span>}
+            {s.bootcampTitle && <span className="text-gray-600 font-mono">·</span>}
+            <span className="font-mono">{dateStr}</span>
+            {isUpcoming && <span className="text-gray-600 font-mono">·</span>}
+            {isUpcoming && <span className="font-mono text-violet-300">{timeStr}</span>}
+            <span className="text-gray-600 font-mono">·</span>
+            <span className="bg-white/5 border border-white/[0.04] px-1.5 py-0.5 rounded text-[10px] text-gray-300">{s.duration ?? '—'}min</span>
+            <span className="text-gray-600 font-mono">·</span>
+            <span className="text-gray-300">Mentored by {mentorName}</span>
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2.5">
           {s.target_type && (
-            <span className="hidden sm:inline-block rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
+            <span className="hidden sm:inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-white/[0.03] border border-white/10 font-mono">
               {TARGET_LABEL[s.target_type] ?? s.target_type}
             </span>
           )}
           {isUpcoming ? (
-            <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+            <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
           ) : s.attended === true ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
           ) : s.attended === false ? (
-            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+            <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400 ring-1 ring-rose-500/20">missed</span>
           ) : (
-            <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+            <span className="rounded-full bg-gray-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 ring-1 ring-gray-500/20">done</span>
           )}
-          <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown className={cn(
+            "h-4 w-4 text-gray-400 transition-transform duration-300",
+            open ? 'rotate-180 text-violet-400' : ''
+          )} />
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
-          {s.description && <TaskDescriptionRenderer content={s.description} />}
-          {s.notes && (
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Mentor notes</p>
-              <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{s.notes}</p>
+        <div className="border-t border-white/[0.06] bg-white/[0.01]/10 px-6 pb-6 pt-4 space-y-4">
+          {s.description && (
+            <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
+              <TaskDescriptionRenderer content={s.description} />
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
+          
+          {s.notes && (
+            <div className="rounded-xl border border-white/[0.05] bg-[#080a0f]/60 overflow-hidden">
+              <div className="flex items-center gap-1.5 bg-white/[0.02] border-b border-white/[0.05] px-4 py-2">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-violet-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mentor Notes & Guidelines</span>
+              </div>
+              <div className="p-4">
+                <p className="text-[12.5px] leading-relaxed text-gray-300 font-mono whitespace-pre-wrap">{s.notes}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-2.5 pt-1">
             {s.meet_link && (
               <a href={s.meet_link} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors">
-                <Video className="h-3 w-3" />
-                {isUpcoming ? 'Join Meet' : 'Open Meet'}
-                <ChevronRight className="h-3 w-3 opacity-70" />
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4.5 py-2.5 text-[12px] font-bold text-white transition-all duration-200 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.98]">
+                <Video className="h-3.5 w-3.5" />
+                {isUpcoming ? 'Join Live Google Meet' : 'Open Meet Link'}
+                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70" />
               </a>
             )}
             {s.recording_url && (
               <a href={s.recording_url} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 text-[11px] font-semibold text-violet-300 transition-colors">
-                <PlayCircle className="h-3 w-3" />
-                Watch recording
-                <ChevronRight className="h-3 w-3 opacity-70" />
+                className="inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-4.5 py-2.5 text-[12px] font-bold text-violet-300 transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-[0.98]">
+                <PlayCircle className="h-3.5 w-3.5" />
+                Watch Saved Recording
+                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70" />
               </a>
             )}
           </div>
@@ -1616,7 +1726,6 @@ function SessionsTab({ enrolledBootcamps }) {
 
   const now = new Date();
   const upcoming = (allSessions || []).filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
-  const past = (allSessions || []).filter(s => s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now);
 
   const visible = (allSessions || []).filter(s => {
     const inFilter = filter === 'upcoming'
@@ -1633,22 +1742,22 @@ function SessionsTab({ enrolledBootcamps }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.05] pb-5">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Sessions</h1>
-          <p className="text-gray-500 mt-1 text-sm">All mentorship sessions across your bootcamps</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Sessions</h1>
+          <p className="text-gray-400 mt-1 text-sm">All mentorship and broadcast sessions across your bootcamps</p>
         </div>
-        <div className="relative w-full md:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search sessions…"
-            className="h-9 w-full bg-white/[0.03] border border-white/10 rounded-lg pl-9 pr-9 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/40 transition-colors"
+            placeholder="Search topic, mentor, bootcamp…"
+            className="h-10 w-full bg-[#0a0c10]/60 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-all"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white">
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -1656,39 +1765,65 @@ function SessionsTab({ enrolledBootcamps }) {
       </div>
 
       {allSessions === null ? (
-        <div className="flex items-center justify-center py-20 text-gray-500">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          <span className="text-sm">Loading sessions…</span>
+        <div className="flex flex-col items-center justify-center py-24 text-gray-500">
+          <Loader2 className="h-7 w-7 animate-spin text-violet-500 mb-3" />
+          <span className="text-sm font-semibold">Loading mentorship schedules…</span>
         </div>
       ) : allSessions.length === 0 ? (
         <EmptyState icon={Video} title="No sessions yet" description="Your mentor hasn't scheduled any sessions for your bootcamps." />
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Total', value: allSessions.length, color: 'text-white' },
-              { label: 'Upcoming', value: upcoming.length, color: 'text-violet-400' },
-              { label: 'Attended', value: allSessions.filter(s => s.attended).length, color: 'text-emerald-400' },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3 text-center">
-                <p className={`text-xl font-bold ${color}`}>{value}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{label}</p>
+              { 
+                label: 'Total Sessions', 
+                value: allSessions.length, 
+                color: 'text-white', 
+                bg: 'bg-white/[0.02] border-white/[0.05]',
+                glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
+              },
+              { 
+                label: 'Upcoming Scheduled', 
+                value: upcoming.length, 
+                color: 'text-violet-400', 
+                bg: 'bg-violet-500/[0.02] border-violet-500/10',
+                glow: 'shadow-[inset_0_0_12px_rgba(139,92,246,0.02)]'
+              },
+              { 
+                label: 'Attended Sessions', 
+                value: allSessions.filter(s => s.attended).length, 
+                color: 'text-emerald-400', 
+                bg: 'bg-emerald-500/[0.02] border-emerald-500/10',
+                glow: 'shadow-[inset_0_0_12px_rgba(16,185,129,0.02)]'
+              },
+            ].map(({ label, value, color, bg, glow }) => (
+              <div key={label} className={cn("rounded-2xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5", bg, glow)}>
+                <p className={cn("text-2xl sm:text-3xl font-bold tracking-tight font-mono", color)}>{value}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mt-1">{label}</p>
               </div>
             ))}
           </div>
 
           {/* Filter tabs */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
             {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
               <button
                 key={v}
                 onClick={() => setFilter(v)}
-                className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${filter === v ? 'bg-violet-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white border border-white/[0.07]'}`}
+                className={cn(
+                  "rounded-lg px-4 py-1.5 text-[12px] font-bold transition-all duration-200 flex items-center gap-1.5",
+                  filter === v 
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10' 
+                    : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+                )}
               >
                 {label}
                 {v === 'upcoming' && upcoming.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-violet-500/20 px-1.5 text-[10px] text-violet-300">{upcoming.length}</span>
+                  <span className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold font-mono transition-all",
+                    filter === v ? "bg-white/20 text-white" : "bg-violet-500/10 text-violet-400"
+                  )}>{upcoming.length}</span>
                 )}
               </button>
             ))}
@@ -1698,7 +1833,7 @@ function SessionsTab({ enrolledBootcamps }) {
           {visible.length === 0 ? (
             <EmptyState icon={Search} title="No matches" description="Try adjusting the filter or search." />
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {visible.map(s => <SessionCard key={s.id} session={s} />)}
             </div>
           )}
