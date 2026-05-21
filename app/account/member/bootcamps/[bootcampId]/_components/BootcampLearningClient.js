@@ -53,6 +53,7 @@ import {
   getMemberHelpTickets,
   getMemberBootcampTasks,
   getMemberBootcampSessions,
+  submitTaskAction,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 
@@ -758,6 +759,77 @@ function PanelEmpty({ message }) {
   return <p className="py-10 text-center text-[13px] text-gray-500">{message}</p>;
 }
 
+const STATUS_STYLE = {
+  pending:               'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  completed:             'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  accepted:              'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  late:                  'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+  'redo action required':'text-orange-400 bg-orange-500/10 ring-orange-500/20',
+  'bonus deserved':      'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+};
+
+function TaskSubmitForm({ task, onSubmitted }) {
+  const [url, setUrl] = useState(task.mySubmission?.submission_url || '');
+  const [notes, setNotes] = useState(task.mySubmission?.notes || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const isRedo = task.mySubmission?.status === 'redo action required';
+  const canSubmit = !task.mySubmission || isRedo;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const fd = new FormData();
+    fd.set('task_id', task.id);
+    fd.set('submission_url', url);
+    fd.set('notes', notes);
+    const result = await submitTaskAction(fd);
+    setLoading(false);
+    if (result.error) { setError(result.error); return; }
+    onSubmitted(task.id, result.data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3">
+      <div>
+        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Submission Link</label>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://github.com/you/solution"
+          disabled={!canSubmit}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Notes</label>
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Briefly describe your approach or any questions..."
+          disabled={!canSubmit}
+          className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
+        />
+      </div>
+      {error && <p className="text-[11px] text-rose-400">{error}</p>}
+      {canSubmit && (
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40"
+        >
+          <Send className="h-3 w-3" />
+          {loading ? 'Submitting…' : isRedo ? 'Resubmit' : 'Submit'}
+        </button>
+      )}
+    </form>
+  );
+}
+
 function MemberTasksPanel({ bootcampId }) {
   const [tasks, setTasks] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -767,40 +839,92 @@ function MemberTasksPanel({ bootcampId }) {
     getMemberBootcampTasks(bootcampId).then(setTasks).catch(() => setTasks([]));
   }, [bootcampId]);
 
-  if (tasks === null) return <PanelLoader />;
+  const handleSubmitted = useCallback((taskId, submissionData) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, mySubmission: submissionData } : t));
+  }, []);
 
+  if (tasks === null) return <PanelLoader />;
   if (tasks.length === 0) return <PanelEmpty message="No tasks assigned yet." />;
 
   return (
     <div className="space-y-2">
-      {tasks.map((task) => (
-        <div key={task.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-          <button className="flex w-full items-center gap-3 p-4 text-left" onClick={() => setExpanded(expanded === task.id ? null : task.id)}>
-            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>{task.difficulty}</span>
-            <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
-            {task.deadline && (
-              <span className="shrink-0 text-[11px] text-gray-500">
-                {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      {tasks.map((task) => {
+        const sub = task.mySubmission;
+        const isExpanded = expanded === task.id;
+        const isPastDue = task.deadline && new Date(task.deadline) < new Date();
+
+        return (
+          <div key={task.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+            <button
+              className="flex w-full items-center gap-3 p-4 text-left"
+              onClick={() => setExpanded(isExpanded ? null : task.id)}
+            >
+              <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+                {task.difficulty}
               </span>
-            )}
-            {expanded === task.id ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
-          </button>
-          {expanded === task.id && (
-            <div className="border-t border-white/[0.06] px-4 pb-4 pt-3">
-              {task.description && <p className="mb-3 text-[13px] text-gray-400">{task.description}</p>}
-              {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {task.problem_links.map((link, i) => (
-                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
-                      <Download className="h-3 w-3" />Problem {i + 1}
-                    </a>
-                  ))}
-                </div>
+              <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
+              {task.points != null && (
+                <span className="shrink-0 text-[10px] font-bold text-amber-400">{task.points} pts</span>
               )}
-            </div>
-          )}
-        </div>
-      ))}
+              {task.deadline && (
+                <span className={`shrink-0 text-[11px] ${isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'}`}>
+                  {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+              {sub ? (
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ${STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+                  {sub.status}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-bold text-gray-500 ring-1 ring-white/10">
+                  not submitted
+                </span>
+              )}
+              {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
+            </button>
+
+            {isExpanded && (
+              <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+                {task.description && (
+                  <p className="text-[13px] text-gray-400 leading-relaxed">{task.description}</p>
+                )}
+                {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {task.problem_links.map((link, i) => (
+                      <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
+                        <Download className="h-3 w-3" />Problem {i + 1}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {/* Existing submission status */}
+                {sub && (
+                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
+                    {sub.submission_url && (
+                      <a href={sub.submission_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[12px] text-violet-400 hover:underline truncate">
+                        <Send className="h-3 w-3 shrink-0" />{sub.submission_url}
+                      </a>
+                    )}
+                    {sub.notes && <p className="text-[12px] text-gray-400 italic">"{sub.notes}"</p>}
+                    {sub.feedback && (
+                      <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Mentor Feedback</p>
+                        <p className="text-[12px] text-gray-300">{sub.feedback}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <TaskSubmitForm task={task} onSubmitted={handleSubmitted} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

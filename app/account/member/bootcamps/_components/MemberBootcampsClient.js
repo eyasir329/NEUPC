@@ -8,9 +8,9 @@ import {
   GraduationCap, Zap, CheckCircle2, X, House, Play, Trophy,
   Flame, TrendingUp, Sparkles, PlayCircle, CheckCircle, Calendar,
   ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
-  Lock, HourglassIcon, Archive,
+  Lock, HourglassIcon, Archive, ClipboardList, Send,
 } from 'lucide-react';
-import { enrollUser, getMemberBootcampSessions } from '@/app/_lib/bootcamp-actions';
+import { enrollUser, getMemberBootcampSessions, getMemberBootcampTasks, submitTaskAction } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
@@ -21,6 +21,7 @@ function cn(...c) { return c.filter(Boolean).join(' '); }
 const TABS = [
   { id: 'overview', label: 'Overview', icon: House },
   { id: 'mylearning', label: 'My Learning', icon: GraduationCap },
+  { id: 'tasks', label: 'Tasks', icon: ClipboardList },
   { id: 'sessions', label: 'Sessions', icon: Video },
   { id: 'catalog', label: 'Catalog', icon: BookOpen },
 ];
@@ -1189,6 +1190,242 @@ function CatalogTab({ availableBootcamps, filteredAvailable, search, setSearch, 
   );
 }
 
+// ─── Tasks Tab ────────────────────────────────────────────────────────────────
+
+const DIFF_COLOR = {
+  easy:   'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  medium: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  hard:   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+};
+
+const SUB_STATUS_STYLE = {
+  pending:                'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  completed:              'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  accepted:               'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  late:                   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+  'redo action required': 'text-orange-400 bg-orange-500/10 ring-orange-500/20',
+  'bonus deserved':       'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+};
+
+function TaskCard({ task, onSubmitted }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState(task.mySubmission?.submission_url || '');
+  const [notes, setNotes] = useState(task.mySubmission?.notes || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const sub = task.mySubmission;
+  const isRedo = sub?.status === 'redo action required';
+  const canSubmit = !sub || isRedo;
+  const isPastDue = task.deadline && new Date(task.deadline) < new Date();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const fd = new FormData();
+    fd.set('task_id', task.id);
+    fd.set('submission_url', url);
+    fd.set('notes', notes);
+    const result = await submitTaskAction(fd);
+    setLoading(false);
+    if (result.error) { setError(result.error); return; }
+    onSubmitted(task.id, result.data);
+  };
+
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <button
+        className="flex w-full items-center gap-3 p-4 text-left"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+          {task.difficulty}
+        </span>
+        <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
+        <span className="shrink-0 text-[10px] font-bold text-gray-500">{task.bootcampTitle}</span>
+        {task.points != null && (
+          <span className="shrink-0 text-[10px] font-bold text-amber-400">{task.points} pts</span>
+        )}
+        {task.deadline && (
+          <span className={`shrink-0 text-[11px] ${isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'}`}>
+            {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        )}
+        {sub ? (
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ${SUB_STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+            {sub.status}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-bold text-gray-500 ring-1 ring-white/10">
+            not submitted
+          </span>
+        )}
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+          {task.description && (
+            <p className="text-[13px] text-gray-400 leading-relaxed">{task.description}</p>
+          )}
+          {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {task.problem_links.map((link, i) => (
+                <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
+                  <FileText className="h-3 w-3" />Problem {i + 1}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {sub && (
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
+              {sub.submission_url && (
+                <a href={sub.submission_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[12px] text-violet-400 hover:underline truncate">
+                  <Send className="h-3 w-3 shrink-0" />{sub.submission_url}
+                </a>
+              )}
+              {sub.notes && <p className="text-[12px] text-gray-400 italic">"{sub.notes}"</p>}
+              {sub.feedback && (
+                <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Mentor Feedback</p>
+                  <p className="text-[12px] text-gray-300">{sub.feedback}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Submission Link</label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://github.com/you/solution"
+                disabled={!canSubmit}
+                className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Notes</label>
+              <textarea
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Briefly describe your approach..."
+                disabled={!canSubmit}
+                className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white placeholder-gray-600 focus:border-violet-500/60 focus:outline-none disabled:opacity-40"
+              />
+            </div>
+            {error && <p className="text-[11px] text-rose-400">{error}</p>}
+            {canSubmit && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40"
+              >
+                <Send className="h-3 w-3" />
+                {loading ? 'Submitting…' : isRedo ? 'Resubmit' : 'Submit'}
+              </button>
+            )}
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TasksTab({ enrolledBootcamps }) {
+  const [allTasks, setAllTasks] = useState(null);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    if (!enrolledBootcamps.length) { setAllTasks([]); return; }
+    Promise.all(
+      enrolledBootcamps.map(({ bootcamp }) =>
+        getMemberBootcampTasks(bootcamp.id).then((tasks) =>
+          tasks.map((t) => ({ ...t, bootcampId: bootcamp.id, bootcampTitle: bootcamp.title }))
+        ).catch(() => [])
+      )
+    ).then((results) => {
+      const flat = results.flat();
+      flat.sort((a, b) => new Date(a.deadline || 0) - new Date(b.deadline || 0));
+      setAllTasks(flat);
+    });
+  }, [enrolledBootcamps]);
+
+  const handleSubmitted = (taskId, submissionData) => {
+    setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, mySubmission: submissionData } : t));
+  };
+
+  const filtered = useMemo(() => {
+    if (!allTasks) return [];
+    if (filter === 'pending') return allTasks.filter(t => !t.mySubmission);
+    if (filter === 'submitted') return allTasks.filter(t => t.mySubmission);
+    return allTasks;
+  }, [allTasks, filter]);
+
+  if (allTasks === null) return (
+    <div className="flex items-center justify-center py-16 text-gray-500">
+      <Loader2 className="mr-2 h-5 w-5 animate-spin" /><span className="text-[13px]">Loading tasks…</span>
+    </div>
+  );
+
+  if (enrolledBootcamps.length === 0) return (
+    <div className="py-16 text-center text-[13px] text-gray-500">Enroll in a bootcamp to see tasks.</div>
+  );
+
+  const pendingCount = allTasks.filter(t => !t.mySubmission).length;
+  const submittedCount = allTasks.filter(t => t.mySubmission).length;
+
+  return (
+    <div className="space-y-5">
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total Tasks', value: allTasks.length, color: 'text-white' },
+          { label: 'Not Submitted', value: pendingCount, color: 'text-rose-400' },
+          { label: 'Submitted', value: submittedCount, color: 'text-emerald-400' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 text-center">
+            <div className={`text-2xl font-bold ${color}`}>{value}</div>
+            <div className="mt-1 text-[11px] text-gray-500">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter */}
+      <div className="flex gap-2">
+        {[['all', 'All'], ['pending', 'Not Submitted'], ['submitted', 'Submitted']].map(([val, label]) => (
+          <button
+            key={val}
+            onClick={() => setFilter(val)}
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${filter === val ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white border border-white/10'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Task list */}
+      {filtered.length === 0 ? (
+        <p className="py-10 text-center text-[13px] text-gray-500">No tasks match this filter.</p>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(task => (
+            <TaskCard key={task.id} task={task} onSubmitted={handleSubmitted} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Sessions Tab ─────────────────────────────────────────────────────────────
 
 const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
@@ -1492,6 +1729,8 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
             onTab={handleTabChange}
           />
         );
+      case 'tasks':
+        return <TasksTab enrolledBootcamps={enrolledBootcamps} />;
       case 'sessions':
         return <SessionsTab enrolledBootcamps={enrolledBootcamps} />;
       case 'catalog':

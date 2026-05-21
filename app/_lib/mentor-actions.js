@@ -19,7 +19,7 @@ async function requireMentor() {
   const roles = await getUserRoles(session.user.email);
   if (!roles.includes('mentor')) throw new Error('Not authorized as mentor');
   const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_online)
+  if (user?.account_status !== 'active')
     throw new Error('Account not active');
   return user;
 }
@@ -41,11 +41,13 @@ export async function createWeeklyTaskAction(formData) {
           .filter(Boolean)
       : [];
     const target_audience = formData.get('target_audience')?.trim() || null;
+    const task_type = formData.get('task_type')?.trim() || 'Exercise';
+    const points = parseInt(formData.get('points') || '10', 10);
 
     if (!title || !deadline)
       return { error: 'Title and deadline are required' };
 
-    const { data, error } = await supabase
+    const { data: inserted, error } = await supabase
       .from('weekly_tasks')
       .insert([
         {
@@ -56,12 +58,23 @@ export async function createWeeklyTaskAction(formData) {
           assigned_by: mentor.id,
           problem_links,
           target_audience,
+          bootcamp_id: target_audience || null,
+          task_type,
+          points,
         },
       ])
-      .select()
+      .select('id')
       .single();
 
     if (error) throw new Error(error.message);
+
+    const { data, error: fetchError } = await supabase
+      .from('weekly_tasks')
+      .select('*, users!weekly_tasks_assigned_by_fkey(id, full_name)')
+      .eq('id', inserted.id)
+      .single();
+
+    if (fetchError) throw new Error(fetchError.message);
     revalidatePath('/account/mentor/tasks');
     revalidatePath('/account/member/bootcamps');
     return { success: 'Task created successfully', data };
@@ -78,6 +91,8 @@ export async function updateWeeklyTaskAction(formData) {
     const description = formData.get('description')?.trim();
     const difficulty = formData.get('difficulty') || 'medium';
     const deadline = formData.get('deadline');
+    const task_type = formData.get('task_type')?.trim() || 'Exercise';
+    const points = parseInt(formData.get('points') || '10', 10);
     const problem_links = formData.get('problem_links')
       ? formData
           .get('problem_links')
@@ -105,6 +120,8 @@ export async function updateWeeklyTaskAction(formData) {
         difficulty,
         deadline: new Date(deadline).toISOString(),
         problem_links,
+        task_type,
+        points,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -143,11 +160,10 @@ export async function deleteWeeklyTaskAction(formData) {
 
 export async function reviewTaskSubmissionAction(formData) {
   try {
-    await requireMentor();
+    const reviewer = await requireMentor();
     const submissionId = formData.get('submissionId');
     const status = formData.get('status');
     const feedback = formData.get('feedback')?.trim();
-    const reviewer = await requireMentor();
 
     if (!submissionId || !status) return { error: 'Missing required fields' };
 

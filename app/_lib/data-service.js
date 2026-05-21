@@ -3800,7 +3800,7 @@ export async function deleteMentorshipSession(id) {
 
 // Get all weekly tasks.
 export async function getAllWeeklyTasks() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('weekly_tasks')
     .select('*, users!weekly_tasks_assigned_by_fkey(id, full_name)')
     .order('deadline', { ascending: false });
@@ -3877,6 +3877,27 @@ export async function getTaskSubmissions(taskId) {
     `
     )
     .eq('task_id', taskId)
+    .order('submitted_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// Get all submissions across all weekly tasks.
+export async function getAllTaskSubmissions() {
+  const { data, error } = await supabaseAdmin
+    .from('task_submissions')
+    .select(
+      `
+      *,
+      users!task_submissions_user_id_fkey(
+        id, full_name, email, avatar_url,
+        member_profiles(student_id, academic_session)
+      ),
+      weekly_tasks(
+        id, title, difficulty, deadline, target_audience, description
+      )
+    `
+    )
     .order('submitted_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data;

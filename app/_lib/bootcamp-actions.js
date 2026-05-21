@@ -2957,11 +2957,76 @@ export async function getMemberBootcampTasks(bootcampId) {
 
   const { data, error } = await supabaseAdmin
     .from('weekly_tasks')
-    .select('id, title, description, difficulty, deadline, problem_links, created_at')
+    .select('id, title, description, difficulty, deadline, problem_links, task_type, points, created_at')
     .eq('bootcamp_id', bootcampId)
     .order('created_at', { ascending: false });
   if (error) return [];
-  return data || [];
+
+  const tasks = data || [];
+  if (tasks.length === 0) return [];
+
+  // Attach this member's submission (if any) to each task
+  const taskIds = tasks.map((t) => t.id);
+  const { data: subs } = await supabaseAdmin
+    .from('task_submissions')
+    .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+    .eq('user_id', userId)
+    .in('task_id', taskIds);
+
+  const subMap = Object.fromEntries((subs || []).map((s) => [s.task_id, s]));
+  return tasks.map((t) => ({ ...t, mySubmission: subMap[t.id] || null }));
+}
+
+/**
+ * Member: submit (or resubmit) a task.
+ */
+export async function submitTaskAction(formData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const taskId = formData.get('task_id');
+    const submissionUrl = formData.get('submission_url')?.trim() || null;
+    const notes = formData.get('notes')?.trim() || null;
+
+    if (!taskId) return { error: 'Missing task ID' };
+    if (!submissionUrl && !notes) return { error: 'Provide a submission link or notes' };
+
+    // Check if already submitted
+    const { data: existing } = await supabaseAdmin
+      .from('task_submissions')
+      .select('id, status')
+      .eq('task_id', taskId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      // Allow resubmit only if redo is required
+      if (existing.status !== 'redo action required') {
+        return { error: 'Already submitted. Resubmission is only allowed when mentor requests a redo.' };
+      }
+      const { data, error } = await supabaseAdmin
+        .from('task_submissions')
+        .update({ submission_url: submissionUrl, notes, status: 'pending', submitted_at: new Date().toISOString(), feedback: null })
+        .eq('id', existing.id)
+        .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+        .single();
+      if (error) return { error: error.message };
+      revalidatePath('/account/member/bootcamps');
+      return { success: 'Resubmission sent!', data };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('task_submissions')
+      .insert({ task_id: taskId, user_id: userId, submission_url: submissionUrl, notes, status: 'pending' })
+      .select('id, task_id, submission_url, notes, status, feedback, submitted_at')
+      .single();
+    if (error) return { error: error.message };
+    revalidatePath('/account/member/bootcamps');
+    return { success: 'Task submitted!', data };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
 /**
