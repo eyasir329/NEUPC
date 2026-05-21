@@ -1,6 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const MultiBlockEditor = dynamic(
+  () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/[0.08] bg-white/[0.02]" /> }
+);
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Video, Plus, Search, X, Calendar, Clock, CheckCircle2, XCircle, Check,
@@ -21,6 +27,17 @@ import {
   PageShell, PageHeader, GlassCard, StatCard, Avatar, Pill, ActionButton, EmptyState, TabBar,
 } from '@/app/account/mentor/_components/_ui';
 import toast from 'react-hot-toast';
+
+function descriptionPreview(desc) {
+  if (!desc) return '';
+  try {
+    const blocks = JSON.parse(desc);
+    if (Array.isArray(blocks)) {
+      return blocks.map(b => b.content || '').join(' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  } catch {}
+  return desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const formatDatetime = (d) =>
@@ -189,7 +206,9 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
   const [groupSearch, setGroupSearch] = useState('');
   const [when, setWhen] = useState('');
   const [duration, setDuration] = useState(60);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(
+    () => JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const activeBootcamp = bootcamps.find((b) => b.id === bootcampId);
@@ -292,7 +311,7 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
     ]);
 
     setTopic('');
-    setDescription('');
+    setDescription(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
     setSingleId('');
     setGroupIds([]);
     setWhen('');
@@ -550,13 +569,12 @@ function ScheduledRoomsView({ bootcamps, mentorships, scheduled, setScheduled, o
           </Step>
 
           <Step n={5} label="Session content & details">
-            <textarea
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Outline the agenda, objectives, prerequisites, resource links, or problem set URLs for this session…"
-              className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/40 leading-relaxed"
-            />
+            <div className="rounded-xl overflow-hidden">
+              <MultiBlockEditor
+                value={description}
+                onChange={setDescription}
+              />
+            </div>
           </Step>
 
           <button
@@ -671,9 +689,9 @@ function ScheduledRow({ session: s, onCancel, onEnd, onRecordingUploaded }) {
             {s.scheduled_at ? formatDatetime(s.scheduled_at) : 'TBD'}
           </p>
 
-          {s.description && (
+          {s.description && descriptionPreview(s.description) && (
             <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2 text-[11px] text-gray-400 leading-relaxed">
-              {s.description}
+              {descriptionPreview(s.description)}
             </div>
           )}
 

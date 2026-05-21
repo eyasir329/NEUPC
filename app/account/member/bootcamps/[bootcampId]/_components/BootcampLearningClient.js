@@ -1,5 +1,7 @@
 'use client';
 
+import { marked } from 'marked';
+
 import {
   useState,
   useMemo,
@@ -56,6 +58,65 @@ import {
   submitTaskAction,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
+
+// Lightweight markdown renderer for task/session descriptions
+const MD_DESC_STYLES = `
+.md-desc{display:grid;grid-template-columns:1fr;gap:.5rem;line-height:1.6;color:#908fa0;font-size:.8125rem;}
+.md-desc .md-h{font-weight:700;color:#d4e4fa;margin-top:.5rem;margin-bottom:-.25rem;}
+.md-desc .md-p{line-height:1.65;word-break:break-word;}
+.md-desc .md-strong{color:#d4e4fa;font-weight:600;}
+.md-desc .md-em{font-style:italic;}
+.md-desc .md-a{color:#8083ff;text-decoration:none;}.md-desc .md-a:hover{text-decoration:underline;}
+.md-desc .md-ul,.md-desc .md-ol{padding-left:1.25rem;display:flex;flex-direction:column;gap:.15rem;}
+.md-desc .md-ul .md-li{list-style-type:disc;}.md-desc .md-ol .md-li{list-style-type:decimal;}
+.md-desc .md-li{padding-left:.2rem;}
+.md-desc .md-inline-code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .35em;border-radius:.3rem;font-size:.8em;font-family:monospace;}
+.md-desc .md-bq{border-left:3px solid rgba(255,255,255,.12);padding:.4rem .75rem;background:rgba(255,255,255,.02);border-radius:0 .4rem .4rem 0;}
+`;
+
+function buildDescRenderer() {
+  const r = new marked.Renderer();
+  r.heading = function ({ tokens, depth }) {
+    return `<h${depth} class="md-h md-h${depth}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+  };
+  r.paragraph = function ({ tokens }) {
+    return `<p class="md-p">${this.parser.parseInline(tokens)}</p>\n`;
+  };
+  r.blockquote = function ({ tokens }) {
+    return `<blockquote class="md-bq">${this.parser.parse(tokens)}</blockquote>\n`;
+  };
+  r.list = function (token) {
+    const tag = token.ordered ? 'ol' : 'ul';
+    let body = '';
+    for (const item of token.items) {
+      const inner = this.parser.parse(item.tokens).replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
+      body += `<li class="md-li">${inner}</li>\n`;
+    }
+    return `<${tag} class="md-${tag}">${body}</${tag}>\n`;
+  };
+  r.strong = function ({ tokens }) { return `<strong class="md-strong">${this.parser.parseInline(tokens)}</strong>`; };
+  r.em = function ({ tokens }) { return `<em class="md-em">${this.parser.parseInline(tokens)}</em>`; };
+  r.codespan = ({ text }) => `<code class="md-inline-code">${text}</code>`;
+  r.link = function ({ href, title, tokens }) {
+    return `<a href="${href}" class="md-a"${title ? ` title="${title}"` : ''} target="_blank" rel="noopener">${this.parser.parseInline(tokens)}</a>`;
+  };
+  r.code = ({ text }) => `<pre class="md-inline-code" style="display:block;white-space:pre-wrap;padding:.5rem .75rem;border-radius:.4rem;margin:.25rem 0;">${text}</pre>`;
+  return r;
+}
+
+const DESC_RENDERER = buildDescRenderer();
+
+function MarkdownDesc({ text, className = '' }) {
+  if (!text) return null;
+  let html = '';
+  try { html = marked.parse(text, { gfm: true, breaks: true, renderer: DESC_RENDERER }); } catch { html = `<p>${text}</p>`; }
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: MD_DESC_STYLES }} />
+      <div className={`md-desc ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
+    </>
+  );
+}
 
 // Heavy chunk: lazy-load only the markdown/code-highlight renderer
 const LessonContentRenderer = lazy(
@@ -886,7 +947,9 @@ function MemberTasksPanel({ bootcampId }) {
             {isExpanded && (
               <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
                 {task.description && (
-                  <p className="text-[13px] text-gray-400 leading-relaxed">{task.description}</p>
+                  <Suspense fallback={<ChunkFallback />}>
+                    <LessonContentRenderer content={task.description} lessonId={task.id} />
+                  </Suspense>
                 )}
                 {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -976,7 +1039,9 @@ function MemberSessionRow({ s }) {
       {open && (
         <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
           {s.description && (
-            <p className="text-[12px] text-gray-400 leading-relaxed">{s.description}</p>
+            <Suspense fallback={<ChunkFallback />}>
+              <LessonContentRenderer content={s.description} lessonId={s.id} />
+            </Suspense>
           )}
           {s.notes && (
             <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
@@ -1150,7 +1215,7 @@ const OVERVIEW_TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'tasks', label: 'Tasks' },
   { value: 'sessions', label: 'Sessions' },
-  { value: 'helpdesk', label: 'Help Desk' },
+  { value: 'help', label: 'Help Desk' },
 ];
 
 const OverviewPanel = memo(function OverviewPanel({
@@ -1214,35 +1279,45 @@ const OverviewPanel = memo(function OverviewPanel({
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="mt-6 flex gap-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-1">
+      {/* Tab nav */}
+      <div className="mt-6 flex gap-1 border-b border-white/[0.06]">
         {OVERVIEW_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`flex-1 rounded-lg py-2 text-[12px] font-semibold transition-colors ${activeTab === tab.value ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            className={`px-3 py-2 text-[12px] font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === tab.value
+                ? 'border-violet-500 text-white'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
+      {/* Tab: Tasks */}
       {activeTab === 'tasks' && (
         <div className="mt-6">
           <MemberTasksPanel bootcampId={bootcamp?.id} />
         </div>
       )}
+
+      {/* Tab: Sessions */}
       {activeTab === 'sessions' && (
         <div className="mt-6">
           <MemberSessionsPanel bootcampId={bootcamp?.id} />
         </div>
       )}
-      {activeTab === 'helpdesk' && (
+
+      {/* Tab: Help Desk */}
+      {activeTab === 'help' && (
         <div className="mt-6">
           <MemberHelpDeskPanel bootcampId={bootcamp?.id} />
         </div>
       )}
 
+      {/* Overview content */}
       {activeTab === 'overview' && <>
 
       {/* Continue card */}
