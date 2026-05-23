@@ -1423,11 +1423,59 @@ function TaskCard({ task, onSubmitted }) {
                   <AttachmentList files={sub.attachments} />
                 </div>
               )}
+
+              {/* Points earned — shown whenever the mentor has graded the submission */}
+              {sub.points_earned != null && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 shadow-sm shadow-amber-500/5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 ring-1 ring-amber-500/25">
+                    <Trophy className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Points Obtained</p>
+                    <p className="text-xl font-bold text-amber-300 tabular-nums leading-tight">
+                      {sub.points_earned}
+                      {task.points != null && (
+                        <span className="text-[13px] font-semibold text-amber-500/60 ml-1">/ {task.points} pts</span>
+                      )}
+                    </p>
+                  </div>
+                  {task.points != null && sub.points_earned != null && (
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Score</p>
+                      <p className="text-[13px] font-bold text-white tabular-nums">
+                        {Math.round((sub.points_earned / task.points) * 100)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {sub.feedback && (
-                <div className="mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 shadow-sm shadow-emerald-500/5">
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10.5px] mb-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Mentor Feedback & Assessment
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 shadow-sm shadow-emerald-500/5 space-y-3">
+                  {/* Header with mentor info */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10.5px]">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Mentor Feedback &amp; Assessment
+                    </div>
+                    {sub.reviewer && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {sub.reviewer.avatar_url ? (
+                          <img
+                            src={sub.reviewer.avatar_url}
+                            alt={sub.reviewer.full_name || 'Mentor'}
+                            className="h-6 w-6 rounded-full object-cover ring-1 ring-emerald-500/30"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-400">
+                            {(sub.reviewer.full_name || 'M')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-[11px] font-semibold text-gray-400 max-w-[120px] truncate">
+                          {sub.reviewer.full_name || 'Mentor'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{sub.feedback}</p>
                 </div>
@@ -1486,7 +1534,8 @@ function TaskCard({ task, onSubmitted }) {
 
 function TasksTab({ enrolledBootcamps }) {
   const [allTasks, setAllTasks] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [bootcampFilter, setBootcampFilter] = useState('all');
 
   useEffect(() => {
     if (!enrolledBootcamps.length) { setAllTasks([]); return; }
@@ -1509,10 +1558,21 @@ function TasksTab({ enrolledBootcamps }) {
 
   const filtered = useMemo(() => {
     if (!allTasks) return [];
-    if (filter === 'pending') return allTasks.filter(t => !t.mySubmission);
-    if (filter === 'submitted') return allTasks.filter(t => t.mySubmission);
-    return allTasks;
-  }, [allTasks, filter]);
+    return allTasks.filter(t => {
+      const matchStatus = statusFilter === 'all' ? true
+        : statusFilter === 'pending' ? !t.mySubmission
+        : !!t.mySubmission;
+      const matchBootcamp = bootcampFilter === 'all' || t.bootcampId === bootcampFilter;
+      return matchStatus && matchBootcamp;
+    });
+  }, [allTasks, statusFilter, bootcampFilter]);
+
+  const filteredTasksForStats = useMemo(() => {
+    if (!allTasks) return [];
+    return bootcampFilter === 'all'
+      ? allTasks
+      : allTasks.filter(t => t.bootcampId === bootcampFilter);
+  }, [allTasks, bootcampFilter]);
 
   if (allTasks === null) return (
     <div className="flex flex-col items-center justify-center py-20 text-gray-500">
@@ -1525,8 +1585,8 @@ function TasksTab({ enrolledBootcamps }) {
     <div className="py-16 text-center text-[13px] text-gray-500">Enroll in a bootcamp to see tasks.</div>
   );
 
-  const pendingCount = allTasks.filter(t => !t.mySubmission).length;
-  const submittedCount = allTasks.filter(t => t.mySubmission).length;
+  const pendingCount = filteredTasksForStats.filter(t => !t.mySubmission).length;
+  const submittedCount = filteredTasksForStats.filter(t => t.mySubmission).length;
 
   return (
     <div className="space-y-6">
@@ -1535,7 +1595,7 @@ function TasksTab({ enrolledBootcamps }) {
         {[
           { 
             label: 'Total Tasks', 
-            value: allTasks.length, 
+            value: filteredTasksForStats.length, 
             color: 'text-white', 
             bg: 'bg-white/[0.02] border-white/[0.05]',
             glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
@@ -1562,15 +1622,64 @@ function TasksTab({ enrolledBootcamps }) {
         ))}
       </div>
 
-      {/* Filter */}
+      {/* Points analytics */}
+      {(() => {
+        const byBootcamp = {};
+        for (const { bootcamp } of enrolledBootcamps) {
+          if (bootcampFilter !== 'all' && bootcamp.id !== bootcampFilter) continue;
+          byBootcamp[bootcamp.id] = { name: bootcamp.title.split(':')[0].trim(), earned: 0, max: 0 };
+        }
+        for (const t of filteredTasksForStats) {
+          if (!byBootcamp[t.bootcampId]) continue;
+          byBootcamp[t.bootcampId].max += t.points ?? 0;
+          if (t.mySubmission?.points_earned != null) byBootcamp[t.bootcampId].earned += t.mySubmission.points_earned;
+        }
+        const chartData = Object.values(byBootcamp).filter(d => d.max > 0 || d.earned > 0);
+        const totalEarned = filteredTasksForStats.reduce((s, t) => s + (t.mySubmission?.points_earned ?? 0), 0);
+        const totalMax = filteredTasksForStats.reduce((s, t) => s + (t.points ?? 0), 0);
+        return <PointsStatsPanel chartData={chartData} totalEarned={totalEarned} totalMax={totalMax} label="Task Points" />;
+      })()}
+
+      {/* Bootcamp filter pills */}
+      {enrolledBootcamps.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setBootcampFilter('all')}
+            className={cn(
+              'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
+              bootcampFilter === 'all'
+                ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+            )}
+          >
+            All Bootcamps
+          </button>
+          {enrolledBootcamps.map(({ bootcamp }) => (
+            <button
+              key={bootcamp.id}
+              onClick={() => setBootcampFilter(bootcamp.id)}
+              className={cn(
+                'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
+                bootcampFilter === bootcamp.id
+                  ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                  : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+              )}
+            >
+              {bootcamp.title.split(':')[0].trim()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Status filter */}
       <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
         {[['all', 'All'], ['pending', 'Not Submitted'], ['submitted', 'Submitted']].map(([val, label]) => (
           <button
             key={val}
-            onClick={() => setFilter(val)}
+            onClick={() => setStatusFilter(val)}
             className={cn(
               "rounded-lg px-4 py-1.5 text-[12px] font-bold transition-all duration-200",
-              filter === val 
+              statusFilter === val 
                 ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10' 
                 : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
             )}
@@ -1594,17 +1703,240 @@ function TasksTab({ enrolledBootcamps }) {
   );
 }
 
+// ─── Points Stats Panel (shared by Tasks + Sessions) ─────────────────────────
+
+function RadialProgress({ pct, size = 80, stroke = 7, color = '#8b5cf6' }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = circ * Math.min(pct / 100, 1);
+  return (
+    <svg width={size} height={size} className="-rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={color} strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`}
+        style={{ transition: 'stroke-dasharray 0.6s ease' }}
+      />
+    </svg>
+  );
+}
+
+function PointsStatsPanel({ chartData, totalEarned, totalMax, label = 'Points' }) {
+  const score = totalMax > 0 ? Math.round((totalEarned / totalMax) * 100) : null;
+  const hasAnyPoints = chartData.some(d => d.earned > 0 || d.max > 0);
+  if (!hasAnyPoints) return null;
+
+  const CustomTooltip = ({ active, payload, label: l }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#0a0e15] border border-white/[0.08] p-3 rounded-xl shadow-xl min-w-44">
+        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 font-bold">{l}</p>
+        {payload.map(p => (
+          <div key={p.name} className="flex items-center justify-between gap-4">
+            <span className="text-xs text-gray-400">{p.name}</span>
+            <span className="text-xs font-bold tabular-nums" style={{ color: p.fill }}>{p.value} pts</span>
+          </div>
+        ))}
+        {payload.length === 2 && payload[1].value > 0 && (
+          <div className="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between">
+            <span className="text-[10px] text-gray-500">Score</span>
+            <span className="text-[11px] font-bold text-white">{Math.round((payload[0].value / payload[1].value) * 100)}%</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-5">
+      <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
+        <Trophy className="h-3.5 w-3.5 text-amber-400" />
+        {label} Analytics
+      </h3>
+
+      {/* Summary row */}
+      <div className="flex items-center gap-5 flex-wrap">
+        <div className="relative shrink-0">
+          <RadialProgress
+            pct={score ?? 0}
+            color={score !== null && score >= 70 ? '#10b981' : score !== null && score >= 40 ? '#f59e0b' : '#8b5cf6'}
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[13px] font-bold text-white tabular-nums">
+              {score !== null ? `${score}%` : '—'}
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-4 flex-wrap">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Earned</p>
+            <p className="text-2xl font-bold text-amber-300 tabular-nums">{totalEarned}</p>
+          </div>
+          {totalMax > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Max Possible</p>
+              <p className="text-2xl font-bold text-gray-400 tabular-nums">{totalMax}</p>
+            </div>
+          )}
+          {score !== null && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Score</p>
+              <p className={cn('text-2xl font-bold tabular-nums',
+                score >= 70 ? 'text-emerald-400' : score >= 40 ? 'text-amber-400' : 'text-rose-400'
+              )}>{score}%</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Per-bootcamp bar chart */}
+      {chartData.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Per Bootcamp</p>
+          <div className="w-full" style={{ height: Math.max(120, chartData.length * 48) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
+                barSize={12}
+                barGap={3}
+              >
+                <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#1e2535" opacity={0.6} />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} />
+                <YAxis
+                  type="category" dataKey="name" axisLine={false} tickLine={false}
+                  tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }}
+                  width={90}
+                  tickFormatter={v => v.length > 14 ? v.slice(0, 13) + '…' : v}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139,92,246,0.04)' }} />
+                <Bar dataKey="earned" name="Earned" radius={[0, 4, 4, 0]}>
+                  {chartData.map((_, i) => <Cell key={i} fill="#f59e0b" />)}
+                </Bar>
+                {chartData.some(d => d.max > 0) && (
+                  <Bar dataKey="max" name="Max" radius={[0, 4, 4, 0]}>
+                    {chartData.map((_, i) => <Cell key={i} fill="rgba(139,92,246,0.25)" />)}
+                  </Bar>
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Sessions Tab ─────────────────────────────────────────────────────────────
 
 const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
 
-function SessionCard({ session: s }) {
+function useCountdown(targetDate, enabled) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!enabled || !targetDate) return;
+    const calc = () => {
+      const diff = new Date(targetDate) - new Date();
+      if (diff <= 0) { setTimeLeft({ d: 0, h: 0, m: 0, s: 0, done: true }); return; }
+      setTimeLeft({
+        d: Math.floor(diff / 86400000),
+        h: Math.floor((diff % 86400000) / 3600000),
+        m: Math.floor((diff % 3600000) / 60000),
+        s: Math.floor((diff % 60000) / 1000),
+        done: false,
+      });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [targetDate, enabled]);
+
+  return timeLeft;
+}
+
+function CountdownBlock({ timeLeft, compact = false }) {
+  if (!timeLeft) return null;
+  if (timeLeft.done) return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30 px-3 py-1 text-[11px] font-bold text-emerald-300 animate-pulse">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+      Starting now!
+    </span>
+  );
+
+  const imminent = timeLeft.d === 0 && timeLeft.h === 0 && timeLeft.m < 5;
+  const units = timeLeft.d > 0
+    ? [{ v: timeLeft.d, l: 'd' }, { v: timeLeft.h, l: 'h' }, { v: timeLeft.m, l: 'm' }]
+    : [{ v: timeLeft.h, l: 'h' }, { v: timeLeft.m, l: 'm' }, { v: timeLeft.s, l: 's' }];
+
+  if (compact) {
+    return (
+      <span className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold font-mono ring-1 transition-all',
+        imminent
+          ? 'bg-amber-500/15 ring-amber-500/30 text-amber-300'
+          : 'bg-violet-500/10 ring-violet-500/20 text-violet-300'
+      )}>
+        <HourglassIcon className="h-3 w-3 shrink-0" />
+        {units.map(({ v, l }) => `${String(v).padStart(2, '0')}${l}`).join(' ')}
+      </span>
+    );
+  }
+
+  return (
+    <div className={cn(
+      'rounded-2xl border p-4 flex flex-col gap-2',
+      imminent
+        ? 'border-amber-500/25 bg-amber-500/[0.05]'
+        : 'border-violet-500/20 bg-violet-500/[0.04]'
+    )}>
+      <p className={cn(
+        'text-[10px] font-bold uppercase tracking-widest',
+        imminent ? 'text-amber-400' : 'text-violet-400'
+      )}>
+        {imminent ? '⚡ Starting very soon' : '⏳ Starts in'}
+      </p>
+      <div className="flex items-end gap-3">
+        {units.map(({ v, l }) => (
+          <div key={l} className="flex flex-col items-center">
+            <span className={cn(
+              'text-3xl font-bold tabular-nums leading-none tracking-tight',
+              imminent ? 'text-amber-200' : 'text-white'
+            )}>
+              {String(v).padStart(2, '0')}
+            </span>
+            <span className={cn(
+              'text-[10px] font-bold uppercase tracking-widest mt-1',
+              imminent ? 'text-amber-500/70' : 'text-violet-400/70'
+            )}>
+              {l === 'd' ? 'days' : l === 'h' ? 'hrs' : l === 'm' ? 'min' : 'sec'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SessionCard({ session: s, userId }) {
   const [open, setOpen] = useState(false);
   const dt = new Date(s.scheduled_at || s.session_date);
   const isUpcoming = s.status === 'scheduled' && dt >= new Date();
   const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   const mentorName = s.mentor?.full_name || '—';
+  const timeLeft = useCountdown(s.scheduled_at || s.session_date, isUpcoming);
+
+  // Find this user's attendance record for completed sessions
+  const myAttendance = useMemo(() => {
+    if (!userId || !Array.isArray(s.attendance_data)) return null;
+    return s.attendance_data.find(a => a.user_id === userId) || null;
+  }, [userId, s.attendance_data]);
+  const myPoints = myAttendance?.points ?? null;
+  const attended = myAttendance?.attended ?? s.attended;
 
   return (
     <div className={cn(
@@ -1643,7 +1975,10 @@ function SessionCard({ session: s }) {
             </span>
           )}
           {isUpcoming ? (
-            <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+              {timeLeft && <CountdownBlock timeLeft={timeLeft} compact />}
+            </div>
           ) : s.attended === true ? (
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
           ) : s.attended === false ? (
@@ -1660,6 +1995,38 @@ function SessionCard({ session: s }) {
 
       {open && (
         <div className="border-t border-white/[0.06] bg-white/[0.01]/10 px-6 pb-6 pt-4 space-y-4">
+          {/* Countdown timer for upcoming sessions */}
+          {isUpcoming && timeLeft && (
+            <CountdownBlock timeLeft={timeLeft} />
+          )}
+
+          {/* Points obtained for completed sessions */}
+          {!isUpcoming && myAttendance && (
+            <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3.5 shadow-sm shadow-amber-500/5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
+                <Trophy className="h-4.5 w-4.5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">Points Obtained</p>
+                <p className="text-2xl font-bold text-amber-300 tabular-nums leading-tight">
+                  {myPoints != null ? myPoints : '—'}
+                  <span className="text-[13px] font-semibold text-amber-500/50 ml-1">pts</span>
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Attendance</p>
+                {attended ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/25 px-2.5 py-1 text-[10.5px] font-bold text-emerald-400">
+                    <CheckCircle className="h-3 w-3" /> Attended
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 ring-1 ring-rose-500/25 px-2.5 py-1 text-[10.5px] font-bold text-rose-400">
+                    <X className="h-3 w-3" /> Absent
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           {s.description && (
             <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
               <TaskDescriptionRenderer content={s.description} />
@@ -1702,9 +2069,10 @@ function SessionCard({ session: s }) {
   );
 }
 
-function SessionsTab({ enrolledBootcamps }) {
+function SessionsTab({ enrolledBootcamps, user }) {
   const [allSessions, setAllSessions] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [bootcampFilter, setBootcampFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -1712,7 +2080,7 @@ function SessionsTab({ enrolledBootcamps }) {
     Promise.all(
       enrolledBootcamps.map(({ bootcamp }) =>
         getMemberBootcampSessions(bootcamp.id)
-          .then(sessions => sessions.map(s => ({ ...s, bootcampTitle: bootcamp.title.split(':')[0] })))
+          .then(sessions => sessions.map(s => ({ ...s, bootcampId: bootcamp.id, bootcampTitle: bootcamp.title.split(':')[0] })))
           .catch(() => [])
       )
     ).then(results => {
@@ -1725,7 +2093,24 @@ function SessionsTab({ enrolledBootcamps }) {
   }, [enrolledBootcamps]);
 
   const now = new Date();
-  const upcoming = (allSessions || []).filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
+  const filteredSessionsForStats = useMemo(() => {
+    if (!allSessions) return [];
+    return bootcampFilter === 'all'
+      ? allSessions
+      : allSessions.filter(s => s.bootcampId === bootcampFilter);
+  }, [allSessions, bootcampFilter]);
+
+  const upcoming = filteredSessionsForStats.filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
+
+  const pastSessions = filteredSessionsForStats.filter(s => s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now);
+  const attendedCount = pastSessions.filter(s => {
+    const myEntry = Array.isArray(s.attendance_data)
+      ? s.attendance_data.find(a => a.user_id === user?.id)
+      : null;
+    return myEntry ? myEntry.attended : s.attended;
+  }).length;
+  const pastCount = pastSessions.length;
+  const attendanceRate = pastCount > 0 ? Math.round((attendedCount / pastCount) * 100) : 100;
 
   const visible = (allSessions || []).filter(s => {
     const inFilter = filter === 'upcoming'
@@ -1733,11 +2118,12 @@ function SessionsTab({ enrolledBootcamps }) {
       : filter === 'past'
       ? s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now
       : true;
+    const inBootcamp = bootcampFilter === 'all' || s.bootcampId === bootcampFilter;
     const inSearch = !search.trim() ||
       s.topic?.toLowerCase().includes(search.toLowerCase()) ||
       s.bootcampTitle?.toLowerCase().includes(search.toLowerCase()) ||
       s.mentor?.full_name?.toLowerCase().includes(search.toLowerCase());
-    return inFilter && inSearch;
+    return inFilter && inBootcamp && inSearch;
   });
 
   return (
@@ -1774,11 +2160,11 @@ function SessionsTab({ enrolledBootcamps }) {
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { 
                 label: 'Total Sessions', 
-                value: allSessions.length, 
+                value: filteredSessionsForStats.length, 
                 color: 'text-white', 
                 bg: 'bg-white/[0.02] border-white/[0.05]',
                 glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
@@ -1792,10 +2178,17 @@ function SessionsTab({ enrolledBootcamps }) {
               },
               { 
                 label: 'Attended Sessions', 
-                value: allSessions.filter(s => s.attended).length, 
+                value: `${attendedCount}/${pastCount}`, 
                 color: 'text-emerald-400', 
                 bg: 'bg-emerald-500/[0.02] border-emerald-500/10',
                 glow: 'shadow-[inset_0_0_12px_rgba(16,185,129,0.02)]'
+              },
+              { 
+                label: 'Attendance Rate', 
+                value: `${attendanceRate}%`, 
+                color: 'text-amber-400', 
+                bg: 'bg-amber-500/[0.02] border-amber-500/10',
+                glow: 'shadow-[inset_0_0_12px_rgba(245,158,11,0.02)]'
               },
             ].map(({ label, value, color, bg, glow }) => (
               <div key={label} className={cn("rounded-2xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5", bg, glow)}>
@@ -1805,7 +2198,62 @@ function SessionsTab({ enrolledBootcamps }) {
             ))}
           </div>
 
-          {/* Filter tabs */}
+          {/* Points analytics */}
+          {(() => {
+            const byBootcamp = {};
+            for (const { bootcamp } of enrolledBootcamps) {
+              if (bootcampFilter !== 'all' && bootcamp.id !== bootcampFilter) continue;
+              byBootcamp[bootcamp.id] = { name: bootcamp.title.split(':')[0].trim(), earned: 0, max: 0 };
+            }
+            for (const s of filteredSessionsForStats) {
+              if (!s.bootcampId || !byBootcamp[s.bootcampId]) continue;
+              const isPast = s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now;
+              if (isPast) {
+                byBootcamp[s.bootcampId].max += 100;
+              }
+              const myEntry = Array.isArray(s.attendance_data)
+                ? s.attendance_data.find(a => a.user_id === user?.id)
+                : null;
+              if (myEntry?.points) byBootcamp[s.bootcampId].earned += myEntry.points;
+            }
+            const chartData = Object.values(byBootcamp).filter(d => d.max > 0 || d.earned > 0);
+            const totalEarned = chartData.reduce((s, d) => s + d.earned, 0);
+            const totalMax = chartData.reduce((s, d) => s + d.max, 0);
+            return <PointsStatsPanel chartData={chartData} totalEarned={totalEarned} totalMax={totalMax} label="Session Points" />;
+          })()}
+
+          {/* Bootcamp filter pills */}
+          {enrolledBootcamps.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setBootcampFilter('all')}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
+                  bootcampFilter === 'all'
+                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                    : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                )}
+              >
+                All Bootcamps
+              </button>
+              {enrolledBootcamps.map(({ bootcamp }) => (
+                <button
+                  key={bootcamp.id}
+                  onClick={() => setBootcampFilter(bootcamp.id)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
+                    bootcampFilter === bootcamp.id
+                      ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                      : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                  )}
+                >
+                  {bootcamp.title.split(':')[0].trim()}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Status / time filter tabs */}
           <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
             {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
               <button
@@ -1834,7 +2282,7 @@ function SessionsTab({ enrolledBootcamps }) {
             <EmptyState icon={Search} title="No matches" description="Try adjusting the filter or search." />
           ) : (
             <div className="space-y-3">
-              {visible.map(s => <SessionCard key={s.id} session={s} />)}
+              {visible.map(s => <SessionCard key={s.id} session={s} userId={user?.id} />)}
             </div>
           )}
         </>
@@ -1956,7 +2404,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
       case 'tasks':
         return <TasksTab enrolledBootcamps={enrolledBootcamps} />;
       case 'sessions':
-        return <SessionsTab enrolledBootcamps={enrolledBootcamps} />;
+        return <SessionsTab enrolledBootcamps={enrolledBootcamps} user={user} />;
       case 'catalog':
         return (
           <CatalogTab

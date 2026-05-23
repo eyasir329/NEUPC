@@ -11,13 +11,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Video, Plus, Search, X, Calendar, Clock, CheckCircle2, XCircle, Check,
   MessageSquare, Trash2, Loader2, User, Users, GraduationCap,
-  AlertCircle, BookOpen, Tv, ExternalLink, Upload, Film,
+  AlertCircle, BookOpen, Tv, ExternalLink, Upload, Film, Pencil,
 } from 'lucide-react';
 import {
   createMentorshipSessionAction,
   updateSessionNotesAction,
   deleteSessionAction,
   scheduleSessionAction,
+  updateScheduledSessionAction,
   cancelSessionAction,
   endSessionAction,
   saveSessionAttendanceAction,
@@ -40,6 +41,25 @@ function descriptionPreview(desc) {
   return desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function TaskDescriptionRenderer({ content }) {
+  if (!content) return null;
+  let html = '';
+  try {
+    const blocks = typeof content === 'string' ? JSON.parse(content) : content;
+    if (Array.isArray(blocks)) {
+      html = blocks.map(b => b.content || '').join('');
+    } else {
+      html = content;
+    }
+  } catch {
+    html = content;
+  }
+  if (!html) return null;
+  return (
+    <div className="tiptap-viewer-content text-[13px] text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: html }} />
+  );
+}
+
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const formatDatetime = (d) =>
   new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -55,21 +75,74 @@ export default function MentorSessionsClient({
   const [tab, setTab] = useState('rooms');
   const [scheduled, setScheduled] = useState(initialScheduled);
 
+  const studentMap = useMemo(() => {
+    const map = new Map();
+    mentorships.forEach((m) => {
+      const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
+      if (mentee?.id) {
+        map.set(mentee.id, {
+          name: mentee.full_name || 'Unknown',
+          email: mentee.email || '',
+          avatar_url: mentee.avatar_url,
+        });
+      }
+    });
+    bootcamps.forEach((bc) => {
+      (bc.students || []).forEach((s) => {
+        if (s.id) {
+          map.set(s.id, {
+            name: s.name || 'Unknown',
+            email: s.email || '',
+            avatar_url: s.avatar_url,
+          });
+        }
+      });
+    });
+    return map;
+  }, [mentorships, bootcamps]);
+
   // Past-sessions: mentorship 1:1 sessions + completed bootcamp-scheduled sessions
   const [sessions, setSessions] = useState(() => {
     const mentorshipPast = mentorships.flatMap((m) => {
       const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
       return (m.mentorship_sessions || [])
         .filter((s) => s.status !== 'scheduled' && s.status !== 'cancelled')
-        .map((s) => ({
-          ...s,
-          menteeName: mentee?.full_name || 'Unknown',
-          menteeAvatar: mentee?.avatar_url,
-          mentorship_id: m.id,
-        }));
+        .map((s) => {
+          const ad = s.attendance_data && s.attendance_data.length > 0
+            ? s.attendance_data
+            : mentee?.id
+            ? [{ user_id: mentee.id, attended: s.attended ?? true, points: s.points || 0 }]
+            : [];
+          return {
+            ...s,
+            menteeName: mentee?.full_name || 'Unknown',
+            menteeAvatar: mentee?.avatar_url,
+            menteeEmail: mentee?.email || '',
+            menteeId: mentee?.id,
+            mentorship_id: m.id,
+            attendance_data: ad,
+          };
+        });
     });
     const bootcampPast = pastScheduledSessions.map((s) => {
-      const ad = s.attendance_data ?? [];
+      let ad = s.attendance_data ?? [];
+      if (ad.length === 0) {
+        const bc = bootcamps.find((b) => b.id === s.bootcamp_id);
+        const allBCStudents = bc?.students ?? [];
+        let targetIds = [];
+        if (s.target_type === 'one-on-one') {
+          targetIds = s.target_student_ids ?? [];
+        } else if (s.target_type === 'selected-group') {
+          targetIds = s.target_student_ids ?? [];
+        } else {
+          targetIds = allBCStudents.map((st) => st.id);
+        }
+        ad = targetIds.map((uid) => ({
+          user_id: uid,
+          attended: s.attended ?? true,
+          points: 0,
+        }));
+      }
       const anyPresent = ad.some((r) => r.attended);
       return {
         id: s.id,
@@ -217,7 +290,14 @@ export default function MentorSessionsClient({
             onEndSession={handleEndSession}
           />
         ) : (
-          <PastSessionsView mentorships={mentorships} mentorId={mentorId} sessions={allSessions} setSessions={setSessions} />
+          <PastSessionsView
+            mentorships={mentorships}
+            mentorId={mentorId}
+            sessions={allSessions}
+            setSessions={setSessions}
+            studentMap={studentMap}
+            bootcamps={bootcamps}
+          />
         )}
       </div>
     </PageShell>
@@ -242,11 +322,55 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     () => JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
   );
   const [submitting, setSubmitting] = useState(false);
+  const [editingSession, setEditingSession] = useState(null);
 
   const activeBootcamp = bootcamps.find((b) => b.id === bootcampId);
   const students = activeBootcamp?.students ?? [];
 
   const effectiveSingleId = singleId || students[0]?.id || '';
+
+  const handleStartEdit = (session) => {
+    setEditingSession(session);
+    setBootcampId(session.bootcamp_id || session.bootcampId || bootcamps[0]?.id || '');
+    setTopic(session.topic || '');
+    setTargetType(session.target_type || session.targetType || 'all-bootcamp');
+    
+    const rawIds = session.target_student_ids || session.targetStudentIds || [];
+    const stIds = Array.isArray(rawIds) ? rawIds : (typeof rawIds === 'string' ? rawIds.split(',') : []);
+    
+    setSingleId(session.targetStudentId || stIds[0] || '');
+    setGroupIds(stIds);
+    
+    if (session.scheduled_at) {
+      try {
+        const d = new Date(session.scheduled_at);
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+        setWhen(localISOTime);
+      } catch (e) {
+        setWhen(session.scheduled_at.slice(0, 16));
+      }
+    } else {
+      setWhen('');
+    }
+    
+    setDuration(session.duration || 60);
+    setDescription(session.description || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSession(null);
+    setTopic('');
+    setDescription(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setSingleId('');
+    setGroupIds([]);
+    setWhen('');
+    setDuration(60);
+    setTargetType('all-bootcamp');
+    if (bootcamps.length > 0) {
+      setBootcampId(bootcamps[0].id);
+    }
+  };
 
   const handleSchedule = async (e) => {
     e.preventDefault();
@@ -294,46 +418,85 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     fd.set('target_student_ids',
       targetType === 'one-on-one' ? effectiveSingleId : groupIds.join(',')
     );
-    fd.set('attendee_emails', attendeeEmails.join(','));
 
-    const result = await scheduleSessionAction(fd);
+    if (editingSession) {
+      fd.set('sessionId', editingSession.id);
+      const result = await updateScheduledSessionAction(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        setSubmitting(false);
+        return;
+      }
 
-    if (result?.error) {
-      toast.error(result.error);
-      setSubmitting(false);
-      return;
+      setScheduled((prev) =>
+        prev.map((s) =>
+          s.id === editingSession.id
+            ? {
+                ...s,
+                topic: topic.trim(),
+                description: description.trim(),
+                scheduled_at: new Date(when).toISOString(),
+                duration,
+                bootcamp_id: bootcampId,
+                bootcampId,
+                bootcampTitle,
+                target_type: targetType,
+                targetType,
+                target_student_ids: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+                targetStudentId: effectiveSingleId,
+                targetStudentIds: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+                targetStudentName,
+                targetStudentAvatar,
+                targetStudentNames,
+                targetStudentAvatars,
+                targetStudentNamesAll,
+              }
+            : s
+        )
+      );
+
+      toast.success('Scheduled room updated successfully!');
+      handleCancelEdit();
+    } else {
+      fd.set('attendee_emails', attendeeEmails.join(','));
+      const result = await scheduleSessionAction(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        setSubmitting(false);
+        return;
+      }
+
+      if (result?.meetWarning) toast(result.meetWarning, { icon: '⚠️' });
+
+      setScheduled((prev) => [
+        {
+          id: result.session.id,
+          topic: topic.trim(),
+          description: description.trim(),
+          scheduled_at: new Date(when).toISOString(),
+          duration,
+          bootcamp_id: bootcampId,
+          bootcampId,
+          bootcampTitle,
+          target_type: targetType,
+          targetType,
+          target_student_ids: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+          targetStudentId: effectiveSingleId,
+          targetStudentIds: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+          targetStudentName,
+          targetStudentAvatar,
+          targetStudentNames,
+          targetStudentAvatars,
+          targetStudentNamesAll,
+          meet_link: result.meetLink,
+          status: 'scheduled',
+        },
+        ...prev,
+      ]);
+
+      toast.success(result.meetLink ? 'Room scheduled — Meet link ready!' : 'Room scheduled (no Meet link)');
+      handleCancelEdit();
     }
-
-    if (result?.meetWarning) toast(result.meetWarning, { icon: '⚠️' });
-
-    setScheduled((prev) => [
-      {
-        id: result.session.id,
-        topic: topic.trim(),
-        description: description.trim(),
-        scheduled_at: new Date(when).toISOString(),
-        bootcampId,
-        bootcampTitle,
-        targetType,
-        targetStudentId: effectiveSingleId,
-        targetStudentName,
-        targetStudentAvatar,
-        targetStudentIds: [...groupIds],
-        targetStudentNames,
-        targetStudentAvatars,
-        targetStudentNamesAll,
-        meet_link: result.meetLink,
-        status: 'scheduled',
-      },
-      ...prev,
-    ]);
-
-    setTopic('');
-    setDescription(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
-    setSingleId('');
-    setGroupIds([]);
-    setWhen('');
-    toast.success(result.meetLink ? 'Room scheduled — Meet link ready!' : 'Room scheduled (no Meet link)');
     setSubmitting(false);
   };
 
@@ -346,6 +509,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     else {
       setScheduled((prev) => prev.filter((s) => s.id !== id));
       toast.success('Room cancelled');
+      if (editingSession?.id === id) {
+        handleCancelEdit();
+      }
     }
   };
 
@@ -372,9 +538,21 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
           <div className="flex items-center justify-between border-b border-white/10 bg-white/2 px-5 py-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-gray-200">Schedule mentorship room</h3>
+              <h3 className="text-sm font-semibold text-gray-200">
+                {editingSession ? 'Edit mentorship room' : 'Schedule mentorship room'}
+              </h3>
             </div>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">Google Meet ready</span>
+            {editingSession ? (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white transition font-mono font-bold cursor-pointer"
+              >
+                <X className="w-3 h-3" /> Cancel Edit
+              </button>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">Google Meet ready</span>
+            )}
           </div>
 
           <form onSubmit={handleSchedule} className="p-5 space-y-5 text-sm">
@@ -611,6 +789,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             <Step n={5} label="Session description">
               <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
                 <MultiBlockEditor
+                  key={editingSession ? `edit-${editingSession.id}` : 'create'}
                   value={description}
                   onChange={setDescription}
                 />
@@ -625,12 +804,12 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  Generating Meet link…
+                  {editingSession ? 'Saving changes...' : 'Generating Meet link…'}
                 </>
               ) : (
                 <>
                   <Video className="h-4 w-4 text-emerald-200" />
-                  Schedule Room & Create Meet Link
+                  {editingSession ? 'Save Changes' : 'Schedule Room & Create Meet Link'}
                 </>
               )}
             </button>
@@ -679,6 +858,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       onRecordingUploaded={(id, url) =>
                         setScheduled((prev) => prev.map((r) => r.id === id ? { ...r, recording_url: url } : r))
                       }
+                      onEdit={() => handleStartEdit(s)}
                     />
                   ))}
                 </StaggerList>
@@ -691,7 +871,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   );
 }
 
-function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploaded, bootcamps }) {
+function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploaded, bootcamps, onEdit }) {
   const [now, setNow] = useState(() => Date.now());
   const [showAttendance, setShowAttendance] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
@@ -889,13 +1069,22 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                   <Clock className="h-3.5 w-3.5 animate-pulse text-amber-405" />
                   {countdown ?? 'Scheduled'}
                 </span>
-                <button
-                  onClick={onCancel}
-                  className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
-                  title="Cancel room slot"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={onEdit}
+                    className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-gray-500 hover:text-emerald-300 transition-colors"
+                    title="Edit scheduled room details"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={onCancel}
+                    className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
+                    title="Cancel room slot"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -952,7 +1141,27 @@ function groupByDate(sessions) {
   return Object.entries(groups).filter(([, v]) => v.length > 0);
 }
 
-function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
+function ensureJsonDescription(raw) {
+  if (!raw) {
+    return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]);
+  }
+  const trimmed = raw.trim();
+  if (
+    (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+    (trimmed.startsWith('{') && trimmed.endsWith('}'))
+  ) {
+    try {
+      JSON.parse(trimmed);
+      return trimmed;
+    } catch (e) {
+      // Not valid JSON
+    }
+  }
+  // Wrap plain text in a rich text block
+  return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: raw }]);
+}
+
+function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studentMap, bootcamps }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [showLogModal, setShowLogModal] = useState(false);
@@ -962,6 +1171,8 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
   const [notesInput, setNotesInput] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showAttendanceEdit, setShowAttendanceEdit] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -986,13 +1197,33 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
     return sessions.find(s => s.id === selectedSessionId) || null;
   }, [sessions, selectedSessionId]);
 
+  const sessionStudents = useMemo(() => {
+    if (!selectedSession) return [];
+    if (selectedSession.attendance_data && selectedSession.attendance_data.length > 0) {
+      return selectedSession.attendance_data.map((r) => {
+        const profile = studentMap.get(r.user_id);
+        return {
+          id: r.user_id,
+          name: profile?.name || 'Unknown Candidate',
+          email: profile?.email || '',
+          avatar_url: profile?.avatar_url || null,
+        };
+      });
+    }
+    return [];
+  }, [selectedSession, studentMap]);
+
   // Sync editor value when selected session changes
   useEffect(() => {
     if (selectedSession) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNotesInput(selectedSession.notes || '');
+      setNotesInput(ensureJsonDescription(selectedSession.notes));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsEditingNotes(false);
     } else {
-      setNotesInput('');
+      setNotesInput(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsEditingNotes(false);
     }
   }, [selectedSession]);
 
@@ -1011,6 +1242,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
       setSessions((prev) =>
         prev.map((s) => (s.id === selectedSession.id ? { ...s, notes: notesInput } : s))
       );
+      setIsEditingNotes(false);
     }
     setSavingNotes(false);
   };
@@ -1246,14 +1478,24 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
 
                 {/* Attendance audit sheet */}
                 <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Attendance Audit Sheet</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Attendance Audit Sheet</h4>
+                    <button
+                      onClick={() => setShowAttendanceEdit(true)}
+                      className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Manage
+                    </button>
+                  </div>
                   {s.attendance_data?.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/20 p-3 border border-white/5 rounded-2xl">
                       {s.attendance_data.map((r) => {
-                        const cand = mentorships.flatMap(m => {
-                          const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
-                          return mentee ? [mentee] : [];
-                        }).find(u => u.id === r.user_id) || { full_name: 'Enrolled Candidate' };
+                        const cand = studentMap.get(r.user_id) || {
+                          name: 'Enrolled Candidate',
+                          email: 'Candidate',
+                          avatar_url: null,
+                        };
 
                         return (
                           <div
@@ -1265,14 +1507,18 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <Avatar name={cand.full_name} src={cand.avatar_url} size="sm" />
+                              <Avatar name={cand.name} src={cand.avatar_url} size="sm" />
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-gray-200 truncate">{cand.full_name}</p>
-                                <p className="text-[9px] text-gray-500 truncate">{cand.email || 'Candidate'}</p>
+                                <p className="text-xs font-semibold text-gray-200 truncate">{cand.name}</p>
+                                <p className="text-[9px] text-gray-500 truncate">{cand.email}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {r.points > 0 && <span className="text-[9px] font-extrabold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md">+{r.points} pts</span>}
+                              {r.points > 0 && (
+                                <span className="text-[9px] font-extrabold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md">
+                                  +{r.points} pts
+                                </span>
+                              )}
                               {r.attended ? (
                                 <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400 shrink-0" />
                               ) : (
@@ -1289,7 +1535,9 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
                         <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" />
                         <div>
                           <p className="text-xs font-semibold text-gray-200">{s.menteeName}</p>
-                          <p className="text-[10px] text-gray-500">{effectiveAttended ? 'Candidate reported presence.' : 'Candidate reported absence.'}</p>
+                          <p className="text-[10px] text-gray-550">
+                            {effectiveAttended ? 'Candidate reported presence.' : 'Candidate reported absence.'}
+                          </p>
                         </div>
                       </div>
                       <Pill tone={effectiveAttended ? 'emerald' : 'rose'} icon={effectiveAttended ? CheckCircle2 : XCircle}>
@@ -1301,38 +1549,71 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
 
                 {/* Notes logs section */}
                 <div className="space-y-2 border-t border-white/5 pt-4">
-                  <div className="flex items-center gap-1.5 text-gray-300">
-                    <MessageSquare className="h-4 w-4 text-emerald-400" />
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Interactive Discussion logs</h4>
+                  <div className="flex items-center justify-between text-gray-300">
+                    <div className="flex items-center gap-1.5">
+                      <MessageSquare className="h-4 w-4 text-emerald-400" />
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Interactive Discussion logs</h4>
+                    </div>
+                    {s.notes && !isEditingNotes && (
+                      <button
+                        onClick={() => {
+                          setNotesInput(ensureJsonDescription(s.notes));
+                          setIsEditingNotes(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit Logs
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-3.5 text-left">
-                    <textarea
-                      rows={4}
-                      value={notesInput}
-                      onChange={(e) => setNotesInput(e.target.value)}
-                      placeholder="Detail curriculum points covered, milestones checked, algorithms explained..."
-                      className="w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-xs text-gray-200 placeholder-gray-650 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
-                    />
-                    <div className="flex justify-end">
-                      <button
-                        onClick={handleSaveInspectorNotes}
-                        disabled={savingNotes}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-emerald-250 transition-colors"
-                      >
-                        {savingNotes ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            Syncing logs...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="h-3.5 w-3.5" />
-                            Save notes
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    {(!s.notes || isEditingNotes) ? (
+                      <>
+                        <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                          <MultiBlockEditor
+                            key={selectedSession ? `inspector-edit-${selectedSession.id}-${isEditingNotes}` : 'inspector-create'}
+                            value={notesInput}
+                            onChange={setNotesInput}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          {s.notes && (
+                            <button
+                              onClick={() => {
+                                setNotesInput(ensureJsonDescription(s.notes));
+                                setIsEditingNotes(false);
+                              }}
+                              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs font-semibold text-gray-300 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          <button
+                            onClick={handleSaveInspectorNotes}
+                            disabled={savingNotes}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-emerald-250 transition-colors"
+                          >
+                            {savingNotes ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Syncing logs...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" />
+                                Save notes
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
+                        <TaskDescriptionRenderer content={s.notes} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1353,6 +1634,24 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions }) {
             }}
           />
         )}
+        {showAttendanceEdit && selectedSession && (
+          <AttendanceModal
+            session={selectedSession}
+            students={sessionStudents}
+            isPast={true}
+            onClose={() => setShowAttendanceEdit(false)}
+            onSaved={(attendanceData) => {
+              setShowAttendanceEdit(false);
+              setSessions((prev) =>
+                prev.map((r) =>
+                  r.id === selectedSession.id
+                    ? { ...r, attendance_data: attendanceData }
+                    : r
+                )
+              );
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -1366,6 +1665,9 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
   const [error, setError] = useState(null);
   const activeMentorships = mentorships.filter((m) => m.status === 'active');
   const [selectedMentorshipId, setSelectedMentorshipId] = useState(activeMentorships[0]?.id || '');
+  const [notes, setNotes] = useState(
+    () => JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1373,6 +1675,7 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
     setError(null);
     const fd = new FormData(e.target);
     fd.set('created_by', mentorId);
+    fd.set('notes', notes.trim());
     const result = await createMentorshipSessionAction(fd);
     if (result?.error) { setError(result.error); setLoading(false); return; }
 
@@ -1383,13 +1686,12 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
     const menteeAvatar = mentee?.avatar_url;
 
     const localSession = {
-      // eslint-disable-next-line react-hooks/purity
-      id: `local-${Date.now()}`,
+      id: result.session?.id || `local-${Date.now()}`,
       mentorship_id: msId,
       topic: fd.get('topic'),
       session_date: new Date(fd.get('session_date')).toISOString(),
       duration: parseInt(fd.get('duration')) || null,
-      notes: fd.get('notes') || null,
+      notes: notes.trim(),
       attended: fd.get('attended') === 'on',
     };
 
@@ -1497,12 +1799,12 @@ function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
           </Field>
 
           <Field label="Discussion Notes">
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="What core details did you focus on? Recommended homework guidelines..."
-              className="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-white placeholder-gray-650 outline-none focus:border-emerald-500/40"
-            />
+            <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
+              <MultiBlockEditor
+                value={notes}
+                onChange={setNotes}
+              />
+            </div>
           </Field>
 
           <label className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 cursor-pointer hover:bg-white/2 select-none">
@@ -1547,10 +1849,19 @@ function Field({ label, required, children }) {
 
 // ─── Attendance Modal ─────────────────────────────────────────────────────────
 
-function AttendanceModal({ session, students, onClose, onSaved }) {
+function AttendanceModal({ session, students, onClose, onSaved, isPast = false }) {
   useScrollLock();
   const [rows, setRows] = useState(() =>
-    students.map((s) => ({ user_id: s.id, name: s.name, avatar_url: s.avatar_url, attended: false, points: '' }))
+    students.map((st) => {
+      const match = (session.attendance_data || []).find((r) => r.user_id === st.id);
+      return {
+        user_id: st.id,
+        name: st.name,
+        avatar_url: st.avatar_url,
+        attended: match ? match.attended : false,
+        points: match && match.points !== undefined && match.points !== 0 ? String(match.points) : '',
+      };
+    })
   );
   const [saving, setSaving] = useState(false);
 
@@ -1560,10 +1871,12 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
 
-    const endFd = new FormData();
-    endFd.set('sessionId', session.id);
-    const endResult = await endSessionAction(endFd);
-    if (endResult?.error) { toast.error(endResult.error); setSaving(false); return; }
+    if (!isPast) {
+      const endFd = new FormData();
+      endFd.set('sessionId', session.id);
+      const endResult = await endSessionAction(endFd);
+      if (endResult?.error) { toast.error(endResult.error); setSaving(false); return; }
+    }
 
     const attendance_data = rows.map((r) => ({
       user_id: r.user_id,
@@ -1576,7 +1889,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
     const result = await saveSessionAttendanceAction(fd);
     if (result?.error) { toast.error(result.error); setSaving(false); return; }
 
-    toast.success('Session ended & attendance saved');
+    toast.success(isPast ? 'Attendance updated successfully' : 'Session ended & attendance saved');
     onSaved(attendance_data);
   };
 
@@ -1601,7 +1914,9 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
         <div className="px-5 pt-5 pb-4 border-b border-white/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">Interactive Attendance Sheet</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">
+                {isPast ? 'Edit Attendance Sheet' : 'Interactive Attendance Sheet'}
+              </p>
               <h2 className="text-sm font-bold text-white leading-tight truncate">{session.topic}</h2>
             </div>
             <button
@@ -1621,7 +1936,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
             ].map(({ label, value, color }) => (
               <div key={label} className="rounded-xl border border-white/5 bg-black/30 px-3 py-2.5 text-center">
                 <p className={`text-base font-black ${color}`}>{value}</p>
-                <p className="text-[10px] text-gray-500 mt-1 font-medium">{label}</p>
+                <p className="text-[10px] text-gray-550 mt-1 font-medium">{label}</p>
               </div>
             ))}
           </div>
@@ -1721,7 +2036,7 @@ function AttendanceModal({ session, students, onClose, onSaved }) {
             className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/10 transition-colors"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <CheckCircle2 className="h-4 w-4 text-violet-200" />}
-            {saving ? 'Closing slot…' : 'Close & Log Attendance'}
+            {saving ? (isPast ? 'Updating logs…' : 'Closing slot…') : (isPast ? 'Save Changes' : 'Close & Log Attendance')}
           </button>
         </div>
       </motion.div>

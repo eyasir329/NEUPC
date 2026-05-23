@@ -2969,11 +2969,25 @@ export async function getMemberBootcampTasks(bootcampId) {
   const taskIds = tasks.map((t) => t.id);
   const { data: subs } = await supabaseAdmin
     .from('task_submissions')
-    .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
+    .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at, reviewed_by')
     .eq('user_id', userId)
     .in('task_id', taskIds);
 
-  const subMap = Object.fromEntries((subs || []).map((s) => [s.task_id, s]));
+  // Fetch reviewer profiles separately (avoids relying on a specific FK constraint alias)
+  const reviewerIds = [...new Set((subs || []).map((s) => s.reviewed_by).filter(Boolean))];
+  let reviewerMap = {};
+  if (reviewerIds.length > 0) {
+    const { data: reviewers } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', reviewerIds);
+    reviewerMap = Object.fromEntries((reviewers || []).map((u) => [u.id, u]));
+  }
+
+  const subMap = Object.fromEntries((subs || []).map((s) => [
+    s.task_id,
+    { ...s, reviewer: s.reviewed_by ? (reviewerMap[s.reviewed_by] || null) : null },
+  ]));
   return tasks.map((t) => ({ ...t, mySubmission: subMap[t.id] || null }));
 }
 
@@ -3094,7 +3108,7 @@ export async function getMemberBootcampSessions(bootcampId) {
     .maybeSingle();
   if (!enr) return [];
 
-  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by';
+  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by, attendance_data';
 
   // 1. Bootcamp-wide sessions (broadcast or group) tied to this bootcamp
   const { data: bcSessions } = await supabaseAdmin

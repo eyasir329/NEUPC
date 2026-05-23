@@ -283,7 +283,7 @@ export async function createMentorshipSessionAction(formData) {
     if (ms?.mentor_id !== mentor.id)
       return { error: 'Not authorized for this mentorship' };
 
-    const { error } = await supabase.from('mentorship_sessions').insert([
+    const { data, error } = await supabase.from('mentorship_sessions').insert([
       {
         mentorship_id,
         topic,
@@ -293,11 +293,11 @@ export async function createMentorshipSessionAction(formData) {
         attended,
         created_by: mentor.id,
       },
-    ]);
+    ]).select().single();
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/sessions');
-    return { success: 'Session scheduled successfully' };
+    return { success: 'Session scheduled successfully', session: data };
   } catch (err) {
     return { error: err.message };
   }
@@ -432,6 +432,66 @@ export async function scheduleSessionAction(formData) {
       session,
       meetLink,
       meetWarning: meetLink ? null : 'Session saved but Google Meet link could not be created.',
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export async function updateScheduledSessionAction(formData) {
+  try {
+    const mentor = await requireMentor();
+    const sessionId = formData.get('sessionId');
+
+    const { data: existingSession } = await supabase
+      .from('mentorship_sessions')
+      .select('created_by')
+      .eq('id', sessionId)
+      .single();
+
+    if (existingSession?.created_by !== mentor.id)
+      return { error: 'Not authorized to update this session' };
+
+    const topic        = formData.get('topic')?.trim();
+    const description  = formData.get('description')?.trim() || '';
+    const scheduled_at = formData.get('scheduled_at');   // ISO string from datetime-local
+    const duration     = parseInt(formData.get('duration')) || 60;
+    const bootcamp_id  = formData.get('bootcamp_id') || null;
+    const target_type  = formData.get('target_type') || 'all-bootcamp';
+    const target_student_ids_raw = formData.get('target_student_ids') || '';
+
+    if (!topic || !scheduled_at) return { error: 'Topic and scheduled time are required' };
+
+    const startIso = new Date(scheduled_at).toISOString();
+
+    const target_student_ids = target_student_ids_raw
+      ? target_student_ids_raw.split(',').map((s) => s.trim()).filter(Boolean)
+      : null;
+
+    const updateRow = {
+      topic,
+      description,
+      session_date: startIso,
+      scheduled_at: startIso,
+      duration,
+      target_type,
+      target_student_ids,
+      bootcamp_id,
+    };
+
+    const { data: session, error } = await supabase
+      .from('mentorship_sessions')
+      .update(updateRow)
+      .eq('id', sessionId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/account/mentor/sessions');
+    return {
+      success: true,
+      session,
     };
   } catch (err) {
     return { error: err.message };
