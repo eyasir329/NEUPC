@@ -11,13 +11,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Video, Plus, Search, X, Calendar, Clock, CheckCircle2, XCircle, Check,
   MessageSquare, Trash2, Loader2, User, Users, GraduationCap,
-  AlertCircle, BookOpen, Tv, ExternalLink, Upload, Film, Pencil,
+  AlertCircle, BookOpen, Tv, ExternalLink, Upload, Film, Pencil, MapPin,
 } from 'lucide-react';
 import {
-  createMentorshipSessionAction,
   updateSessionNotesAction,
   deleteSessionAction,
   scheduleSessionAction,
+  logPastSessionAction,
   updateScheduledSessionAction,
   cancelSessionAction,
   endSessionAction,
@@ -73,7 +73,13 @@ export default function MentorSessionsClient({
 }) {
   const mentorships = rawMentorships;
   const [tab, setTab] = useState('rooms');
+  const [logMode, setLogMode] = useState(false);
   const [scheduled, setScheduled] = useState(initialScheduled);
+
+  const startLogMode = () => {
+    setLogMode(true);
+    setTab('rooms');
+  };
 
   const studentMap = useMemo(() => {
     const map = new Map();
@@ -288,6 +294,9 @@ export default function MentorSessionsClient({
             scheduled={scheduled}
             setScheduled={setScheduled}
             onEndSession={handleEndSession}
+            logMode={logMode}
+            setLogMode={setLogMode}
+            setSessions={setSessions}
           />
         ) : (
           <PastSessionsView
@@ -297,6 +306,7 @@ export default function MentorSessionsClient({
             setSessions={setSessions}
             studentMap={studentMap}
             bootcamps={bootcamps}
+            onStartLog={startLogMode}
           />
         )}
       </div>
@@ -306,7 +316,7 @@ export default function MentorSessionsClient({
 
 // ─── Scheduled Rooms (Scheduler + List) ───────────────────────────────────────
 
-function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, setScheduled, onEndSession }) {
+function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, setScheduled, onEndSession, logMode = false, setLogMode, setSessions }) {
   const [search, setSearch] = useState('');
 
   // Form state
@@ -323,6 +333,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   );
   const [submitting, setSubmitting] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
+  const [attended, setAttended] = useState(true);
+  const [mode, setMode] = useState('online'); // 'online' | 'offline'
+  const [location, setLocation] = useState('');
 
   const activeBootcamp = bootcamps.find((b) => b.id === bootcampId);
   const students = activeBootcamp?.students ?? [];
@@ -356,6 +369,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     
     setDuration(session.duration || 60);
     setDescription(session.description || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setMode(session.location ? 'offline' : 'online');
+    setLocation(session.location || '');
   };
 
   const handleCancelEdit = () => {
@@ -367,6 +382,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     setWhen('');
     setDuration(60);
     setTargetType('all-bootcamp');
+    setMode('online');
+    setLocation('');
     if (bootcamps.length > 0) {
       setBootcampId(bootcamps[0].id);
     }
@@ -418,6 +435,61 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     fd.set('target_student_ids',
       targetType === 'one-on-one' ? effectiveSingleId : groupIds.join(',')
     );
+    fd.set('location', mode === 'offline' ? location.trim() : '');
+
+    if (logMode) {
+      fd.set('attended', attended ? 'on' : 'off');
+      const result = await logPastSessionAction(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        setSubmitting(false);
+        return;
+      }
+
+      const targetIds = targetType === 'one-on-one'
+        ? [effectiveSingleId]
+        : targetType === 'selected-group'
+        ? groupIds
+        : students.map((s) => s.id);
+
+      const menteeName = targetType === 'one-on-one'
+        ? targetStudentName || 'Unknown'
+        : targetType === 'selected-group'
+        ? (targetStudentNames.join(', ') || 'Group')
+        : (bootcampTitle ? `${bootcampTitle} — All` : 'All enrolled');
+
+      const avatars = targetType === 'one-on-one'
+        ? (targetStudentAvatar ? [targetStudentAvatar] : [])
+        : targetStudentAvatars;
+
+      setSessions?.((prev) => [
+        {
+          id: result.session.id,
+          topic: topic.trim(),
+          session_date: new Date(when).toISOString(),
+          duration,
+          attended,
+          notes: description.trim() || null,
+          meet_link: null,
+          targetType,
+          bootcampTitle,
+          menteeName,
+          menteeAvatars: avatars,
+          menteeAvatar: targetStudentAvatar ?? null,
+          mentorship_id: null,
+          attendance_data: targetIds.map((uid) => ({ user_id: uid, attended, points: 0 })),
+          recording_url: null,
+          location: mode === 'offline' ? location.trim() : null,
+        },
+        ...prev,
+      ]);
+
+      toast.success('Session logged');
+      handleCancelEdit();
+      setLogMode?.(false);
+      setSubmitting(false);
+      return;
+    }
 
     if (editingSession) {
       fd.set('sessionId', editingSession.id);
@@ -450,6 +522,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 targetStudentNames,
                 targetStudentAvatars,
                 targetStudentNamesAll,
+                location: mode === 'offline' ? location.trim() : null,
               }
             : s
         )
@@ -489,12 +562,17 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
           targetStudentAvatars,
           targetStudentNamesAll,
           meet_link: result.meetLink,
+          location: mode === 'offline' ? location.trim() : null,
           status: 'scheduled',
         },
         ...prev,
       ]);
 
-      toast.success(result.meetLink ? 'Room scheduled — Meet link ready!' : 'Room scheduled (no Meet link)');
+      toast.success(
+        mode === 'offline'
+          ? 'In-person session scheduled'
+          : result.meetLink ? 'Room scheduled — Meet link ready!' : 'Room scheduled (no Meet link)'
+      );
       handleCancelEdit();
     }
     setSubmitting(false);
@@ -526,7 +604,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     !topic.trim() ||
     !when ||
     (targetType === 'one-on-one' && !singleId) ||
-    (targetType === 'selected-group' && groupIds.length === 0);
+    (targetType === 'selected-group' && groupIds.length === 0) ||
+    (mode === 'offline' && !location.trim());
 
   const hasScheduledRooms = scheduled.length > 0;
 
@@ -539,10 +618,18 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" />
               <h3 className="text-sm font-semibold text-gray-200">
-                {editingSession ? 'Edit mentorship room' : 'Schedule mentorship room'}
+                {logMode ? 'Log past session' : editingSession ? 'Edit mentorship room' : 'Schedule mentorship room'}
               </h3>
             </div>
-            {editingSession ? (
+            {logMode ? (
+              <button
+                type="button"
+                onClick={() => { handleCancelEdit(); setLogMode?.(false); }}
+                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white transition font-mono font-bold cursor-pointer"
+              >
+                <X className="w-3 h-3" /> Exit log mode
+              </button>
+            ) : editingSession ? (
               <button
                 type="button"
                 onClick={handleCancelEdit}
@@ -551,7 +638,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 <X className="w-3 h-3" /> Cancel Edit
               </button>
             ) : (
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">Google Meet ready</span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                {mode === 'offline' ? 'In-person' : 'Google Meet ready'}
+              </span>
             )}
           </div>
 
@@ -764,7 +853,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     value={when}
                     onChange={(e) => setWhen(e.target.value)}
                     required
-                    min={new Date().toISOString().slice(0, 16)}
+                    {...(logMode
+                      ? { max: new Date().toISOString().slice(0, 16) }
+                      : { min: new Date().toISOString().slice(0, 16) })}
                     className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 transition-all duration-300"
                   />
                 </div>
@@ -786,7 +877,51 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
               </div>
             </Step>
 
-            <Step n={5} label="Session description">
+            <Step n={5} label="Session mode">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'online',  icon: Video,  label: 'Online',  desc: 'Google Meet' },
+                  { id: 'offline', icon: MapPin, label: 'Offline', desc: 'In-person' },
+                ].map((opt) => {
+                  const Icon = opt.icon;
+                  const chosen = mode === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setMode(opt.id)}
+                      className={`rounded-xl border p-3 text-center transition-all flex flex-col items-center gap-2 ${
+                        chosen
+                          ? 'border-emerald-500/40 bg-emerald-500/[0.06] text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.06)]'
+                          : 'border-white/10 bg-black/20 text-gray-400 hover:bg-black/30 hover:text-gray-200'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`} />
+                      <div>
+                        <div className="text-[11px] font-bold leading-none">{opt.label}</div>
+                        <div className="text-[9px] opacity-70 mt-1">{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {mode === 'offline' && (
+                <div className="mt-3 relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Venue / address (e.g. NEUPC Lab Room 304, Dhaka University)"
+                    required
+                    className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 py-3 pl-9 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40 transition-all duration-300"
+                  />
+                </div>
+              )}
+            </Step>
+
+            <Step n={6} label="Session description">
               <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
                 <MultiBlockEditor
                   key={editingSession ? `edit-${editingSession.id}` : 'create'}
@@ -796,6 +931,18 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
               </div>
             </Step>
 
+            {logMode && (
+              <label className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 cursor-pointer hover:bg-white/2 select-none">
+                <input
+                  type="checkbox"
+                  checked={attended}
+                  onChange={(e) => setAttended(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/20 bg-transparent text-emerald-500 focus:ring-emerald-500/40 cursor-pointer"
+                />
+                <span className="text-xs text-gray-300">Candidate(s) reported as present</span>
+              </label>
+            )}
+
             <button
               type="submit"
               disabled={submitDisabled}
@@ -804,12 +951,12 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  {editingSession ? 'Saving changes...' : 'Generating Meet link…'}
+                  {logMode ? 'Logging…' : editingSession ? 'Saving changes...' : (mode === 'offline' ? 'Saving session…' : 'Generating Meet link…')}
                 </>
               ) : (
                 <>
                   <Video className="h-4 w-4 text-emerald-200" />
-                  {editingSession ? 'Save Changes' : 'Schedule Room & Create Meet Link'}
+                  {logMode ? 'Log Session' : editingSession ? 'Save Changes' : (mode === 'offline' ? 'Schedule In-Person Session' : 'Schedule Room & Create Meet Link')}
                 </>
               )}
             </button>
@@ -1021,7 +1168,12 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
           <div className="flex shrink-0 flex-wrap gap-2 md:flex-col md:items-end">
             {hasStarted ? (
               <>
-                {s.meet_link && !hasEnded ? (
+                {s.location ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 max-w-[260px]" title={s.location}>
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{s.location}</span>
+                  </span>
+                ) : s.meet_link && !hasEnded ? (
                   <a
                     href={s.meet_link}
                     target="_blank"
@@ -1161,10 +1313,9 @@ function ensureJsonDescription(raw) {
   return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: raw }]);
 }
 
-function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studentMap, bootcamps }) {
+function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studentMap, bootcamps, onStartLog }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [showLogModal, setShowLogModal] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
 
   // Inspector States
@@ -1302,7 +1453,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                 </button>
               ))}
             </div>
-            <ActionButton tone="emerald" icon={Plus} onClick={() => setShowLogModal(true)} className="text-[10px] py-1.5">
+            <ActionButton tone="emerald" icon={Plus} onClick={onStartLog} className="text-[10px] py-1.5">
               Log Session
             </ActionButton>
           </div>
@@ -1318,7 +1469,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                 description={search || filter !== 'all' ? 'Adjust filters to explore.' : 'Log an interactive session below.'}
                 accent="emerald"
                 action={
-                  <ActionButton tone="emerald" icon={Plus} onClick={() => setShowLogModal(true)}>
+                  <ActionButton tone="emerald" icon={Plus} onClick={onStartLog}>
                     Log Past Session
                   </ActionButton>
                 }
@@ -1623,17 +1774,6 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
       </div>
 
       <AnimatePresence>
-        {showLogModal && (
-          <LogSessionModal
-            mentorships={mentorships}
-            onClose={() => setShowLogModal(false)}
-            mentorId={mentorId}
-            onSessionLogged={(session, menteeName, menteeAvatar) => {
-              setSessions((prev) => [{ ...session, menteeName, menteeAvatar }, ...prev]);
-              setShowLogModal(false);
-            }}
-          />
-        )}
         {showAttendanceEdit && selectedSession && (
           <AttendanceModal
             session={selectedSession}
@@ -1653,194 +1793,6 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
           />
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-// ─── Log Session Modal ────────────────────────────────────────────────────────
-
-function LogSessionModal({ mentorships, onClose, mentorId, onSessionLogged }) {
-  useScrollLock();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const activeMentorships = mentorships.filter((m) => m.status === 'active');
-  const [selectedMentorshipId, setSelectedMentorshipId] = useState(activeMentorships[0]?.id || '');
-  const [notes, setNotes] = useState(
-    () => JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
-  );
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const fd = new FormData(e.target);
-    fd.set('created_by', mentorId);
-    fd.set('notes', notes.trim());
-    const result = await createMentorshipSessionAction(fd);
-    if (result?.error) { setError(result.error); setLoading(false); return; }
-
-    const msId = fd.get('mentorship_id');
-    const ms = activeMentorships.find((m) => m.id === msId);
-    const mentee = ms?.['users!mentorships_mentee_id_fkey'] || ms?.users;
-    const menteeName = mentee?.full_name || 'Unknown';
-    const menteeAvatar = mentee?.avatar_url;
-
-    const localSession = {
-      id: result.session?.id || `local-${Date.now()}`,
-      mentorship_id: msId,
-      topic: fd.get('topic'),
-      session_date: new Date(fd.get('session_date')).toISOString(),
-      duration: parseInt(fd.get('duration')) || null,
-      notes: notes.trim(),
-      attended: fd.get('attended') === 'on',
-    };
-
-    toast.success('Session logged');
-    onSessionLogged(localSession, menteeName, menteeAvatar);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-300">
-              <Video className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-white">Log past session</h2>
-              <p className="text-[10px] text-gray-500">Record a manual interaction slot</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:bg-white/5 hover:text-white">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mx-5 mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">{error}</div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 p-5 text-sm">
-          <Field label="Mentee" required>
-            <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <select
-                name="mentorship_id"
-                required
-                value={selectedMentorshipId}
-                onChange={(e) => setSelectedMentorshipId(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
-              >
-                <option value="">Select mentee…</option>
-                {activeMentorships.map((m) => {
-                  const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
-                  return <option key={m.id} value={m.id}>{mentee?.full_name || 'Unknown'}</option>;
-                })}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-              </div>
-            </div>
-            {activeMentorships.length === 0 && (
-              <p className="mt-1 text-[11px] text-amber-450">No active mentorship links registered.</p>
-            )}
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Session Date" required>
-              <div className="relative">
-                <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <input
-                  type="date"
-                  name="session_date"
-                  required
-                  defaultValue={new Date().toISOString().slice(0, 10)}
-                  max={new Date().toISOString().slice(0, 10)}
-                  className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
-                />
-              </div>
-            </Field>
-            <Field label="Duration (minutes)">
-              <div className="relative">
-                <Clock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <input
-                  type="number"
-                  name="duration"
-                  min="15"
-                  step="15"
-                  defaultValue="60"
-                  className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none focus:border-emerald-500/40"
-                />
-              </div>
-            </Field>
-          </div>
-
-          <Field label="Discussion Topic" required>
-            <div className="relative">
-              <BookOpen className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <input
-                name="topic"
-                required
-                placeholder="e.g. Discussing time complexity analyses"
-                className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white placeholder-gray-600 outline-none focus:border-emerald-500/40"
-              />
-            </div>
-          </Field>
-
-          <Field label="Discussion Notes">
-            <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
-              <MultiBlockEditor
-                value={notes}
-                onChange={setNotes}
-              />
-            </div>
-          </Field>
-
-          <label className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 cursor-pointer hover:bg-white/2 select-none">
-            <input
-              type="checkbox"
-              name="attended"
-              defaultChecked
-              className="h-4 w-4 rounded border-white/20 bg-transparent text-emerald-500 focus:ring-emerald-500/40 cursor-pointer"
-            />
-            <span className="text-xs text-gray-300">Mentee reported presence</span>
-          </label>
-
-          <div className="flex gap-3 pt-3 border-t border-white/10">
-            <ActionButton tone="ghost" onClick={onClose} className="flex-1 justify-center py-2">Cancel</ActionButton>
-            <button
-              type="submit"
-              disabled={loading || activeMentorships.length === 0}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-550/15 hover:bg-emerald-550/25 px-4 py-2 text-xs font-semibold text-emerald-250 transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
-              {loading ? 'Logging…' : 'Log Session Slot'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
-  );
-}
-
-function Field({ label, required, children }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-        {label}{required && <span className="text-rose-455"> *</span>}
-      </label>
-      {children}
     </div>
   );
 }

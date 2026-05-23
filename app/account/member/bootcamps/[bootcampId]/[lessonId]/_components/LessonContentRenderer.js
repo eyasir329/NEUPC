@@ -240,7 +240,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-[#273647] bg-[#051424] shadow-2xl flex flex-col lg:flex-row">
+    <div className="rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl flex flex-col lg:flex-row">
       {/* Featured player area */}
       <div className="flex-1 min-w-0 bg-black flex flex-col relative">
         <VideoPlayer
@@ -264,17 +264,17 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
       </div>
 
       {/* Playlist sidebar */}
-      <div className="lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-[#273647] bg-[#010f1f] flex flex-col max-h-[420px] lg:max-h-[500px]">
+      <div className="lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-white/10 bg-zinc-950 flex flex-col max-h-[420px] lg:max-h-[500px]">
         
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#273647] bg-[#051424] shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-zinc-900 shrink-0">
           <div className="flex items-center gap-2">
             <ListVideo className="h-4 w-4 text-[#8083ff]" />
             <span className="text-sm font-bold text-[#d4e4fa] tracking-wide">
               Course Playlist
             </span>
           </div>
-          <span className="text-[11px] font-bold text-[#c0c1ff] bg-[#8083ff]/10 px-2 py-0.5 rounded-md tabular-nums border border-[#8083ff]/20">
+          <span className="text-[11px] font-bold text-violet-200 bg-violet-500/10 px-2 py-0.5 rounded-md tabular-nums border border-violet-500/20">
             {activeIdx + 1} / {videos.length}
           </span>
         </div>
@@ -291,21 +291,21 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
                 disabled={!hasVideo}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all relative overflow-hidden group ${
                   isActive
-                    ? 'bg-[#122131] border border-[#464554] shadow-md shadow-[#8083ff]/5'
-                    : 'border border-transparent hover:bg-[#051424] hover:border-[#273647]'
+                    ? 'bg-violet-500/15 border border-violet-500/30 shadow-md shadow-violet-500/5'
+                    : 'border border-transparent hover:bg-zinc-900 hover:border-white/10'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {/* Active Indicator Line */}
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#8083ff] shadow-[0_0_8px_#8083ff]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
                 )}
 
                 {/* Number / play icon */}
                 <div
                   className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     isActive
-                      ? 'bg-[#8083ff] text-white shadow-lg shadow-[#8083ff]/20 scale-105'
-                      : 'bg-[#273647] text-[#908fa0] group-hover:bg-[#34465c] group-hover:text-[#d4e4fa]'
+                      ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20 scale-105'
+                      : 'bg-zinc-700 text-zinc-400 group-hover:bg-zinc-600 group-hover:text-zinc-100'
                   }`}
                 >
                   {isActive ? (
@@ -317,10 +317,10 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
 
                 {/* Label */}
                 <div className="flex-1 min-w-0 pr-2">
-                  <p className={`text-sm font-semibold leading-snug truncate transition-colors ${isActive ? 'text-white' : 'text-[#908fa0] group-hover:text-[#d4e4fa]'}`}>
+                  <p className={`text-sm font-semibold leading-snug truncate transition-colors ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-100'}`}>
                     {vid.label || `Video ${idx + 1}`}
                   </p>
-                  <p className={`text-[10px] font-medium mt-0.5 uppercase tracking-wider transition-colors ${isActive ? 'text-[#c0c1ff]' : 'text-[#464554] group-hover:text-[#908fa0]'}`}>
+                  <p className={`text-[10px] font-medium mt-0.5 uppercase tracking-wider transition-colors ${isActive ? 'text-violet-200' : 'text-[#464554] group-hover:text-zinc-400'}`}>
                     {isActive ? 'Now Playing' : 'Up Next'}
                   </p>
                 </div>
@@ -452,7 +452,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                 return (
                   <div
                     key={img.id}
-                    className={`rounded-2xl border border-white/10 overflow-hidden bg-[#020810] flex justify-center items-center shadow-xl group/img relative ${
+                    className={`rounded-2xl border border-white/10 overflow-hidden bg-zinc-950 flex justify-center items-center shadow-xl group/img relative ${
                       isFeatured ? "sm:col-span-2" : ""
                     }`}
                   >
@@ -517,7 +517,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                   onComplete={onComplete}
                 />
                 {vid.label && (
-                  <div className="px-4 py-3 border-t border-white/8 bg-[#0a0d14]">
+                  <div className="px-4 py-3 border-t border-white/10 bg-zinc-900">
                     <p className="text-sm font-medium text-white/75 truncate">{vid.label}</p>
                   </div>
                 )}
@@ -542,9 +542,9 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           return (
             <div
               key={block.id}
-              className="rounded-2xl border border-[#8083ff]/30 bg-[#8083ff]/5 p-6 sm:p-8"
+              className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-6 sm:p-8"
             >
-              <h4 className="text-lg font-bold text-[#c0c1ff] mb-6 flex items-center gap-3">
+              <h4 className="text-lg font-bold text-violet-200 mb-6 flex items-center gap-3">
                 <BookOpen className="h-5 w-5" /> Lesson Plan
               </h4>
               <LessonContentRenderer content={block.content} lessonId={lessonId} onProgress={onProgress} onComplete={onComplete} />

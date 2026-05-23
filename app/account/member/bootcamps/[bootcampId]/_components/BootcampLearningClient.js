@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/[0.03]" /> }
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/5" /> }
 );
 
 import {
@@ -50,6 +50,8 @@ import {
   Paperclip,
   Upload,
   Trash2,
+  Sparkles,
+  MapPin,
 } from 'lucide-react';
 import {
   getLesson,
@@ -272,7 +274,7 @@ const LessonRow = memo(function LessonRow({
           ? 'cursor-not-allowed opacity-60'
           : isActive
             ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
-            : 'border-transparent hover:border-white/10 hover:bg-white/[0.04]'
+            : 'border-transparent hover:border-white/10 hover:bg-white/5'
       }`}
     >
       <div className="mt-0.5 shrink-0">
@@ -359,7 +361,7 @@ function ModuleGroup({
     <div className="ml-1.5">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-white/[0.03]"
+        className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-white/5"
       >
         <ChevronDown
           className={`h-3 w-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
@@ -451,10 +453,10 @@ function CourseGroup({
   const isOpen = forceOpen || open;
 
   return (
-    <div className="border-b border-white/[0.06] last:border-b-0">
+    <div className="border-b border-white/10 last:border-b-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="group flex w-full items-center gap-2.5 px-3 py-3 text-left hover:bg-white/[0.03]"
+        className="group flex w-full items-center gap-2.5 px-3 py-3 text-left hover:bg-white/5"
       >
         <ChevronDown
           className={`h-3.5 w-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
@@ -571,7 +573,7 @@ function CurriculumRail({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-white/[0.06] px-4 pt-4 pb-3">
+      <div className="shrink-0 border-b border-white/10 px-4 pt-4 pb-3">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
             Course content
@@ -583,7 +585,7 @@ function CurriculumRail({
             {onClose && (
               <button
                 onClick={onClose}
-                className="rounded-md p-1 text-gray-500 hover:bg-white/[0.05] hover:text-white lg:hidden"
+                className="rounded-md p-1 text-gray-500 hover:bg-white/5 hover:text-white lg:hidden"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -608,7 +610,7 @@ function CurriculumRail({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search lessons..."
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-1.5 pr-7 pl-8 text-[12px] text-white transition-colors placeholder:text-gray-600 focus:border-violet-500/40 focus:bg-white/[0.05] focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-white/5 py-1.5 pr-7 pl-8 text-[12px] text-white transition-colors placeholder:text-gray-600 focus:border-violet-500/40 focus:bg-white/5 focus:outline-none"
           />
           {query && (
             <button
@@ -708,8 +710,8 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   }, [lessonId, notes, onSave]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
           <StickyNote className="h-3.5 w-3.5 text-yellow-400" />
           <h3 className="text-[13px] font-semibold text-white">My Notes</h3>
@@ -717,7 +719,7 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10 disabled:opacity-50"
         >
           {saving ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -798,7 +800,7 @@ function TableOfContents({ contentRef }) {
         </span>
       </div>
       <nav>
-        <ul className="space-y-0.5 border-l border-white/[0.08]">
+        <ul className="space-y-0.5 border-l border-white/10">
           {headings.map((h) => {
             const isActive = activeId === h.id;
             const indent =
@@ -839,15 +841,25 @@ const DIFF_COLOR = {
 
 function PanelLoader() {
   return (
-    <div className="flex items-center justify-center py-12 text-gray-500">
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      <span className="text-[12px]">Loading…</span>
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="relative">
+        <div className="h-10 w-10 rounded-full border-4 border-white/5" />
+        <div className="absolute inset-0 h-10 w-10 animate-spin rounded-full border-4 border-transparent border-t-violet-400" />
+      </div>
+      <p className="mt-3 text-[12px] text-gray-500">Loading…</p>
     </div>
   );
 }
 
 function PanelEmpty({ message }) {
-  return <p className="py-10 text-center text-[13px] text-gray-500">{message}</p>;
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="mb-3 rounded-full bg-white/5 p-3 ring-1 ring-white/10">
+        <Sparkles className="h-5 w-5 text-gray-500" />
+      </div>
+      <p className="text-[13px] text-gray-500">{message}</p>
+    </div>
+  );
 }
 
 const STATUS_STYLE = {
@@ -878,7 +890,7 @@ function AttachmentList({ files, onRemove }) {
   return (
     <ul className="space-y-1.5">
       {files.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5">
+        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
           <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
           <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
             className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
@@ -968,7 +980,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="mt-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/[0.08] disabled:opacity-40"
+          className="mt-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
         >
           {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
           {uploading ? 'Uploading…' : 'Add files'}
@@ -1011,7 +1023,7 @@ function MemberTasksPanel({ bootcampId }) {
         const isPastDue = task.deadline && new Date(task.deadline) < new Date();
 
         return (
-          <div key={task.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+          <div key={task.id} className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20">
             <button
               className="flex w-full items-center gap-3 p-4 text-left"
               onClick={() => setExpanded(isExpanded ? null : task.id)}
@@ -1033,7 +1045,7 @@ function MemberTasksPanel({ bootcampId }) {
                   {sub.status}
                 </span>
               ) : (
-                <span className="shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-bold text-gray-500 ring-1 ring-white/10">
+                <span className="shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[9px] font-bold text-gray-500 ring-1 ring-white/10">
                   not submitted
                 </span>
               )}
@@ -1041,7 +1053,7 @@ function MemberTasksPanel({ bootcampId }) {
             </button>
 
             {isExpanded && (
-              <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+              <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3">
                 {task.description && (
                   <TaskDescriptionRenderer content={task.description} />
                 )}
@@ -1058,7 +1070,7 @@ function MemberTasksPanel({ bootcampId }) {
 
                 {/* Existing submission status */}
                 {sub && (
-                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
+                  <div className="rounded-lg border border-white/10 bg-white/2 p-3 space-y-1.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
                     {sub.notes && <TaskDescriptionRenderer content={sub.notes} />}
                     {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
@@ -1102,13 +1114,16 @@ function MemberSessionRow({ s }) {
   const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className={`rounded-xl border overflow-hidden transition-all ${isUpcoming ? 'border-violet-500/25 bg-violet-500/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+    <div className={`group relative overflow-hidden rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-xl transition-all ${isUpcoming ? 'border-violet-500/30 bg-violet-500/[0.05]' : 'border-white/10 bg-zinc-900/50 hover:border-white/20'}`}>
+      {isUpcoming && (
+        <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/10 blur-[60px]" />
+      )}
       {/* Row header */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className="relative z-10 flex w-full items-center gap-3 px-4 py-3 text-left"
       >
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isUpcoming ? 'bg-violet-500/15' : 'bg-white/[0.04]'}`}>
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${isUpcoming ? 'bg-violet-500/15 ring-violet-500/30' : 'bg-white/5 ring-white/10'}`}>
           <Video className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`} />
         </div>
         <div className="flex-1 min-w-0">
@@ -1117,12 +1132,15 @@ function MemberSessionRow({ s }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {s.target_type && (
-            <span className="hidden sm:inline-block rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
+            <span className="hidden sm:inline-block rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
               {TARGET_LABEL[s.target_type] ?? s.target_type}
             </span>
           )}
           {isUpcoming ? (
-            <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-300 ring-1 ring-violet-500/20">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.8)]" />
+              upcoming
+            </span>
           ) : s.attended === true ? (
             <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
           ) : s.attended === false ? (
@@ -1136,18 +1154,23 @@ function MemberSessionRow({ s }) {
 
       {/* Expanded detail */}
       {open && (
-        <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 space-y-3">
+        <div className="relative z-10 border-t border-white/5 bg-black/20 px-4 pb-4 pt-3 space-y-3">
           {s.description && (
             <TaskDescriptionRenderer content={s.description} />
           )}
           {s.notes && (
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+            <div className="rounded-lg border border-white/10 bg-white/2 px-3 py-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Mentor notes</p>
               <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{s.notes}</p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {s.meet_link && (
+            {s.location ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300" title={s.location}>
+                <MapPin className="h-3 w-3" />
+                {s.location}
+              </span>
+            ) : s.meet_link && (
               <a
                 href={s.meet_link}
                 target="_blank"
@@ -1205,9 +1228,9 @@ function MemberSessionsPanel({ bootcampId }) {
           { label: 'Upcoming', value: upcoming.length, color: 'text-violet-400' },
           { label: 'Attended', value: sessions.filter(s => s.attended).length, color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-center">
-            <p className={`text-lg font-bold ${color}`}>{value}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+          <div key={label} className="rounded-xl border border-white/10 bg-zinc-900/50 px-3 py-2.5 text-center shadow-lg shadow-black/20 backdrop-blur-xl">
+            <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
+            <p className="mt-0.5 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">{label}</p>
           </div>
         ))}
       </div>
@@ -1218,7 +1241,7 @@ function MemberSessionsPanel({ bootcampId }) {
           <button
             key={v}
             onClick={() => setFilter(v)}
-            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${filter === v ? 'bg-violet-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white border border-white/[0.07]'}`}
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${filter === v ? 'bg-violet-500/15 text-violet-200 shadow-[0_0_12px_rgba(139,92,246,0.15)] ring-1 ring-violet-500/30' : 'bg-white/5 text-gray-400 hover:text-white ring-1 ring-white/10 hover:ring-white/20'}`}
           >
             {label}
           </button>
@@ -1267,11 +1290,12 @@ function MemberHelpDeskPanel({ bootcampId }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
-        <p className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">Ask for help</p>
-        <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
-        <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white placeholder-gray-600 focus:border-violet-500/50 focus:outline-none" />
-        <button type="submit" disabled={sending} className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-violet-500 disabled:opacity-50">
+      <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 space-y-3 shadow-lg shadow-black/20 backdrop-blur-xl">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.08] blur-[60px]" />
+        <p className="relative z-10 text-[11px] font-bold tracking-widest text-violet-300 uppercase">Ask for help</p>
+        <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="relative z-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
+        <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="relative z-10 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
+        <button type="submit" disabled={sending} className="relative z-10 flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/15 px-4 py-2 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-50">
           {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           {sending ? 'Sending…' : 'Submit'}
         </button>
@@ -1285,7 +1309,7 @@ function MemberHelpDeskPanel({ bootcampId }) {
         <div className="space-y-2">
           <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Your tickets</p>
           {tickets.map(t => (
-            <div key={t.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <div key={t.id} className="rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20">
               <div className="flex items-center gap-2">
                 <span className="flex-1 text-[13px] font-medium text-white truncate">{t.subject}</span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.status === 'open' ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'}`}>{t.status}</span>
@@ -1430,7 +1454,7 @@ const OverviewPanel = memo(function OverviewPanel({
           Your progress
         </h2>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4">
             <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
               Overall
             </div>
@@ -1445,7 +1469,7 @@ const OverviewPanel = memo(function OverviewPanel({
               />
             </div>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4">
             <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
               Lessons
             </div>
@@ -1457,7 +1481,7 @@ const OverviewPanel = memo(function OverviewPanel({
               {totalLessons - completedCount} remaining
             </div>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4">
             <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
               Watched
             </div>
@@ -1477,7 +1501,7 @@ const OverviewPanel = memo(function OverviewPanel({
           <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
             About this bootcamp
           </h2>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="rounded-xl border border-white/10 bg-white/2 p-5">
             <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
               {bootcamp.description}
             </p>
@@ -1495,7 +1519,7 @@ const OverviewPanel = memo(function OverviewPanel({
             {bootcamp.courses.map((c) => (
               <div
                 key={c.id}
-                className="flex items-start gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+                className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/2 p-3"
               >
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                 <span className="text-[13px] leading-snug text-gray-300">
@@ -1628,7 +1652,7 @@ const LessonPanel = memo(function LessonPanel({
         >
           <div className="mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
             {/* Lesson title */}
-            <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
               <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
                 {lesson.title}
               </h1>
@@ -1668,7 +1692,7 @@ const LessonPanel = memo(function LessonPanel({
               className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
                 localCompleted
                   ? 'border-emerald-500/20 bg-emerald-500/5'
-                  : 'border-white/[0.08] bg-white/[0.02]'
+                  : 'border-white/10 bg-white/2'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -1717,7 +1741,7 @@ const LessonPanel = memo(function LessonPanel({
                 />
               </Suspense>
             ) : lesson._pendingContent ? (
-              <div className="space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
                 <div className="spa-skeleton h-3 w-full rounded" />
                 <div className="spa-skeleton h-3 w-11/12 rounded" />
                 <div className="spa-skeleton h-3 w-9/12 rounded" />
@@ -1727,8 +1751,8 @@ const LessonPanel = memo(function LessonPanel({
 
             {/* Attachments */}
             {lesson.attachments?.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
-                <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
+                <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
                   <Download className="h-4 w-4 text-purple-400" />
                   <h3 className="text-[13px] font-semibold text-white">
                     Attachments
@@ -1741,7 +1765,7 @@ const LessonPanel = memo(function LessonPanel({
                       href={att.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
+                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/2 px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
                     >
                       <FileText className="h-4 w-4 shrink-0 text-gray-500" />
                       <span className="truncate">
@@ -1763,18 +1787,18 @@ const LessonPanel = memo(function LessonPanel({
         </div>
 
         {/* TOC (xl+) */}
-        <div className="spa-scroll hidden w-64 shrink-0 overflow-y-auto border-l border-white/[0.06] p-4 pt-8 xl:block">
+        <div className="spa-scroll hidden w-64 shrink-0 overflow-y-auto border-l border-white/10 p-4 pt-8 xl:block">
           <TableOfContents contentRef={contentAreaRef} />
         </div>
       </div>
 
       {/* Lesson nav footer */}
-      <div className="shrink-0 border-t border-white/[0.06] bg-[#080b11] px-4 py-3 sm:px-6">
+      <div className="shrink-0 border-t border-white/10 bg-zinc-950 px-4 py-3 sm:px-6">
         <div className="flex items-center justify-between gap-3">
           {prevLesson ? (
             <button
               onClick={() => onSelectLesson(prevLesson)}
-              className="group flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-[12px] font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/[0.08] hover:text-white sm:px-4 sm:text-[13px]"
+              className="group flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-[12px] font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/10 hover:text-white sm:px-4 sm:text-[13px]"
             >
               <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
               <span className="hidden max-w-[200px] truncate sm:inline md:max-w-[300px]">
@@ -1822,7 +1846,7 @@ const LessonPanel = memo(function LessonPanel({
 function LessonSkeleton({ title, hasVideo }) {
   return (
     <div className="spa-fade-in mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
-      <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
         {title ? (
           <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
             {title}
@@ -1838,7 +1862,7 @@ function LessonSkeleton({ title, hasVideo }) {
       {hasVideo !== false && (
         <div className="spa-skeleton aspect-video w-full rounded-2xl" />
       )}
-      <div className="space-y-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
         <div className="spa-skeleton h-3 w-full rounded" />
         <div className="spa-skeleton h-3 w-11/12 rounded" />
         <div className="spa-skeleton h-3 w-9/12 rounded" />
@@ -2252,16 +2276,16 @@ export default function BootcampLearningClient({
   }, []);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#080b11] text-white">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-950 text-white">
       <style dangerouslySetInnerHTML={{ __html: SCROLLBAR }} />
 
       {/* Topbar */}
-      <header className="shrink-0 border-b border-white/[0.06] bg-[#080b11]/95 backdrop-blur-xl">
+      <header className="shrink-0 border-b border-white/10 bg-zinc-950/95 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-2 px-3 sm:px-5">
           {isLessonView ? (
             <button
               onClick={() => selectLesson(null)}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -2269,7 +2293,7 @@ export default function BootcampLearningClient({
           ) : (
             <Link
               href="/account/member/bootcamps"
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Bootcamps</span>
@@ -2293,7 +2317,7 @@ export default function BootcampLearningClient({
           {/* Mobile: open curriculum drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white lg:hidden"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] text-gray-400 transition-colors hover:bg-white/5 hover:text-white lg:hidden"
             aria-label="Open curriculum"
           >
             <Menu className="h-4 w-4" />
@@ -2320,7 +2344,7 @@ export default function BootcampLearningClient({
       >
         {/* Desktop sidebar */}
         <aside
-          className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#0a0e15] lg:flex xl:w-[360px]"
+          className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-zinc-900 lg:flex xl:w-[360px]"
         >
           <CurriculumRail
             bootcamp={bootcamp}
@@ -2424,7 +2448,7 @@ export default function BootcampLearningClient({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.2 }}
-              className="fixed top-0 left-0 z-50 flex h-[100dvh] w-[88%] max-w-[360px] flex-col overflow-hidden border-r border-white/[0.06] bg-[#0a0e15] lg:hidden"
+              className="fixed top-0 left-0 z-50 flex h-[100dvh] w-[88%] max-w-[360px] flex-col overflow-hidden border-r border-white/10 bg-zinc-900 lg:hidden"
             >
               <CurriculumRail
                 bootcamp={bootcamp}
@@ -2445,7 +2469,7 @@ export default function BootcampLearningClient({
 
       {/* Mobile sticky CTA (overview only) */}
       {!isLessonView && resumeLesson && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#080b11]/95 px-4 py-3 backdrop-blur-xl sm:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-zinc-950/95 px-4 py-3 backdrop-blur-xl sm:hidden">
           <button
             onClick={() => selectLesson(resumeLesson)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"

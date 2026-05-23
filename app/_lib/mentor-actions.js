@@ -376,6 +376,7 @@ export async function scheduleSessionAction(formData) {
     const target_type  = formData.get('target_type') || 'all-bootcamp';
     const attendee_emails_raw = formData.get('attendee_emails') || '';
     const target_student_ids_raw = formData.get('target_student_ids') || '';
+    const location     = formData.get('location')?.trim() || null;
 
     if (!topic || !scheduled_at) return { error: 'Topic and scheduled time are required' };
 
@@ -389,13 +390,15 @@ export async function scheduleSessionAction(formData) {
 
     let meetLink = null;
     let meetEventId = null;
-    try {
-      const meet = await createMeetEvent({ title: topic, description, startIso, endIso, attendeeEmails });
-      meetLink    = meet.meetLink;
-      meetEventId = meet.eventId;
-    } catch (meetErr) {
-      // Non-fatal: persist the session without a Meet link so the mentor sees the error
-      console.error('Google Meet creation failed:', meetErr.message);
+    if (!location) {
+      try {
+        const meet = await createMeetEvent({ title: topic, description, startIso, endIso, attendeeEmails });
+        meetLink    = meet.meetLink;
+        meetEventId = meet.eventId;
+      } catch (meetErr) {
+        // Non-fatal: persist the session without a Meet link so the mentor sees the error
+        console.error('Google Meet creation failed:', meetErr.message);
+      }
     }
 
     const target_student_ids = target_student_ids_raw
@@ -413,6 +416,7 @@ export async function scheduleSessionAction(formData) {
       meet_space_id: meetLink ? meetEventId : null,
       target_type,
       target_student_ids,
+      location,
       created_by: mentor.id,
     };
     if (mentorship_id) insertRow.mentorship_id = mentorship_id;
@@ -431,7 +435,7 @@ export async function scheduleSessionAction(formData) {
       success: true,
       session,
       meetLink,
-      meetWarning: meetLink ? null : 'Session saved but Google Meet link could not be created.',
+      meetWarning: location ? null : (meetLink ? null : 'Session saved but Google Meet link could not be created.'),
     };
   } catch (err) {
     return { error: err.message };
@@ -468,6 +472,8 @@ export async function updateScheduledSessionAction(formData) {
       ? target_student_ids_raw.split(',').map((s) => s.trim()).filter(Boolean)
       : null;
 
+    const location = formData.get('location')?.trim() || null;
+
     const updateRow = {
       topic,
       description,
@@ -477,6 +483,7 @@ export async function updateScheduledSessionAction(formData) {
       target_type,
       target_student_ids,
       bootcamp_id,
+      location,
     };
 
     const { data: session, error } = await supabase
@@ -493,6 +500,70 @@ export async function updateScheduledSessionAction(formData) {
       success: true,
       session,
     };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// --- Log a past (already-happened) session ---
+
+export async function logPastSessionAction(formData) {
+  try {
+    const mentor = await requireMentor();
+
+    const topic        = formData.get('topic')?.trim();
+    const description  = formData.get('description')?.trim() || '';
+    const scheduled_at = formData.get('scheduled_at');
+    const duration     = parseInt(formData.get('duration')) || 60;
+    const bootcamp_id  = formData.get('bootcamp_id') || null;
+    const target_type  = formData.get('target_type') || 'all-bootcamp';
+    const target_student_ids_raw = formData.get('target_student_ids') || '';
+    const attended     = formData.get('attended') === 'on' || formData.get('attended') === 'true';
+    const location     = formData.get('location')?.trim() || null;
+
+    if (!topic || !scheduled_at) return { error: 'Topic and session time are required' };
+
+    const startIso = new Date(scheduled_at).toISOString();
+    if (new Date(startIso).getTime() > Date.now())
+      return { error: 'Logged sessions must be in the past' };
+
+    const target_student_ids = target_student_ids_raw
+      ? target_student_ids_raw.split(',').map((s) => s.trim()).filter(Boolean)
+      : null;
+
+    const attendance_data = (target_student_ids ?? []).map((uid) => ({
+      user_id: uid,
+      attended,
+      points: 0,
+    }));
+
+    const insertRow = {
+      topic,
+      description,
+      session_date: startIso,
+      scheduled_at: startIso,
+      duration,
+      status: 'completed',
+      meet_link: null,
+      meet_space_id: null,
+      target_type,
+      target_student_ids,
+      attendance_data,
+      location,
+      created_by: mentor.id,
+    };
+    if (bootcamp_id) insertRow.bootcamp_id = bootcamp_id;
+
+    const { data: session, error } = await supabase
+      .from('mentorship_sessions')
+      .insert([insertRow])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/account/mentor/sessions');
+    return { success: true, session };
   } catch (err) {
     return { error: err.message };
   }

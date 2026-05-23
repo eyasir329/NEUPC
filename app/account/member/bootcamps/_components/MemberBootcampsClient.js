@@ -9,7 +9,7 @@ import {
   Flame, TrendingUp, Sparkles, PlayCircle, CheckCircle, Calendar,
   ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
   Lock, HourglassIcon, Archive, ClipboardList, Send,
-  Paperclip, Upload, Trash2,
+  Paperclip, Upload, Trash2, Layers, AlertCircle, Percent, MapPin,
 } from 'lucide-react';
 import { enrollUser, getMemberBootcampSessions, getMemberBootcampTasks, submitTaskAction, uploadTaskAttachmentAction } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/[0.03]" /> }
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/5" /> }
 );
 
 function cn(...c) { return c.filter(Boolean).join(' '); }
@@ -44,7 +44,7 @@ function AttachmentList({ files, onRemove }) {
   return (
     <ul className="space-y-1.5">
       {files.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5">
+        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
           <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
           <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
             className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
@@ -162,22 +162,50 @@ function SectionLabel({ children, action }) {
 }
 
 function StatTile({ icon: Icon, label, value, sub, accent = 'text-violet-400' }) {
+  const accentBg = {
+    'text-violet-400': 'bg-violet-500/10 ring-violet-500/20',
+    'text-emerald-400': 'bg-emerald-500/10 ring-emerald-500/20',
+    'text-amber-400': 'bg-amber-500/10 ring-amber-500/20',
+    'text-indigo-400': 'bg-indigo-500/10 ring-indigo-500/20',
+    'text-rose-400': 'bg-rose-500/10 ring-rose-500/20',
+    'text-blue-400': 'bg-blue-500/10 ring-blue-500/20',
+    'text-fuchsia-400': 'bg-fuchsia-500/10 ring-fuchsia-500/20',
+    'text-orange-400': 'bg-orange-500/10 ring-orange-500/20',
+  }[accent] || 'bg-white/5 ring-white/10';
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-[10.5px] uppercase tracking-wider text-gray-500 font-semibold">
-        <Icon className={cn('w-3.5 h-3.5', accent)} />
-        {label}
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/30 backdrop-blur-xl transition-colors hover:border-white/20"
+    >
+      <div className="pointer-events-none absolute -top-12 -right-12 h-28 w-28 rounded-full bg-current opacity-5 blur-3xl transition-opacity group-hover:opacity-10" style={{ color: 'currentColor' }} />
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        <span className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">{label}</span>
+        <div className={cn('rounded-lg p-2 ring-1', accentBg)}>
+          <Icon className={cn('h-4 w-4', accent)} />
+        </div>
       </div>
-      <div className="mt-2 text-2xl sm:text-3xl font-bold text-white tabular-nums">{value}</div>
-      {sub && <div className="mt-1 text-[11.5px] text-gray-500">{sub}</div>}
-    </div>
+      <div className="relative z-10 mt-3 text-3xl font-bold text-white tabular-nums">{value}</div>
+      {sub && <div className="relative z-10 mt-1 text-[12px] text-gray-500">{sub}</div>}
+    </motion.div>
   );
 }
 
-function ProgressBar({ value, className = '' }) {
+function ProgressBar({ value, className = '', tone = 'emerald' }) {
+  const colors = {
+    emerald: 'from-emerald-500 to-teal-400',
+    violet: 'from-violet-500 to-fuchsia-400',
+    amber: 'from-amber-500 to-orange-400',
+    blue: 'from-blue-500 to-cyan-400',
+  };
   return (
-    <div className={cn('h-1.5 rounded-full bg-white/5 overflow-hidden', className)}>
-      <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${value}%` }} />
+    <div className={cn('relative h-1.5 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/5', className)}>
+      <motion.div
+        className={cn('h-full rounded-full bg-gradient-to-r', colors[tone] || colors.emerald)}
+        initial={{ width: 0 }}
+        animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      />
     </div>
   );
 }
@@ -192,7 +220,7 @@ function SearchInput({ value, onChange, placeholder, autoFocus }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="h-9 w-full bg-white/[0.03] border border-white/10 rounded-lg pl-9 pr-9 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/40 focus:bg-white/[0.05] transition-colors"
+        className="h-9 w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-9 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/40 focus:bg-white/5 transition-colors"
       />
       {value && (
         <button onClick={() => onChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/5 text-gray-500 hover:text-white">
@@ -205,7 +233,7 @@ function SearchInput({ value, onChange, placeholder, autoFocus }) {
 
 function EmptyState({ icon: Icon = GraduationCap, title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02] py-14 text-center px-4">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/2 py-14 text-center px-4">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20">
         <Icon className="h-6 w-6 text-violet-400" />
       </div>
@@ -250,7 +278,7 @@ function EnrolledRow({ bootcamp, enrollment, compact }) {
   return (
     <Link
       href={`/account/member/bootcamps/${bootcamp.id}`}
-      className="group flex gap-4 sm:gap-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 transition-colors hover:border-violet-500/30 hover:bg-white/[0.03]"
+      className="group flex gap-4 sm:gap-5 rounded-2xl border border-white/10 bg-white/2 p-4 sm:p-5 transition-colors hover:border-violet-500/30 hover:bg-white/5"
     >
       <Thumbnail bootcamp={bootcamp} size="sm" />
       <div className="flex-1 min-w-0 flex flex-col gap-2">
@@ -303,7 +331,7 @@ function CompletedCard({ bootcamp, enrollment }) {
   return (
     <Link
       href={`/account/member/bootcamps/${bootcamp.id}`}
-      className="group flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-colors hover:border-amber-500/30"
+      className="group flex flex-col rounded-2xl border border-white/10 bg-white/2 overflow-hidden transition-colors hover:border-amber-500/30"
     >
       <Thumbnail bootcamp={bootcamp} size="md" />
       <div className="p-4 flex-1 flex flex-col gap-2">
@@ -324,9 +352,14 @@ function CatalogCard({ bootcamp, onEnroll, isEnrolling, pendingEnrollment }) {
   const needsApproval = bootcamp.enrollment_type === 'approval';
 
   return (
-    <div className="group flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-colors hover:border-violet-500/30">
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg shadow-black/30 backdrop-blur-xl transition-all duration-300 hover:border-violet-500/40 hover:bg-zinc-900/70"
+    >
+      <div className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-violet-500/[0.08] blur-[60px] opacity-0 transition-opacity group-hover:opacity-100" />
       <Thumbnail bootcamp={bootcamp} size="lg" />
-      <div className="p-4 sm:p-5 flex-1 flex flex-col gap-3">
+      <div className="relative z-10 p-4 sm:p-5 flex-1 flex flex-col gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             {bootcamp.difficulty_level && (
@@ -375,14 +408,15 @@ function CatalogCard({ bootcamp, onEnroll, isEnrolling, pendingEnrollment }) {
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
+function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [], courses = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [courseFilter, setCourseFilter] = useState('all');
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -395,8 +429,10 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
 
   const completedByDate = useMemo(() => {
     const map = {};
+    const matches = (bootcampId) => courseFilter === 'all' || bootcampId === courseFilter;
     // Active bootcamp completions — lessons are clickable
     enrolledBootcamps.forEach(({ bootcamp, enrollment }) => {
+      if (!matches(bootcamp.id)) return;
       const progress = enrollment?.progressData?.lessonProgress || {};
       Object.values(progress).forEach((p) => {
         if (p.is_completed && p.completed_at) {
@@ -414,6 +450,7 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
     });
     // Archived bootcamp completions — no lesson links (content inaccessible)
     archivedBootcamps.forEach(({ bootcamp, enrollment }) => {
+      if (!matches(bootcamp.id)) return;
       const progress = enrollment?.progressData?.lessonProgress || {};
       Object.values(progress).forEach((p) => {
         if (p.is_completed && p.completed_at) {
@@ -430,19 +467,19 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
       });
     });
     return map;
-  }, [enrolledBootcamps, archivedBootcamps]);
+  }, [enrolledBootcamps, archivedBootcamps, courseFilter]);
 
   const getIntensityClass = (count, isToday) => {
     if (count === 0) return isToday
       ? 'bg-violet-500/10 border-violet-500/40 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]'
-      : 'bg-white/[0.03] border-transparent text-gray-600 hover:border-white/10 hover:bg-white/[0.05]';
+      : 'bg-white/5 border-transparent text-gray-600 hover:border-white/10 hover:bg-white/5';
     if (count === 1) return 'bg-violet-500/30 text-white border-violet-500/10 hover:bg-violet-500/40';
     if (count === 2) return 'bg-violet-500/60 text-white border-violet-500/20 hover:bg-violet-500/70';
     return 'bg-violet-500 text-white border-violet-500 shadow-[0_4px_10px_rgba(139,92,246,0.25)] hover:bg-violet-400';
   };
 
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 md:p-6 h-full flex flex-col shadow-sm">
+    <div className="bg-white/2 border border-white/10 rounded-2xl p-5 md:p-6 h-full flex flex-col shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2 text-white">
@@ -451,16 +488,21 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">Your monthly completion heatmap</p>
         </div>
-        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 shrink-0">
-          <button onClick={prevMonth} className="p-1.5 hover:bg-white/[0.05] rounded-lg text-gray-500 hover:text-white transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="w-28 text-center text-sm font-semibold text-white">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {courses.length > 0 && (
+            <CourseFilterMenu courses={courses} value={courseFilter} onChange={setCourseFilter} />
+          )}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+            <button onClick={prevMonth} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="w-28 text-center text-sm font-semibold text-white">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </div>
+            <button onClick={nextMonth} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-all">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={nextMonth} className="p-1.5 hover:bg-white/[0.05] rounded-lg text-gray-500 hover:text-white transition-all">
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -485,7 +527,7 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
                 {isToday && count === 0 && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-violet-500/60" />}
                 {count > 0 && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-auto origin-bottom">
-                    <div className="bg-[#1a1d27] border border-white/10 text-white text-xs rounded-xl p-3 shadow-xl min-w-[160px] max-w-[240px]">
+                    <div className="bg-zinc-800 border border-white/10 text-white text-xs rounded-xl p-3 shadow-xl min-w-[160px] max-w-[240px]">
                       <p className="font-semibold text-gray-400 mb-2">{count} lesson{count > 1 ? 's' : ''} completed</p>
                       <ul className="space-y-1.5">
                         {lessons.map((l, li) => (
@@ -514,10 +556,10 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [] }) {
             );
           })}
         </div>
-        <div className="flex items-center justify-center gap-2 mt-8 text-xs text-gray-600 font-medium bg-white/[0.02] w-fit mx-auto px-4 py-2 rounded-full border border-white/[0.06]">
+        <div className="flex items-center justify-center gap-2 mt-8 text-xs text-gray-600 font-medium bg-white/2 w-fit mx-auto px-4 py-2 rounded-full border border-white/10">
           <span>Less</span>
           <div className="flex items-center gap-1.5 mx-1">
-            <div className="w-3.5 h-3.5 rounded-sm bg-white/[0.03] border border-transparent" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-white/5 border border-transparent" />
             <div className="w-3.5 h-3.5 rounded-sm bg-violet-500/30 border border-violet-500/10" />
             <div className="w-3.5 h-3.5 rounded-sm bg-violet-500/60 border border-violet-500/20" />
             <div className="w-3.5 h-3.5 rounded-sm bg-violet-500 border border-violet-500" />
@@ -630,10 +672,83 @@ function buildWatchChartData(learningActivity, preset, customFrom, customTo) {
   return Object.values(buckets);
 }
 
-function WatchTimeChart({ learningActivity }) {
+function CourseFilterMenu({ courses, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  const selected = courses.find((c) => c.id === value);
+  const label = selected ? selected.title : 'All courses';
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cn(
+          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all max-w-[160px]',
+          open
+            ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+            : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:border-white/10'
+        )}
+      >
+        <Layers className="w-3.5 h-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
+        <ChevronDown className={cn('w-3.5 h-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1.5 z-30 min-w-[200px] max-w-[260px] max-h-64 overflow-y-auto bg-zinc-900 border border-white/10 rounded-xl shadow-xl py-1"
+        >
+          <button
+            role="menuitemradio"
+            aria-checked={value === 'all'}
+            onClick={() => { onChange('all'); setOpen(false); }}
+            className={cn(
+              'w-full flex items-center justify-between gap-3 px-3 py-1.5 text-xs font-medium transition-colors text-left',
+              value === 'all' ? 'text-violet-300' : 'text-gray-400 hover:text-white hover:bg-white/5'
+            )}
+          >
+            <span className="truncate">All courses</span>
+            {value === 'all' && <Check className="w-3.5 h-3.5 shrink-0" />}
+          </button>
+          {courses.map((c) => {
+            const active = value === c.id;
+            return (
+              <button
+                key={c.id}
+                role="menuitemradio"
+                aria-checked={active}
+                onClick={() => { onChange(c.id); setOpen(false); }}
+                className={cn(
+                  'w-full flex items-center justify-between gap-3 px-3 py-1.5 text-xs font-medium transition-colors text-left',
+                  active ? 'text-violet-300' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                )}
+              >
+                <span className="truncate">{c.title}</span>
+                {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WatchTimeChart({ learningActivity, courses = [] }) {
   const [preset, setPreset] = useState('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [courseFilter, setCourseFilter] = useState('all');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -645,9 +760,16 @@ function WatchTimeChart({ learningActivity }) {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
+
+  const filteredActivity = useMemo(
+    () => courseFilter === 'all'
+      ? learningActivity
+      : learningActivity.filter((r) => r.bootcamp_id === courseFilter),
+    [learningActivity, courseFilter]
+  );
   const chartData = useMemo(
-    () => buildWatchChartData(learningActivity, preset, customFrom, customTo),
-    [learningActivity, preset, customFrom, customTo]
+    () => buildWatchChartData(filteredActivity, preset, customFrom, customTo),
+    [filteredActivity, preset, customFrom, customTo]
   );
 
   // chartData.duration is in SECONDS
@@ -668,7 +790,7 @@ function WatchTimeChart({ learningActivity }) {
     if (!active || !payload?.length) return null;
     const { lessons = [] } = payload[0].payload;
     return (
-      <div className="bg-[#0a0e15] border border-white/[0.08] p-3 rounded-xl shadow-xl min-w-48 max-w-72">
+      <div className="bg-zinc-900 border border-white/10 p-3 rounded-xl shadow-xl min-w-48 max-w-72">
         <p className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mb-2">{label}</p>
         {lessons.length > 0 && (
           <div className="space-y-1.5 mb-2">
@@ -687,7 +809,7 @@ function WatchTimeChart({ learningActivity }) {
             ))}
           </div>
         )}
-        <div className={`flex items-center justify-between gap-4 ${lessons.length > 0 ? 'pt-2 border-t border-white/[0.08]' : ''}`}>
+        <div className={`flex items-center justify-between gap-4 ${lessons.length > 0 ? 'pt-2 border-t border-white/10' : ''}`}>
           <span className="text-[10px] text-gray-500 uppercase tracking-widest">Watch time</span>
           <span className="text-xs font-bold text-violet-400 flex items-center gap-1">
             <Clock className="w-3 h-3" />
@@ -699,7 +821,7 @@ function WatchTimeChart({ learningActivity }) {
   };
 
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 md:p-6 h-full flex flex-col shadow-sm">
+    <div className="bg-white/2 border border-white/10 rounded-2xl p-5 md:p-6 h-full flex flex-col shadow-sm">
       <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2 mb-1 text-white">
@@ -712,6 +834,9 @@ function WatchTimeChart({ learningActivity }) {
           <div className="bg-violet-500/10 text-violet-300 px-3 py-1 rounded-lg text-sm font-semibold border border-violet-500/20">
             {formatWatchSeconds(totalSecs) || '0m'}
           </div>
+          {courses.length > 0 && (
+            <CourseFilterMenu courses={courses} value={courseFilter} onChange={setCourseFilter} />
+          )}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -722,7 +847,7 @@ function WatchTimeChart({ learningActivity }) {
                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all',
                 menuOpen
                   ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
-                  : 'bg-white/[0.03] border-white/[0.06] text-gray-300 hover:text-white hover:border-white/10'
+                  : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:border-white/10'
               )}
             >
               <span>{WATCH_PRESETS.find((p) => p.id === preset)?.label || 'Range'}</span>
@@ -731,7 +856,7 @@ function WatchTimeChart({ learningActivity }) {
             {menuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-1.5 z-20 min-w-[140px] bg-[#0a0e15] border border-white/[0.08] rounded-xl shadow-xl py-1"
+                className="absolute right-0 top-full mt-1.5 z-20 min-w-[140px] bg-zinc-900 border border-white/10 rounded-xl shadow-xl py-1"
               >
                 {WATCH_PRESETS.map((p) => {
                   const active = preset === p.id;
@@ -743,7 +868,7 @@ function WatchTimeChart({ learningActivity }) {
                       onClick={() => { setPreset(p.id); setMenuOpen(false); }}
                       className={cn(
                         'w-full flex items-center justify-between gap-3 px-3 py-1.5 text-xs font-medium transition-colors',
-                        active ? 'text-violet-300' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                        active ? 'text-violet-300' : 'text-gray-400 hover:text-white hover:bg-white/5'
                       )}
                     >
                       <span>{p.label}</span>
@@ -764,14 +889,14 @@ function WatchTimeChart({ learningActivity }) {
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="flex-1 min-w-[130px] bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
+            className="flex-1 min-w-[130px] bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
           />
           <span className="text-gray-600 text-xs shrink-0">to</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="flex-1 min-w-[130px] bg-white/[0.03] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
+            className="flex-1 min-w-[130px] bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40 [color-scheme:dark]"
           />
         </div>
       )}
@@ -793,11 +918,11 @@ function WatchTimeChart({ learningActivity }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
+        <div className="p-3.5 rounded-xl bg-white/2 border border-white/10 flex flex-col">
           <span className="text-xs text-gray-500 font-medium mb-1">Avg / active day</span>
           <span className="text-lg font-bold text-white">{formatWatchSeconds(avgSecs) || '0s'}</span>
         </div>
-        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col">
+        <div className="p-3.5 rounded-xl bg-white/2 border border-white/10 flex flex-col">
           <span className="text-xs text-gray-500 font-medium mb-1">Top Period</span>
           <span className="text-lg font-bold text-white">{topBar.duration > 0 ? topBar.name : '-'}</span>
         </div>
@@ -813,6 +938,17 @@ function OverviewTab({ user, enrolledBootcamps, archivedBootcamps, totalLessonsC
     const done = e.enrollment?.completed_lessons || 0;
     return total === 0 || done < total;
   }) || enrolledBootcamps[0];
+
+  const courses = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    [...enrolledBootcamps, ...archivedBootcamps].forEach(({ bootcamp }) => {
+      if (!bootcamp?.id || seen.has(bootcamp.id)) return;
+      seen.add(bootcamp.id);
+      list.push({ id: bootcamp.id, title: bootcamp.title });
+    });
+    return list;
+  }, [enrolledBootcamps, archivedBootcamps]);
 
   const stats = [
     { title: 'Enrolled Courses', value: String(enrolledBootcamps.length), icon: BookOpen, color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
@@ -846,27 +982,28 @@ function OverviewTab({ user, enrolledBootcamps, archivedBootcamps, totalLessonsC
       {/* Stats */}
       <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((stat, i) => (
-          <div key={i} className="relative overflow-hidden group p-6 bg-white/[0.02] border border-white/[0.06] rounded-2xl shadow-sm hover:shadow-md hover:border-white/10 transition-all cursor-default">
-            <div className={cn('absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity', stat.bg)} />
-            <div className="relative flex justify-between items-start">
-              <div className="space-y-4">
-                <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border', stat.bg, stat.border)}>
-                  <stat.icon className={cn('w-5 h-5', stat.color)} />
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">{stat.value}</div>
-                  <div className="text-sm font-medium text-gray-500 mt-1">{stat.title}</div>
-                </div>
+          <motion.div
+            key={i}
+            whileHover={{ y: -4, scale: 1.01 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
+          >
+            <div className={cn('pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-40 transition-opacity group-hover:opacity-70', stat.bg)} />
+            <div className="relative z-10 flex items-center justify-between gap-3 mb-4">
+              <span className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">{stat.title}</span>
+              <div className={cn('rounded-lg p-2 ring-1 ring-white/10 border', stat.bg, stat.border)}>
+                <stat.icon className={cn('h-5 w-5', stat.color)} />
               </div>
             </div>
-          </div>
+            <div className="relative z-10 text-3xl font-bold text-white tabular-nums">{stat.value}</div>
+          </motion.div>
         ))}
       </motion.div>
 
       {/* Calendar + Watch Time */}
       <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="flex flex-col h-full"><LearningCalendar enrolledBootcamps={enrolledBootcamps} archivedBootcamps={archivedBootcamps} /></div>
-        <div className="flex flex-col h-full"><WatchTimeChart learningActivity={learningActivity} /></div>
+        <div className="flex flex-col h-full"><LearningCalendar enrolledBootcamps={enrolledBootcamps} archivedBootcamps={archivedBootcamps} courses={courses} /></div>
+        <div className="flex flex-col h-full"><WatchTimeChart learningActivity={learningActivity} courses={courses} /></div>
       </motion.div>
 
       {/* Pick up where you left off */}
@@ -883,10 +1020,11 @@ function OverviewTab({ user, enrolledBootcamps, archivedBootcamps, totalLessonsC
         {continueBootcamp ? (
           <Link
             href={`/account/member/bootcamps/${continueBootcamp.bootcamp.id}`}
-            className="group relative overflow-hidden bg-white/[0.02] border border-white/[0.06] rounded-2xl p-2 transition-all hover:border-violet-500/50 block shadow-sm hover:shadow-md"
+            className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-2 shadow-lg shadow-black/30 backdrop-blur-xl transition-all hover:border-violet-500/40 hover:bg-zinc-900/70"
           >
+            <div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-violet-500/10 blur-[80px] opacity-60 transition-opacity group-hover:opacity-100" />
             <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative flex flex-col md:flex-row gap-6 p-4">
+            <div className="relative z-10 flex flex-col gap-6 p-4 md:flex-row">
               <div className="hidden md:block w-64 h-40 rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-indigo-950 to-slate-900 shrink-0 relative">
                 {continueBootcamp.bootcamp.thumbnail ? (
                   <SafeImg src={continueBootcamp.bootcamp.thumbnail} alt={continueBootcamp.bootcamp.title} className="w-full h-full object-cover" />
@@ -952,7 +1090,7 @@ function CatalogCardLite({ bootcamp, onTab }) {
   return (
     <button
       onClick={() => onTab('catalog')}
-      className="group text-left flex gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-violet-500/30 hover:bg-white/[0.03]"
+      className="group text-left flex gap-3 rounded-xl border border-white/10 bg-white/2 p-3 transition-colors hover:border-violet-500/30 hover:bg-white/5"
     >
       <Thumbnail bootcamp={bootcamp} size="sm" />
       <div className="min-w-0 flex-1">
@@ -984,10 +1122,11 @@ function MyLearningEnrolledRow({ bootcamp, enrollment }) {
   return (
     <Link
       href={`/account/member/bootcamps/${bootcamp.id}`}
-      className="group relative overflow-hidden bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 transition-all hover:border-violet-500/50 block shadow-sm hover:shadow-md"
+      className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-1 shadow-lg shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-violet-500/40 hover:bg-zinc-900/70"
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="relative flex flex-col md:flex-row gap-6 p-5">
+      <div className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-violet-500/[0.08] blur-[60px] opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="relative z-10 flex flex-col gap-6 p-5 md:flex-row">
         <div className="flex-1 flex flex-col justify-center space-y-4">
           <div className="flex justify-between items-start gap-3">
             <h3 className="text-xl font-semibold text-white group-hover:text-violet-300 transition-colors leading-tight">{bootcamp.title}</h3>
@@ -996,7 +1135,7 @@ function MyLearningEnrolledRow({ bootcamp, enrollment }) {
             </span>
           </div>
 
-          <div className="flex gap-4 text-sm text-gray-500 bg-white/[0.02] w-fit px-3 py-1.5 rounded-lg border border-white/[0.06]">
+          <div className="flex gap-4 text-sm text-gray-500 bg-white/2 w-fit px-3 py-1.5 rounded-lg border border-white/10">
             <div className="flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-emerald-500" /> <span className="font-medium text-white">{totalLessons}</span> lessons</div>
             {duration && <div className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-sky-500" /> <span className="font-medium text-white">{duration}</span></div>}
             {bootcamp.difficulty_level && <div className="flex items-center gap-1.5"><span className="font-medium text-violet-400">{bootcamp.difficulty_level}</span></div>}
@@ -1080,7 +1219,7 @@ function MyLearningTab({ enrolledBootcamps, archivedBootcamps = [], filteredEnro
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search my bootcamps..."
-              className="h-9 w-full md:w-64 bg-white/[0.03] border border-white/10 rounded-md pl-9 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-transparent transition-all"
+              className="h-9 w-full md:w-64 bg-white/5 border border-white/10 rounded-md pl-9 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-transparent transition-all"
             />
           </div>
         )}
@@ -1143,7 +1282,7 @@ function MyLearningTab({ enrolledBootcamps, archivedBootcamps = [], filteredEnro
                 ? new Date(enrollment.enrolled_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
                 : null;
               return (
-                <div key={bootcamp.id} className="flex items-center gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 opacity-75">
+                <div key={bootcamp.id} className="flex items-center gap-4 bg-white/2 border border-white/10 rounded-xl p-4 opacity-75">
                   <div className="h-12 w-12 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
                     {bootcamp.thumbnail ? (
                       <SafeImg src={bootcamp.thumbnail} alt={bootcamp.title} className="w-full h-full object-cover grayscale" />
@@ -1189,9 +1328,9 @@ function MyLearningCompletedCard({ bootcamp, enrollment }) {
   return (
     <Link
       href={`/account/member/bootcamps/${bootcamp.id}`}
-      className="group relative overflow-hidden bg-white/[0.02] border border-white/[0.06] rounded-xl transition-all hover:border-violet-500/50 block cursor-pointer shadow-sm"
+      className="group relative overflow-hidden bg-white/2 border border-white/10 rounded-xl transition-all hover:border-violet-500/50 block cursor-pointer shadow-sm"
     >
-      <div className="h-32 w-full bg-white/[0.02] relative border-b border-white/[0.06]">
+      <div className="h-32 w-full bg-white/2 relative border-b border-white/10">
         {bootcamp.thumbnail ? (
           <SafeImg src={bootcamp.thumbnail} alt={bootcamp.title} className="w-full h-full object-cover" />
         ) : (
@@ -1321,40 +1460,41 @@ function TaskCard({ task, onSubmitted }) {
     onSubmitted(task.id, result.data);
   };
 
-  const difficultyGlow = {
-    easy: 'border-l-2 border-l-emerald-500/80 hover:border-l-emerald-400',
-    medium: 'border-l-2 border-l-amber-500/80 hover:border-l-amber-400',
-    hard: 'border-l-2 border-l-rose-500/80 hover:border-l-rose-400',
+  const diffAccent = {
+    easy:   { border: 'border-l-[3.5px] border-l-emerald-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.03)] border-emerald-500/10' },
+    medium: { border: 'border-l-[3.5px] border-l-amber-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.03)] border-amber-500/10' },
+    hard:   { border: 'border-l-[3.5px] border-l-rose-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.03)] border-rose-500/10' },
   };
+  const activeDiff = diffAccent[task.difficulty] || { border: 'border-l-[3.5px] border-l-gray-500/50', glow: '' };
 
   return (
     <div className={cn(
-      "rounded-xl border transition-all duration-300 overflow-hidden bg-[#0c0e15]/40 backdrop-blur-md",
+      "rounded-xl border transition-all duration-300 overflow-hidden bg-zinc-900/50 backdrop-blur-md relative",
       open 
-        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)]" 
-        : "border-white/[0.05] hover:border-white/[0.12] hover:bg-[#0f121d]/50",
-      difficultyGlow[task.difficulty] || "border-l-2 border-l-gray-500/80"
+        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)] bg-zinc-900/70" 
+        : cn("border-white/5 hover:border-white/20 hover:bg-zinc-900/70", activeDiff.glow),
+      activeDiff.border
     )}>
       <button
-        className="flex w-full items-center gap-3 px-5 py-4 text-left select-none"
+        className="flex w-full items-center gap-3.5 px-5 py-4.5 text-left select-none"
         onClick={() => setOpen(o => !o)}
       >
         <span className={cn(
-          "shrink-0 rounded-md px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ring-1",
-          DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'
+          "shrink-0 rounded px-2.5 py-0.5 text-[9.5px] font-bold tracking-wider uppercase font-mono ring-1",
+          DIFF_COLOR[task.difficulty] ?? 'text-gray-450 bg-white/5 ring-white/10'
         )}>
           {task.difficulty}
         </span>
-        <span className="flex-1 truncate text-[13.5px] font-medium text-white/95 group-hover:text-white transition-colors">{task.title}</span>
-        <span className="shrink-0 text-[10px] font-mono font-bold text-gray-500 bg-white/[0.03] border border-white/[0.05] rounded px-1.5 py-0.5">{task.bootcampTitle}</span>
+        <span className="flex-1 truncate text-[13.5px] font-semibold text-white/95 group-hover:text-white transition-colors">{task.title}</span>
+        <span className="shrink-0 text-[9.5px] font-mono font-bold text-gray-500 bg-white/5 border border-white/5 rounded px-1.5 py-0.5">{task.bootcampTitle}</span>
         {task.points != null && (
           <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-mono font-bold text-amber-400/90 bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded">
-            <Trophy className="h-3 w-3 text-amber-400" /> {task.points} pts
+            <Trophy className="h-3 w-3 text-amber-550" /> {task.points} pts
           </span>
         )}
         {task.deadline && (
           <span className={cn(
-            "shrink-0 inline-flex items-center gap-1 text-[11px] font-medium",
+            "shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium font-mono",
             isPastDue && !sub ? 'text-rose-400' : 'text-gray-400'
           )}>
             <Clock className="h-3 w-3 opacity-60" />
@@ -1363,115 +1503,119 @@ function TaskCard({ task, onSubmitted }) {
         )}
         {sub ? (
           <span className={cn(
-            "shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1",
+            "shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 font-mono",
             SUB_STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'
           )}>
             {sub.status}
           </span>
         ) : (
-          <span className="shrink-0 rounded-full bg-white/[0.02] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-500 ring-1 ring-white/10">
+          <span className="shrink-0 rounded-full bg-white/2 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-550 ring-1 ring-white/[0.05]">
             not submitted
           </span>
         )}
         <ChevronDown className={cn(
-          "h-4 w-4 shrink-0 text-gray-400 transition-transform duration-300",
+          "h-4 w-4 shrink-0 text-gray-500 transition-transform duration-300",
           open ? 'rotate-180 text-violet-400' : ''
         )} />
       </button>
 
       {open && (
-        <div className="border-t border-white/[0.06] bg-white/[0.01]/10 px-6 pb-6 pt-4 space-y-5">
+        <div className="border-t border-white/10 bg-white/2/10 px-6 pb-6 pt-5 space-y-5 text-left">
           {task.description && (
-            <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
+            <div className="text-gray-300 text-[13px] leading-relaxed bg-black/30 border border-white/5 p-4.5 rounded-xl shadow-inner relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500 opacity-60" />
               <TaskDescriptionRenderer content={task.description} />
             </div>
           )}
           {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Problem Links</p>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Problem Attachments</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {task.problem_links.map((link, i) => (
                   <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] hover:bg-violet-500/[0.08] hover:border-violet-500/40 px-3.5 py-2.5 text-xs text-violet-300 font-semibold transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5">
-                    <FileText className="h-4 w-4 text-violet-400 shrink-0" />
+                    className="flex items-center gap-2.5 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] hover:bg-violet-500/[0.08] hover:border-violet-500/40 px-4 py-3 text-xs text-violet-300 font-semibold transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-95 group">
+                    <FileText className="h-4.5 w-4.5 text-violet-400 shrink-0 group-hover:scale-105 transition-transform" />
                     <span className="truncate">Download Problem {i + 1}</span>
-                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-violet-400/60" />
+                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-violet-400/60 group-hover:translate-x-0.5 transition-transform" />
                   </a>
                 ))}
               </div>
             </div>
           )}
-
+ 
           {sub && (
-            <div className="rounded-xl border border-white/[0.05] bg-[#080a0f]/40 p-4 space-y-3.5">
-              <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
-                <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
+            <div className="rounded-xl border border-white/5 bg-black/20 p-5 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Your Submission</p>
+                </div>
                 {sub.submitted_at && (
-                  <span className="text-[10.5px] text-gray-500 font-mono">
-                    Submitted on {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  <span className="text-[10.5px] text-gray-500 font-mono font-bold">
+                    Submitted {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
               </div>
               {sub.notes && (
-                <div className="text-[13px] text-gray-300 leading-relaxed bg-white/[0.01] p-3 rounded-lg border border-white/[0.03]">
+                <div className="text-[13px] text-gray-300 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/5 shadow-inner">
                   <TaskDescriptionRenderer content={sub.notes} />
                 </div>
               )}
               {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Submitted Files</p>
+                  <p className="text-[9.5px] font-bold uppercase tracking-wider text-gray-500">Submitted Files</p>
                   <AttachmentList files={sub.attachments} />
                 </div>
               )}
-
+ 
               {/* Points earned — shown whenever the mentor has graded the submission */}
               {sub.points_earned != null && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 shadow-sm shadow-amber-500/5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 ring-1 ring-amber-500/25">
-                    <Trophy className="h-4 w-4 text-amber-400" />
+                <div className="flex items-center gap-3.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4.5 py-3.5 shadow-sm shadow-amber-500/5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20 shadow-[0_2px_8px_rgba(245,158,11,0.1)]">
+                    <Trophy className="h-4.5 w-4.5 text-amber-400 animate-bounce" style={{ animationDuration: '3s' }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Points Obtained</p>
-                    <p className="text-xl font-bold text-amber-300 tabular-nums leading-tight">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Assessment score</p>
+                    <p className="text-xl font-extrabold text-amber-300 tabular-nums leading-tight mt-0.5">
                       {sub.points_earned}
                       {task.points != null && (
-                        <span className="text-[13px] font-semibold text-amber-500/60 ml-1">/ {task.points} pts</span>
+                        <span className="text-[13px] font-bold text-amber-500/55 ml-1">/ {task.points} max pts</span>
                       )}
                     </p>
                   </div>
                   {task.points != null && sub.points_earned != null && (
-                    <div className="shrink-0 text-right">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Score</p>
-                      <p className="text-[13px] font-bold text-white tabular-nums">
+                    <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3 py-1.5 rounded-xl font-mono">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Grade pct</p>
+                      <p className="text-[13.5px] font-bold text-emerald-450 tabular-nums mt-0.5">
                         {Math.round((sub.points_earned / task.points) * 100)}%
                       </p>
                     </div>
                   )}
                 </div>
               )}
-
+ 
               {sub.feedback && (
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 shadow-sm shadow-emerald-500/5 space-y-3">
+                <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.02] p-4.5 shadow-md shadow-emerald-950/10 space-y-3">
                   {/* Header with mentor info */}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 border-b border-emerald-500/10 pb-2.5">
                     <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10.5px]">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Mentor Feedback &amp; Assessment
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-450 animate-pulse" />
+                      Mentor Assessment Notes
                     </div>
                     {sub.reviewer && (
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 bg-emerald-950/40 border border-emerald-500/10 rounded-full px-2.5 py-1">
                         {sub.reviewer.avatar_url ? (
                           <img
                             src={sub.reviewer.avatar_url}
                             alt={sub.reviewer.full_name || 'Mentor'}
-                            className="h-6 w-6 rounded-full object-cover ring-1 ring-emerald-500/30"
+                            className="h-5 w-5 rounded-full object-cover ring-1 ring-emerald-500/30"
                           />
                         ) : (
-                          <div className="h-6 w-6 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-400">
+                          <div className="h-5 w-5 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center text-[9px] font-bold text-emerald-400">
                             {(sub.reviewer.full_name || 'M')[0].toUpperCase()}
                           </div>
                         )}
-                        <span className="text-[11px] font-semibold text-gray-400 max-w-[120px] truncate">
+                        <span className="text-[11px] font-bold text-gray-300 max-w-[120px] truncate">
                           {sub.reviewer.full_name || 'Mentor'}
                         </span>
                       </div>
@@ -1484,17 +1628,17 @@ function TaskCard({ task, onSubmitted }) {
           )}
 
           {canSubmit && (
-            <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/[0.05] pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/5 pt-4.5">
               <div className="space-y-2">
-                <label className="block text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Your Answer / Notes</label>
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#090b11]/80 backdrop-blur-md shadow-inner transition-colors focus-within:border-violet-500/40">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Solution / Notes</label>
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-zinc-950/80 backdrop-blur-md shadow-inner transition-all focus-within:border-violet-500/35 focus-within:shadow-[0_0_12px_rgba(139,92,246,0.05)]">
                   <MultiBlockEditor value={content} onChange={setContent} />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Attachments</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Supporting Attachments</label>
                 {attachments.length > 0 && (
-                  <div className="mb-2 bg-white/[0.01] p-2.5 rounded-lg border border-white/[0.03]">
+                  <div className="mb-2 bg-white/2 p-2.5 rounded-xl border border-white/5">
                     <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
                   </div>
                 )}
@@ -1509,21 +1653,31 @@ function TaskCard({ task, onSubmitted }) {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3.5 py-2 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] hover:border-white/20 transition-all disabled:opacity-40"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/2 px-4 py-3.5 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/5 hover:border-violet-500/30 transition-all duration-300 disabled:opacity-40"
                 >
-                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 text-violet-400" />}
-                  {uploading ? 'Uploading…' : 'Add attachment files'}
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                  ) : (
+                    <Upload className="h-4 w-4 text-violet-400 transition-transform group-hover:-translate-y-0.5" />
+                  )}
+                  {uploading ? 'Processing & uploading attachments…' : 'Click to add files (drag & drop support)'}
                 </button>
               </div>
               {error && <p className="text-[11px] font-semibold text-rose-400">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading || uploading}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-5 py-2.5 text-[12.5px] font-bold text-white transition-all duration-200 shadow-md shadow-violet-600/10 hover:shadow-violet-600/25 active:scale-[0.98] disabled:opacity-40"
-              >
-                <Send className="h-3.5 w-3.5" />
-                {loading ? 'Submitting…' : isRedo ? 'Resubmit Solution' : 'Submit Solution'}
-              </button>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={loading || uploading}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-5.5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-violet-600/10 hover:shadow-violet-600/25 active:scale-[0.98] disabled:opacity-40 hover:-translate-y-0.5"
+                >
+                  {loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  {loading ? 'Submitting solution…' : isRedo ? 'Resubmit Solution' : 'Submit Solution'}
+                </button>
+              </div>
             </form>
           )}
         </div>
@@ -1596,28 +1750,39 @@ function TasksTab({ enrolledBootcamps }) {
           { 
             label: 'Total Tasks', 
             value: filteredTasksForStats.length, 
-            color: 'text-white', 
-            bg: 'bg-white/[0.02] border-white/[0.05]',
-            glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
+            color: 'bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent', 
+            icon: Layers,
+            iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+            bg: 'bg-zinc-950/40 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.06)] hover:border-indigo-500/30'
           },
           { 
             label: 'Not Submitted', 
             value: pendingCount, 
             color: 'text-rose-400', 
-            bg: 'bg-rose-500/[0.02] border-rose-500/10',
-            glow: 'shadow-[inset_0_0_12px_rgba(244,63,94,0.02)]'
+            icon: AlertCircle,
+            iconColor: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+            bg: 'bg-zinc-950/40 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.06)] hover:border-rose-500/30'
           },
           { 
             label: 'Submitted', 
             value: submittedCount, 
             color: 'text-emerald-400', 
-            bg: 'bg-emerald-500/[0.02] border-emerald-500/10',
-            glow: 'shadow-[inset_0_0_12px_rgba(16,185,129,0.02)]'
+            icon: CheckCircle2,
+            iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+            bg: 'bg-zinc-950/40 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.06)] hover:border-emerald-500/30'
           },
-        ].map(({ label, value, color, bg, glow }) => (
-          <div key={label} className={cn("rounded-2xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5", bg, glow)}>
-            <div className={cn("text-2xl sm:text-3xl font-bold tracking-tight font-mono", color)}>{value}</div>
-            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
+        ].map(({ label, value, color, icon: Icon, iconColor, bg, glow }) => (
+          <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-4.5 flex items-center justify-between backdrop-blur-md transition-all duration-300 hover:-translate-y-1", bg, glow)}>
+            <div className="space-y-1 text-left">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</div>
+              <div className={cn("text-2xl sm:text-3xl font-extrabold tracking-tight font-mono leading-none", color)}>{value}</div>
+            </div>
+            <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border shrink-0 transition-transform duration-300", iconColor)}>
+              <Icon className="h-4.5 w-4.5" />
+            </div>
           </div>
         ))}
       </div>
@@ -1649,7 +1814,7 @@ function TasksTab({ enrolledBootcamps }) {
               'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
               bootcampFilter === 'all'
                 ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
             )}
           >
             All Bootcamps
@@ -1662,7 +1827,7 @@ function TasksTab({ enrolledBootcamps }) {
                 'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
                 bootcampFilter === bootcamp.id
                   ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                  : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                  : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
               )}
             >
               {bootcamp.title.split(':')[0].trim()}
@@ -1672,7 +1837,7 @@ function TasksTab({ enrolledBootcamps }) {
       )}
 
       {/* Status filter */}
-      <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
+      <div className="flex gap-2 bg-white/2 border border-white/5 rounded-xl p-1.5 w-fit">
         {[['all', 'All'], ['pending', 'Not Submitted'], ['submitted', 'Submitted']].map(([val, label]) => (
           <button
             key={val}
@@ -1731,18 +1896,18 @@ function PointsStatsPanel({ chartData, totalEarned, totalMax, label = 'Points' }
   const CustomTooltip = ({ active, payload, label: l }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[#0a0e15] border border-white/[0.08] p-3 rounded-xl shadow-xl min-w-44">
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 font-bold">{l}</p>
+      <div className="bg-zinc-900 border border-white/10 p-3 rounded-2xl shadow-xl min-w-44 backdrop-blur-md">
+        <p className="text-[9.5px] font-bold uppercase tracking-wider text-gray-500 mb-2">{l}</p>
         {payload.map(p => (
-          <div key={p.name} className="flex items-center justify-between gap-4">
+          <div key={p.name} className="flex items-center justify-between gap-4 py-0.5">
             <span className="text-xs text-gray-400">{p.name}</span>
-            <span className="text-xs font-bold tabular-nums" style={{ color: p.fill }}>{p.value} pts</span>
+            <span className="text-xs font-bold tabular-nums" style={{ color: p.name === 'Earned' ? '#f59e0b' : '#6b7280' }}>{p.value} pts</span>
           </div>
         ))}
         {payload.length === 2 && payload[1].value > 0 && (
-          <div className="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between">
+          <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
             <span className="text-[10px] text-gray-500">Score</span>
-            <span className="text-[11px] font-bold text-white">{Math.round((payload[0].value / payload[1].value) * 100)}%</span>
+            <span className="text-[11px] font-bold text-emerald-400">{Math.round((payload[0].value / payload[1].value) * 100)}%</span>
           </div>
         )}
       </div>
@@ -1750,76 +1915,95 @@ function PointsStatsPanel({ chartData, totalEarned, totalMax, label = 'Points' }
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-5">
-      <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
-        <Trophy className="h-3.5 w-3.5 text-amber-400" />
-        {label} Analytics
-      </h3>
+    <div className="rounded-2xl border border-white/5 bg-zinc-950/30 p-5.5 space-y-6 backdrop-blur-md">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-550" />
+          {label} Analytics
+        </h3>
+        {score !== null && (
+          <span className={cn("rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1",
+            score >= 70 ? 'bg-emerald-500/5 ring-emerald-500/20 text-emerald-400' : score >= 40 ? 'bg-amber-500/5 ring-amber-500/20 text-amber-400' : 'bg-rose-500/5 ring-rose-500/20 text-rose-400'
+          )}>
+            {score >= 70 ? 'Elite Performance' : score >= 40 ? 'Passing Rank' : 'Needs Focus'}
+          </span>
+        )}
+      </div>
 
       {/* Summary row */}
-      <div className="flex items-center gap-5 flex-wrap">
-        <div className="relative shrink-0">
-          <RadialProgress
-            pct={score ?? 0}
-            color={score !== null && score >= 70 ? '#10b981' : score !== null && score >= 40 ? '#f59e0b' : '#8b5cf6'}
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[13px] font-bold text-white tabular-nums">
-              {score !== null ? `${score}%` : '—'}
-            </span>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
+        <div className="flex justify-center sm:justify-start items-center gap-4 col-span-1 border-b sm:border-b-0 sm:border-r border-white/5 pb-4 sm:pb-0 sm:pr-4">
+          <div className="relative shrink-0">
+            <RadialProgress
+              pct={score ?? 0}
+              size={76}
+              stroke={6}
+              color={score !== null && score >= 70 ? '#10b981' : score !== null && score >= 40 ? '#f59e0b' : '#8b5cf6'}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[14px] font-extrabold text-white tabular-nums leading-none">
+                {score !== null ? `${score}%` : '—'}
+              </span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-gray-500 mt-0.5">score</span>
+            </div>
+          </div>
+          <div className="text-left">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Progress</div>
+            <div className="text-sm font-bold text-white mt-0.5">
+              {score !== null ? `${score}% Complete` : 'No points graded'}
+            </div>
           </div>
         </div>
-        <div className="flex gap-4 flex-wrap">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Earned</p>
-            <p className="text-2xl font-bold text-amber-300 tabular-nums">{totalEarned}</p>
-          </div>
-          {totalMax > 0 && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Max Possible</p>
-              <p className="text-2xl font-bold text-gray-400 tabular-nums">{totalMax}</p>
+
+        <div className="grid grid-cols-3 gap-2.5 col-span-3 pl-0 sm:pl-2">
+          {[
+            { label: 'Earned Points', value: totalEarned, color: 'text-amber-400' },
+            { label: 'Max Points', value: totalMax || '—', color: 'text-gray-400' },
+            { label: 'Overall Score', value: score !== null ? `${score}%` : '—', color: score >= 70 ? 'text-emerald-400' : score >= 40 ? 'text-amber-400' : 'text-rose-400' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-white/2 border border-white/5 rounded-xl p-3 text-left">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{label}</div>
+              <div className={cn("text-xl sm:text-2xl font-bold tracking-tight font-mono mt-0.5", color)}>{value}</div>
             </div>
-          )}
-          {score !== null && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Score</p>
-              <p className={cn('text-2xl font-bold tabular-nums',
-                score >= 70 ? 'text-emerald-400' : score >= 40 ? 'text-amber-400' : 'text-rose-400'
-              )}>{score}%</p>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
       {/* Per-bootcamp bar chart */}
       {chartData.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Per Bootcamp</p>
+        <div className="space-y-3 pt-2 border-t border-white/5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-left">Per Bootcamp breakdown</p>
           <div className="w-full" style={{ height: Math.max(120, chartData.length * 48) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
                 layout="vertical"
                 margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
-                barSize={12}
-                barGap={3}
+                barSize={10}
+                barGap={4}
               >
-                <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#1e2535" opacity={0.6} />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} />
+                <defs>
+                  <linearGradient id="earnedGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.7} />
+                    <stop offset="100%" stopColor="#d97706" stopOpacity={0.95} />
+                  </linearGradient>
+                  <linearGradient id="maxGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.03)" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#1e2535" opacity={0.3} />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 9, fontWeight: 500 }} />
                 <YAxis
                   type="category" dataKey="name" axisLine={false} tickLine={false}
                   tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }}
                   width={90}
                   tickFormatter={v => v.length > 14 ? v.slice(0, 13) + '…' : v}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139,92,246,0.04)' }} />
-                <Bar dataKey="earned" name="Earned" radius={[0, 4, 4, 0]}>
-                  {chartData.map((_, i) => <Cell key={i} fill="#f59e0b" />)}
-                </Bar>
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.015)' }} />
+                <Bar dataKey="earned" name="Earned" radius={[0, 3, 3, 0]} fill="url(#earnedGrad)" />
                 {chartData.some(d => d.max > 0) && (
-                  <Bar dataKey="max" name="Max" radius={[0, 4, 4, 0]}>
-                    {chartData.map((_, i) => <Cell key={i} fill="rgba(139,92,246,0.25)" />)}
-                  </Bar>
+                  <Bar dataKey="max" name="Max" radius={[0, 3, 3, 0]} fill="url(#maxGrad)" />
                 )}
               </BarChart>
             </ResponsiveContainer>
@@ -1888,31 +2072,36 @@ function CountdownBlock({ timeLeft, compact = false }) {
 
   return (
     <div className={cn(
-      'rounded-2xl border p-4 flex flex-col gap-2',
+      'rounded-2xl border p-4.5 flex flex-col gap-3 backdrop-blur-md',
       imminent
-        ? 'border-amber-500/25 bg-amber-500/[0.05]'
-        : 'border-violet-500/20 bg-violet-500/[0.04]'
+        ? 'border-amber-500/25 bg-amber-500/[0.03] shadow-[0_4px_20px_rgba(245,158,11,0.02)]'
+        : 'border-violet-500/20 bg-violet-500/[0.02] shadow-[0_4px_20px_rgba(139,92,246,0.02)]'
     )}>
-      <p className={cn(
-        'text-[10px] font-bold uppercase tracking-widest',
-        imminent ? 'text-amber-400' : 'text-violet-400'
-      )}>
-        {imminent ? '⚡ Starting very soon' : '⏳ Starts in'}
-      </p>
-      <div className="flex items-end gap-3">
+      <div className="flex items-center gap-1.5">
+        <span className={cn("h-1.5 w-1.5 rounded-full animate-ping shrink-0", imminent ? 'bg-amber-400' : 'bg-violet-400')} />
+        <p className={cn(
+          'text-[9px] font-bold uppercase tracking-wider',
+          imminent ? 'text-amber-400' : 'text-violet-400'
+        )}>
+          {imminent ? '⚡ Imminent cohort start' : '⏳ Scheduled Room Timer'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
         {units.map(({ v, l }) => (
-          <div key={l} className="flex flex-col items-center">
+          <div key={l} className="flex items-center gap-1">
+            <div className="bg-black/30 border border-white/5 rounded-xl px-3 py-2.5 shadow-inner">
+              <span className={cn(
+                'text-2xl sm:text-3xl font-extrabold tabular-nums leading-none tracking-tight font-mono',
+                imminent ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-white'
+              )}>
+                {String(v).padStart(2, '0')}
+              </span>
+            </div>
             <span className={cn(
-              'text-3xl font-bold tabular-nums leading-none tracking-tight',
-              imminent ? 'text-amber-200' : 'text-white'
+              'text-[10px] font-bold uppercase tracking-wider pr-1 text-gray-500 font-mono',
+              imminent ? 'text-amber-500/80' : 'text-violet-400/80'
             )}>
-              {String(v).padStart(2, '0')}
-            </span>
-            <span className={cn(
-              'text-[10px] font-bold uppercase tracking-widest mt-1',
-              imminent ? 'text-amber-500/70' : 'text-violet-400/70'
-            )}>
-              {l === 'd' ? 'days' : l === 'h' ? 'hrs' : l === 'm' ? 'min' : 'sec'}
+              {l}
             </span>
           </div>
         ))}
@@ -1938,39 +2127,47 @@ function SessionCard({ session: s, userId }) {
   const myPoints = myAttendance?.points ?? null;
   const attended = myAttendance?.attended ?? s.attended;
 
+  const targetBadgeStyle = {
+    'one-on-one': 'text-cyan-400 bg-cyan-500/10 ring-cyan-500/20',
+    'selected-group': 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+    'all-bootcamp': 'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+  };
+
   return (
     <div className={cn(
-      "rounded-xl border transition-all duration-300 overflow-hidden bg-[#0c0e15]/40 backdrop-blur-md",
+      "rounded-xl border transition-all duration-300 overflow-hidden bg-zinc-900/50 backdrop-blur-md text-left",
       open 
-        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)]" 
+        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)] bg-zinc-900/70" 
         : isUpcoming
-        ? "border-violet-500/25 bg-violet-500/[0.03] hover:border-violet-500/40"
-        : "border-white/[0.05] hover:border-white/[0.12] hover:bg-[#0f121d]/50"
+        ? "border-violet-500/25 bg-violet-500/[0.02] hover:border-violet-500/40 hover:shadow-[0_4px_24px_rgba(139,92,246,0.03)]"
+        : "border-white/5 hover:border-white/20 hover:bg-zinc-900/70"
     )}>
-      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-4 px-5 py-4 text-left select-none">
+      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-4 px-5 py-4.5 text-left select-none">
         <div className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors",
-          isUpcoming ? "bg-violet-500/10 border border-violet-500/20 text-violet-400" : "bg-white/[0.03] border border-white/5 text-emerald-400"
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors",
+          isUpcoming ? "bg-violet-500/10 border-violet-500/20 text-violet-400 animate-pulse" : "bg-white/2 border-white/5 text-emerald-400"
         )}>
           <Video className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13.5px] font-semibold text-white/95 truncate">{s.topic || 'Session'}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-medium">
+          <p className="text-[13.5px] font-bold text-white/95 truncate">{s.topic || 'Session'}</p>
+          <p className="text-[11px] text-gray-450 mt-1 flex flex-wrap items-center gap-1.5 font-medium">
             {s.bootcampTitle && <span className="text-violet-400 font-bold">{s.bootcampTitle}</span>}
-            {s.bootcampTitle && <span className="text-gray-600 font-mono">·</span>}
+            {s.bootcampTitle && <span className="text-gray-700 font-mono">·</span>}
             <span className="font-mono">{dateStr}</span>
-            {isUpcoming && <span className="text-gray-600 font-mono">·</span>}
-            {isUpcoming && <span className="font-mono text-violet-300">{timeStr}</span>}
-            <span className="text-gray-600 font-mono">·</span>
-            <span className="bg-white/5 border border-white/[0.04] px-1.5 py-0.5 rounded text-[10px] text-gray-300">{s.duration ?? '—'}min</span>
-            <span className="text-gray-600 font-mono">·</span>
-            <span className="text-gray-300">Mentored by {mentorName}</span>
+            {isUpcoming && <span className="text-gray-700 font-mono">·</span>}
+            {isUpcoming && <span className="font-mono text-violet-300 font-bold">{timeStr}</span>}
+            <span className="text-gray-700 font-mono">·</span>
+            <span className="bg-white/5 border border-white/5 px-1.5 py-0.5 rounded text-[10px] text-gray-300 font-mono font-bold">{s.duration ?? '—'}min</span>
+            <span className="text-gray-700 font-mono">·</span>
+            <span className="text-gray-450">Mentored by <span className="text-white font-semibold">{mentorName}</span></span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {s.target_type && (
-            <span className="hidden sm:inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-white/[0.03] border border-white/10 font-mono">
+            <span className={cn("hidden sm:inline-block rounded px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider font-mono ring-1", 
+              targetBadgeStyle[s.target_type] || 'text-gray-450 bg-white/5 ring-white/10'
+            )}>
               {TARGET_LABEL[s.target_type] ?? s.target_type}
             </span>
           )}
@@ -1979,22 +2176,22 @@ function SessionCard({ session: s, userId }) {
               <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
               {timeLeft && <CountdownBlock timeLeft={timeLeft} compact />}
             </div>
-          ) : s.attended === true ? (
+          ) : attended === true ? (
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
-          ) : s.attended === false ? (
+          ) : attended === false ? (
             <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400 ring-1 ring-rose-500/20">missed</span>
           ) : (
-            <span className="rounded-full bg-gray-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 ring-1 ring-gray-500/20">done</span>
+            <span className="rounded-full bg-gray-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-450 ring-1 ring-gray-500/20">done</span>
           )}
           <ChevronDown className={cn(
-            "h-4 w-4 text-gray-400 transition-transform duration-300",
+            "h-4 w-4 text-gray-500 transition-transform duration-300",
             open ? 'rotate-180 text-violet-400' : ''
           )} />
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-white/[0.06] bg-white/[0.01]/10 px-6 pb-6 pt-4 space-y-4">
+        <div className="border-t border-white/10 bg-white/2/10 px-6 pb-6 pt-5 space-y-5">
           {/* Countdown timer for upcoming sessions */}
           {isUpcoming && timeLeft && (
             <CountdownBlock timeLeft={timeLeft} />
@@ -2002,64 +2199,70 @@ function SessionCard({ session: s, userId }) {
 
           {/* Points obtained for completed sessions */}
           {!isUpcoming && myAttendance && (
-            <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3.5 shadow-sm shadow-amber-500/5">
+            <div className="flex items-center gap-3.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] px-4.5 py-3.5 shadow-sm shadow-amber-500/5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
                 <Trophy className="h-4.5 w-4.5 text-amber-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">Points Obtained</p>
-                <p className="text-2xl font-bold text-amber-300 tabular-nums leading-tight">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Attendance Session points</p>
+                <p className="text-xl font-extrabold text-amber-300 tabular-nums leading-none mt-0.5">
                   {myPoints != null ? myPoints : '—'}
-                  <span className="text-[13px] font-semibold text-amber-500/50 ml-1">pts</span>
+                  <span className="text-[13px] font-bold text-amber-500/60 ml-1">pts earned</span>
                 </p>
               </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Attendance</p>
+              <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3.5 py-1.5 rounded-xl">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-550 mb-0.5">Attendance</p>
                 {attended ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/25 px-2.5 py-1 text-[10.5px] font-bold text-emerald-400">
-                    <CheckCircle className="h-3 w-3" /> Attended
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 font-mono">
+                    <CheckCircle className="h-3.5 w-3.5" /> Attended
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 ring-1 ring-rose-500/25 px-2.5 py-1 text-[10.5px] font-bold text-rose-400">
-                    <X className="h-3 w-3" /> Absent
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 font-mono">
+                    <X className="h-3.5 w-3.5" /> Absent
                   </span>
                 )}
               </div>
             </div>
           )}
           {s.description && (
-            <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
+            <div className="text-gray-350 text-[13px] leading-relaxed bg-black/30 border border-white/5 p-4.5 rounded-xl relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500/40" />
               <TaskDescriptionRenderer content={s.description} />
             </div>
           )}
           
           {s.notes && (
-            <div className="rounded-xl border border-white/[0.05] bg-[#080a0f]/60 overflow-hidden">
-              <div className="flex items-center gap-1.5 bg-white/[0.02] border-b border-white/[0.05] px-4 py-2">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-violet-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mentor Notes & Guidelines</span>
+            <div className="rounded-xl border border-white/5 bg-black/40 overflow-hidden shadow-inner">
+              <div className="flex items-center gap-1.5 bg-white/2 border-b border-white/5 px-4 py-2.5">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mentor Notes &amp; Guidelines</span>
               </div>
-              <div className="p-4">
+              <div className="p-4.5 text-left">
                 <p className="text-[12.5px] leading-relaxed text-gray-300 font-mono whitespace-pre-wrap">{s.notes}</p>
               </div>
             </div>
           )}
           
-          <div className="flex flex-wrap gap-2.5 pt-1">
-            {s.meet_link && (
+          <div className="flex flex-wrap gap-3 pt-1">
+            {s.location ? (
+              <span className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-2.5 text-[12px] font-bold text-amber-300 shadow-sm" title={s.location}>
+                <MapPin className="h-4 w-4" />
+                In-person · {s.location}
+              </span>
+            ) : s.meet_link && (
               <a href={s.meet_link} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4.5 py-2.5 text-[12px] font-bold text-white transition-all duration-200 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.98]">
-                <Video className="h-3.5 w-3.5" />
-                {isUpcoming ? 'Join Live Google Meet' : 'Open Meet Link'}
-                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70" />
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.98] group">
+                <Video className="h-4 w-4 transition-transform group-hover:scale-105" />
+                {isUpcoming ? 'Join Live Google Meet Room' : 'Open Google Meet Room'}
+                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
               </a>
             )}
             {s.recording_url && (
               <a href={s.recording_url} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-4.5 py-2.5 text-[12px] font-bold text-violet-300 transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-[0.98]">
-                <PlayCircle className="h-3.5 w-3.5" />
-                Watch Saved Recording
-                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70" />
+                className="inline-flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 px-5 py-2.5 text-[12px] font-bold text-violet-300 transition-all duration-300 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-[0.98] group">
+                <PlayCircle className="h-4 w-4 text-violet-400 transition-transform group-hover:scale-105" />
+                Watch Saved Session Recording
+                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
               </a>
             )}
           </div>
@@ -2128,7 +2331,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.05] pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Sessions</h1>
           <p className="text-gray-400 mt-1 text-sm">All mentorship and broadcast sessions across your bootcamps</p>
@@ -2140,7 +2343,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search topic, mentor, bootcamp…"
-            className="h-10 w-full bg-[#0a0c10]/60 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-all"
+            className="h-10 w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white transition-colors">
@@ -2165,35 +2368,48 @@ function SessionsTab({ enrolledBootcamps, user }) {
               { 
                 label: 'Total Sessions', 
                 value: filteredSessionsForStats.length, 
-                color: 'text-white', 
-                bg: 'bg-white/[0.02] border-white/[0.05]',
-                glow: 'shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
+                color: 'bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent', 
+                icon: Video,
+                iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                bg: 'bg-zinc-950/40 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.06)] hover:border-indigo-500/30'
               },
               { 
                 label: 'Upcoming Scheduled', 
                 value: upcoming.length, 
-                color: 'text-violet-400', 
-                bg: 'bg-violet-500/[0.02] border-violet-500/10',
-                glow: 'shadow-[inset_0_0_12px_rgba(139,92,246,0.02)]'
+                color: 'text-violet-400 border-none', 
+                icon: Clock,
+                iconColor: 'text-violet-400 bg-violet-500/10 border-violet-500/20',
+                bg: 'bg-zinc-950/40 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(139,92,246,0.06)] hover:border-violet-500/30'
               },
               { 
                 label: 'Attended Sessions', 
                 value: `${attendedCount}/${pastCount}`, 
                 color: 'text-emerald-400', 
-                bg: 'bg-emerald-500/[0.02] border-emerald-500/10',
-                glow: 'shadow-[inset_0_0_12px_rgba(16,185,129,0.02)]'
+                icon: CheckCircle,
+                iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+                bg: 'bg-zinc-950/40 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.06)] hover:border-emerald-500/30'
               },
               { 
                 label: 'Attendance Rate', 
                 value: `${attendanceRate}%`, 
                 color: 'text-amber-400', 
-                bg: 'bg-amber-500/[0.02] border-amber-500/10',
-                glow: 'shadow-[inset_0_0_12px_rgba(245,158,11,0.02)]'
+                icon: Percent,
+                iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+                bg: 'bg-zinc-950/40 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.06)] hover:border-amber-500/30'
               },
-            ].map(({ label, value, color, bg, glow }) => (
-              <div key={label} className={cn("rounded-2xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5", bg, glow)}>
-                <p className={cn("text-2xl sm:text-3xl font-bold tracking-tight font-mono", color)}>{value}</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mt-1">{label}</p>
+            ].map(({ label, value, color, icon: Icon, iconColor, bg, glow }) => (
+              <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-4.5 flex items-center justify-between backdrop-blur-md transition-all duration-300 hover:-translate-y-1", bg, glow)}>
+                <div className="space-y-1 text-left">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</div>
+                  <div className={cn("text-2xl sm:text-3xl font-extrabold tracking-tight font-mono leading-none", color)}>{value}</div>
+                </div>
+                <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border shrink-0 transition-transform duration-300", iconColor)}>
+                  <Icon className="h-4.5 w-4.5" />
+                </div>
               </div>
             ))}
           </div>
@@ -2231,7 +2447,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
                   'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
                   bootcampFilter === 'all'
                     ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                    : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
                 )}
               >
                 All Bootcamps
@@ -2244,7 +2460,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
                     'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
                     bootcampFilter === bootcamp.id
                       ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                      : 'bg-white/[0.02] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                      : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
                   )}
                 >
                   {bootcamp.title.split(':')[0].trim()}
@@ -2254,7 +2470,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
           )}
 
           {/* Status / time filter tabs */}
-          <div className="flex gap-2 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1.5 w-fit">
+          <div className="flex gap-2 bg-white/2 border border-white/5 rounded-xl p-1.5 w-fit">
             {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
               <button
                 key={v}

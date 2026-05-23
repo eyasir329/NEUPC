@@ -3108,7 +3108,7 @@ export async function getMemberBootcampSessions(bootcampId) {
     .maybeSingle();
   if (!enr) return [];
 
-  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by, attendance_data';
+  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by, attendance_data, location';
 
   // 1. Bootcamp-wide sessions (broadcast or group) tied to this bootcamp
   const { data: bcSessions } = await supabaseAdmin
