@@ -188,6 +188,19 @@ export default function LessonFullscreenEditorModal({
                     className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
                   />
                 </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+                    Points
+                  </label>
+                  <input
+                    type="number"
+                    value={form.points ?? 10}
+                    onChange={(e) => set('points', Math.max(0, parseInt(e.target.value) || 0))}
+                    min="0"
+                    title="Points / Max Score for this lesson on the leaderboard standings."
+                    className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+                  />
+                </div>
                 <div className="flex items-center gap-3 mt-5">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input

@@ -69,6 +69,8 @@ import {
   Eye,
   Maximize2,
   Minimize2,
+  Users,
+  Award,
 } from 'lucide-react';
 import {
   getLesson,
@@ -88,20 +90,33 @@ import {
   uploadTaskAttachmentAction,
   submitExamSubmission,
   getExamSubmission,
+  checkEnrollment,
+  getBootcampLeaderboard,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 import ExtensionGuide from '@/app/account/member/problem-solving/_components/ExtensionGuide';
 
-const parseExamQuestions = (questions) => {
-  if (!questions) return [];
-  if (Array.isArray(questions)) return questions;
-  if (typeof questions === 'string') {
+const parseExamQuestions = (questions, lesson = null) => {
+  let list = [];
+  if (lesson) {
     try {
-      const parsed = JSON.parse(questions);
-      if (Array.isArray(parsed)) return parsed;
+      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+      const examBlock = parsed?.find((b) => b.type === 'exam');
+      list = examBlock?.questions || [];
     } catch {}
   }
-  return [];
+  if (!list || list.length === 0) {
+    if (!questions) return [];
+    if (Array.isArray(questions)) return questions;
+    if (typeof questions === 'string') {
+      try {
+        const parsed = JSON.parse(questions);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  }
+  return list;
 };
 
 const parsePracticeProblems = (problems) => {
@@ -183,14 +198,24 @@ function TaskDescriptionRenderer({ content }) {
   try {
     const blocks = typeof content === 'string' ? JSON.parse(content) : content;
     if (Array.isArray(blocks)) {
-      html = blocks.map(b => b.content || '').join('');
+      html = blocks.map(b => {
+        if (!b) return '';
+        const type = b.type || 'richText';
+        const text = b.content || '';
+        if (type === 'markdown') {
+          try { return marked(text); } catch { return `<pre>${text}</pre>`; }
+        }
+        // richText, html — already HTML; skip structural/media blocks
+        if (type === 'richText' || type === 'html') return text;
+        return '';
+      }).join('');
     } else {
       html = content;
     }
   } catch {
     html = content;
   }
-  if (!html) return null;
+  if (!html || !html.trim()) return null;
   return (
     <div className="tiptap-viewer-content" dangerouslySetInnerHTML={{ __html: html }} />
   );
@@ -1479,6 +1504,7 @@ const OverviewPanel = memo(function OverviewPanel({
   onSelectLesson,
   coursesCount,
   modulesCount,
+  enrollment,
 }) {
   const ctaLabel = isComplete
     ? 'Review'
@@ -1486,11 +1512,35 @@ const OverviewPanel = memo(function OverviewPanel({
       ? 'Resume'
       : 'Start learning';
 
+  const [activeSubTab, setActiveSubTab] = useState('overview'); // 'overview' | 'leaderboard'
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  const totalPoints = useMemo(() => {
+    return allLessons.reduce((s, l) => s + (l.points ?? 10), 0);
+  }, [allLessons]);
+
+  useEffect(() => {
+    if (activeSubTab === 'leaderboard') {
+      setLoadingLeaderboard(true);
+      getBootcampLeaderboard(bootcamp.id)
+        .then((data) => {
+          setLeaderboardData(data || []);
+        })
+        .catch((err) => {
+          toast.error('Failed to load leaderboard');
+          console.error(err);
+        })
+        .finally(() => {
+          setLoadingLeaderboard(false);
+        });
+    }
+  }, [activeSubTab, bootcamp?.id]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
       {/* Title + meta */}
       <div className="space-y-3">
-
         {bootcamp?.difficulty_level && (
           <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-violet-300 uppercase ring-1 ring-violet-500/20">
             {bootcamp.difficulty_level}
@@ -1585,7 +1635,7 @@ const OverviewPanel = memo(function OverviewPanel({
         <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
           Your progress
         </h2>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           <div className="rounded-xl border border-white/10 bg-white/2 p-4">
             <div className="text-[10.5px] font-semibold tracking-wider text-gray-500 uppercase">
               Overall
@@ -1610,7 +1660,22 @@ const OverviewPanel = memo(function OverviewPanel({
               <span className="text-base text-gray-500">/{totalLessons}</span>
             </div>
             <div className="mt-2 text-[11px] text-gray-500">
-              {totalLessons - completedCount} remaining
+              {totalLessons - completedCount} left
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#161b22] p-4 ring-1 ring-violet-500/20">
+            <div className="text-[10.5px] font-bold tracking-wider text-violet-400 uppercase flex items-center gap-1">
+              <Trophy className="h-3 w-3 text-amber-400" /> Score
+            </div>
+            <div className="mt-1 text-2xl font-black text-white tabular-nums">
+              {enrollment?.score || 0}
+              <span className="text-[11px] font-semibold text-gray-500 ml-1">pts</span>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
+              <div
+                className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-500"
+                style={{ width: `${totalPoints > 0 ? Math.min(100, Math.round(((enrollment?.score || 0) / totalPoints) * 100)) : 0}%` }}
+              />
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/2 p-4">
@@ -1620,46 +1685,185 @@ const OverviewPanel = memo(function OverviewPanel({
             <div className="mt-1 text-2xl font-bold text-white tabular-nums">
               {formatDurationSecs(totalWatchedSecs) || '0m'}
             </div>
-            <div className="mt-2 text-[11px] text-gray-500">
+            <div className="mt-2 text-[11px] text-gray-500 truncate">
               of {formatDurationSecs(totalDurationSecs) || '—'}
             </div>
           </div>
         </div>
       </section>
 
-      {/* About */}
-      {bootcamp?.description && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-            About this bootcamp
-          </h2>
-          <div className="rounded-xl border border-white/10 bg-white/2 p-5">
-            <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
-              {bootcamp.description}
-            </p>
-          </div>
-        </section>
-      )}
+      {/* Sub-tab selection */}
+      <div className="mt-8 flex border-b border-white/10">
+        <button
+          onClick={() => setActiveSubTab('overview')}
+          className={`relative border-b-2 px-6 py-3 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+            activeSubTab === 'overview'
+              ? 'border-violet-500 text-white'
+              : 'border-transparent text-gray-500 hover:text-white/80'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveSubTab('leaderboard')}
+          className={`relative border-b-2 px-6 py-3 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+            activeSubTab === 'leaderboard'
+              ? 'border-violet-500 text-white'
+              : 'border-transparent text-gray-500 hover:text-white/80'
+          }`}
+        >
+          Leaderboard
+        </button>
+      </div>
 
-      {/* What you'll learn */}
-      {coursesCount > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-            What you&apos;ll learn
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {bootcamp.courses.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/2 p-3"
-              >
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                <span className="text-[13px] leading-snug text-gray-300">
-                  {c.title}
-                </span>
+      {activeSubTab === 'overview' ? (
+        <>
+          {/* About */}
+          {bootcamp?.description && (
+            <section className="mt-8">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+                About this bootcamp
+              </h2>
+              <div className="rounded-xl border border-white/10 bg-white/2 p-5">
+                <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
+                  {bootcamp.description}
+                </p>
               </div>
-            ))}
+            </section>
+          )}
+
+          {/* What you'll learn */}
+          {coursesCount > 0 && (
+            <section className="mt-8">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+                What you&apos;ll learn
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {bootcamp.courses.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/2 p-3"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span className="text-[13px] leading-snug text-gray-300">
+                      {c.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      ) : (
+        <section className="mt-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+              Class Standings
+            </h2>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-violet-400">
+              <Sparkles className="h-3.5 w-3.5" />
+              Live Rankings
+            </div>
           </div>
+
+          {loadingLeaderboard ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+              <span className="text-xs text-gray-500">Calculating weighted points...</span>
+            </div>
+          ) : leaderboardData.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-white/2 p-10 text-center text-gray-500 text-[13px]">
+              No entries found.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-white/1 divide-y divide-white/5">
+              {leaderboardData.map((student) => {
+                const isCurrentUser = student.userId === enrollment?.user_id;
+                const showPodium = student.rank <= 3;
+                return (
+                  <div
+                    key={student.userId}
+                    className={`flex items-center gap-4 px-4 py-3.5 transition-all ${
+                      isCurrentUser
+                        ? 'border-l-4 border-emerald-500 bg-emerald-500/[0.04]'
+                        : 'hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {/* Rank Badge */}
+                    <div className="flex w-10 items-center justify-center shrink-0">
+                      {showPodium ? (
+                        <div
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-black shadow-md ${
+                            student.rank === 1
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-yellow-500/20'
+                              : student.rank === 2
+                                ? 'bg-gradient-to-r from-slate-300 to-gray-400 text-black shadow-slate-400/20'
+                                : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-amber-700/20'
+                          }`}
+                        >
+                          {student.rank === 1 ? (
+                            <Trophy className="h-4 w-4" />
+                          ) : (
+                            student.rank
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-500 tabular-nums">
+                          #{student.rank}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Avatar + Name */}
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {student.avatarUrl ? (
+                        <img
+                          src={student.avatarUrl}
+                          alt=""
+                          className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10 shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-violet-500/20 to-pink-500/20 text-xs font-semibold text-white ring-1 ring-white/10 shrink-0">
+                          {student.userName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white flex items-center gap-1.5">
+                          {student.userName}
+                          {isCurrentUser && (
+                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 ring-1 ring-emerald-500/20">
+                              You
+                            </span>
+                          )}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1 w-16 overflow-hidden rounded-full bg-white/10 sm:w-24">
+                            <div
+                              className="h-full bg-linear-to-r from-violet-500 to-pink-500 transition-all"
+                              style={{ width: `${student.progressPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-gray-500 tabular-nums font-semibold">
+                            {student.progressPercent}% progress
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total Points */}
+                    <div className="text-right shrink-0">
+                      <p className="text-[15px] font-black text-white tabular-nums">
+                        {student.score}
+                      </p>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                        points
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -1683,6 +1887,7 @@ const LessonPanel = memo(function LessonPanel({
   currentIndex,
   bootcampId,
   onProgressUpdate,
+  onRefreshEnrollment,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -1722,6 +1927,83 @@ const LessonPanel = memo(function LessonPanel({
   const [isMcqRetaking, setIsMcqRetaking] = useState(false);
   const [cqAttachments, setCqAttachments] = useState([]);
   const [cqUploading, setCqUploading] = useState(false);
+
+  const lessonScoreDetails = useMemo(() => {
+    const weight = lesson.points ?? 10;
+
+    if (lesson.type === 'video' || lesson.type === 'lesson') {
+      const earned = localCompleted ? weight : 0;
+      return { earned, total: weight };
+    } else if (lesson.type === 'practice') {
+      let problems = [];
+      try {
+        const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+        const practiceBlock = parsed?.find((b) => b.type === 'practice');
+        problems = practiceBlock?.problems || [];
+      } catch {}
+      if (!problems || problems.length === 0) {
+        problems = parsePracticeProblems(lesson.practice_problems);
+      }
+
+      let solvedPoints = 0;
+      let totalPoints = 0;
+      const solvedIndices = lessonProgress[lesson.id]?.solved_problems || [];
+      
+      if (Array.isArray(problems)) {
+        problems.forEach((p, idx) => {
+          const pts = p.points ?? 5;
+          totalPoints += pts;
+          if (solvedIndices.includes(idx)) {
+            solvedPoints += pts;
+          }
+        });
+      }
+      
+      if (totalPoints > 0) {
+        const ratio = solvedPoints / totalPoints;
+        return { earned: Math.floor(ratio * weight), total: weight };
+      } else {
+        return { earned: localCompleted ? weight : 0, total: weight };
+      }
+    } else if (lesson.type === 'exam') {
+      let questions = [];
+      try {
+        const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+        const examBlock = parsed?.find((b) => b.type === 'exam');
+        questions = examBlock?.questions || [];
+      } catch {}
+      if (!questions || questions.length === 0) {
+        questions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
+          ? selectedQuestions
+          : (lesson.exam_questions || []);
+      }
+
+      let examMaxScore = 0;
+      if (Array.isArray(questions)) {
+        questions.forEach((q) => {
+          const isMcq = q.options && q.options.length > 0;
+          examMaxScore += q.points ?? (isMcq ? 5 : 10);
+        });
+      }
+
+      // Use highest score across all attempts (best performance)
+      let bestScore = examSub?.score || 0;
+      const history = examSub?.submitted_answers?.attempts_history || [];
+      if (Array.isArray(history)) {
+        history.forEach((attempt) => {
+          bestScore = Math.max(bestScore, attempt?.score || 0);
+        });
+      }
+
+      if (examMaxScore > 0) {
+        const ratio = bestScore / examMaxScore;
+        return { earned: Math.floor(ratio * weight), total: weight };
+      } else {
+        return { earned: localCompleted ? weight : 0, total: weight };
+      }
+    }
+    return { earned: localCompleted ? weight : 0, total: weight };
+  }, [lesson, lessonProgress, localCompleted, examSub, selectedQuestions]);
 
   const safeParseNotes = (val) => {
     if (!val) {
@@ -1815,9 +2097,10 @@ const LessonPanel = memo(function LessonPanel({
     const updatedHistory = [...history, currentAttempt];
 
     const randomCount = lesson.random_question_count;
+    const resolvedQs = parseExamQuestions(lesson.exam_questions, lesson);
     const qs = randomCount > 0 
-      ? selectNovelQuestions(lesson.exam_questions || [], updatedHistory, randomCount)
-      : (lesson.exam_questions || []);
+      ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
+      : resolvedQs;
     
     setSelectedQuestions(qs);
     setMcqAnswers({});
@@ -1847,9 +2130,10 @@ const LessonPanel = memo(function LessonPanel({
     const updatedHistory = [...history, currentAttempt];
 
     const randomCount = lesson.random_question_count;
+    const resolvedQs = parseExamQuestions(lesson.exam_questions, lesson);
     const qs = randomCount > 0 
-      ? selectNovelQuestions(lesson.exam_questions || [], updatedHistory, randomCount)
-      : (lesson.exam_questions || []);
+      ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
+      : resolvedQs;
 
     setSelectedQuestions(qs);
     setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
@@ -1861,9 +2145,10 @@ const LessonPanel = memo(function LessonPanel({
   };
 
   const handleMcqSubmit = async () => {
-    const activeQuestions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
+    const allQuestions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
       ? selectedQuestions
-      : (lesson.exam_questions || []);
+      : parseExamQuestions(lesson.exam_questions, lesson);
+    const activeQuestions = allQuestions.filter(q => Array.isArray(q.options) && q.options.length > 0);
 
     const unanswered = activeQuestions.filter((q) => mcqAnswers[q.id] === undefined);
     if (unanswered.length > 0) {
@@ -1927,6 +2212,7 @@ const LessonPanel = memo(function LessonPanel({
       if (isMcqOnly) {
         onMarkComplete(lesson.id);
       }
+      refreshEnrollment();
     } catch (err) {
       toast.error(err.message || 'Failed to submit MCQ answers');
     } finally {
@@ -1999,6 +2285,7 @@ const LessonPanel = memo(function LessonPanel({
       setExamSub(res);
       setIsRetaking(false);
       toast.success('Subjective solution successfully submitted to your mentor!');
+      refreshEnrollment();
     } catch (err) {
       toast.error(err.message || 'Failed to submit CQ solution');
     } finally {
@@ -2017,7 +2304,7 @@ const LessonPanel = memo(function LessonPanel({
       getExamSubmission(lesson.id)
         .then((res) => {
           setExamSub(res);
-          const allQuestions = parseExamQuestions(lesson.exam_questions);
+          const allQuestions = parseExamQuestions(lesson.exam_questions, lesson);
           if (res) {
             const attemptAnswers = res.submitted_answers;
             if (attemptAnswers?.selected_questions) {
@@ -2149,7 +2436,7 @@ const LessonPanel = memo(function LessonPanel({
     const activeQuestions = overrideQuestions || (
       (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
         ? selectedQuestions
-        : (lesson.exam_questions || [])
+        : parseExamQuestions(lesson.exam_questions, lesson)
     );
 
     // Derive displayed attempt values if viewing a completed submission
@@ -2165,6 +2452,7 @@ const LessonPanel = memo(function LessonPanel({
         mcq: examSub.submitted_answers?.mcq || (lesson.exam_type === 'mcq' ? (examSub.submitted_answers?.mcq || examSub.submitted_answers) : {}),
         cq: {
           answer: safeParseNotes(examSub.submitted_answers?.cq?.answer || examSub.submitted_answers?.answer),
+          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || examSub.submitted_answers?.answers_by_question || {},
           attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments)
             ? examSub.submitted_answers.cq.attachments
             : Array.isArray(examSub.submitted_answers?.attachments)
@@ -2191,6 +2479,10 @@ const LessonPanel = memo(function LessonPanel({
     const maxPoints = (examSub && !isRetaking)
       ? displayedQuestions.reduce((acc, q) => acc + (q.points || 5), 0)
       : activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+
+    const mcqMaxPoints = ((examSub && !isRetaking) ? displayedQuestions : activeQuestions)
+      .filter(q => Array.isArray(q.options) && q.options.length > 0)
+      .reduce((acc, q) => acc + (q.points || 5), 0);
 
     const isMcq = lesson.exam_type === 'mcq';
     const isCq = lesson.exam_type === 'cq';
@@ -2238,16 +2530,14 @@ const LessonPanel = memo(function LessonPanel({
                   </p>
                 </div>
                 
-                {!isCq && (
-                  <button
-                    type="button"
-                    onClick={isMcq || isHybrid ? handleRetakeMcq : handleRetakeCq}
-                    className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Retake Exam
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={isCq ? handleRetakeCq : (isMcq || isHybrid) ? handleRetakeMcq : handleRetakeCq}
+                  className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {isCq ? 'Retake CQ Exam' : 'Retake Exam'}
+                </button>
               </div>
             </div>
 
@@ -2264,21 +2554,8 @@ const LessonPanel = memo(function LessonPanel({
             )}
           </div>
 
-          {/* Exam Guidelines / Instructions */}
-          {lesson.content && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.01] p-4 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-              <Suspense fallback={<ChunkFallback label="Loading exam instructions…" />}>
-                <LessonContentRenderer
-                  key={lesson.id}
-                  content={lesson.content}
-                  lessonId={lesson.id}
-                  onProgress={handleProgress}
-                  onComplete={handleVideoComplete}
-                  initialPosition={initialPosition}
-                />
-              </Suspense>
-            </div>
-          )}
+          {/* NOTE: lesson content/instructions are rendered once by the parent LessonContentRenderer.
+               No duplicate rendering needed here. */}
 
           {/* Attempt Selector Pill Row */}
           {history.length > 0 && (
@@ -2380,27 +2657,66 @@ const LessonPanel = memo(function LessonPanel({
               </div>
             )}
 
-            {(isCq || isHybrid) && (
-              <div className="space-y-5">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Your Submitted Solution</h4>
-                
-                {displayedCqAnswerText && (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Written Answer</h5>
-                    <TaskDescriptionRenderer content={displayedCqAnswerText} />
-                  </div>
-                )}
+            {(isCq || isHybrid) && (() => {
+              const cqQs = displayedQuestions.filter(
+                q => !Array.isArray(q.options) || q.options.length === 0
+              );
+              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || {};
+              return (
+                <div className="space-y-5">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Your Submitted Solution</h4>
 
+                  {/* Per-question submitted answers */}
+                  {cqQs.length > 0 ? (
+                    <div className="space-y-4">
+                      {cqQs.map((q, idx) => {
+                        const qId = q.id || String(idx);
+                        const answerText = submittedByQuestion[qId] || (cqQs.length === 1 ? displayedCqAnswerText : '') || '';
+                        return (
+                          <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                            <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.01]">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                                {idx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <MarkdownDesc text={q.question} className="text-slate-200 [&_p]:text-slate-200 [&_p]:font-semibold [&_p]:text-xs" />
+                                {q.points != null && (
+                                  <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                    {q.points} pts
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3">
+                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Your Answer</span>
+                              {answerText ? (
+                                <TaskDescriptionRenderer content={answerText} />
+                              ) : (
+                                <p className="text-xs text-gray-600 italic">No answer provided for this question.</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : displayedCqAnswerText ? (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Written Answer</h5>
+                      <TaskDescriptionRenderer content={displayedCqAnswerText} />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 italic">No subjective answers were submitted.</p>
+                  )}
 
-
-                {displayedCqAttachments && displayedCqAttachments.length > 0 && (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Attachments</h5>
-                    <AttachmentList files={displayedCqAttachments} />
-                  </div>
-                )}
-              </div>
-            )}
+                  {displayedCqAttachments && displayedCqAttachments.length > 0 && (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Attachments</h5>
+                      <AttachmentList files={displayedCqAttachments} />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       );
@@ -2424,21 +2740,8 @@ const LessonPanel = memo(function LessonPanel({
           </p>
         </div>
 
-        {/* Exam Guidelines / Instructions */}
-        {lesson.content && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.01] p-4 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-            <Suspense fallback={<ChunkFallback label="Loading exam instructions…" />}>
-              <LessonContentRenderer
-                key={lesson.id}
-                content={lesson.content}
-                lessonId={lesson.id}
-                onProgress={handleProgress}
-                onComplete={handleVideoComplete}
-                initialPosition={initialPosition}
-              />
-            </Suspense>
-          </div>
-        )}
+        {/* NOTE: lesson content/instructions are rendered once by the parent LessonContentRenderer.
+             No duplicate rendering needed here. */}
 
         {/* Tab switcher for Hybrid */}
         {isHybrid && (
@@ -2490,7 +2793,7 @@ const LessonPanel = memo(function LessonPanel({
                   <div>
                     <h4 className="text-sm font-bold text-white">MCQ Section Graded</h4>
                     <p className="text-xs text-gray-400 mt-1">
-                      You scored <span className="text-emerald-400 font-bold">{examSub?.submitted_answers?.mcq_score || examSub?.score || 0}</span> out of {maxPoints} points on your latest MCQ attempt.
+                      You scored <span className="text-emerald-400 font-bold">{examSub?.submitted_answers?.mcq_score || examSub?.score || 0}</span> out of {mcqMaxPoints} points on your latest MCQ attempt.
                     </p>
                   </div>
                   <button
@@ -2626,11 +2929,11 @@ const LessonPanel = memo(function LessonPanel({
           <div className="space-y-6">
             {(() => {
               // Only subjective questions (no options array = CQ question)
-              const cqQuestions = (lesson.exam_questions || []).filter(
+              const cqQuestions = displayedQuestions.filter(
                 q => !Array.isArray(q.options) || q.options.length === 0
               );
               // Per-question submitted answers from the current displayed attempt
-              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || {};
+              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || displayedAttempt?.answers_by_question || {};
 
               if (isCqSubmitted) {
                 return (
@@ -2829,6 +3132,10 @@ const LessonPanel = memo(function LessonPanel({
                 <span className="inline-flex items-center gap-1 rounded bg-zinc-800 text-[10px] font-bold text-gray-400 px-1.5 py-0.5 uppercase">
                   {lesson.type || 'lesson'}
                 </span>
+                <span className="flex items-center gap-1 text-[11px] font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                  <Award className="h-3 w-3 text-amber-400" />
+                  Score: {lessonScoreDetails.earned} / {lessonScoreDetails.total} pts
+                </span>
                 {lesson.duration > 0 && (
                   <span className="flex items-center gap-1.5 text-[12px] text-gray-500">
                     <Clock className="h-3.5 w-3.5" />{' '}
@@ -2922,6 +3229,7 @@ const LessonPanel = memo(function LessonPanel({
                           lessonProgress={lessonProgress}
                           onProgressUpdate={onProgressUpdate}
                           bootcampId={bootcampId}
+                          onRefreshEnrollment={onRefreshEnrollment}
                         />
                       )}
                       examComponent={(questions) => getExamPlayer(questions)}
@@ -2946,6 +3254,7 @@ const LessonPanel = memo(function LessonPanel({
                     lessonProgress={lessonProgress}
                     onProgressUpdate={onProgressUpdate}
                     bootcampId={bootcampId}
+                    onRefreshEnrollment={onRefreshEnrollment}
                   />
                 )}
 
@@ -3082,7 +3391,7 @@ function getLessonIdFromUrl() {
   return m ? m[1] : null;
 }
 
-function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId }) {
+function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId, onRefreshEnrollment }) {
   const [selectedProblem, setSelectedProblem] = useState(null); // { problem, pIdx }
   const [modalTab, setModalTab] = useState('editorial'); // 'editorial' | 'solution' | 'ai'
   const [copiedIdx, setCopiedIdx] = useState(null);
@@ -3165,6 +3474,9 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
       } else {
         toast.success(`Marked "${name}" as unsolved.`);
       }
+      if (onRefreshEnrollment) {
+        onRefreshEnrollment();
+      }
     } catch (err) {
       console.error('Failed to toggle problem solve status:', err);
       toast.error('Failed to update progress.');
@@ -3228,6 +3540,8 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   const solvedCount = solvedList.length;
   const totalCount = problems.length;
   const percent = Math.round((solvedCount / totalCount) * 100);
+  const totalPoints = problems.reduce((acc, p) => acc + (p.points ?? 5), 0);
+  const earnedPoints = problems.reduce((acc, p, idx) => acc + (solvedList.includes(idx) ? (p.points ?? 5) : 0), 0);
 
   return (
     <div className="flex flex-col gap-6 mt-6">
@@ -3246,6 +3560,9 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
           <div className="flex items-center gap-3">
             <span className="text-xs font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-full shrink-0">
               {solvedCount} / {totalCount} Solved ({percent}%)
+            </span>
+            <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full shrink-0">
+              {earnedPoints} / {totalPoints} pts
             </span>
           </div>
         </div>
@@ -3275,6 +3592,7 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-16 text-center">Status</th>
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-24">Star</th>
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Problem</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Points</th>
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Workspace</th>
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Editorial</th>
               <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Video</th>
@@ -3361,6 +3679,13 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                       >
                         {p.name || `Problem ${pIdx + 1}`}
                       </a>
+                    </td>
+
+                    {/* Points */}
+                    <td className="p-4 text-center">
+                      <span className="text-xs font-bold text-amber-400">
+                        {p.points ?? 5} pts
+                      </span>
                     </td>
 
                     {/* Workspace Link */}
@@ -3657,8 +3982,10 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
 export default function BootcampLearningClient({
   bootcamp,
   lessonProgress: initialProgress = {},
+  enrollment: initialEnrollment = {},
 }) {
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
+  const [enrollment, setEnrollment] = useState(initialEnrollment);
   // activeLessonId: what the sidebar highlights (set immediately on click)
   const [activeLessonId, setActiveLessonId] = useState(null);
   // loadedLesson: what is actually rendered in the main panel
@@ -3667,6 +3994,23 @@ export default function BootcampLearningClient({
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
+
+  const refreshEnrollment = useCallback(async () => {
+    try {
+      const res = await checkEnrollment(bootcamp?.id);
+      if (res.enrolled && res.enrollment) {
+        setEnrollment(res.enrollment);
+      }
+    } catch (err) {
+      console.error('Failed to refresh enrollment:', err);
+    }
+  }, [bootcamp?.id]);
+
+  useEffect(() => {
+    if (Object.keys(lessonProgress).length > 0) {
+      refreshEnrollment();
+    }
+  }, [lessonProgress, refreshEnrollment]);
 
   const lessonCacheRef = useRef({});
   const prefetchInflightRef = useRef(new Set());
@@ -3692,6 +4036,7 @@ export default function BootcampLearningClient({
 
   const totalLessons = allLessons.length;
   const totalWeight = allLessons.reduce((s, l) => s + (l.weight ?? 1), 0);
+  const totalPoints = allLessons.reduce((s, l) => s + (l.points ?? 10), 0);
   const completedCount = allLessons.filter(
     (l) => lessonProgress?.[l.id]?.is_completed
   ).length;
@@ -3969,9 +4314,10 @@ export default function BootcampLearningClient({
             activityDate,
           }).catch(() => {});
         }
+        refreshEnrollment();
       });
     },
-    [bootcamp, moduleIndex, lessonProgress]
+    [bootcamp, moduleIndex, lessonProgress, refreshEnrollment]
   );
 
   const handleMarkIncomplete = useCallback((lessonId) => {
@@ -3981,8 +4327,9 @@ export default function BootcampLearningClient({
         ...prev,
         [lessonId]: { ...prev[lessonId], is_completed: false },
       }));
+      refreshEnrollment();
     });
-  }, [bootcamp?.id]);
+  }, [bootcamp?.id, refreshEnrollment]);
 
   const handleSaveNotes = useCallback(async (lessonId, notes) => {
     await saveLessonNotes(lessonId, notes);
@@ -4091,6 +4438,14 @@ export default function BootcampLearningClient({
             )}
           </div>
 
+          {/* Points display */}
+          <div className="flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500/10 to-pink-500/10 px-3 py-1 text-[11px] font-bold text-white ring-1 ring-white/10 shrink-0">
+            <Trophy className="h-3.5 w-3.5 text-amber-400" />
+            <span className="hidden sm:inline text-gray-400 font-medium mr-0.5">Points:</span>
+            <span className="text-white">{enrollment.score || 0}</span>
+            <span className="text-gray-500 font-medium">/{totalPoints}</span>
+          </div>
+
           {/* Mobile: open curriculum drawer */}
           <button
             onClick={() => setDrawerOpen(true)}
@@ -4186,6 +4541,7 @@ export default function BootcampLearningClient({
                 currentIndex={currentIndex}
                 bootcampId={bootcamp?.id}
                 onProgressUpdate={setLessonProgress}
+                onRefreshEnrollment={refreshEnrollment}
               />
             </div>
           ) : (
@@ -4204,6 +4560,7 @@ export default function BootcampLearningClient({
               onSelectLesson={selectLesson}
               coursesCount={coursesCount}
               modulesCount={modulesCount}
+              enrollment={enrollment}
             />
           )}
         </main>

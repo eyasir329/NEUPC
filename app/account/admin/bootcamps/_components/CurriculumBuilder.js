@@ -216,6 +216,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
       is_free_preview: lesson.is_free_preview || false,
       is_published: lesson.is_published !== false,
       weight: lesson.weight !== undefined ? lesson.weight : 1,
+      points: lesson.points !== undefined ? lesson.points : 10,
     };
   });
 
@@ -377,6 +378,19 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
               className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
             />
           </div>
+          <div>
+            <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+              Points
+            </label>
+            <input
+              type="number"
+              value={form.points}
+              onChange={(e) => set('points', Math.max(0, parseInt(e.target.value) || 0))}
+              min="0"
+              title="Points / Max Score for this lesson on the leaderboard standings."
+              className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+            />
+          </div>
           <div className="flex items-center gap-3 mt-5">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -440,7 +454,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
           <div className="flex items-center justify-between border-b border-[#464554] pb-3">
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-violet-400" />
-              <h4 className="text-base font-semibold text-[#d4e4fa]">MCQ Questions ({form.exam_questions?.length || 0})</h4>
+              <h4 className="text-base font-semibold text-[#d4e4fa]">MCQ Questions ({(form.exam_questions || []).filter(q => Array.isArray(q.options) && q.options.length > 0).length})</h4>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -469,7 +483,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
                   ];
                   set('exam_questions', newQuestions);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Question
@@ -477,109 +491,220 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
             </div>
           </div>
 
-          {(!form.exam_questions || form.exam_questions.length === 0) && (
+          {((form.exam_questions || []).filter(q => Array.isArray(q.options) && q.options.length > 0).length === 0) && (
             <div className="text-center py-6 text-sm text-[#908fa0] italic">
-              No questions added yet. Click "Add Question" to start building your MCQ exam.
+              No MCQ questions added yet. Click "Add Question" to start building your MCQ exam.
             </div>
           )}
 
           <div className="space-y-6">
-            {(form.exam_questions || []).map((q, qIdx) => (
-              <div key={q.id ? `exam-q-${q.id}-${qIdx}` : `exam-q-idx-${qIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newQuestions = form.exam_questions.filter((_, idx) => idx !== qIdx);
-                    set('exam_questions', newQuestions);
-                  }}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-
-                <div className="flex items-center gap-3">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
-                    {qIdx + 1}
-                  </span>
-                  <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Question {qIdx + 1}</span>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
-                  <textarea
-                    value={q.question || ''}
-                    onChange={(e) => {
-                      const newQuestions = [...form.exam_questions];
-                      newQuestions[qIdx] = { ...newQuestions[qIdx], question: e.target.value };
+            {(form.exam_questions || [])
+              .map((q, originalIdx) => ({ q, originalIdx }))
+              .filter(item => Array.isArray(item.q.options) && item.q.options.length > 0)
+              .map(({ q, originalIdx }, filteredIdx) => (
+                <div key={q.id ? `exam-q-${q.id}-${originalIdx}` : `exam-q-idx-${originalIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestions = form.exam_questions.filter((_, idx) => idx !== originalIdx);
                       set('exam_questions', newQuestions);
                     }}
-                    rows={6}
-                    placeholder="Enter the question prompt... (Markdown supported, code blocks and scenarios)"
-                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
-                  />
-                  {q.question && (
-                    <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
-                      <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3" /> Live Markdown Preview
-                      </div>
-                      <MarkdownPreview text={q.question} />
-                    </div>
-                  )}
-                </div>
+                    className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['A', 'B', 'C', 'D'].map((optLabel, optIdx) => (
-                    <div key={optIdx} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider">Option {optLabel}</label>
-                        <label className="flex items-center gap-1.5 text-[10px] text-gray-500 cursor-pointer select-none">
-                          <input
-                            type="radio"
-                            name={`correct-${q.id || qIdx}`}
-                            checked={q.correct_option === optIdx}
-                            onChange={() => {
-                              const newQuestions = [...form.exam_questions];
-                              newQuestions[qIdx] = { ...newQuestions[qIdx], correct_option: optIdx };
-                              set('exam_questions', newQuestions);
-                            }}
-                            className="text-violet-600 focus:ring-violet-500 bg-zinc-900 border-zinc-700"
-                          />
-                          Correct
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        value={q.options?.[optIdx] || ''}
-                        onChange={(e) => {
-                          const newQuestions = [...form.exam_questions];
-                          const newOptions = [...(newQuestions[qIdx].options || ['', '', '', ''])];
-                          newOptions[optIdx] = e.target.value;
-                          newQuestions[qIdx] = { ...newQuestions[qIdx], options: newOptions };
-                          set('exam_questions', newQuestions);
-                        }}
-                        placeholder={`Option ${optLabel}...`}
-                        className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
-                      />
-                    </div>
-                  ))}
-                </div>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      {filteredIdx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Question {filteredIdx + 1}</span>
+                  </div>
 
-                <div className="w-32">
-                  <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={q.points ?? 5}
-                    onChange={(e) => {
-                      const newQuestions = [...form.exam_questions];
-                      newQuestions[qIdx] = { ...newQuestions[qIdx], points: parseInt(e.target.value) || 0 };
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
+                    <textarea
+                      value={q.question || ''}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], question: e.target.value };
+                        set('exam_questions', newQuestions);
+                      }}
+                      rows={6}
+                      placeholder="Enter the question prompt... (Markdown supported, code blocks and scenarios)"
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
+                    />
+                    {q.question && (
+                      <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
+                        <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" /> Live Markdown Preview
+                        </div>
+                        <MarkdownPreview text={q.question} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {['A', 'B', 'C', 'D'].map((optLabel, optIdx) => (
+                      <div key={optIdx} className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider">Option {optLabel}</label>
+                          <label className="flex items-center gap-1.5 text-[10px] text-gray-500 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name={`correct-${q.id || originalIdx}`}
+                              checked={q.correct_option === optIdx}
+                              onChange={() => {
+                                const newQuestions = [...form.exam_questions];
+                                newQuestions[originalIdx] = { ...newQuestions[originalIdx], correct_option: optIdx };
+                                set('exam_questions', newQuestions);
+                              }}
+                              className="text-violet-600 focus:ring-violet-500 bg-zinc-900 border-zinc-700"
+                            />
+                            Correct
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={q.options?.[optIdx] || ''}
+                          onChange={(e) => {
+                            const newQuestions = [...form.exam_questions];
+                            const newOptions = [...(newQuestions[originalIdx].options || ['', '', '', ''])];
+                            newOptions[optIdx] = e.target.value;
+                            newQuestions[originalIdx] = { ...newQuestions[originalIdx], options: newOptions };
+                            set('exam_questions', newQuestions);
+                          }}
+                          placeholder={`Option ${optLabel}...`}
+                          className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="w-32">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={q.points ?? 5}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], points: parseInt(e.target.value) || 0 };
+                        set('exam_questions', newQuestions);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* CQ questions builder */}
+      {form.type === 'exam' && (form.exam_type === 'cq' || form.exam_type === 'hybrid') && (
+        <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6 mt-6">
+          <div className="flex items-center justify-between border-b border-[#464554] pb-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-violet-400" />
+              <h4 className="text-base font-semibold text-[#d4e4fa]">
+                Creative / Subjective Questions (CQ) ({(form.exam_questions || []).filter(q => !Array.isArray(q.options) || q.options.length === 0).length})
+              </h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuestions = [
+                    ...(form.exam_questions || []),
+                    {
+                      id: crypto.randomUUID(),
+                      question: '',
+                      options: [],
+                      correct_option: 0,
+                      points: 10,
+                    }
+                  ];
+                  set('exam_questions', newQuestions);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add CQ Question
+              </button>
+            </div>
+          </div>
+
+          {((form.exam_questions || []).filter(q => !Array.isArray(q.options) || q.options.length === 0).length === 0) && (
+            <div className="text-center py-6 text-sm text-[#908fa0] italic">
+              No subjective questions added yet. Click "Add CQ Question" to start building your subjective/written exam.
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {(form.exam_questions || [])
+              .map((q, originalIdx) => ({ q, originalIdx }))
+              .filter(item => !Array.isArray(item.q.options) || item.q.options.length === 0)
+              .map(({ q, originalIdx }, filteredIdx) => (
+                <div key={q.id ? `exam-cq-q-${q.id}-${originalIdx}` : `exam-cq-q-idx-${originalIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestions = form.exam_questions.filter((_, idx) => idx !== originalIdx);
                       set('exam_questions', newQuestions);
                     }}
-                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
-                  />
+                    className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      {filteredIdx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">CQ Question {filteredIdx + 1}</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text *</label>
+                    <textarea
+                      required
+                      value={q.question || ''}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], question: e.target.value };
+                        set('exam_questions', newQuestions);
+                      }}
+                      rows={6}
+                      placeholder="Enter the subjective question prompt... (Markdown & math formulas supported)"
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
+                    />
+                    {q.question && (
+                      <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
+                        <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" /> Live Markdown & Formula Preview
+                        </div>
+                        <MarkdownPreview text={q.question} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-32">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={q.points ?? 10}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], points: parseInt(e.target.value) || 0 };
+                        set('exam_questions', newQuestions);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
@@ -614,6 +739,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
                       video_url: '',
                       editorial: '',
                       solution_code: '',
+                      points: 5,
                     }
                   ];
                   set('practice_problems', newProblems);
@@ -701,8 +827,8 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
                   />
                 </div>
 
-                {/* Row: Source Platform, Problem Link, Video Solution Link */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Row: Source Platform, Problem Link, Video Solution Link, Points */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Source Platform */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Platform</label>
@@ -747,6 +873,22 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
                         set('practice_problems', newProblems);
                       }}
                       placeholder="https://youtube.com/..."
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+
+                  {/* Points */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={p.points ?? 5}
+                      onChange={(e) => {
+                        const newProblems = [...form.practice_problems];
+                        newProblems[pIdx] = { ...newProblems[pIdx], points: parseInt(e.target.value) || 0 };
+                        set('practice_problems', newProblems);
+                      }}
                       className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
                     />
                   </div>
@@ -1065,9 +1207,19 @@ class Solution {
                       return;
                     }
                     if (res.success && Array.isArray(res.problems)) {
+                      const mapped = res.problems.map(p => ({
+                        id: p.id || crypto.randomUUID(),
+                        name: p.name || '',
+                        source: p.source || '',
+                        url: p.url || '',
+                        video_url: p.video_url || '',
+                        editorial: p.editorial || '',
+                        solution_code: p.solution_code || '',
+                        points: p.points || 5,
+                      }));
                       const mergedProblems = [
                         ...(form.practice_problems || []),
-                        ...res.problems
+                        ...mapped
                       ];
                       set('practice_problems', mergedProblems);
                       setOpenAiProblemsImport(false);

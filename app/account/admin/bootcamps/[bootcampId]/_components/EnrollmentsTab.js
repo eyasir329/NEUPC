@@ -669,6 +669,10 @@ function EnrollmentRow({
             {enrollment.completed_lessons || 0}/{totalLessons}
           </span>
         </div>
+        <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-violet-400">
+          <Award className="h-3 w-3 text-amber-500" />
+          <span>Score: {enrollment.score || 0} pts</span>
+        </div>
       </td>
       <td className="px-4 py-3">
         <span className="text-xs text-gray-400">
@@ -799,22 +803,27 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 divide-x divide-white/5 border-b border-white/8 shrink-0">
-          <div className="px-4 py-3 text-center">
+        <div className="grid grid-cols-4 divide-x divide-white/5 border-b border-white/8 shrink-0">
+          <div className="px-2 py-3 text-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Status</p>
-            <span className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${sc.badge}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
+            <span className={`mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${sc.badge}`}>
+              <span className={`h-1 w-1 rounded-full ${sc.dot}`} />
               {sc.label}
             </span>
           </div>
-          <div className="px-4 py-3 text-center">
+          <div className="px-2 py-3 text-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Progress</p>
             <p className="mt-1 text-sm font-bold text-white">{enrollment.progress_percent || 0}%</p>
-            <p className="text-[10px] text-gray-600">{enrollment.completed_lessons || 0}/{totalLessons} lessons</p>
+            <p className="text-[9px] text-gray-600 truncate">{enrollment.completed_lessons || 0}/{totalLessons} les</p>
           </div>
-          <div className="px-4 py-3 text-center">
+          <div className="px-2 py-3 text-center">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Score</p>
+            <p className="mt-1 text-sm font-bold text-violet-400">{enrollment.score || 0}</p>
+            <p className="text-[10px] text-gray-600">points</p>
+          </div>
+          <div className="px-2 py-3 text-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Enrolled</p>
-            <p className="mt-1 text-xs text-gray-300">{formatDate(enrollment.enrolled_at)}</p>
+            <p className="mt-1 text-xs text-gray-300 truncate">{formatDate(enrollment.enrolled_at)}</p>
           </div>
         </div>
 

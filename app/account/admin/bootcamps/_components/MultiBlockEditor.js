@@ -404,6 +404,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
               video_url: p.video_url || '',
               editorial: p.editorial || '',
               solution_code: p.solution_code || '',
+              points: p.points || 5,
             }))
           ];
           updateBlock(aiModalConfig.blockId, { data: { practice_problems: mergedProblems } });
@@ -935,6 +936,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                       video_url: '',
                       editorial: '',
                       solution_code: '',
+                      points: 5,
                     }
                   ];
                   setProblems(newProbs);
@@ -1020,7 +1022,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block">Platform</label>
                     <input
@@ -1062,6 +1064,21 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                         setProblems(newProbs);
                       }}
                       placeholder="https://youtube.com/..."
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={p.points ?? 5}
+                      onChange={(e) => {
+                        const newProbs = [...problems];
+                        newProbs[pIdx] = { ...newProbs[pIdx], points: parseInt(e.target.value) || 0 };
+                        setProblems(newProbs);
+                      }}
                       className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
                     />
                   </div>
@@ -1170,10 +1187,30 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                   ];
                   setQuestions(newQuests);
                 }}
+                className="px-2.5 py-1.5 rounded-lg bg-[#0e2742] border border-violet-500/30 hover:bg-violet-500/10 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add MCQ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuests = [
+                    ...questions,
+                    {
+                      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                      question: '',
+                      options: [],
+                      correct_option: 0,
+                      points: 10,
+                    }
+                  ];
+                  setQuestions(newQuests);
+                }}
                 className="px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Question
+                Add CQ
               </button>
             </div>
           </div>
@@ -1185,109 +1222,123 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
           )}
 
           <div className="space-y-6">
-            {questions.map((q, qIdx) => (
-              <div key={q.id ? `exam-block-q-${q.id}-${qIdx}` : `exam-block-q-idx-${qIdx}`} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newQuests = questions.filter((_, idx) => idx !== qIdx);
-                    setQuestions(newQuests);
-                  }}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
-                    {qIdx + 1}
-                  </span>
-                  <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Question {qIdx + 1}</span>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
-                  <textarea
-                    value={q.question || ''}
-                    onChange={(e) => {
-                      const newQuests = [...questions];
-                      newQuests[qIdx] = { ...newQuests[qIdx], question: e.target.value };
+            {questions.map((q, qIdx) => {
+              const isCQ = !Array.isArray(q.options) || q.options.length === 0;
+              return (
+                <div key={q.id ? `exam-block-q-${q.id}-${qIdx}` : `exam-block-q-idx-${qIdx}`} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuests = questions.filter((_, idx) => idx !== qIdx);
                       setQuestions(newQuests);
                     }}
-                    rows={6}
-                    placeholder="Enter the question prompt... (Markdown supported, code blocks and scenarios)"
-                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
-                  />
-                  {q.question && (
-                    <div className="mt-1 bg-[#05111d] border border-violet-500/10 rounded-lg p-2.5">
-                      <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" /> Live Markdown Preview
-                      </div>
-                      <div className="text-[11px] text-[#908fa0] leading-relaxed max-w-full overflow-x-auto">
-                        <div dangerouslySetInnerHTML={{
-                          __html: (() => {
-                            try { return marked.parse(q.question, { gfm: true, breaks: true }); }
-                            catch { return q.question; }
-                          })()
-                        }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {['A', 'B', 'C', 'D'].map((optLabel, optIdx) => (
-                    <div key={optIdx} className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider">Option {optLabel}</label>
-                        <label className="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer select-none">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      {qIdx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">{isCQ ? 'CQ Question' : 'MCQ Question'} {qIdx + 1}</span>
+                    {isCQ && (
+                      <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded uppercase tracking-wider">
+                        Subjective (CQ)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
+                    <textarea
+                      value={q.question || ''}
+                      onChange={(e) => {
+                        const newQuests = [...questions];
+                        newQuests[qIdx] = { ...newQuests[qIdx], question: e.target.value };
+                        setQuestions(newQuests);
+                      }}
+                      rows={6}
+                      placeholder={isCQ ? "Enter the subjective/creative question prompt... (Markdown and formula supported)" : "Enter the question prompt... (Markdown supported, code blocks and scenarios)"}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
+                    />
+                    {q.question && (
+                      <div className="mt-1 bg-[#05111d] border border-violet-500/10 rounded-lg p-2.5">
+                        <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" /> Live Markdown Preview
+                        </div>
+                        <div className="text-[11px] text-[#908fa0] leading-relaxed max-w-full overflow-x-auto">
+                          <div dangerouslySetInnerHTML={{
+                            __html: (() => {
+                              try { return marked.parse(q.question, { gfm: true, breaks: true }); }
+                              catch { return q.question; }
+                            })()
+                          }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {isCQ ? (
+                    <div className="text-xs text-[#908fa0] bg-[#05111d] rounded-lg p-3 border border-[#464554]/50 italic">
+                      This subjective question will be answered via text/attachment by the student and graded manually by a mentor.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {['A', 'B', 'C', 'D'].map((optLabel, optIdx) => (
+                        <div key={optIdx} className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider">Option {optLabel}</label>
+                            <label className="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name={`correct-${block.id}-${q.id || qIdx}`}
+                                checked={q.correct_option === optIdx}
+                                onChange={() => {
+                                  const newQuests = [...questions];
+                                  newQuests[qIdx] = { ...newQuests[qIdx], correct_option: optIdx };
+                                  setQuestions(newQuests);
+                                }}
+                                className="text-violet-600 focus:ring-violet-500 bg-zinc-900 border-zinc-700"
+                              />
+                              Correct
+                            </label>
+                          </div>
                           <input
-                            type="radio"
-                            name={`correct-${block.id}-${q.id || qIdx}`}
-                            checked={q.correct_option === optIdx}
-                            onChange={() => {
+                            type="text"
+                            value={q.options?.[optIdx] || ''}
+                            onChange={(e) => {
                               const newQuests = [...questions];
-                              newQuests[qIdx] = { ...newQuests[qIdx], correct_option: optIdx };
+                              const newOpts = [...(newQuests[qIdx].options || ['', '', '', ''])];
+                              newOpts[optIdx] = e.target.value;
+                              newQuests[qIdx] = { ...newQuests[qIdx], options: newOpts };
                               setQuestions(newQuests);
                             }}
-                            className="text-violet-600 focus:ring-violet-500 bg-zinc-900 border-zinc-700"
+                            placeholder={`Option ${optLabel}...`}
+                            className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
                           />
-                          Correct
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        value={q.options?.[optIdx] || ''}
-                        onChange={(e) => {
-                          const newQuests = [...questions];
-                          const newOpts = [...(newQuests[qIdx].options || ['', '', '', ''])];
-                          newOpts[optIdx] = e.target.value;
-                          newQuests[qIdx] = { ...newQuests[qIdx], options: newOpts };
-                          setQuestions(newQuests);
-                        }}
-                        placeholder={`Option ${optLabel}...`}
-                        className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
-                      />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
 
-                <div className="w-24">
-                  <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={q.points ?? 5}
-                    onChange={(e) => {
-                      const newQuests = [...questions];
-                      newQuests[qIdx] = { ...newQuests[qIdx], points: parseInt(e.target.value) || 0 };
-                      setQuestions(newQuests);
-                    }}
-                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
-                  />
+                  <div className="w-24">
+                    <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={q.points ?? (isCQ ? 10 : 5)}
+                      onChange={(e) => {
+                        const newQuests = [...questions];
+                        newQuests[qIdx] = { ...newQuests[qIdx], points: parseInt(e.target.value) || 0 };
+                        setQuestions(newQuests);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );

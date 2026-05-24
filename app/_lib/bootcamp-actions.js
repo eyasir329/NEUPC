@@ -382,7 +382,7 @@ export async function getBootcampCurriculumLight(idOrSlug) {
           id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, video_source, video_id, duration, order_index,
-            is_free_preview, is_published, is_locked, type, exam_type, random_question_count, weight, practice_problems
+            is_free_preview, is_published, is_locked, type, exam_type, random_question_count, weight, points, practice_problems
           )
         )
       )
@@ -979,6 +979,7 @@ export async function createLesson(moduleId, data) {
       exam_questions: data.exam_questions || [],
       practice_problems: data.practice_problems || [],
       weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : 1,
+      points: data.points !== undefined ? Math.max(0, parseInt(data.points) || 0) : 10,
     })
     .select()
     .single();
@@ -1045,6 +1046,7 @@ export async function updateLesson(lessonId, data) {
     practice_problems: data.practice_problems,
     random_question_count: data.random_question_count !== undefined ? parseInt(data.random_question_count) || 0 : undefined,
     weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : undefined,
+    points: data.points !== undefined ? Math.max(0, parseInt(data.points) || 0) : undefined,
   };
 
   // Remove undefined values
@@ -1417,7 +1419,7 @@ export async function checkEnrollment(bootcampId) {
 
   const { data } = await supabaseAdmin
     .from('enrollments')
-    .select('id, status, progress_percent')
+    .select('id, status, progress_percent, score')
     .eq('user_id', userId)
     .eq('bootcamp_id', bootcampId)
     .single();
@@ -2149,12 +2151,7 @@ export async function getEnrollmentsWithProgress(bootcampId) {
   const enrichedEnrollments = enrollments.map((enrollment) => ({
     ...enrollment,
     completed_lessons: completedMap[enrollment.user_id] || 0,
-    progress_percent:
-      totalLessons > 0
-        ? Math.round(
-            ((completedMap[enrollment.user_id] || 0) / totalLessons) * 100
-          )
-        : 0,
+    progress_percent: enrollment.progress_percent ?? 0,
   }));
 
   return { enrollments: enrichedEnrollments, totalLessons };
@@ -3471,6 +3468,16 @@ export async function reviewExamSubmission(submissionId, score, feedback, status
     throw error;
   }
 
+  // Trigger recalculation of enrollment progress and score
+  try {
+    await supabaseAdmin.rpc('calculate_enrollment_progress', {
+      p_user_id: data.user_id,
+      p_bootcamp_id: subCheck.bootcamp_id,
+    });
+  } catch (rpcErr) {
+    console.error('Error executing calculate_enrollment_progress RPC on grading:', rpcErr);
+  }
+
   return data;
 }
 
@@ -3832,6 +3839,53 @@ OUTPUT FORMAT (return exactly this, no prose):
     console.error('[generatePracticeProblemsAction] error:', err);
     return { error: err.message || 'Failed to parse practice problems text.' };
   }
+}
+
+/**
+ * Get leaderboard for a specific bootcamp, ranking users by score.
+ */
+export async function getBootcampLeaderboard(bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  // Verify enrollment
+  const { data: enrollment } = await supabaseAdmin
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('bootcamp_id', bootcampId)
+    .single();
+
+  if (!enrollment) throw new Error('Not enrolled in this bootcamp');
+
+  // Fetch all enrollments with scores, joined with users
+  const { data: leaderboard, error } = await supabaseAdmin
+    .from('enrollments')
+    .select(`
+      user_id,
+      score,
+      progress_percent,
+      enrolled_at,
+      users (id, full_name, avatar_url)
+    `)
+    .eq('bootcamp_id', bootcampId)
+    .order('score', { ascending: false })
+    .order('progress_percent', { ascending: false })
+    .order('enrolled_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching bootcamp leaderboard:', error);
+    throw error;
+  }
+
+  return (leaderboard || []).map((entry, idx) => ({
+    rank: idx + 1,
+    userId: entry.user_id,
+    score: entry.score || 0,
+    progressPercent: entry.progress_percent || 0,
+    userName: entry.users?.full_name || 'Member',
+    avatarUrl: entry.users?.avatar_url || null,
+  }));
 }
 
 
