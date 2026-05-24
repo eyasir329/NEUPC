@@ -143,6 +143,8 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
   const [openAiImport, setOpenAiImport] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [aiGuidelines, setAiGuidelines] = useState('');
+  const [aiDifficulty, setAiDifficulty] = useState('medium');
 
   const [openAiProblemsImport, setOpenAiProblemsImport] = useState(false);
   const [aiProblemsInput, setAiProblemsInput] = useState('');
@@ -897,28 +899,47 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
 
             {/* Modal Body */}
             <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Exam Data Input</label>
-                <p className="text-[10px] text-gray-500 leading-normal">
-                  Our model will parse questions, options (A, B, C, D), correct answers, and points automatically. You can write:
-                </p>
-                <div className="bg-black/35 rounded-lg p-2.5 border border-white/5 font-mono text-[9px] text-[#908fa0] whitespace-pre">
-                  {`1. What is React?
-A) A styling framework
-B) A JavaScript library
-C) A database
-D) A web browser
-Correct: B
-Points: 5`}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Difficulty */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Difficulty Level</label>
+                  <select
+                    value={aiDifficulty}
+                    onChange={(e) => setAiDifficulty(e.target.value)}
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                  >
+                    <option value="easy">Easy (Conceptual & Basic)</option>
+                    <option value="medium">Medium (Analytical & Implementation)</option>
+                    <option value="hard">Hard (Advanced Problem Solving & Deep Logic)</option>
+                  </select>
                 </div>
+
+                {/* Custom Guidelines */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Custom / Formatting Guidelines</label>
+                  <input
+                    type="text"
+                    value={aiGuidelines}
+                    onChange={(e) => setAiGuidelines(e.target.value)}
+                    placeholder="e.g. Code snippets, LaTeX formulas, Bengali, etc."
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Exam Data or Topic Prompt</label>
+                <p className="text-[10px] text-gray-500 leading-normal">
+                  Our model will parse questions, options (A, B, C, D), correct answers, and points automatically. Or just type a topic and let AI generate detailed questions!
+                </p>
               </div>
 
               <textarea
                 value={aiInput}
                 onChange={(e) => setAiInput(e.target.value)}
-                placeholder="Paste your raw unstructured exam questions here..."
-                rows={10}
-                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all resize-y min-h-[160px]"
+                placeholder="Paste your raw unstructured exam questions or topic description here..."
+                rows={7}
+                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all resize-y min-h-[120px]"
               />
             </div>
 
@@ -937,7 +958,7 @@ Points: 5`}
                 onClick={async () => {
                   setGeneratingQuestions(true);
                   try {
-                    const res = await generateExamQuestionsAction(aiInput);
+                    const res = await generateExamQuestionsAction(aiInput, aiGuidelines, aiDifficulty);
                     if (res.error) {
                       toast.error(res.error);
                       return;
@@ -962,7 +983,7 @@ Points: 5`}
                 {generatingQuestions ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    AI is Parsing...
+                    AI is Generating...
                   </>
                 ) : (
                   <>

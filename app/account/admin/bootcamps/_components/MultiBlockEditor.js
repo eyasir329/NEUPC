@@ -390,7 +390,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
     setAiModalConfig(prev => ({ ...prev, generating: true }));
     try {
       if (aiModalConfig.type === 'practice') {
-        const res = await generatePracticeProblemsAction(aiModalConfig.input);
+        const res = await generatePracticeProblemsAction(aiModalConfig.input, aiModalConfig.guidelines || '', aiModalConfig.difficulty || 'medium');
         if (res.success && Array.isArray(res.problems)) {
           const block = blocks.find(b => b.id === aiModalConfig.blockId);
           const currentProbs = block?.data?.practice_problems || [];
@@ -412,7 +412,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
           alert(res.error || 'Failed to parse practice problems with AI.');
         }
       } else if (aiModalConfig.type === 'exam') {
-        const res = await generateExamQuestionsAction(aiModalConfig.input);
+        const res = await generateExamQuestionsAction(aiModalConfig.input, aiModalConfig.guidelines || '', aiModalConfig.difficulty || 'medium');
         if (res.success && Array.isArray(res.questions)) {
           const block = blocks.find(b => b.id === aiModalConfig.blockId);
           const currentQuests = block?.data?.exam_questions || [];
@@ -912,7 +912,9 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                     type: 'practice',
                     blockId: block.id,
                     input: '',
-                    generating: false
+                    generating: false,
+                    difficulty: 'medium',
+                    guidelines: ''
                   });
                 }}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1143,7 +1145,9 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                     type: 'exam',
                     blockId: block.id,
                     input: '',
-                    generating: false
+                    generating: false,
+                    difficulty: 'medium',
+                    guidelines: ''
                   });
                 }}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1457,7 +1461,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+            <div className="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar text-left">
               <p className="text-xs text-[#908fa0] leading-relaxed">
                 {aiModalConfig.type === 'practice' 
                   ? 'Paste raw text containing a list of practice problems, contests, or links. The AI will extract Name, Platform, Problem Link, Video Solution Link, Editorial/Explanation, and Solution Code.' 
@@ -1465,15 +1469,43 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
                 }
               </p>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Difficulty */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Difficulty Level</label>
+                  <select
+                    value={aiModalConfig.difficulty || 'medium'}
+                    onChange={(e) => setAiModalConfig(prev => ({ ...prev, difficulty: e.target.value }))}
+                    className="w-full bg-[#0d1c2d] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
+                  >
+                    <option value="easy">Easy (Conceptual & Basic)</option>
+                    <option value="medium">Medium (Analytical & Implementation)</option>
+                    <option value="hard">Hard (Advanced Problem Solving & Deep Logic)</option>
+                  </select>
+                </div>
+
+                {/* Custom Guidelines */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Custom Instructions / Guidelines</label>
+                  <input
+                    type="text"
+                    value={aiModalConfig.guidelines || ''}
+                    onChange={(e) => setAiModalConfig(prev => ({ ...prev, guidelines: e.target.value }))}
+                    placeholder="e.g. Include specific code examples, LaTeX math, etc."
+                    className="w-full bg-[#0d1c2d] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-violet-500 transition-all"
+                  />
+                </div>
+              </div>
+
               <textarea
                 value={aiModalConfig.input}
                 onChange={(e) => setAiModalConfig(prev => ({ ...prev, input: e.target.value }))}
-                rows={10}
+                rows={8}
                 placeholder={aiModalConfig.type === 'practice' 
                   ? "Example:\nProblem 1: Watermelon\nPlatform: Codeforces\nLink: https://codeforces.com/problemset/problem/4/A\nEditorial: Check if weight is even and > 2.\nCode: print('YES' if w % 2 == 0 and w > 2 else 'NO')" 
                   : "Example:\nCreate 3 questions about React hooks, useEffect dependencies, and useState asynchronous state updates."
                 }
-                className="w-full bg-[#0d1c2d] border border-white/10 rounded-xl px-4 py-3 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none font-mono resize-none"
+                className="w-full bg-[#0d1c2d] border border-white/10 rounded-xl px-4 py-3 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none font-mono resize-none min-h-[120px]"
               />
             </div>
 

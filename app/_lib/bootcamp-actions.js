@@ -3704,7 +3704,7 @@ function normaliseOptions(opts) {
  * Handles: numbered/lettered options, Bengali text, embedded code/math, 2-3 option questions,
  * "Ans: B" answer markers, missing answers (defaults to 0), mixed whitespace, and more.
  */
-export async function generateExamQuestionsAction(rawText) {
+export async function generateExamQuestionsAction(rawText, guidelines = '', difficulty = 'medium') {
   await requireAdmin();
 
   if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
@@ -3713,12 +3713,20 @@ export async function generateExamQuestionsAction(rawText) {
 
   const input = preprocessRawInput(rawText);
 
-  const systemPrompt = `You are an expert exam content parser. Convert the raw input into a JSON array of MCQ objects.
+  const systemPrompt = `You are an expert exam content parser and developer. Convert the raw input into a JSON array of MCQ objects.
+
+ADDITIONAL PARAMETERS:
+- Target Difficulty: ${difficulty} (Ensure questions, coding logic, and conceptual depth reflect this level)
+- Custom/Formatting Guidelines: ${guidelines || 'None specified'}
 
 RULES:
 1. Each object must have exactly these keys:
    - "id": unique string like "q-1", "q-2"
-   - "question": A highly clear, professional, and beautiful problem description. Do NOT restrict the description to a single line; instead, generate comprehensive multi-line scenarios, realistic programming challenges, code snippets, or structured explanations where applicable, with no limits on description length. Make the questions robust, realistic, and high-quality. Preserve markdown formatting, code fences, and math verbatim.
+   - "question": A highly clear, professional, and beautiful problem description.
+     - You MUST format any programming code inside markdown code blocks (e.g. \`\`\`javascript ... \`\`\`).
+     - You MUST format any mathematical formulas or equations beautifully using standard Markdown/LaTeX (e.g., $E = mc^2$ or $$ ... $$).
+     - Make descriptions rich, structured, and realistic (with scenarios, input/output structures, logic challenges, etc. where appropriate) instead of a simple single-line.
+     - No limit on the length or complexity of the descriptions.
    - "options": array of EXACTLY 4 strings. If the source has fewer, generate plausible distractors. Strip leading "A." / "1." prefixes from option text.
    - "correct_option": integer 0-3 (0=A, 1=B, 2=C, 3=D). Parse "Ans: B", "Answer: C", "*B*", "(B)" etc. Default 0 if not found.
    - "points": integer, default 5
@@ -3760,7 +3768,7 @@ OUTPUT FORMAT (return exactly this, no prose):
  * AI server action to parse raw practice problem data into structured problems.
  * Handles: problem links, editorials, solution code, YouTube links, star ratings, difficulty.
  */
-export async function generatePracticeProblemsAction(rawText) {
+export async function generatePracticeProblemsAction(rawText, guidelines = '', difficulty = 'medium') {
   await requireAdmin();
 
   if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
@@ -3769,7 +3777,11 @@ export async function generatePracticeProblemsAction(rawText) {
 
   const input = preprocessRawInput(rawText);
 
-  const systemPrompt = `You are an expert competitive programming content parser. Convert raw input into a JSON array of practice problem objects.
+  const systemPrompt = `You are an expert competitive programming content parser and developer. Convert raw input into a JSON array of practice problem objects.
+
+ADDITIONAL PARAMETERS:
+- Target Difficulty: ${difficulty} (Ensure the explanation complexity and editorial depth reflect this level)
+- Custom/Formatting Guidelines: ${guidelines || 'None specified'}
 
 RULES:
 1. Each object must have exactly these keys:
@@ -3778,8 +3790,8 @@ RULES:
    - "source": platform name (e.g. "Codeforces", "LeetCode", "VJudge", "AtCoder", "HackerRank")
    - "url": direct problem URL (http/https). Empty string if not found.
    - "video_url": YouTube/solution video URL. Empty string if not found.
-   - "editorial": full step-by-step explanation in markdown. Use \\n for newlines. Empty string if not found.
-   - "solution_code": clean solution code (C++/Python/Java). Use \\n for newlines inside code. Empty string if not found.
+   - "editorial": A highly clear, professional, and beautiful explanation in markdown. Ensure any formulas are in LaTeX/Markdown and formatting is completely clean. Use \\n for newlines.
+   - "solution_code": clean and beautifully structured solution code (C++/Python/Java). Use \\n for newlines inside code. Empty string if not found.
 
 2. Detect platform from URL patterns:
    - codeforces.com → "Codeforces"
