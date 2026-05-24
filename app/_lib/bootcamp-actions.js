@@ -3475,189 +3475,352 @@ export async function reviewExamSubmission(submissionId, score, feedback, status
 }
 
 /**
+ * Robust JSON parser for AI outputs.
+ * Strategy (in order):
+ *   1. Strip markdown code-fence wrappers
+ *   2. Extract the outermost [...] via bracket-balanced scan
+ *   3. Standard JSON.parse on the extracted slice
+ *   4. Sanitise raw control chars inside strings (char-by-char), then retry
+ *   5. Bracket-balanced per-object extractor (handles nested arrays e.g. options:[...])
+ *   6. Strip trailing commas then retry
+ */
+function robustJsonParse(raw) {
+  // Step 1: strip markdown fences
+  let s = raw.trim();
+  // Remove leading ```lang and trailing ```
+  s = s.replace(/^```[a-zA-Z]*/, '').replace(/```\s*$/, '').trim();
+
+  // Step 2: bracket-balanced outermost [...] extraction
+  function extractOutermostArray(text) {
+    const start = text.indexOf('[');
+    if (start === -1) return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (esc)               { esc = false; continue; }
+      if (ch === '\\' && inStr) { esc = true; continue; }
+      if (ch === '"')        { inStr = !inStr; continue; }
+      if (inStr)             continue;
+      if (ch === '[')        depth++;
+      else if (ch === ']')   { depth--; if (depth === 0) return text.slice(start, i + 1); }
+    }
+    return depth > 0 ? text.slice(start) + ']' : null;
+  }
+
+  // Step 3: try standard parse
+  const arraySlice = extractOutermostArray(s) || s;
+  try { return JSON.parse(arraySlice); }
+  catch (e) { console.warn('[robustJsonParse] pass-1 failed:', e.message); }
+
+  // Step 4: sanitise raw control chars inside JSON strings using char-by-char walk
+  function sanitise(text) {
+    let out = '', inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (esc)                 { out += ch; esc = false; continue; }
+      if (ch === '\\' && inStr) { out += ch; esc = true; continue; }
+      if (ch === '"')          { inStr = !inStr; out += ch; continue; }
+      if (inStr) {
+        if (ch === '\n') { out += '\\n'; continue; }
+        if (ch === '\r') { out += '\\r'; continue; }
+        if (ch === '\t') { out += '\\t'; continue; }
+      }
+      out += ch;
+    }
+    return out;
+  }
+
+  try { return JSON.parse(sanitise(arraySlice)); }
+  catch (e) { console.warn('[robustJsonParse] pass-2 (sanitised) failed:', e.message); }
+
+  // Step 5: bracket-balanced per-object extraction (correctly handles nested arrays)
+  function extractObjects(text) {
+    const items = [];
+    let i = 0;
+    while (i < text.length) {
+      if (text[i] !== '{') { i++; continue; }
+      let depth = 0, inStr = false, esc = false;
+      const start = i;
+      for (; i < text.length; i++) {
+        const ch = text[i];
+        if (esc)                 { esc = false; continue; }
+        if (ch === '\\' && inStr) { esc = true; continue; }
+        if (ch === '"')          { inStr = !inStr; continue; }
+        if (inStr)               continue;
+        if (ch === '{')          depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) {
+            try {
+              const obj = JSON.parse(sanitise(text.slice(start, i + 1)));
+              if (obj && typeof obj === 'object') items.push(obj);
+            } catch {}
+            i++; break;
+          }
+        }
+      }
+    }
+    return items;
+  }
+
+  const objects = extractObjects(arraySlice);
+  if (objects.length > 0) {
+    console.log('[robustJsonParse] pass-3: extracted ' + objects.length + ' objects via bracket balancing');
+    return objects;
+  }
+
+  // Step 6: strip trailing commas then retry
+  try {
+    const fixed = sanitise(arraySlice).replace(/,\s*([\]}])/g, '$1');
+    return JSON.parse(fixed);
+  } catch (e) { console.warn('[robustJsonParse] pass-4 (trailing-comma) failed:', e.message); }
+
+  throw new Error('AI returned an unparseable response. Try with shorter or simpler input, or rephrase your questions.');
+}
+
+
+
+/**
+ * Shared AI call helper — supports Gemini (POST) and Pollinations (POST fallback).
+ * Automatically retries once with a reduced token limit if the first call fails.
+ */
+async function callAI(systemPrompt, userText, { maxTokens = 8192, temperature = 0.2, jsonMode = true } = {}) {
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+
+  async function tryGemini(tokens) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const body = {
+      contents: [{ parts: [{ text: `${systemPrompt}\n\n---\nRAW INPUT:\n${userText}` }] }],
+      generationConfig: {
+        maxOutputTokens: tokens,
+        temperature,
+        ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`Gemini API error ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    // Gemini can return multiple candidates/parts — join all text parts
+    return data?.candidates?.[0]?.content?.parts?.map(p => p.text ?? '').join('') ?? '';
+  }
+
+  async function tryPollinations(tokens) {
+    // Use POST to avoid 8KB URL limit
+    const res = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userText },
+        ],
+        model: 'openai',
+        max_tokens: Math.min(tokens, 4000),
+        temperature,
+        jsonMode: jsonMode,
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`Pollinations API error ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    const data = await res.json().catch(() => null);
+    // Pollinations returns OpenAI-compatible shape
+    return data?.choices?.[0]?.message?.content ?? await res.text().catch(() => '');
+  }
+
+  const caller = hasGemini ? tryGemini : tryPollinations;
+
+  // First attempt
+  try {
+    const text = await caller(maxTokens);
+    if (text && text.trim().length > 2) return text;
+    throw new Error('Empty response from AI');
+  } catch (firstErr) {
+    console.warn('[callAI] first attempt failed, retrying with smaller token limit:', firstErr.message);
+  }
+
+  // Retry with smaller limit
+  const text = await caller(Math.min(maxTokens, 4096));
+  if (!text || text.trim().length < 2) throw new Error('AI returned empty response on retry');
+  return text;
+}
+
+/**
+ * Pre-processes raw admin input before sending to AI.
+ * Normalises whitespace, removes invisible chars, and strips BOM.
+ */
+function preprocessRawInput(raw) {
+  return raw
+    .replace(/^\uFEFF/, '')                    // strip BOM
+    .replace(/\u00A0/g, ' ')                   // nbsp → space
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')     // zero-width chars
+    .replace(/\r\n/g, '\n')                    // normalise line endings
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, '  ')                      // tabs → 2 spaces
+    .replace(/[ \t]+$/gm, '')                  // trailing whitespace per line
+    .replace(/\n{4,}/g, '\n\n\n')              // max 3 consecutive blank lines
+    .trim();
+}
+
+/**
+ * Converts a correct-option value to a 0-based integer index.
+ * Handles: 0-3 (number), "0"-"3" (string number), "A"-"D" (letter), "a"-"d".
+ */
+function normaliseCorrectOption(raw, fallback = 0) {
+  if (typeof raw === 'number' && raw >= 0 && raw <= 3) return raw;
+  if (typeof raw === 'string') {
+    const upper = raw.trim().toUpperCase();
+    const letterMap = { A: 0, B: 1, C: 2, D: 3 };
+    if (upper in letterMap) return letterMap[upper];
+    const n = parseInt(upper, 10);
+    if (!isNaN(n) && n >= 0 && n <= 3) return n;
+  }
+  return fallback;
+}
+
+/**
+ * Pads or trims an options array to exactly 4 entries.
+ */
+function normaliseOptions(opts) {
+  const labels = ['Option A', 'Option B', 'Option C', 'Option D'];
+  if (!Array.isArray(opts)) return labels;
+  const trimmed = opts.slice(0, 4).map((o, i) => (typeof o === 'string' && o.trim()) ? o.trim() : labels[i]);
+  while (trimmed.length < 4) trimmed.push(labels[trimmed.length]);
+  return trimmed;
+}
+
+/**
  * AI server action to parse raw unstructured text into structured MCQ questions.
+ * Handles: numbered/lettered options, Bengali text, embedded code/math, 2-3 option questions,
+ * "Ans: B" answer markers, missing answers (defaults to 0), mixed whitespace, and more.
  */
 export async function generateExamQuestionsAction(rawText) {
-  const admin = await requireAdmin();
+  await requireAdmin();
 
   if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
-    return { error: 'Please provide some raw exam text to parse.' };
+    return { error: 'Please provide some exam text to parse.' };
   }
 
-  const systemPrompt = `You are an expert AI exam content parser. Your job is to parse unstructured raw exam questions, markdown, text, or quizzes, and structure them into a valid JSON array of Multiple Choice Questions (MCQs).
-The output MUST be a valid JSON array of objects, where each object has the following keys:
-- "id": string (e.g. "q-1", "q-2" or a random string)
-- "question": string (the question text)
-- "options": array of exactly 4 strings (options)
-- "correct_option": integer (0 for A, 1 for B, 2 for C, 3 for D) representing the correct index. If not specified, default to 0.
-- "points": integer (points for this question, default to 5 if not specified)
+  const input = preprocessRawInput(rawText);
 
-Return ONLY the raw JSON array string. Do NOT wrap the JSON in markdown code blocks like \`\`\`json ... \`\`\`. Do not include any intro, explanation, or commentary.
-Example Output:
-[
-  {
-    "id": "q-1",
-    "question": "What is React?",
-    "options": ["A styling framework", "A JavaScript library", "A database", "A browser"],
-    "correct_option": 1,
-    "points": 5
-  }
-]`;
+  const systemPrompt = `You are an expert exam content parser. Convert the raw input into a JSON array of MCQ objects.
+
+RULES:
+1. Each object must have exactly these keys:
+   - "id": unique string like "q-1", "q-2"
+   - "question": A highly clear, professional, and beautiful problem description. Do NOT restrict the description to a single line; instead, generate comprehensive multi-line scenarios, realistic programming challenges, code snippets, or structured explanations where applicable, with no limits on description length. Make the questions robust, realistic, and high-quality. Preserve markdown formatting, code fences, and math verbatim.
+   - "options": array of EXACTLY 4 strings. If the source has fewer, generate plausible distractors. Strip leading "A." / "1." prefixes from option text.
+   - "correct_option": integer 0-3 (0=A, 1=B, 2=C, 3=D). Parse "Ans: B", "Answer: C", "*B*", "(B)" etc. Default 0 if not found.
+   - "points": integer, default 5
+
+2. If the user input is a brief topic or prompt, dynamically expand it to generate highly detailed, professional, and clear MCQ questions with complete multi-line problem descriptions.
+3. Do NOT include any text outside the JSON array.
+4. Do NOT wrap in markdown code fences.
+5. Escape all newlines inside string values as \\n.
+6. If text has multiple questions, return ALL of them as separate objects.
+7. If a question has more than 4 options keep the first 4.
+
+OUTPUT FORMAT (return exactly this, no prose):
+[{"id":"q-1","question":"...","options":["...","...","...","..."],"correct_option":0,"points":5}]`;
 
   try {
-    const hasGemini = !!process.env.GEMINI_API_KEY;
-    let generatedText = '';
-    
-    if (!hasGemini) {
-      const systemEncoded = encodeURIComponent(systemPrompt);
-      const promptEncoded = encodeURIComponent(rawText);
-      const url = `https://text.pollinations.ai/${promptEncoded}?model=openai-fast&system=${systemEncoded}`;
-      
-      const res = await fetch(url, {
-        method: 'GET',
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (!res.ok) {
-        throw new Error(`AI model error (${res.status})`);
-      }
-      generatedText = await res.text();
-    } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-      const body = {
-        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser raw text:\n${rawText}` }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        throw new Error(`Gemini API error (${res.status})`);
-      }
-      const data = await res.json();
-      generatedText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
-    }
+    const generatedText = await callAI(systemPrompt, input, { maxTokens: 8192, temperature: 0.15, jsonMode: true });
+    const parsed = robustJsonParse(generatedText);
 
-    let cleaned = generatedText.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
-    }
-
-    const parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed)) {
-      throw new Error("AI did not return a valid array of questions.");
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('AI did not return a valid array of questions. Check your input format.');
     }
 
     const normalized = parsed.map((q, idx) => ({
-      id: q.id || `q-${Date.now()}-${idx}`,
-      question: q.question || 'Untitled Question',
-      options: Array.isArray(q.options) && q.options.length === 4 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
-      correct_option: typeof q.correct_option === 'number' && q.correct_option >= 0 && q.correct_option < 4 ? q.correct_option : 0,
-      points: typeof q.points === 'number' ? q.points : 5,
+      id: typeof q.id === 'string' && q.id.trim() ? q.id.trim() : `q-${Date.now()}-${idx}`,
+      question: typeof q.question === 'string' && q.question.trim() ? q.question.trim() : 'Untitled Question',
+      options: normaliseOptions(q.options),
+      correct_option: normaliseCorrectOption(q.correct_option, 0),
+      points: typeof q.points === 'number' && q.points > 0 ? Math.round(q.points) : 5,
     }));
 
     return { success: true, questions: normalized };
   } catch (err) {
-    console.error('AI Question parsing error:', err);
-    return { error: err.message || 'Failed to parse raw text into valid MCQ questions.' };
+    console.error('[generateExamQuestionsAction] error:', err);
+    return { error: err.message || 'Failed to parse exam text into MCQ questions.' };
   }
 }
 
 /**
- * AI server action to parse raw unstructured text into structured Practice Problems.
+ * AI server action to parse raw practice problem data into structured problems.
+ * Handles: problem links, editorials, solution code, YouTube links, star ratings, difficulty.
  */
 export async function generatePracticeProblemsAction(rawText) {
-  const admin = await requireAdmin();
+  await requireAdmin();
 
   if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
-    return { error: 'Please provide some raw practice problems text to parse.' };
+    return { error: 'Please provide some practice problems text to parse.' };
   }
 
-  const systemPrompt = `You are an expert AI problem setter and content parser. Your job is to parse unstructured raw practice problems, competitive programming questions, problem statements, editorials, codes, platform names, and links, and structure them into a valid JSON array of Practice Problems.
-The output MUST be a valid JSON array of objects, where each object has the following keys:
-- "id": string (UUID or random unique string)
-- "name": string (the problem name, e.g. "Watermelon", "Two Sum")
-- "source": string (the platform name, e.g. "Codeforces", "LeetCode", "VJudge")
-- "url": string (the direct HTTP/S problem link, default to empty string if not found)
-- "video_url": string (the solution video link if present, default to empty string if not found)
-- "editorial": string (full detailed markdown explaining the step-by-step logic, math, and approach)
-- "solution_code": string (clean C++, Python, or Java solution code if present, default to empty string if not found)
+  const input = preprocessRawInput(rawText);
 
-Return ONLY the raw JSON array string. Do NOT wrap the JSON in markdown code blocks like \`\`\`json ... \`\`\`. Do not include any intro, explanation, or commentary.
-Example Output:
-[
-  {
-    "id": "p-1",
-    "name": "Watermelon",
-    "source": "Codeforces",
-    "url": "https://codeforces.com/problemset/problem/4/A",
-    "video_url": "https://youtube.com/watch?v=...",
-    "editorial": "### Method\\nIf the weight is even and greater than 2, we can divide it...",
-    "solution_code": "#include <iostream>\\nusing namespace std;\\nint main() { ... }"
-  }
-]`;
+  const systemPrompt = `You are an expert competitive programming content parser. Convert raw input into a JSON array of practice problem objects.
+
+RULES:
+1. Each object must have exactly these keys:
+   - "id": unique string like "p-1", "p-2"
+   - "name": problem name (e.g. "Watermelon", "Two Sum", "A+B Problem")
+   - "source": platform name (e.g. "Codeforces", "LeetCode", "VJudge", "AtCoder", "HackerRank")
+   - "url": direct problem URL (http/https). Empty string if not found.
+   - "video_url": YouTube/solution video URL. Empty string if not found.
+   - "editorial": full step-by-step explanation in markdown. Use \\n for newlines. Empty string if not found.
+   - "solution_code": clean solution code (C++/Python/Java). Use \\n for newlines inside code. Empty string if not found.
+
+2. Detect platform from URL patterns:
+   - codeforces.com → "Codeforces"
+   - leetcode.com → "LeetCode"
+   - vjudge.net → "VJudge"
+   - atcoder.jp → "AtCoder"
+   - spoj.com → "SPOJ"
+   - youtube.com / youtu.be → put in video_url, NOT url
+
+3. Do NOT include any text outside the JSON array.
+4. Do NOT wrap in markdown code fences.
+5. Escape all newlines inside string values as \\n.
+6. Parse ALL problems from the input — do not skip any.
+
+OUTPUT FORMAT (return exactly this, no prose):
+[{"id":"p-1","name":"Watermelon","source":"Codeforces","url":"https://...","video_url":"","editorial":"","solution_code":""}]`;
 
   try {
-    const hasGemini = !!process.env.GEMINI_API_KEY;
-    let generatedText = '';
-    
-    if (!hasGemini) {
-      const systemEncoded = encodeURIComponent(systemPrompt);
-      const promptEncoded = encodeURIComponent(rawText);
-      const url = `https://text.pollinations.ai/${promptEncoded}?model=openai-fast&system=${systemEncoded}`;
-      
-      const res = await fetch(url, {
-        method: 'GET',
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (!res.ok) {
-        throw new Error(`AI model error (${res.status})`);
-      }
-      generatedText = await res.text();
-    } else {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-      const body = {
-        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser raw text:\n${rawText}` }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        throw new Error(`Gemini API error (${res.status})`);
-      }
-      const data = await res.json();
-      generatedText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+    const generatedText = await callAI(systemPrompt, input, { maxTokens: 8192, temperature: 0.15, jsonMode: true });
+    const parsed = robustJsonParse(generatedText);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('AI did not return a valid array of problems. Check your input format.');
     }
 
-    let cleaned = generatedText.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
-    }
-
-    const parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed)) {
-      throw new Error("AI did not return a valid array of practice problems.");
-    }
-
-    const normalized = parsed.map((p, idx) => ({
-      id: p.id || crypto.randomUUID(),
-      name: p.name || 'Untitled Problem',
-      source: p.source || 'Platform',
-      url: p.url || '',
-      video_url: p.video_url || '',
-      editorial: p.editorial || '',
-      solution_code: p.solution_code || '',
+    const normalized = parsed.map((p) => ({
+      id: typeof p.id === 'string' && p.id.trim() ? p.id.trim() : crypto.randomUUID(),
+      name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : 'Untitled Problem',
+      source: typeof p.source === 'string' && p.source.trim() ? p.source.trim() : 'Unknown',
+      url: typeof p.url === 'string' ? p.url.trim() : '',
+      video_url: typeof p.video_url === 'string' ? p.video_url.trim() : '',
+      editorial: typeof p.editorial === 'string' ? p.editorial : '',
+      solution_code: typeof p.solution_code === 'string' ? p.solution_code : '',
     }));
 
     return { success: true, problems: normalized };
   } catch (err) {
-    console.error('AI Practice Problem parsing error:', err);
-    return { error: err.message || 'Failed to parse raw text into valid practice problems.' };
+    console.error('[generatePracticeProblemsAction] error:', err);
+    return { error: err.message || 'Failed to parse practice problems text.' };
   }
 }
+
 
 

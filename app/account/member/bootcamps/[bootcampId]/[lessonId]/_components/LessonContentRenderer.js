@@ -593,6 +593,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           }
           return (
             <div key={block.id} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-6">
+              <style dangerouslySetInnerHTML={{ __html: MD_STYLES }} />
               <h4 className="text-sm font-bold text-violet-200 mb-4 flex items-center gap-2">
                 <BookOpen className="h-4 w-4" /> Exam Module ({questions.length} Questions)
               </h4>
@@ -602,11 +603,13 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                 <div className="space-y-4">
                   {questions.map((q, idx) => (
                     <div key={q.id || idx} className="p-4 bg-white/2 border border-white/5 rounded-xl space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 shrink-0 mt-0.5">
                           Q {idx + 1}
                         </span>
-                        <p className="text-xs font-semibold text-white">{q.question || 'Untitled Question'}</p>
+                        <div className="text-xs font-semibold text-white flex-1 min-w-0 md-viewer">
+                          <div dangerouslySetInnerHTML={{ __html: processMarkdown(q.question || 'Untitled Question') }} />
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {(q.options || ['', '', '', '']).map((opt, oIdx) => (

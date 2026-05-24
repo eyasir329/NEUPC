@@ -47,6 +47,10 @@ export default function LessonFullscreenEditorModal({
   // Local preview state so the right-pane preview updates as the user edits.
   const [previewContent, setPreviewContent] = useState(contentRef.current);
 
+  const [openAiProblemsImport, setOpenAiProblemsImport] = useState(false);
+  const [aiProblemsInput, setAiProblemsInput] = useState('');
+  const [generatingProblems, setGeneratingProblems] = useState(false);
+
   const contentHasPractice = useMemo(() => {
     if (!previewContent) return false;
     try {
@@ -228,7 +232,7 @@ export default function LessonFullscreenEditorModal({
             </div>
 
             {/* Practice Problems builder */}
-            {false && (
+            {form.type === 'practice' && (
               <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between border-b border-[#464554] pb-3">
                   <div className="flex items-center gap-2">
@@ -483,9 +487,109 @@ export default function LessonFullscreenEditorModal({
             )}
           </div>
         </div>
-
       </div>
 
+      {openAiProblemsImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#051424] border border-[#464554] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#464554] bg-[#010f1f]">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-5 w-5 text-violet-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">AI Practice Problems Generator</h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Paste raw text, URLs, sheet descriptions, or YouTube links to automatically format practice problems.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenAiProblemsImport(false)}
+                className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Practice Problems Data Input</label>
+                <p className="text-[10px] text-gray-500 leading-normal">
+                  Our model will parse problem name, platform source, direct workspace link, YouTube video solution, step-by-step markdown editorials, and code templates automatically. Example input:
+                </p>
+                <div className="bg-black/35 rounded-lg p-2.5 border border-white/5 font-mono text-[9px] text-[#908fa0] whitespace-pre">
+                  {`1. Two Sum (https://leetcode.com/problems/two-sum)
+Video Solution: https://youtube.com/watch?v=WY
+Editorial: Use a hashmap to store seen values for O(n) lookup.
+Code:
+class Solution {
+    public int[] twoSum(int[] nums, int target) { ... }
+}`}
+                </div>
+              </div>
+
+              <textarea
+                value={aiProblemsInput}
+                onChange={(e) => setAiProblemsInput(e.target.value)}
+                placeholder="Paste your unstructured practice problems text, list, or description here..."
+                rows={10}
+                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all resize-y min-h-[160px]"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-[#464554] bg-[#010f1f] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOpenAiProblemsImport(false)}
+                className="px-4 py-2 rounded-xl border border-[#464554] text-xs font-semibold text-[#d4e4fa] hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={generatingProblems || !aiProblemsInput.trim()}
+                onClick={async () => {
+                  setGeneratingProblems(true);
+                  try {
+                    const res = await generatePracticeProblemsAction(aiProblemsInput);
+                    if (res.error) {
+                      toast.error(res.error);
+                      return;
+                    }
+                    if (res.success && Array.isArray(res.problems)) {
+                      const mergedProblems = [
+                        ...(form.practice_problems || []),
+                        ...res.problems
+                      ];
+                      set('practice_problems', mergedProblems);
+                      setOpenAiProblemsImport(false);
+                      toast.success(`Successfully parsed and added ${res.problems.length} practice problems!`);
+                    }
+                  } catch (err) {
+                    toast.error('AI problem generation failed. Try checking your format.');
+                  } finally {
+                    setGeneratingProblems(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-xs font-bold text-white shadow-lg shadow-violet-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+              >
+                {generatingProblems ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    AI is Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Generate & Format Problems
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
     </div>

@@ -65,6 +65,10 @@ import {
   Brain,
   Puzzle,
   Info,
+  Pencil,
+  Eye,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   getLesson,
@@ -88,6 +92,30 @@ import {
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 import ExtensionGuide from '@/app/account/member/problem-solving/_components/ExtensionGuide';
 
+const parseExamQuestions = (questions) => {
+  if (!questions) return [];
+  if (Array.isArray(questions)) return questions;
+  if (typeof questions === 'string') {
+    try {
+      const parsed = JSON.parse(questions);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  return [];
+};
+
+const parsePracticeProblems = (problems) => {
+  if (!problems) return [];
+  if (Array.isArray(problems)) return problems;
+  if (typeof problems === 'string') {
+    try {
+      const parsed = JSON.parse(problems);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  return [];
+};
+
 // Lightweight markdown renderer for task/session descriptions
 const MD_DESC_STYLES = `
 .md-desc{display:grid;grid-template-columns:1fr;gap:.5rem;line-height:1.6;color:#908fa0;font-size:.8125rem;}
@@ -100,6 +128,7 @@ const MD_DESC_STYLES = `
 .md-desc .md-ul .md-li{list-style-type:disc;}.md-desc .md-ol .md-li{list-style-type:decimal;}
 .md-desc .md-li{padding-left:.2rem;}
 .md-desc .md-inline-code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .35em;border-radius:.3rem;font-size:.8em;font-family:monospace;}
+.md-desc .md-code-block{background:#040d17;border:1px solid rgba(255,255,255,0.08);color:#d4e4fa;padding:.75rem 1rem;border-radius:.6rem;font-size:.8em;font-family:monospace;margin:.5rem 0;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-all;}
 .md-desc .md-bq{border-left:3px solid rgba(255,255,255,.12);padding:.4rem .75rem;background:rgba(255,255,255,.02);border-radius:0 .4rem .4rem 0;}
 `;
 
@@ -129,7 +158,7 @@ function buildDescRenderer() {
   r.link = function ({ href, title, tokens }) {
     return `<a href="${href}" class="md-a"${title ? ` title="${title}"` : ''} target="_blank" rel="noopener">${this.parser.parseInline(tokens)}</a>`;
   };
-  r.code = ({ text }) => `<pre class="md-inline-code" style="display:block;white-space:pre-wrap;padding:.5rem .75rem;border-radius:.4rem;margin:.25rem 0;">${text}</pre>`;
+  r.code = ({ text }) => `<pre class="md-code-block">${text}</pre>`;
   return r;
 }
 
@@ -713,11 +742,14 @@ function CurriculumRail({
 
 function NotesPanel({ lessonId, initialNotes, onSave }) {
   const [notes, setNotes] = useState(initialNotes || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [saving, startSaving] = useTransition();
   const [saved, setSaved] = useState(false);
   const lastSavedRef = useRef(initialNotes || '');
   const prevLessonRef = useRef(lessonId);
   const notesRef = useRef(notes);
+
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
@@ -734,6 +766,8 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
     prevLessonRef.current = lessonId;
     setNotes(initialNotes || '');
     lastSavedRef.current = initialNotes || '';
+    setIsEditing(false);
+    setIsExpanded(false);
   }, [lessonId, initialNotes, onSave]);
 
   const handleSave = useCallback(() => {
@@ -749,35 +783,94 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   }, [lessonId, notes, onSave]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2 transition-all duration-300">
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
           <StickyNote className="h-3.5 w-3.5 text-yellow-400" />
           <h3 className="text-[13px] font-semibold text-white">My Notes</h3>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10 disabled:opacity-50"
-        >
-          {saving ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : saved ? (
-            <>
-              <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved
-            </>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
+            title={isExpanded ? "Collapse Notes" : "Expand Notes"}
+          >
+            {isExpanded ? (
+              <>
+                <Minimize2 className="h-3.5 w-3.5 text-orange-400" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-3.5 w-3.5 text-indigo-400" />
+                Expand
+              </>
+            )}
+          </button>
+
+          {isEditing ? (
+            <button
+              onClick={() => setIsEditing(false)}
+              className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
+              title="Preview Notes"
+            >
+              <Eye className="h-3.5 w-3.5 text-blue-400" />
+              Preview
+            </button>
           ) : (
-            'Save'
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
+              title="Edit Notes"
+            >
+              <Pencil className="h-3.5 w-3.5 text-yellow-400" />
+              Edit
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 rounded-lg bg-[#8083ff]/10 hover:bg-[#8083ff]/20 px-3 py-1.5 text-[11px] font-medium text-[#c0c1ff] transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {saving ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : saved ? (
+              <>
+                <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved
+              </>
+            ) : (
+              'Save'
+            )}
+          </button>
+        </div>
       </div>
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Take notes while watching…"
-        className="spa-scroll w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none"
-        rows={4}
-      />
+
+      {/* Body Content Mode */}
+      {!isEditing ? (
+        <div className={`px-4 py-3 text-sm text-gray-300 spa-scroll transition-all duration-300 ${
+          isExpanded ? 'min-h-[400px] h-auto overflow-y-visible' : 'min-h-[116px] max-h-[300px] overflow-y-auto'
+        }`}>
+          {notes ? (
+            <MarkdownDesc text={notes} className="[&_p]:text-gray-300 [&_p]:text-[13px] [&_p]:leading-relaxed" />
+          ) : (
+            <p className="text-gray-500 italic text-[13px]">No notes taken yet. Click the edit icon to write notes in Markdown format...</p>
+          )}
+        </div>
+      ) : (
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Take notes while watching (supports Markdown)…"
+          className={`spa-scroll w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none border-t border-white/5 transition-all duration-300 ${
+            isExpanded ? 'min-h-[650px] h-auto' : 'min-h-[116px]'
+          }`}
+          rows={isExpanded ? 25 : 4}
+          autoFocus
+        />
+      )}
     </div>
   );
 }
@@ -1641,6 +1734,8 @@ const LessonPanel = memo(function LessonPanel({
     return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: val }]);
   };
 
+
+
   const handleCqFiles = async (files) => {
     if (!files?.length) return;
     setCqUploading(true);
@@ -1922,12 +2017,13 @@ const LessonPanel = memo(function LessonPanel({
       getExamSubmission(lesson.id)
         .then((res) => {
           setExamSub(res);
+          const allQuestions = parseExamQuestions(lesson.exam_questions);
           if (res) {
             const attemptAnswers = res.submitted_answers;
             if (attemptAnswers?.selected_questions) {
               setSelectedQuestions(attemptAnswers.selected_questions);
             } else {
-              setSelectedQuestions(lesson.exam_questions || []);
+              setSelectedQuestions(allQuestions);
             }
 
             if (lesson.exam_type === 'mcq') {
@@ -1944,10 +2040,10 @@ const LessonPanel = memo(function LessonPanel({
             }
           } else {
             if (lesson.random_question_count > 0) {
-              const qs = selectNovelQuestions(lesson.exam_questions || [], [], lesson.random_question_count);
+              const qs = selectNovelQuestions(allQuestions, [], lesson.random_question_count);
               setSelectedQuestions(qs);
             } else {
-              setSelectedQuestions(lesson.exam_questions || []);
+              setSelectedQuestions(allQuestions);
             }
             setMcqAnswers({});
             setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
@@ -1958,7 +2054,8 @@ const LessonPanel = memo(function LessonPanel({
         .catch((e) => console.error(e))
         .finally(() => setLoadingExamSub(false));
     }
-  }, [lesson.id, lesson.type, lesson.exam_type, lesson.exam_questions, lesson.random_question_count]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson.id]);
 
   useEffect(() => {
     setLocalCompleted(isCompleted);
@@ -2246,7 +2343,9 @@ const LessonPanel = memo(function LessonPanel({
                         </span>
                       </div>
 
-                      <p className="text-sm font-semibold text-white">{q.question}</p>
+                      <div className="text-sm font-semibold text-white">
+                        <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                      </div>
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {(q.options || ['', '', '', '']).map((opt, optIdx) => {
@@ -2424,7 +2523,9 @@ const LessonPanel = memo(function LessonPanel({
                           </span>
                         </div>
 
-                        <p className="text-sm font-semibold text-white">{q.question}</p>
+                        <div className="text-sm font-semibold text-white">
+                          <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                        </div>
 
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {(q.options || ['', '', '', '']).map((opt, optIdx) => {
@@ -2470,7 +2571,9 @@ const LessonPanel = memo(function LessonPanel({
                       <span className="text-xs font-bold text-gray-500">Question {qIdx + 1} of {activeQuestions.length}</span>
                     </div>
 
-                    <p className="text-sm font-semibold text-white">{q.question}</p>
+                    <div className="text-sm font-semibold text-white">
+                      <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                    </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {(q.options || ['', '', '', '']).map((opt, optIdx) => {
@@ -2557,7 +2660,9 @@ const LessonPanel = memo(function LessonPanel({
                                   {idx + 1}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-slate-200 leading-relaxed">{q.question}</p>
+                                  <div className="text-xs font-semibold text-slate-200 leading-relaxed">
+                                    <MarkdownDesc text={q.question} className="text-slate-200 [&_p]:text-slate-200 [&_p]:font-semibold [&_p]:text-xs" />
+                                  </div>
                                   {q.points != null && (
                                     <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                                       {q.points} pts
@@ -2623,7 +2728,9 @@ const LessonPanel = memo(function LessonPanel({
                                 {idx + 1}
                               </span>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-slate-100 leading-relaxed">{q.question}</p>
+                                <div className="text-xs font-semibold text-slate-100 leading-relaxed">
+                                  <MarkdownDesc text={q.question} className="text-slate-100 [&_p]:text-slate-100 [&_p]:font-semibold [&_p]:text-xs" />
+                                </div>
                                 {q.points != null && (
                                   <span className="mt-1.5 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                                     {q.points} pts
@@ -2829,6 +2936,19 @@ const LessonPanel = memo(function LessonPanel({
                   </div>
                 ) : null}
 
+                {/* Dedicated Exam renderer for standalone exam items without an inline exam block */}
+                {lesson.type === 'exam' && !contentHasExam && examPlayer}
+
+                {/* Dedicated Practice Problems renderer for standalone practice items without an inline practice block */}
+                {lesson.type === 'practice' && !contentHasPractice && (
+                  <PracticeProblemsCockpit
+                    lesson={lesson}
+                    lessonProgress={lessonProgress}
+                    onProgressUpdate={onProgressUpdate}
+                    bootcampId={bootcampId}
+                  />
+                )}
+
                 {/* Attachments */}
                 {lesson.attachments?.length > 0 && (
                   <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
@@ -2999,7 +3119,7 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   };
 
   const solvedList = lessonProgress[lesson.id]?.solved_problems || [];
-  const problems = lesson.practice_problems || [];
+  const problems = parsePracticeProblems(lesson.practice_problems);
 
   const getPlatformName = (sourceStr) => {
     if (!sourceStr) return '—';

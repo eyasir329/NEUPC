@@ -1203,17 +1203,32 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
-                  <input
-                    type="text"
+                  <textarea
                     value={q.question || ''}
                     onChange={(e) => {
                       const newQuests = [...questions];
                       newQuests[qIdx] = { ...newQuests[qIdx], question: e.target.value };
                       setQuestions(newQuests);
                     }}
-                    placeholder="Enter the question prompt..."
-                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    rows={6}
+                    placeholder="Enter the question prompt... (Markdown supported, code blocks and scenarios)"
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-1.5 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
                   />
+                  {q.question && (
+                    <div className="mt-1 bg-[#05111d] border border-violet-500/10 rounded-lg p-2.5">
+                      <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Live Markdown Preview
+                      </div>
+                      <div className="text-[11px] text-[#908fa0] leading-relaxed max-w-full overflow-x-auto">
+                        <div dangerouslySetInnerHTML={{
+                          __html: (() => {
+                            try { return marked.parse(q.question, { gfm: true, breaks: true }); }
+                            catch { return q.question; }
+                          })()
+                        }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
