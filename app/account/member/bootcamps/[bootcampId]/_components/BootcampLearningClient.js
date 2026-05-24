@@ -91,7 +91,6 @@ import {
   submitExamSubmission,
   getExamSubmission,
   checkEnrollment,
-  getBootcampLeaderboard,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
 import ExtensionGuide from '@/app/account/member/problem-solving/_components/ExtensionGuide';
@@ -1512,30 +1511,9 @@ const OverviewPanel = memo(function OverviewPanel({
       ? 'Resume'
       : 'Start learning';
 
-  const [activeSubTab, setActiveSubTab] = useState('overview'); // 'overview' | 'leaderboard'
-  const [leaderboardData, setLeaderboardData] = useState([]);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-
   const totalPoints = useMemo(() => {
     return allLessons.reduce((s, l) => s + (l.points ?? 10), 0);
   }, [allLessons]);
-
-  useEffect(() => {
-    if (activeSubTab === 'leaderboard') {
-      setLoadingLeaderboard(true);
-      getBootcampLeaderboard(bootcamp.id)
-        .then((data) => {
-          setLeaderboardData(data || []);
-        })
-        .catch((err) => {
-          toast.error('Failed to load leaderboard');
-          console.error(err);
-        })
-        .finally(() => {
-          setLoadingLeaderboard(false);
-        });
-    }
-  }, [activeSubTab, bootcamp?.id]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
@@ -1692,178 +1670,39 @@ const OverviewPanel = memo(function OverviewPanel({
         </div>
       </section>
 
-      {/* Sub-tab selection */}
-      <div className="mt-8 flex border-b border-white/10">
-        <button
-          onClick={() => setActiveSubTab('overview')}
-          className={`relative border-b-2 px-6 py-3 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
-            activeSubTab === 'overview'
-              ? 'border-violet-500 text-white'
-              : 'border-transparent text-gray-500 hover:text-white/80'
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveSubTab('leaderboard')}
-          className={`relative border-b-2 px-6 py-3 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
-            activeSubTab === 'leaderboard'
-              ? 'border-violet-500 text-white'
-              : 'border-transparent text-gray-500 hover:text-white/80'
-          }`}
-        >
-          Leaderboard
-        </button>
-      </div>
-
-      {activeSubTab === 'overview' ? (
-        <>
-          {/* About */}
-          {bootcamp?.description && (
-            <section className="mt-8">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-                About this bootcamp
-              </h2>
-              <div className="rounded-xl border border-white/10 bg-white/2 p-5">
-                <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
-                  {bootcamp.description}
-                </p>
-              </div>
-            </section>
-          )}
-
-          {/* What you'll learn */}
-          {coursesCount > 0 && (
-            <section className="mt-8">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-                What you&apos;ll learn
-              </h2>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {bootcamp.courses.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/2 p-3"
-                  >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    <span className="text-[13px] leading-snug text-gray-300">
-                      {c.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      ) : (
-        <section className="mt-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-              Class Standings
-            </h2>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-violet-400">
-              <Sparkles className="h-3.5 w-3.5" />
-              Live Rankings
-            </div>
+      {/* About */}
+      {bootcamp?.description && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+            About this bootcamp
+          </h2>
+          <div className="rounded-xl border border-white/10 bg-white/2 p-5">
+            <p className="text-[14px] leading-relaxed whitespace-pre-line text-gray-300">
+              {bootcamp.description}
+            </p>
           </div>
+        </section>
+      )}
 
-          {loadingLeaderboard ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-              <span className="text-xs text-gray-500">Calculating weighted points...</span>
-            </div>
-          ) : leaderboardData.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-white/2 p-10 text-center text-gray-500 text-[13px]">
-              No entries found.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-white/1 divide-y divide-white/5">
-              {leaderboardData.map((student) => {
-                const isCurrentUser = student.userId === enrollment?.user_id;
-                const showPodium = student.rank <= 3;
-                return (
-                  <div
-                    key={student.userId}
-                    className={`flex items-center gap-4 px-4 py-3.5 transition-all ${
-                      isCurrentUser
-                        ? 'border-l-4 border-emerald-500 bg-emerald-500/[0.04]'
-                        : 'hover:bg-white/[0.02]'
-                    }`}
-                  >
-                    {/* Rank Badge */}
-                    <div className="flex w-10 items-center justify-center shrink-0">
-                      {showPodium ? (
-                        <div
-                          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-black shadow-md ${
-                            student.rank === 1
-                              ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black shadow-yellow-500/20'
-                              : student.rank === 2
-                                ? 'bg-gradient-to-r from-slate-300 to-gray-400 text-black shadow-slate-400/20'
-                                : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-amber-700/20'
-                          }`}
-                        >
-                          {student.rank === 1 ? (
-                            <Trophy className="h-4 w-4" />
-                          ) : (
-                            student.rank
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-500 tabular-nums">
-                          #{student.rank}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Avatar + Name */}
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      {student.avatarUrl ? (
-                        <img
-                          src={student.avatarUrl}
-                          alt=""
-                          className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10 shrink-0"
-                        />
-                      ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-violet-500/20 to-pink-500/20 text-xs font-semibold text-white ring-1 ring-white/10 shrink-0">
-                          {student.userName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white flex items-center gap-1.5">
-                          {student.userName}
-                          {isCurrentUser && (
-                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 ring-1 ring-emerald-500/20">
-                              You
-                            </span>
-                          )}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1 w-16 overflow-hidden rounded-full bg-white/10 sm:w-24">
-                            <div
-                              className="h-full bg-linear-to-r from-violet-500 to-pink-500 transition-all"
-                              style={{ width: `${student.progressPercent}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-gray-500 tabular-nums font-semibold">
-                            {student.progressPercent}% progress
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Total Points */}
-                    <div className="text-right shrink-0">
-                      <p className="text-[15px] font-black text-white tabular-nums">
-                        {student.score}
-                      </p>
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
-                        points
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* What you'll learn */}
+      {coursesCount > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+            What you&apos;ll learn
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {bootcamp.courses.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/2 p-3"
+              >
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="text-[13px] leading-snug text-gray-300">
+                  {c.title}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -2212,7 +2051,9 @@ const LessonPanel = memo(function LessonPanel({
       if (isMcqOnly) {
         onMarkComplete(lesson.id);
       }
-      refreshEnrollment();
+      if (onRefreshEnrollment) {
+        onRefreshEnrollment();
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to submit MCQ answers');
     } finally {
@@ -2285,7 +2126,9 @@ const LessonPanel = memo(function LessonPanel({
       setExamSub(res);
       setIsRetaking(false);
       toast.success('Subjective solution successfully submitted to your mentor!');
-      refreshEnrollment();
+      if (onRefreshEnrollment) {
+        onRefreshEnrollment();
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to submit CQ solution');
     } finally {
@@ -2530,14 +2373,16 @@ const LessonPanel = memo(function LessonPanel({
                   </p>
                 </div>
                 
-                <button
-                  type="button"
-                  onClick={isCq ? handleRetakeCq : (isMcq || isHybrid) ? handleRetakeMcq : handleRetakeCq}
-                  className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  {isCq ? 'Retake CQ Exam' : 'Retake Exam'}
-                </button>
+                {!isCq && (
+                  <button
+                    type="button"
+                    onClick={(isMcq || isHybrid) ? handleRetakeMcq : handleRetakeCq}
+                    className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retake Exam
+                  </button>
+                )}
               </div>
             </div>
 

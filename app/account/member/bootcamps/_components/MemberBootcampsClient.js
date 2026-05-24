@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition, useRef, useEffect } from 'react';
+import { useState, useMemo, useTransition, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import {
@@ -10,8 +10,9 @@ import {
   ChevronLeft, ChevronRight, Video, FileText, ChevronDown, Check,
   Lock, HourglassIcon, Archive, ClipboardList, Send,
   Paperclip, Upload, Trash2, Layers, AlertCircle, Percent, MapPin,
+  Crown, Award, Medal, Target,
 } from 'lucide-react';
-import { enrollUser, getMemberBootcampSessions, getMemberBootcampTasks, submitTaskAction, uploadTaskAttachmentAction } from '@/app/_lib/bootcamp-actions';
+import { enrollUser, getMemberBootcampSessions, getMemberBootcampTasks, submitTaskAction, uploadTaskAttachmentAction, getBootcampsLeaderboardAction } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
@@ -29,7 +30,7 @@ function formatBytes(b) {
   if (!b) return '';
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function resolveAttachmentUrl(url) {
@@ -87,6 +88,7 @@ const TABS = [
   { id: 'tasks', label: 'Tasks', icon: ClipboardList },
   { id: 'sessions', label: 'Sessions', icon: Video },
   { id: 'catalog', label: 'Catalog', icon: BookOpen },
+  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -2507,6 +2509,386 @@ function SessionsTab({ enrolledBootcamps, user }) {
   );
 }
 
+// ─── Leaderboard Tab ──────────────────────────────────────────────────────────
+
+function LeaderboardTab({ enrolledBootcamps, user }) {
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [bootcampFilter, setBootcampFilter] = useState('all');
+  const [timeframeFilter, setTimeframeFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const fetchLeaderboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getBootcampsLeaderboardAction({
+        bootcampId: bootcampFilter,
+        timeframe: timeframeFilter,
+      });
+      if (res.success) {
+        setLeaderboard(res.leaderboard || []);
+      } else {
+        toast.error(res.error || 'Failed to load leaderboard');
+        setLeaderboard([]);
+      }
+    } catch (err) {
+      toast.error('Failed to load leaderboard');
+      setLeaderboard([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [bootcampFilter, timeframeFilter]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  const filteredLeaderboard = useMemo(() => {
+    if (!leaderboard) return [];
+    if (!search.trim()) return leaderboard;
+    const q = search.toLowerCase();
+    return leaderboard.filter((entry) =>
+      entry.userName.toLowerCase().includes(q)
+    );
+  }, [leaderboard, search]);
+
+  // Top 3 Podium
+  const podium = useMemo(() => {
+    if (!leaderboard || leaderboard.length === 0) return [];
+    const top3 = leaderboard.slice(0, 3);
+    const ordered = [];
+    if (top3[1]) ordered.push(top3[1]); // 2nd
+    if (top3[0]) ordered.push(top3[0]); // 1st
+    if (top3[2]) ordered.push(top3[2]); // 3rd
+    return ordered;
+  }, [leaderboard]);
+
+  // Find current user's rank
+  const myRankEntry = useMemo(() => {
+    if (!leaderboard || !user?.id) return null;
+    return leaderboard.find((entry) => entry.userId === user.id) || null;
+  }, [leaderboard, user]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-8 text-left">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Trophy className="h-6 w-6 text-amber-400" />
+            Bootcamp Leaderboard
+          </h1>
+          <p className="text-gray-400 mt-1 text-sm">
+            See how you rank against other learners across all tasks, exams, and attendance.
+          </p>
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search member by name..."
+            className="h-10 w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filters: Bootcamp Wise and Timeframe */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-zinc-950/20 border border-white/5 rounded-2xl p-4.5">
+        {/* Bootcamp select filter */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 shrink-0">Bootcamp:</span>
+          <select
+            value={bootcampFilter}
+            onChange={(e) => setBootcampFilter(e.target.value)}
+            className="h-9.5 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-violet-500/50 transition-colors cursor-pointer w-full sm:w-64"
+          >
+            <option value="all">🏆 Combined (All Bootcamps)</option>
+            {enrolledBootcamps.map(({ bootcamp }) => (
+              <option key={bootcamp.id} value={bootcamp.id}>
+                📖 {bootcamp.title.split(':')[0].trim()}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Timeframe pills */}
+        <div className="flex items-center gap-2 bg-black/20 border border-white/5 rounded-xl p-1 w-full sm:w-auto justify-center sm:justify-start">
+          {[
+            ['all', 'All Time'],
+            ['monthly', 'Monthly'],
+            ['weekly', 'Weekly'],
+          ].map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => setTimeframeFilter(v)}
+              className={cn(
+                'rounded-lg px-4 py-1.5 text-[11.5px] font-bold transition-all duration-200 flex-1 sm:flex-none text-center',
+                timeframeFilter === v
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10'
+                  : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-28 text-gray-500">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500 mb-3.5" />
+          <span className="text-sm font-semibold">Calculating ranks & achievements...</span>
+        </div>
+      ) : leaderboard?.length === 0 ? (
+        <EmptyState icon={Trophy} title="Leaderboard Empty" description="No student progress or scores found for the selected filters." />
+      ) : (
+        <>
+          {/* Podium for top 3 */}
+          {!search && leaderboard.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto pt-4 pb-2">
+              {podium.map((entry) => {
+                const isFirst = entry.rank === 1;
+                const isSecond = entry.rank === 2;
+                const isThird = entry.rank === 3;
+                
+                const cardBorder = isFirst
+                  ? 'border-amber-500/30 bg-amber-500/[0.02] shadow-[0_4px_30px_rgba(245,158,11,0.04)]'
+                  : isSecond
+                  ? 'border-slate-400/20 bg-slate-400/[0.01]'
+                  : 'border-amber-700/20 bg-amber-700/[0.01]';
+                
+                const rankColor = isFirst
+                  ? 'text-amber-400'
+                  : isSecond
+                  ? 'text-slate-300'
+                  : 'text-amber-600';
+
+                return (
+                  <motion.div
+                    key={entry.userId}
+                    whileHover={{ y: -6 }}
+                    className={cn(
+                      'rounded-2xl border p-6 flex flex-col items-center text-center relative overflow-hidden backdrop-blur-md transition-all duration-300',
+                      cardBorder,
+                      isFirst ? 'md:-translate-y-4 md:scale-105 z-10' : ''
+                    )}
+                  >
+                    {/* Crown overlay */}
+                    {isFirst && (
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center justify-center">
+                        <Crown className="h-5 w-5 text-amber-400 animate-bounce" />
+                      </div>
+                    )}
+
+                    <div className="relative mt-2">
+                      <div className="h-18 w-18 rounded-full border-2 border-white/10 overflow-hidden bg-black/40 flex items-center justify-center">
+                        <SafeImg
+                          src={entry.avatarUrl}
+                          alt={entry.userName}
+                          className="h-full w-full object-cover"
+                          fallback={
+                            <div className="h-full w-full bg-violet-650/20 flex items-center justify-center text-lg font-bold text-violet-300 uppercase">
+                              {entry.userName.slice(0, 2)}
+                            </div>
+                          }
+                        />
+                      </div>
+                      <div className={cn(
+                        'absolute -bottom-2 -right-2 h-7 w-7 rounded-full flex items-center justify-center text-xs font-black shadow-lg ring-2 ring-zinc-950 font-mono',
+                        isFirst ? 'bg-amber-400 text-black' : isSecond ? 'bg-slate-300 text-black' : 'bg-amber-750 text-white'
+                      )}>
+                        {entry.rank}
+                      </div>
+                    </div>
+
+                    <div className="mt-4.5 space-y-1">
+                      <p className="text-[14px] font-extrabold text-white truncate max-w-[180px]">{entry.userName}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        {isFirst ? '🏆 Champion' : isSecond ? '🥈 Runner Up' : '🥉 Third Place'}
+                      </p>
+                    </div>
+
+                    {/* Progress details */}
+                    <div className="w-full grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-white/5 text-left">
+                      <div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Progress</span>
+                        <p className="text-xs font-bold text-gray-305 font-mono mt-0.5">{entry.progressPercent}%</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-550">Lessons</span>
+                        <p className="text-xs font-bold text-gray-305 font-mono mt-0.5">{entry.lessonsCompleted}</p>
+                      </div>
+                    </div>
+
+                    {/* Score pill */}
+                    <div className="mt-5.5 px-5 py-2.5 rounded-2xl bg-white/2 border border-white/5 w-full flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Score</span>
+                      <span className="text-[16px] font-black text-amber-400 font-mono">{entry.score} <span className="text-[10px] font-bold text-gray-500">pts</span></span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Current user's rank quick display */}
+          {myRankEntry && (
+            <div className="max-w-4xl mx-auto rounded-2xl border border-violet-500/20 bg-violet-500/[0.02] p-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-violet-500/15 flex items-center justify-center border border-violet-500/20 text-violet-400">
+                  <Trophy className="h-4.5 w-4.5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-gray-400">Your Current Rank</p>
+                  <p className="text-sm font-extrabold text-white mt-0.5">
+                    Rank <span className="text-violet-400 font-mono font-black text-base">#{myRankEntry.rank}</span> out of {leaderboard.length} members
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Your Total Points</span>
+                <span className="text-lg font-black text-amber-400 font-mono">{myRankEntry.score} <span className="text-[11px] font-semibold text-gray-500">pts</span></span>
+              </div>
+            </div>
+          )}
+
+          {/* Rankings Table */}
+          <div className="bg-zinc-950/20 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-md">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/2 text-gray-400 text-[10.5px] font-bold uppercase tracking-wider select-none">
+                    <th className="px-6 py-4.5 text-center w-18">Rank</th>
+                    <th className="px-6 py-4.5 min-w-56">Member</th>
+                    <th className="px-6 py-4.5 text-center">Lessons</th>
+                    <th className="px-6 py-4.5 text-center">Practice</th>
+                    <th className="px-6 py-4.5 text-center">Watch Time</th>
+                    <th className="px-6 py-4.5 text-center">Sessions</th>
+                    <th className="px-6 py-4.5 text-right pr-8">Points</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredLeaderboard.map((entry) => {
+                    const isSelf = entry.userId === user?.id;
+                    return (
+                      <tr
+                        key={entry.userId}
+                        className={cn(
+                          'transition-colors duration-150',
+                          isSelf
+                            ? 'bg-violet-500/[0.03] hover:bg-violet-500/[0.05] border-l-2 border-l-violet-500'
+                            : 'hover:bg-white/2'
+                        )}
+                      >
+                        {/* Rank Badge */}
+                        <td className="px-6 py-4.5 text-center">
+                          {entry.rank === 1 ? (
+                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-amber-400 text-black font-black text-xs font-mono shadow-md">1</span>
+                          ) : entry.rank === 2 ? (
+                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-slate-300 text-black font-black text-xs font-mono shadow-md">2</span>
+                          ) : entry.rank === 3 ? (
+                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-amber-700 text-white font-black text-xs font-mono shadow-md">3</span>
+                          ) : (
+                            <span className="text-gray-450 font-bold font-mono">{entry.rank}</span>
+                          )}
+                        </td>
+
+                        {/* Profile Photo & Name */}
+                        <td className="px-6 py-4.5">
+                          <div className="flex items-center gap-3.5">
+                            <div className="h-9 w-9 rounded-full border border-white/10 overflow-hidden bg-black/40 shrink-0">
+                              <SafeImg
+                                src={entry.avatarUrl}
+                                alt={entry.userName}
+                                className="h-full w-full object-cover"
+                                fallback={
+                                  <div className="h-full w-full bg-violet-650/15 flex items-center justify-center text-xs font-bold text-violet-300 uppercase">
+                                    {entry.userName.slice(0, 2)}
+                                  </div>
+                                }
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-white flex items-center gap-1.5 truncate">
+                                {entry.userName}
+                                {isSelf && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30">
+                                    You
+                                  </span>
+                                )}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-gray-500 font-bold uppercase">Progress</span>
+                                <div className="h-1.5 w-20 rounded-full bg-white/5 overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${entry.progressPercent}%` }} />
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-bold font-mono">{entry.progressPercent}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Completed Lessons */}
+                        <td className="px-6 py-4.5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-gray-350">
+                            <GraduationCap className="h-4 w-4 text-violet-400 shrink-0" />
+                            <span className="font-bold font-mono">{entry.lessonsCompleted}</span>
+                          </div>
+                        </td>
+
+                        {/* Solved Problems */}
+                        <td className="px-6 py-4.5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-gray-355">
+                            <Target className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <span className="font-bold font-mono">{entry.practiceSolved}</span>
+                          </div>
+                        </td>
+
+                        {/* Watch Time */}
+                        <td className="px-6 py-4.5 text-center font-bold text-gray-350 font-mono">
+                          {formatWatchSeconds(entry.watchTime) || '—'}
+                        </td>
+
+                        {/* Sessions */}
+                        <td className="px-6 py-4.5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-gray-355">
+                            <Video className="h-4 w-4 text-cyan-400 shrink-0" />
+                            <span className="font-bold font-mono">{entry.sessionsAttended}</span>
+                          </div>
+                        </td>
+
+                        {/* Points Badge */}
+                        <td className="px-6 py-4.5 text-right pr-8">
+                          <span className="inline-flex items-center gap-1 text-[13.5px] font-black text-amber-400 font-mono">
+                            {entry.score}
+                            <span className="text-[9.5px] font-bold text-gray-500 uppercase tracking-wider font-sans">pts</span>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MemberBootcampsClient({ user, bootcamps = [], enrollmentMap = {}, archivedEnrollmentMap = {}, learningActivity = [] }) {
@@ -2621,6 +3003,8 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
         return <TasksTab enrolledBootcamps={enrolledBootcamps} />;
       case 'sessions':
         return <SessionsTab enrolledBootcamps={enrolledBootcamps} user={user} />;
+      case 'leaderboard':
+        return <LeaderboardTab enrolledBootcamps={enrolledBootcamps} user={user} />;
       case 'catalog':
         return (
           <CatalogTab

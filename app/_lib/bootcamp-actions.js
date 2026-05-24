@@ -17,6 +17,7 @@ import {
   getFileMetadata,
   canAccessFile,
 } from './bootcamp-video';
+import { requireRole } from '@/app/_lib/auth-guard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -3887,6 +3888,245 @@ export async function getBootcampLeaderboard(bootcampId) {
     avatarUrl: entry.users?.avatar_url || null,
   }));
 }
+
+/**
+ * Member/Mentor/Admin: Get a comprehensive leaderboard across all bootcamps or a specific one,
+ * optionally filtered by timeframe (all, weekly, monthly).
+ */
+export async function getBootcampsLeaderboardAction({ bootcampId = 'all', timeframe = 'all' } = {}) {
+  try {
+    await requireRole('member');
+
+    // 1. Fetch active or completed enrollments
+    let query = supabaseAdmin
+      .from('enrollments')
+      .select(`
+        id,
+        user_id,
+        bootcamp_id,
+        score,
+        progress_percent,
+        enrolled_at,
+        users:user_id (id, full_name, avatar_url),
+        bootcamps:bootcamp_id (id, title)
+      `)
+      .in('status', ['active', 'completed']);
+
+    if (bootcampId !== 'all') {
+      query = query.eq('bootcamp_id', bootcampId);
+    }
+
+    const { data: enrollments, error: enrollError } = await query;
+    if (enrollError) throw enrollError;
+
+    if (!enrollments || enrollments.length === 0) {
+      return { success: true, leaderboard: [] };
+    }
+
+    // Get unique user and bootcamp IDs
+    const userIds = [...new Set(enrollments.map((e) => e.user_id))];
+    const bootcampIds = [...new Set(enrollments.map((e) => e.bootcamp_id))];
+
+    // Determine timeframe boundaries
+    let startDate = null;
+    if (timeframe === 'weekly') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (timeframe === 'monthly') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+    }
+
+    // 2. Query user progress
+    let progressQuery = supabaseAdmin
+      .from('user_progress')
+      .select('user_id, bootcamp_id, lesson_id, is_completed, watch_time, solved_problems, completed_at')
+      .in('user_id', userIds);
+
+    if (bootcampId !== 'all') {
+      progressQuery = progressQuery.eq('bootcamp_id', bootcampId);
+    }
+
+    const { data: progressList, error: progressError } = await progressQuery;
+    if (progressError) throw progressError;
+
+    // 3. Query Graded Task Submissions
+    let tasksQuery = supabaseAdmin
+      .from('task_submissions')
+      .select(`
+        user_id,
+        points_earned,
+        submitted_at,
+        weekly_tasks!inner (bootcamp_id)
+      `)
+      .in('user_id', userIds)
+      .eq('status', 'graded');
+
+    if (bootcampId !== 'all') {
+      tasksQuery = tasksQuery.eq('weekly_tasks.bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      tasksQuery = tasksQuery.gte('submitted_at', startDate.toISOString());
+    }
+
+    const { data: taskSubs, error: taskSubsError } = await tasksQuery;
+    if (taskSubsError) throw taskSubsError;
+
+    // 4. Query Exam Submissions
+    let examsQuery = supabaseAdmin
+      .from('exam_submissions')
+      .select('user_id, bootcamp_id, score, graded_at, status')
+      .in('user_id', userIds)
+      .eq('status', 'graded');
+
+    if (bootcampId !== 'all') {
+      examsQuery = examsQuery.eq('bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      examsQuery = examsQuery.gte('graded_at', startDate.toISOString());
+    }
+
+    const { data: examSubs, error: examSubsError } = await examsQuery;
+    if (examSubsError) throw examSubsError;
+
+    // 5. Query Mentorship Sessions for Attendance Data
+    let sessionsQuery = supabaseAdmin
+      .from('mentorship_sessions')
+      .select('id, topic, session_date, attendance_data, bootcamp_id');
+
+    if (bootcampId !== 'all') {
+      sessionsQuery = sessionsQuery.eq('bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      sessionsQuery = sessionsQuery.gte('session_date', startDate.toISOString());
+    }
+
+    const { data: sessions, error: sessionsError } = await sessionsQuery;
+    if (sessionsError) throw sessionsError;
+
+    // 6. Aggregate data per user
+    const statsMap = {};
+
+    userIds.forEach((uid) => {
+      const userEnrollments = enrollments.filter((e) => e.user_id === uid);
+      const mainEnrollment = userEnrollments[0];
+      statsMap[uid] = {
+        userId: uid,
+        userName: mainEnrollment.users?.full_name || 'Member',
+        avatarUrl: mainEnrollment.users?.avatar_url || null,
+        enrolledBootcampsCount: userEnrollments.length,
+        lessonsCompleted: 0,
+        practiceSolved: 0,
+        watchTime: 0,
+        sessionsAttended: 0,
+        score: 0,
+        allTimeScore: userEnrollments.reduce((sum, e) => sum + (e.score || 0), 0),
+        allTimeProgressPercent: Math.round(
+          userEnrollments.reduce((sum, e) => sum + (e.progress_percent || 0), 0) / userEnrollments.length
+        ),
+      };
+    });
+
+    // Aggregate user progress (lessons completed, solved problems, watch time)
+    progressList?.forEach((p) => {
+      const stats = statsMap[p.user_id];
+      if (!stats) return;
+
+      const isCompleted = p.is_completed;
+      const isCompletedInTimeframe = !startDate || (p.completed_at && new Date(p.completed_at) >= startDate);
+
+      if (isCompleted && isCompletedInTimeframe) {
+        stats.lessonsCompleted += 1;
+      }
+
+      stats.watchTime += p.watch_time || 0;
+
+      if (Array.isArray(p.solved_problems)) {
+        if (!startDate || (p.completed_at && new Date(p.completed_at) >= startDate)) {
+          stats.practiceSolved += p.solved_problems.length;
+        }
+      }
+    });
+
+    // Aggregate Task Points
+    taskSubs?.forEach((sub) => {
+      const stats = statsMap[sub.user_id];
+      if (stats) {
+        stats.score += sub.points_earned || 0;
+      }
+    });
+
+    // Aggregate Exam Points
+    examSubs?.forEach((sub) => {
+      const stats = statsMap[sub.user_id];
+      if (stats) {
+        stats.score += sub.score || 0;
+      }
+    });
+
+    // Aggregate Session Attendance Points
+    sessions?.forEach((s) => {
+      if (Array.isArray(s.attendance_data)) {
+        s.attendance_data.forEach((a) => {
+          const stats = statsMap[a.user_id];
+          if (stats) {
+            if (a.attended) {
+              stats.sessionsAttended += 1;
+            }
+            stats.score += a.points || 0;
+          }
+        });
+      }
+    });
+
+    // Format final list
+    const leaderboard = Object.values(statsMap).map((stats) => {
+      let finalScore = stats.score;
+      if (timeframe === 'all' && finalScore === 0) {
+        finalScore = stats.allTimeScore;
+      }
+
+      let progressPercent = 0;
+      if (bootcampId !== 'all') {
+        const matchingEnrollment = enrollments.find(
+          (e) => e.user_id === stats.userId && e.bootcamp_id === bootcampId
+        );
+        progressPercent = matchingEnrollment?.progress_percent || 0;
+      } else {
+        progressPercent = stats.allTimeProgressPercent;
+      }
+
+      return {
+        userId: stats.userId,
+        userName: stats.userName,
+        avatarUrl: stats.avatarUrl,
+        lessonsCompleted: stats.lessonsCompleted,
+        practiceSolved: stats.practiceSolved,
+        watchTime: stats.watchTime,
+        sessionsAttended: stats.sessionsAttended,
+        score: finalScore,
+        progressPercent,
+      };
+    });
+
+    // Sort by score desc, then progress percent desc
+    leaderboard.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.progressPercent - a.progressPercent;
+    });
+
+    // Add rankings
+    leaderboard.forEach((entry, idx) => {
+      entry.rank = idx + 1;
+    });
+
+    return { success: true, leaderboard };
+  } catch (error) {
+    console.error('Error fetching bootcamps leaderboard:', error);
+    return { success: false, error: error.message || 'Failed to fetch leaderboard' };
+  }
+}
+
 
 
 
