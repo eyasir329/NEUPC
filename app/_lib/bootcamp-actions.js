@@ -314,7 +314,7 @@ export async function getBootcampWithCurriculum(idOrSlug) {
           id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, content, video_source, video_id, video_url, duration, order_index,
-            is_free_preview, is_published, is_locked
+            is_free_preview, is_published, is_locked, type, exam_type, exam_questions, random_question_count, weight, practice_problems
           )
         )
       )
@@ -382,7 +382,7 @@ export async function getBootcampCurriculumLight(idOrSlug) {
           id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, video_source, video_id, duration, order_index,
-            is_free_preview, is_published, is_locked
+            is_free_preview, is_published, is_locked, type, exam_type, random_question_count, weight, practice_problems
           )
         )
       )
@@ -974,6 +974,11 @@ export async function createLesson(moduleId, data) {
       is_published: data.is_published !== false,
       is_locked: data.is_locked === true,
       attachments: data.attachments || [],
+      type: data.type || 'lesson',
+      exam_type: data.exam_type || null,
+      exam_questions: data.exam_questions || [],
+      practice_problems: data.practice_problems || [],
+      weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : 1,
     })
     .select()
     .single();
@@ -1034,6 +1039,12 @@ export async function updateLesson(lessonId, data) {
     is_published: data.is_published,
     is_locked: data.is_locked,
     attachments: data.attachments,
+    type: data.type,
+    exam_type: data.exam_type,
+    exam_questions: data.exam_questions,
+    practice_problems: data.practice_problems,
+    random_question_count: data.random_question_count !== undefined ? parseInt(data.random_question_count) || 0 : undefined,
+    weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : undefined,
   };
 
   // Remove undefined values
@@ -1177,7 +1188,7 @@ export async function getLesson(lessonId) {
   const { data, error } = await supabaseAdmin
     .from('lessons')
     .select(
-      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_published, order_index'
+      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_published, order_index, type, exam_type, exam_questions, random_question_count, practice_problems'
     )
     .eq('id', lessonId)
     .single();
@@ -1197,7 +1208,7 @@ export async function getLessonContent(lessonId) {
 
   const { data, error } = await supabaseAdmin
     .from('lessons')
-    .select('id, content, attachments, video_url')
+    .select('id, content, attachments, video_url, type, exam_type, exam_questions, random_question_count, practice_problems')
     .eq('id', lessonId)
     .single();
 
@@ -1807,6 +1818,95 @@ export async function saveLessonNotes(lessonId, notes) {
   return data;
 }
 
+/**
+ * Toggle a practice problem's solved status for a user.
+ * Automatically marks the entire lesson as completed when all problems are solved.
+ */
+export async function togglePracticeProblemSolved(lessonId, problemIndex, solved, bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson?.modules?.courses?.bootcamp_id) throw new Error('Lesson not found');
+    bootcampId = lesson.modules.courses.bootcamp_id;
+  }
+
+  // Get current user progress
+  const { data: progress } = await supabaseAdmin
+    .from('user_progress')
+    .select('id, solved_problems, is_completed')
+    .eq('user_id', userId)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  // Get total practice problems configured
+  const { data: lessonData } = await supabaseAdmin
+    .from('lessons')
+    .select('practice_problems')
+    .eq('id', lessonId)
+    .single();
+
+  const totalProblems = lessonData?.practice_problems || [];
+  let currentSolved = progress?.solved_problems || [];
+
+  if (solved) {
+    if (!currentSolved.includes(problemIndex)) {
+      currentSolved = [...currentSolved, problemIndex];
+    }
+  } else {
+    currentSolved = currentSolved.filter((idx) => idx !== problemIndex);
+  }
+
+  // Determine if all practice problems are solved
+  // If no practice problems are configured, or all of them are solved
+  const isAllSolved = totalProblems.length > 0 && totalProblems.every((_, idx) => currentSolved.includes(idx));
+
+  const patch = {
+    solved_problems: currentSolved,
+    // If all are solved, auto mark lesson as completed
+    is_completed: isAllSolved,
+    completed_at: isAllSolved ? new Date().toISOString() : null,
+  };
+
+  let result;
+  if (progress) {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .update(patch)
+      .eq('id', progress.id)
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .insert({
+        user_id: userId,
+        lesson_id: lessonId,
+        bootcamp_id: bootcampId,
+        watch_time: 0,
+        last_position: 0,
+        ...patch,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  }
+
+  // Revalidate to show updated completion in progress calculations
+  revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+  revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
+
+  return result;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN ENROLLMENT MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2075,7 +2175,7 @@ export async function adminGetStudentProgress(bootcampId, userId) {
           id, title, order_index,
           modules (
             id, title, order_index,
-            lessons (id, title, order_index, duration, is_published, video_source, video_id)
+            lessons (id, title, order_index, duration, is_published, video_source, video_id, type, exam_type, random_question_count, weight)
           )
         )
       `)
@@ -2344,7 +2444,8 @@ export async function finishBatchAndStartNew(bootcampId, newBatchData) {
           title, description, order_index, is_published, is_locked,
           lessons (
             title, description, content, video_source, video_id, video_url,
-            duration, order_index, is_free_preview, is_published, is_locked, attachments
+            duration, order_index, is_free_preview, is_published, is_locked, attachments,
+            type, exam_type, exam_questions, random_question_count, weight
           )
         )
       )
@@ -2436,6 +2537,7 @@ export async function finishBatchAndStartNew(bootcampId, newBatchData) {
             is_published: l.is_published,
             is_locked: l.is_locked,
             attachments: l.attachments,
+            weight: l.weight ?? 1,
           }))
         );
       }
@@ -3187,3 +3289,375 @@ export async function getMemberBootcampSessions(bootcampId) {
   deduped.sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
   return deduped;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXAM SUBMISSION & ASSESSMENT ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Submit an exam answer (called by student).
+ */
+export async function submitExamSubmission(lessonId, bootcampId, answers, score, status = 'submitted') {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Unauthorized');
+
+  // Insert or update exam submission
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .upsert({
+      lesson_id: lessonId,
+      user_id: userId,
+      bootcamp_id: bootcampId,
+      submitted_answers: answers,
+      score: score,
+      status: status,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'lesson_id,user_id'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error submitting exam:', error);
+    throw error;
+  }
+
+  // Also mark the lesson as complete
+  await markLessonComplete(lessonId, bootcampId);
+
+  return data;
+}
+
+/**
+ * Get an exam submission (called by student or mentor).
+ */
+export async function getExamSubmission(lessonId, studentUserId = null) {
+  let userId = studentUserId;
+  if (!userId) {
+    userId = await getCurrentUserId();
+  }
+  if (!userId) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching exam submission:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Get all exam submissions for mentor grading.
+ * Dual-path: primary by bootcamp_id column, fallback via lesson IDs of the bootcamp.
+ */
+export async function getExamSubmissionsForMentor(bootcampId) {
+  await requireAdminOrBootcampMentor(bootcampId);
+
+  const SELECT_FRAGMENT = `
+    *,
+    users!user_id (
+      id,
+      full_name,
+      email,
+      avatar_url,
+      member_profiles!user_id (
+        student_id,
+        academic_session
+      )
+    ),
+    lessons (
+      id,
+      title,
+      exam_type,
+      exam_questions,
+      description,
+      content
+    )
+  `;
+
+  // ── Primary path: filter by bootcamp_id ───────────────────────────────────
+  const { data: byBootcamp, error: err1 } = await supabaseAdmin
+    .from('exam_submissions')
+    .select(SELECT_FRAGMENT)
+    .eq('bootcamp_id', bootcampId)
+    .order('created_at', { ascending: false });
+
+  if (!err1 && Array.isArray(byBootcamp) && byBootcamp.length > 0) {
+    console.log(`[getExamSubmissionsForMentor] bootcamp_id path: ${byBootcamp.length} rows for ${bootcampId}`);
+    return byBootcamp;
+  }
+
+  if (err1) {
+    console.warn('[getExamSubmissionsForMentor] bootcamp_id query failed:', err1.message, '— trying lesson-id fallback');
+  } else {
+    console.log(`[getExamSubmissionsForMentor] bootcamp_id returned 0 rows for ${bootcampId}, trying lesson-id fallback`);
+  }
+
+  // ── Fallback path: collect lesson IDs belonging to this bootcamp ──────────
+  const { data: lessonRows, error: lessonsErr } = await supabaseAdmin
+    .from('lessons')
+    .select('id, modules!inner(courses!inner(bootcamp_id))')
+    .eq('modules.courses.bootcamp_id', bootcampId);
+
+  if (lessonsErr || !lessonRows?.length) {
+    console.warn('[getExamSubmissionsForMentor] lesson fallback found no lessons for bootcamp', bootcampId);
+    return [];
+  }
+
+  const lessonIds = lessonRows.map(l => l.id);
+
+  const { data: byLesson, error: err2 } = await supabaseAdmin
+    .from('exam_submissions')
+    .select(SELECT_FRAGMENT)
+    .in('lesson_id', lessonIds)
+    .order('created_at', { ascending: false });
+
+  if (err2) {
+    console.error('[getExamSubmissionsForMentor] lesson-id fallback failed:', err2.message);
+    throw new Error(err2.message);
+  }
+
+  console.log(`[getExamSubmissionsForMentor] lesson-id path: ${byLesson?.length ?? 0} rows for bootcamp ${bootcampId}`);
+  return byLesson ?? [];
+}
+
+/**
+ * Review/assess a CQ exam submission.
+ */
+export async function reviewExamSubmission(submissionId, score, feedback, status) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
+  const { data: mentor } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('email', session.user.email)
+    .single();
+  if (!mentor) throw new Error('Mentor not found');
+
+  // Verify mentor is authorized for this bootcamp
+  const { data: subCheck } = await supabaseAdmin
+    .from('exam_submissions')
+    .select('bootcamp_id')
+    .eq('id', submissionId)
+    .single();
+
+  if (!subCheck) throw new Error('Submission not found');
+  await requireAdminOrBootcampMentor(subCheck.bootcamp_id);
+
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .update({
+      score: score,
+      mentor_feedback: feedback,
+      status: status,
+      graded_by: mentor.id,
+      graded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error reviewing exam submission:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * AI server action to parse raw unstructured text into structured MCQ questions.
+ */
+export async function generateExamQuestionsAction(rawText) {
+  const admin = await requireAdmin();
+
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
+    return { error: 'Please provide some raw exam text to parse.' };
+  }
+
+  const systemPrompt = `You are an expert AI exam content parser. Your job is to parse unstructured raw exam questions, markdown, text, or quizzes, and structure them into a valid JSON array of Multiple Choice Questions (MCQs).
+The output MUST be a valid JSON array of objects, where each object has the following keys:
+- "id": string (e.g. "q-1", "q-2" or a random string)
+- "question": string (the question text)
+- "options": array of exactly 4 strings (options)
+- "correct_option": integer (0 for A, 1 for B, 2 for C, 3 for D) representing the correct index. If not specified, default to 0.
+- "points": integer (points for this question, default to 5 if not specified)
+
+Return ONLY the raw JSON array string. Do NOT wrap the JSON in markdown code blocks like \`\`\`json ... \`\`\`. Do not include any intro, explanation, or commentary.
+Example Output:
+[
+  {
+    "id": "q-1",
+    "question": "What is React?",
+    "options": ["A styling framework", "A JavaScript library", "A database", "A browser"],
+    "correct_option": 1,
+    "points": 5
+  }
+]`;
+
+  try {
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    let generatedText = '';
+    
+    if (!hasGemini) {
+      const systemEncoded = encodeURIComponent(systemPrompt);
+      const promptEncoded = encodeURIComponent(rawText);
+      const url = `https://text.pollinations.ai/${promptEncoded}?model=openai-fast&system=${systemEncoded}`;
+      
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!res.ok) {
+        throw new Error(`AI model error (${res.status})`);
+      }
+      generatedText = await res.text();
+    } else {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+      const body = {
+        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser raw text:\n${rawText}` }] }],
+        generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        throw new Error(`Gemini API error (${res.status})`);
+      }
+      const data = await res.json();
+      generatedText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+    }
+
+    let cleaned = generatedText.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed)) {
+      throw new Error("AI did not return a valid array of questions.");
+    }
+
+    const normalized = parsed.map((q, idx) => ({
+      id: q.id || `q-${Date.now()}-${idx}`,
+      question: q.question || 'Untitled Question',
+      options: Array.isArray(q.options) && q.options.length === 4 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct_option: typeof q.correct_option === 'number' && q.correct_option >= 0 && q.correct_option < 4 ? q.correct_option : 0,
+      points: typeof q.points === 'number' ? q.points : 5,
+    }));
+
+    return { success: true, questions: normalized };
+  } catch (err) {
+    console.error('AI Question parsing error:', err);
+    return { error: err.message || 'Failed to parse raw text into valid MCQ questions.' };
+  }
+}
+
+/**
+ * AI server action to parse raw unstructured text into structured Practice Problems.
+ */
+export async function generatePracticeProblemsAction(rawText) {
+  const admin = await requireAdmin();
+
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
+    return { error: 'Please provide some raw practice problems text to parse.' };
+  }
+
+  const systemPrompt = `You are an expert AI problem setter and content parser. Your job is to parse unstructured raw practice problems, competitive programming questions, problem statements, editorials, codes, platform names, and links, and structure them into a valid JSON array of Practice Problems.
+The output MUST be a valid JSON array of objects, where each object has the following keys:
+- "id": string (UUID or random unique string)
+- "name": string (the problem name, e.g. "Watermelon", "Two Sum")
+- "source": string (the platform name, e.g. "Codeforces", "LeetCode", "VJudge")
+- "url": string (the direct HTTP/S problem link, default to empty string if not found)
+- "video_url": string (the solution video link if present, default to empty string if not found)
+- "editorial": string (full detailed markdown explaining the step-by-step logic, math, and approach)
+- "solution_code": string (clean C++, Python, or Java solution code if present, default to empty string if not found)
+
+Return ONLY the raw JSON array string. Do NOT wrap the JSON in markdown code blocks like \`\`\`json ... \`\`\`. Do not include any intro, explanation, or commentary.
+Example Output:
+[
+  {
+    "id": "p-1",
+    "name": "Watermelon",
+    "source": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/4/A",
+    "video_url": "https://youtube.com/watch?v=...",
+    "editorial": "### Method\\nIf the weight is even and greater than 2, we can divide it...",
+    "solution_code": "#include <iostream>\\nusing namespace std;\\nint main() { ... }"
+  }
+]`;
+
+  try {
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    let generatedText = '';
+    
+    if (!hasGemini) {
+      const systemEncoded = encodeURIComponent(systemPrompt);
+      const promptEncoded = encodeURIComponent(rawText);
+      const url = `https://text.pollinations.ai/${promptEncoded}?model=openai-fast&system=${systemEncoded}`;
+      
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!res.ok) {
+        throw new Error(`AI model error (${res.status})`);
+      }
+      generatedText = await res.text();
+    } else {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+      const body = {
+        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser raw text:\n${rawText}` }] }],
+        generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        throw new Error(`Gemini API error (${res.status})`);
+      }
+      const data = await res.json();
+      generatedText = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+    }
+
+    let cleaned = generatedText.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed)) {
+      throw new Error("AI did not return a valid array of practice problems.");
+    }
+
+    const normalized = parsed.map((p, idx) => ({
+      id: p.id || crypto.randomUUID(),
+      name: p.name || 'Untitled Problem',
+      source: p.source || 'Platform',
+      url: p.url || '',
+      video_url: p.video_url || '',
+      editorial: p.editorial || '',
+      solution_code: p.solution_code || '',
+    }));
+
+    return { success: true, problems: normalized };
+  } catch (err) {
+    console.error('AI Practice Problem parsing error:', err);
+    return { error: err.message || 'Failed to parse raw text into valid practice problems.' };
+  }
+}
+
+

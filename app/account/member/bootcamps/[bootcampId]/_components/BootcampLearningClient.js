@@ -1,6 +1,7 @@
 'use client';
 
 import { marked } from 'marked';
+import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
@@ -18,12 +19,14 @@ import {
   memo,
   Suspense,
   lazy,
+  Fragment,
 } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronDown,
+  ChevronUp,
   Play,
   FileText,
   CheckCircle2,
@@ -52,6 +55,16 @@ import {
   Trash2,
   Sparkles,
   MapPin,
+  CheckSquare,
+  HelpCircle,
+  RefreshCw,
+  Star,
+  Copy,
+  Code,
+  ExternalLink,
+  Brain,
+  Puzzle,
+  Info,
 } from 'lucide-react';
 import {
   getLesson,
@@ -60,6 +73,7 @@ import {
   recordLearningActivity,
   markLessonComplete,
   markLessonIncomplete,
+  togglePracticeProblemSolved,
   saveLessonNotes,
   touchLessonAccess,
   submitHelpTicketAction,
@@ -68,8 +82,11 @@ import {
   getMemberBootcampSessions,
   submitTaskAction,
   uploadTaskAttachmentAction,
+  submitExamSubmission,
+  getExamSubmission,
 } from '@/app/_lib/bootcamp-actions';
 import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
+import ExtensionGuide from '@/app/account/member/problem-solving/_components/ExtensionGuide';
 
 // Lightweight markdown renderer for task/session descriptions
 const MD_DESC_STYLES = `
@@ -283,9 +300,19 @@ const LessonRow = memo(function LessonRow({
         ) : isCompleted ? (
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         ) : isActive ? (
-          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
-            <Play className="h-2 w-2 fill-emerald-400 text-emerald-400" />
-          </div>
+          lesson.type === 'practice' ? (
+            <CheckSquare className="h-4 w-4 text-teal-400 animate-pulse" />
+          ) : lesson.type === 'exam' ? (
+            <HelpCircle className="h-4 w-4 text-violet-400 animate-pulse" />
+          ) : (
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
+              <Play className="h-2 w-2 fill-emerald-400 text-emerald-400" />
+            </div>
+          )
+        ) : lesson.type === 'practice' ? (
+          <CheckSquare className="h-4 w-4 text-teal-500/60 group-hover:text-teal-400 transition-colors" />
+        ) : lesson.type === 'exam' ? (
+          <HelpCircle className="h-4 w-4 text-violet-500/60 group-hover:text-violet-400 transition-colors" />
         ) : (
           <div className="flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[8px] font-medium text-gray-600 transition-colors group-hover:border-violet-500/40 group-hover:text-violet-400">
             {index + 1}
@@ -307,12 +334,24 @@ const LessonRow = memo(function LessonRow({
           <span className="line-clamp-2">{lesson.title}</span>
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[10.5px] text-gray-500">
-          {hasVideo ? (
+          {lesson.type === 'practice' ? (
+            <CheckSquare className="h-2.5 w-2.5 text-teal-500" />
+          ) : lesson.type === 'exam' ? (
+            <HelpCircle className="h-2.5 w-2.5 text-violet-500" />
+          ) : hasVideo ? (
             <Video className="h-2.5 w-2.5" />
           ) : (
             <FileText className="h-2.5 w-2.5" />
           )}
-          <span>{hasVideo ? 'Video' : 'Reading'}</span>
+          <span>
+            {lesson.type === 'practice'
+              ? 'Practice'
+              : lesson.type === 'exam'
+                ? `Exam (${lesson.exam_type?.toUpperCase()})`
+                : hasVideo
+                  ? 'Video'
+                  : 'Reading'}
+          </span>
           {duration && (
             <>
               <span className="text-gray-700">·</span>
@@ -1560,6 +1599,367 @@ const LessonPanel = memo(function LessonPanel({
   const initialPosition = lessonProgress[lesson.id]?.last_position || 0;
   const [localCompleted, setLocalCompleted] = useState(isCompleted);
 
+  const contentHasPractice = useMemo(() => {
+    if (!lesson.content) return false;
+    try {
+      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+      return Array.isArray(parsed) && parsed.some(b => b.type === 'practice');
+    } catch { return false; }
+  }, [lesson.content]);
+
+  const contentHasExam = useMemo(() => {
+    if (!lesson.content) return false;
+    try {
+      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+      return Array.isArray(parsed) && parsed.some(b => b.type === 'exam');
+    } catch { return false; }
+  }, [lesson.content]);
+
+  const [examSub, setExamSub] = useState(null);
+  const [loadingExamSub, setLoadingExamSub] = useState(false);
+  const [submittingExam, setSubmittingExam] = useState(false);
+  const [mcqAnswers, setMcqAnswers] = useState({});
+  const [cqAnswerText, setCqAnswerText] = useState('');
+  const [cqAnswersByQuestion, setCqAnswersByQuestion] = useState({});
+
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [isRetaking, setIsRetaking] = useState(false);
+  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState(-1);
+  const [activeTab, setActiveTab] = useState('mcq');
+  const [isMcqRetaking, setIsMcqRetaking] = useState(false);
+  const [cqAttachments, setCqAttachments] = useState([]);
+  const [cqUploading, setCqUploading] = useState(false);
+
+  const safeParseNotes = (val) => {
+    if (!val) {
+      return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]);
+    }
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return val;
+    } catch {}
+    return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: val }]);
+  };
+
+  const handleCqFiles = async (files) => {
+    if (!files?.length) return;
+    setCqUploading(true);
+    const uploaded = [];
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await uploadTaskAttachmentAction(fd);
+      if (res.error) {
+        toast.error(res.error);
+        continue;
+      }
+      uploaded.push({ url: res.url, name: res.name, size: res.size, type: res.type });
+    }
+    setCqAttachments((prev) => [...prev, ...uploaded]);
+    setCqUploading(false);
+  };
+
+  const selectNovelQuestions = (allQuestions, attemptsHistory, count) => {
+    if (!allQuestions || allQuestions.length === 0) return [];
+    const limit = Math.min(count || allQuestions.length, allQuestions.length);
+
+    const seenIds = new Set();
+    if (Array.isArray(attemptsHistory)) {
+      attemptsHistory.forEach((att) => {
+        const qList = att.selected_questions || att.questions;
+        if (Array.isArray(qList)) {
+          qList.forEach((q) => {
+            if (q && q.id) seenIds.add(q.id);
+          });
+        }
+      });
+    }
+
+    const unseen = allQuestions.filter((q) => !seenIds.has(q.id));
+    const seen = allQuestions.filter((q) => seenIds.has(q.id));
+
+    const shuffle = (arr) => {
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const shuffledUnseen = shuffle(unseen);
+    const shuffledSeen = shuffle(seen);
+
+    const selected = shuffledUnseen.slice(0, limit);
+    if (selected.length < limit) {
+      const needed = limit - selected.length;
+      selected.push(...shuffledSeen.slice(0, needed));
+    }
+
+    return selected;
+  };
+
+  const handleRetakeMcq = () => {
+    const history = examSub?.submitted_answers?.attempts_history || [];
+    const currentAttempt = {
+      attempt_number: (history.length || 0) + 1,
+      selected_questions: selectedQuestions,
+      mcq: mcqAnswers,
+      cq: {
+        answer: cqAnswerText,
+        answers_by_question: cqAnswersByQuestion,
+        attachments: cqAttachments
+      },
+      score: examSub?.score,
+      status: examSub?.status,
+      graded_at: examSub?.graded_at,
+      graded_by: examSub?.graded_by,
+      mentor_remarks: examSub?.mentor_remarks || examSub?.mentor_feedback,
+      created_at: examSub?.created_at || new Date().toISOString()
+    };
+    const updatedHistory = [...history, currentAttempt];
+
+    const randomCount = lesson.random_question_count;
+    const qs = randomCount > 0 
+      ? selectNovelQuestions(lesson.exam_questions || [], updatedHistory, randomCount)
+      : (lesson.exam_questions || []);
+    
+    setSelectedQuestions(qs);
+    setMcqAnswers({});
+    setIsMcqRetaking(true);
+    setSelectedAttemptIndex(-1);
+    toast.success('Started a new MCQ attempt with fresh questions!');
+  };
+
+  const handleRetakeCq = () => {
+    const history = examSub?.submitted_answers?.attempts_history || [];
+    const currentAttempt = {
+      attempt_number: (history.length || 0) + 1,
+      selected_questions: selectedQuestions,
+      mcq: mcqAnswers,
+      cq: {
+        answer: cqAnswerText,
+        answers_by_question: cqAnswersByQuestion,
+        attachments: cqAttachments
+      },
+      score: examSub?.score,
+      status: examSub?.status,
+      graded_at: examSub?.graded_at,
+      graded_by: examSub?.graded_by,
+      mentor_remarks: examSub?.mentor_remarks || examSub?.mentor_feedback,
+      created_at: examSub?.created_at || new Date().toISOString()
+    };
+    const updatedHistory = [...history, currentAttempt];
+
+    const randomCount = lesson.random_question_count;
+    const qs = randomCount > 0 
+      ? selectNovelQuestions(lesson.exam_questions || [], updatedHistory, randomCount)
+      : (lesson.exam_questions || []);
+
+    setSelectedQuestions(qs);
+    setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setCqAnswersByQuestion({});
+    setCqAttachments([]);
+    setIsRetaking(true);
+    setSelectedAttemptIndex(-1);
+    toast.success('Started a new CQ attempt with fresh questions!');
+  };
+
+  const handleMcqSubmit = async () => {
+    const activeQuestions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
+      ? selectedQuestions
+      : (lesson.exam_questions || []);
+
+    const unanswered = activeQuestions.filter((q) => mcqAnswers[q.id] === undefined);
+    if (unanswered.length > 0) {
+      toast.error(`Please answer all MCQ questions before submitting. (${unanswered.length} remaining)`);
+      return;
+    }
+
+    let mcqScore = 0;
+    activeQuestions.forEach((q) => {
+      if (mcqAnswers[q.id] === q.correct_option) {
+        mcqScore += (q.points || 5);
+      }
+    });
+
+    const history = examSub?.submitted_answers?.attempts_history || [];
+    let updatedHistory = history;
+    if ((isMcqRetaking || examSub?.submitted_answers?.mcq_submitted) && examSub) {
+      const lastAttemptNum = history.length + 1;
+      const previousAttempt = {
+        attempt_number: lastAttemptNum,
+        selected_questions: selectedQuestions,
+        mcq: examSub.submitted_answers?.mcq || {},
+        cq: {
+          answer: examSub.submitted_answers?.cq?.answer || '',
+          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || {},
+          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments) ? examSub.submitted_answers.cq.attachments : []
+        },
+        score: examSub.score,
+        status: examSub.status,
+        graded_at: examSub.graded_at,
+        graded_by: examSub.graded_by,
+        mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
+        created_at: examSub.created_at || new Date().toISOString()
+      };
+      updatedHistory = [...history, previousAttempt];
+    }
+
+    const answersPayload = {
+      ...examSub?.submitted_answers,
+      mcq: mcqAnswers,
+      selected_questions: selectedQuestions,
+      mcq_submitted: true,
+      mcq_score: mcqScore,
+      mcq_submitted_at: new Date().toISOString(),
+      attempt_number: updatedHistory.length + 1,
+      attempts_history: updatedHistory
+    };
+
+    const isMcqOnly = lesson.exam_type === 'mcq';
+    const maxPoints = activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+    const finalScore = isMcqOnly ? mcqScore : (examSub?.score || mcqScore);
+    const finalStatus = isMcqOnly ? 'reviewed' : (examSub?.status || 'submitted');
+
+    setSubmittingExam(true);
+    try {
+      const res = await submitExamSubmission(lesson.id, bootcampId, answersPayload, finalScore, finalStatus);
+      setExamSub(res);
+      setIsMcqRetaking(false);
+      setSelectedAttemptIndex(-1);
+      toast.success(`MCQ section graded! You scored ${mcqScore} / ${maxPoints} points.`);
+      if (isMcqOnly) {
+        onMarkComplete(lesson.id);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit MCQ answers');
+    } finally {
+      setSubmittingExam(false);
+    }
+  };
+
+  const handleCqSubmit = async () => {
+    // Validate: at least one question answer must have content, or there's an attachment
+    const hasAnyAnswer = Object.values(cqAnswersByQuestion).some(val => {
+      if (!val) return false;
+      try {
+        const blocks = JSON.parse(val);
+        return Array.isArray(blocks) && blocks.some(b => b.content && b.content.trim() !== '');
+      } catch { return String(val).trim() !== ''; }
+    });
+
+    if (!hasAnyAnswer && cqAttachments.length === 0) {
+      toast.error('Please answer at least one question or upload an attachment before submitting.');
+      return;
+    }
+
+    const history = examSub?.submitted_answers?.attempts_history || [];
+    let updatedHistory = history;
+    if ((isRetaking || examSub?.submitted_answers?.cq_submitted) && examSub) {
+      const lastAttemptNum = history.length + 1;
+      const previousAttempt = {
+        attempt_number: lastAttemptNum,
+        selected_questions: selectedQuestions,
+        mcq: examSub.submitted_answers?.mcq || {},
+        cq: {
+          answer: examSub.submitted_answers?.cq?.answer || examSub.submitted_answers?.answer || '',
+          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || {},
+          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments) 
+            ? examSub.submitted_answers.cq.attachments 
+            : Array.isArray(examSub.submitted_answers?.attachments)
+              ? examSub.submitted_answers.attachments
+              : []
+        },
+        score: examSub.score,
+        status: examSub.status,
+        graded_at: examSub.graded_at,
+        graded_by: examSub.graded_by,
+        mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
+        created_at: examSub.created_at || new Date().toISOString()
+      };
+      updatedHistory = [...history, previousAttempt];
+    }
+
+    const answersPayload = {
+      ...examSub?.submitted_answers,
+      selected_questions: selectedQuestions,
+      cq: {
+        answer: cqAnswerText,
+        answers_by_question: cqAnswersByQuestion,
+        attachments: cqAttachments
+      },
+      cq_submitted: true,
+      cq_submitted_at: new Date().toISOString(),
+      attempt_number: updatedHistory.length + 1,
+      attempts_history: updatedHistory
+    };
+
+    const finalStatus = 'pending_review';
+    const finalScore = examSub?.score || 0;
+
+    setSubmittingExam(true);
+    try {
+      const res = await submitExamSubmission(lesson.id, bootcampId, answersPayload, finalScore, finalStatus);
+      setExamSub(res);
+      setIsRetaking(false);
+      toast.success('Subjective solution successfully submitted to your mentor!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit CQ solution');
+    } finally {
+      setSubmittingExam(false);
+    }
+  };
+
+  // Load exam submission if item is an exam
+  useEffect(() => {
+    if (lesson.type === 'exam') {
+      setLoadingExamSub(true);
+      setIsRetaking(false);
+      setSelectedAttemptIndex(-1);
+      setActiveTab(lesson.exam_type === 'cq' ? 'cq' : 'mcq');
+      setIsMcqRetaking(false);
+      getExamSubmission(lesson.id)
+        .then((res) => {
+          setExamSub(res);
+          if (res) {
+            const attemptAnswers = res.submitted_answers;
+            if (attemptAnswers?.selected_questions) {
+              setSelectedQuestions(attemptAnswers.selected_questions);
+            } else {
+              setSelectedQuestions(lesson.exam_questions || []);
+            }
+
+            if (lesson.exam_type === 'mcq') {
+              setMcqAnswers(attemptAnswers?.mcq || attemptAnswers || {});
+            } else if (lesson.exam_type === 'cq') {
+              setCqAnswerText(safeParseNotes(attemptAnswers?.cq?.answer || attemptAnswers?.answer));
+              setCqAnswersByQuestion(attemptAnswers?.cq?.answers_by_question || {});
+              setCqAttachments(Array.isArray(attemptAnswers?.cq?.attachments) ? attemptAnswers.cq.attachments : []);
+            } else if (lesson.exam_type === 'hybrid') {
+              setMcqAnswers(attemptAnswers?.mcq || {});
+              setCqAnswerText(safeParseNotes(attemptAnswers?.cq?.answer));
+              setCqAnswersByQuestion(attemptAnswers?.cq?.answers_by_question || {});
+              setCqAttachments(Array.isArray(attemptAnswers?.cq?.attachments) ? attemptAnswers.cq.attachments : []);
+            }
+          } else {
+            if (lesson.random_question_count > 0) {
+              const qs = selectNovelQuestions(lesson.exam_questions || [], [], lesson.random_question_count);
+              setSelectedQuestions(qs);
+            } else {
+              setSelectedQuestions(lesson.exam_questions || []);
+            }
+            setMcqAnswers({});
+            setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+            setCqAnswersByQuestion({});
+            setCqAttachments([]);
+          }
+        })
+        .catch((e) => console.error(e))
+        .finally(() => setLoadingExamSub(false));
+    }
+  }, [lesson.id, lesson.type, lesson.exam_type, lesson.exam_questions, lesson.random_question_count]);
+
   useEffect(() => {
     setLocalCompleted(isCompleted);
   }, [isCompleted]);
@@ -1637,6 +2037,668 @@ const LessonPanel = memo(function LessonPanel({
     }
   }, [lesson.id, localCompleted, onMarkComplete, onMarkIncomplete]);
 
+  const getExamPlayer = (overrideQuestions = null) => {
+    if (lesson.type !== 'exam') return null;
+
+    if (loadingExamSub) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          <p className="text-sm text-gray-500 font-medium">Loading exam details...</p>
+        </div>
+      );
+    }
+
+    const activeQuestions = overrideQuestions || (
+      (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
+        ? selectedQuestions
+        : (lesson.exam_questions || [])
+    );
+
+    // Derive displayed attempt values if viewing a completed submission
+    const history = examSub?.submitted_answers?.attempts_history || [];
+    const displayedAttempt = (() => {
+      if (!examSub) return null;
+      if (selectedAttemptIndex >= 0 && selectedAttemptIndex < history.length) {
+        return history[selectedAttemptIndex];
+      }
+      return {
+        attempt_number: examSub.submitted_answers?.attempt_number || (history.length + 1),
+        selected_questions: examSub.submitted_answers?.selected_questions || selectedQuestions,
+        mcq: examSub.submitted_answers?.mcq || (lesson.exam_type === 'mcq' ? (examSub.submitted_answers?.mcq || examSub.submitted_answers) : {}),
+        cq: {
+          answer: safeParseNotes(examSub.submitted_answers?.cq?.answer || examSub.submitted_answers?.answer),
+          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments)
+            ? examSub.submitted_answers.cq.attachments
+            : Array.isArray(examSub.submitted_answers?.attachments)
+              ? examSub.submitted_answers.attachments
+              : []
+        },
+        score: examSub.score,
+        status: examSub.status,
+        graded_at: examSub.graded_at,
+        graded_by: examSub.graded_by,
+        mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
+        created_at: examSub.created_at
+      };
+    })();
+
+    const displayedQuestions = displayedAttempt?.selected_questions || activeQuestions || [];
+    const displayedMcqAnswers = displayedAttempt?.mcq || {};
+    const displayedCqAnswerText = displayedAttempt?.cq?.answer || '';
+    const displayedCqAttachments = displayedAttempt?.cq?.attachments || [];
+    const displayedScore = displayedAttempt?.score;
+    const displayedStatus = displayedAttempt?.status;
+    const displayedMentorRemarks = displayedAttempt?.mentor_remarks;
+
+    const maxPoints = (examSub && !isRetaking)
+      ? displayedQuestions.reduce((acc, q) => acc + (q.points || 5), 0)
+      : activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+
+    const isMcq = lesson.exam_type === 'mcq';
+    const isCq = lesson.exam_type === 'cq';
+    const isHybrid = lesson.exam_type === 'hybrid';
+
+    // Track submission status per section
+    const isMcqSubmitted = !!(examSub?.submitted_answers?.mcq_submitted || (isMcq && examSub));
+    const isCqSubmitted = !!(examSub?.submitted_answers?.cq_submitted || (isCq && examSub));
+
+    // Fully completed state for the whole exam lesson
+    const isFullySubmitted = isMcq ? isMcqSubmitted : isCq ? isCqSubmitted : (isMcqSubmitted && isCqSubmitted);
+
+    // Graded/Submitted status card and reviews when fully complete
+    if (isFullySubmitted && !isRetaking && !isMcqRetaking) {
+      return (
+        <div className="space-y-6">
+          {/* Graded/Submitted status card */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-600/[0.08] to-transparent p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-400 border border-violet-500/20">
+                  <Trophy className="h-3.5 w-3.5" />
+                  {isHybrid ? 'Hybrid MCQ & CQ Exam' : isMcq ? 'Auto-Graded MCQ Exam' : 'Subjective CQ Exam'}
+                </span>
+                <h3 className="mt-2 text-lg font-bold text-white">
+                  {isMcq ? 'Exam Finished' : displayedStatus === 'reviewed' ? 'Solution Reviewed' : 'Solution Submitted'}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Submitted on {new Date(displayedAttempt?.created_at || examSub.created_at).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center gap-3 shrink-0">
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center shrink-0 w-full sm:w-36">
+                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Score / Grade</p>
+                  <p className="mt-1 text-2xl font-extrabold text-white">
+                    {displayedStatus === 'reviewed' || isMcq ? (
+                      <>
+                        <span className="text-emerald-400">{displayedScore}</span>
+                        <span className="text-gray-600 text-sm"> / {maxPoints || 100} pts</span>
+                      </>
+                    ) : (
+                      <span className="text-amber-400 text-sm">Pending Review</span>
+                    )}
+                  </p>
+                </div>
+                
+                {!isCq && (
+                  <button
+                    type="button"
+                    onClick={isMcq || isHybrid ? handleRetakeMcq : handleRetakeCq}
+                    className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retake Exam
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {displayedMentorRemarks && (
+              <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Mentor Feedback</h4>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-300 leading-relaxed italic">
+                  &ldquo;{displayedMentorRemarks}&rdquo;
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Exam Guidelines / Instructions */}
+          {lesson.content && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.01] p-4 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+              <Suspense fallback={<ChunkFallback label="Loading exam instructions…" />}>
+                <LessonContentRenderer
+                  key={lesson.id}
+                  content={lesson.content}
+                  lessonId={lesson.id}
+                  onProgress={handleProgress}
+                  onComplete={handleVideoComplete}
+                  initialPosition={initialPosition}
+                />
+              </Suspense>
+            </div>
+          )}
+
+          {/* Attempt Selector Pill Row */}
+          {history.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-5 space-y-3">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Attempt History</h4>
+              <div className="flex flex-wrap gap-2">
+                {history.map((att, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedAttemptIndex(idx)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${
+                      selectedAttemptIndex === idx
+                        ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-md shadow-violet-500/10'
+                        : 'bg-zinc-900/60 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span>Attempt {idx + 1}</span>
+                    <span className="text-[10px] opacity-75 font-normal">
+                      ({att.score != null ? `${att.score} pts` : att.status === 'reviewed' ? `${att.score || 0} pts` : 'Pending'})
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttemptIndex(-1)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${
+                    selectedAttemptIndex === -1
+                      ? 'bg-violet-600/30 border-violet-500/50 text-white shadow-md shadow-violet-500/10'
+                      : 'bg-zinc-900/60 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                  }`}
+                >
+                  <span>Latest (Attempt {history.length + 1})</span>
+                  <span className="text-[10px] opacity-75 font-normal">
+                    ({examSub.status === 'reviewed' || isMcq ? `${examSub.score || 0} pts` : 'Pending'})
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Submitted content read-only view */}
+          <div className="space-y-6">
+            {(isMcq || isHybrid) && (
+              <div className="space-y-6">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Question Review</h4>
+                {displayedQuestions.map((q, qIdx) => {
+                  const selectedOpt = displayedMcqAnswers[q.id];
+                  const isCorrect = selectedOpt === q.correct_option;
+
+                  return (
+                    <div key={q.id || qIdx} className={`rounded-xl border p-5 space-y-4 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {qIdx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-gray-500">Question {qIdx + 1}</span>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {isCorrect ? `+${q.points || 5} Points` : `0 / ${q.points || 5} Points`}
+                        </span>
+                      </div>
+
+                      <p className="text-sm font-semibold text-white">{q.question}</p>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {(q.options || ['', '', '', '']).map((opt, optIdx) => {
+                          const optLabels = ['A', 'B', 'C', 'D'];
+                          const isStudentSelect = selectedOpt === optIdx;
+                          const isCorrectAnswer = q.correct_option === optIdx;
+
+                          return (
+                            <div
+                              key={optIdx}
+                              className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs ${
+                                isCorrectAnswer
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold'
+                                  : isStudentSelect
+                                    ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                                    : 'border-white/5 bg-white/[0.02] text-gray-400'
+                              }`}
+                            >
+                              <span>{optLabels[optIdx]}. {opt}</span>
+                              {isCorrectAnswer ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              ) : isStudentSelect ? (
+                                <X className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {(isCq || isHybrid) && (
+              <div className="space-y-5">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Your Submitted Solution</h4>
+                
+                {displayedCqAnswerText && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Written Answer</h5>
+                    <TaskDescriptionRenderer content={displayedCqAnswerText} />
+                  </div>
+                )}
+
+
+
+                {displayedCqAttachments && displayedCqAttachments.length > 0 && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                    <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Attachments</h5>
+                    <AttachmentList files={displayedCqAttachments} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Interactive Exam taking view
+    return (
+      <div className="space-y-6">
+        {/* Upper card */}
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-5">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-violet-400" />
+            Interactive Exam Player
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            {isHybrid 
+              ? 'This is a Hybrid Exam. Step 1 (MCQ Assessment) is evaluated automatically. Step 2 (CQ Solution) is graded manually by your mentor.'
+              : isMcq 
+                ? `Answer all ${activeQuestions.length} questions to complete the exam. Auto-graded instantly.` 
+                : 'Review the task description, guidelines, and submit your written explanation or code repository below for review.'}
+          </p>
+        </div>
+
+        {/* Exam Guidelines / Instructions */}
+        {lesson.content && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.01] p-4 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+            <Suspense fallback={<ChunkFallback label="Loading exam instructions…" />}>
+              <LessonContentRenderer
+                key={lesson.id}
+                content={lesson.content}
+                lessonId={lesson.id}
+                onProgress={handleProgress}
+                onComplete={handleVideoComplete}
+                initialPosition={initialPosition}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {/* Tab switcher for Hybrid */}
+        {isHybrid && (
+          <div className="flex border-b border-white/10 bg-white/[0.01] rounded-xl p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('mcq')}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'mcq'
+                  ? 'bg-violet-600/20 border border-violet-500/30 text-violet-300'
+                  : 'bg-transparent text-gray-500 hover:text-white border border-transparent'
+              }`}
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              Step 1: MCQ Assessment
+              {isMcqSubmitted && !isMcqRetaking && (
+                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/20">
+                  Graded
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('cq')}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'cq'
+                  ? 'bg-violet-600/20 border border-violet-500/30 text-violet-300'
+                  : 'bg-transparent text-gray-500 hover:text-white border border-transparent'
+              }`}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Step 2: Subjective Task (CQ)
+              {isCqSubmitted && (
+                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/20">
+                  Submitted
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Content rendering depending on active tab */}
+        {activeTab === 'mcq' && (isMcq || isHybrid) && (
+          <div className="space-y-6">
+            {/* If MCQ is already submitted and we are NOT retaking, show evaluated reviews + a retake button! */}
+            {isMcqSubmitted && !isMcqRetaking ? (
+              <div className="space-y-6">
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">MCQ Section Graded</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      You scored <span className="text-emerald-400 font-bold">{examSub?.submitted_answers?.mcq_score || examSub?.score || 0}</span> out of {maxPoints} points on your latest MCQ attempt.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetakeMcq}
+                    className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retake MCQ Section
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Question Evaluation Review</h4>
+                  {activeQuestions.map((q, qIdx) => {
+                    const selectedOpt = mcqAnswers[q.id];
+                    const isCorrect = selectedOpt === q.correct_option;
+
+                    return (
+                      <div key={q.id || qIdx} className={`rounded-xl border p-5 space-y-4 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                              {qIdx + 1}
+                            </span>
+                            <span className="text-xs font-bold text-gray-500">Question {qIdx + 1}</span>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {isCorrect ? `+${q.points || 5} Points` : `0 / ${q.points || 5} Points`}
+                          </span>
+                        </div>
+
+                        <p className="text-sm font-semibold text-white">{q.question}</p>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {(q.options || ['', '', '', '']).map((opt, optIdx) => {
+                            const optLabels = ['A', 'B', 'C', 'D'];
+                            const isStudentSelect = selectedOpt === optIdx;
+                            const isCorrectAnswer = q.correct_option === optIdx;
+
+                            return (
+                              <div
+                                key={optIdx}
+                                className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs ${
+                                  isCorrectAnswer
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold'
+                                    : isStudentSelect
+                                      ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                                      : 'border-white/5 bg-white/[0.02] text-gray-400'
+                                }`}
+                              >
+                                <span>{optLabels[optIdx]}. {opt}</span>
+                                {isCorrectAnswer ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                ) : isStudentSelect ? (
+                                  <X className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              // Interactive MCQ taker cards
+              <div className="space-y-6">
+                {activeQuestions.map((q, qIdx) => (
+                  <div key={q.id || qIdx} className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                        {qIdx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-gray-500">Question {qIdx + 1} of {activeQuestions.length}</span>
+                    </div>
+
+                    <p className="text-sm font-semibold text-white">{q.question}</p>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {(q.options || ['', '', '', '']).map((opt, optIdx) => {
+                        const optLabels = ['A', 'B', 'C', 'D'];
+                        const isSelected = mcqAnswers[q.id] === optIdx;
+
+                        return (
+                          <button
+                            key={optIdx}
+                            type="button"
+                            onClick={() => {
+                              setMcqAnswers((p) => ({ ...p, [q.id]: optIdx }));
+                            }}
+                            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-xs transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-violet-500 bg-violet-500/10 text-white font-semibold'
+                                : 'border-white/5 bg-white/[0.01] text-gray-400 hover:border-white/15 hover:bg-white/5'
+                            }`}
+                          >
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${
+                              isSelected ? 'bg-violet-500 text-white animate-pulse' : 'bg-white/10 text-gray-400'
+                            }`}>
+                              {optLabels[optIdx]}
+                            </span>
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="button"
+                    disabled={submittingExam}
+                    onClick={handleMcqSubmit}
+                    className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    Submit & Grade MCQ Answers
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'cq' && (isCq || isHybrid) && (
+          <div className="space-y-6">
+            {(() => {
+              // Only subjective questions (no options array = CQ question)
+              const cqQuestions = (lesson.exam_questions || []).filter(
+                q => !Array.isArray(q.options) || q.options.length === 0
+              );
+              // Per-question submitted answers from the current displayed attempt
+              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || {};
+
+              if (isCqSubmitted) {
+                return (
+                  // ── Read-only submitted view ──────────────────────────────
+                  <div className="space-y-5">
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-5">
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        Subjective Answers Submitted
+                      </h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Your subjective CQ answers have been submitted to your mentor for manual grading.
+                      </p>
+                    </div>
+
+                    {/* Per-question submitted answers */}
+                    {cqQuestions.length > 0 && (
+                      <div className="space-y-4">
+                        {cqQuestions.map((q, idx) => {
+                          const qId = q.id || String(idx);
+                          const answerText = submittedByQuestion[qId] || displayedCqAnswerText || '';
+                          return (
+                            <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                              {/* Question */}
+                              <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.01]">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                                  {idx + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-slate-200 leading-relaxed">{q.question}</p>
+                                  {q.points != null && (
+                                    <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                      {q.points} pts
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Answer */}
+                              <div className="px-4 py-3">
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Your Answer</span>
+                                {answerText ? (
+                                  <TaskDescriptionRenderer content={answerText} />
+                                ) : (
+                                  <p className="text-xs text-gray-600 italic">No answer provided for this question.</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Legacy general answer fallback if no per-question */}
+                    {cqQuestions.length === 0 && displayedCqAnswerText && (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+                        <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Your Explanation</h5>
+                        <TaskDescriptionRenderer content={displayedCqAnswerText} />
+                      </div>
+                    )}
+
+                    {displayedCqAttachments?.length > 0 && (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                        <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider font-sans">Attachments</h5>
+                        <AttachmentList files={displayedCqAttachments} />
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // ── Interactive CQ Form ───────────────────────────────────────
+              return (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-violet-400" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans">
+                      Answer Each Question
+                    </h4>
+                    <span className="ml-auto text-[10px] text-gray-500 font-mono">{cqQuestions.length} question{cqQuestions.length !== 1 ? 's' : ''}</span>
+                  </div>
+
+                  {/* Per-question answer editors */}
+                  {cqQuestions.length > 0 ? (
+                    <div className="space-y-5">
+                      {cqQuestions.map((q, idx) => {
+                        const qId = q.id || String(idx);
+                        const answerVal = cqAnswersByQuestion[qId] || '';
+                        return (
+                          <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.015] overflow-hidden">
+                            {/* Question header */}
+                            <div className="flex items-start gap-3 px-4 py-3 bg-white/[0.02] border-b border-white/5">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                                {idx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-100 leading-relaxed">{q.question}</p>
+                                {q.points != null && (
+                                  <span className="mt-1.5 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                    {q.points} pts
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {/* Answer editor */}
+                            <div className="p-3">
+                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2 font-sans">Your Answer</span>
+                              <div className="rounded-xl overflow-hidden border border-white/10">
+                                <MultiBlockEditor
+                                  value={answerVal}
+                                  onChange={(val) => setCqAnswersByQuestion(prev => ({ ...prev, [qId]: val }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // Fallback: no structured questions — show single editor
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Explanation / Remarks (Required)</label>
+                      <div className="rounded-xl overflow-hidden border border-white/10">
+                        <MultiBlockEditor value={cqAnswerText} onChange={setCqAnswerText} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attachments */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Attachments (Optional)</label>
+                    <AttachmentList files={cqAttachments} onRemove={(i) => setCqAttachments(prev => prev.filter((_, j) => j !== i))} />
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => handleCqFiles(Array.from(e.target.files || []))}
+                      className="hidden"
+                      id="cq-file-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('cq-file-input')?.click()}
+                      disabled={cqUploading}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
+                    >
+                      {cqUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      {cqUploading ? 'Uploading…' : 'Add files'}
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      disabled={submittingExam || cqUploading}
+                      onClick={handleCqSubmit}
+                      className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
+                    >
+                      {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      Submit CQ Solution to Mentor
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const examPlayer = getExamPlayer();
+
   const hasVideo =
     lesson.video_source &&
     lesson.video_source !== 'none' &&
@@ -1657,6 +2719,9 @@ const LessonPanel = memo(function LessonPanel({
                 {lesson.title}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1 rounded bg-zinc-800 text-[10px] font-bold text-gray-400 px-1.5 py-0.5 uppercase">
+                  {lesson.type || 'lesson'}
+                </span>
                 {lesson.duration > 0 && (
                   <span className="flex items-center gap-1.5 text-[12px] text-gray-500">
                     <Clock className="h-3.5 w-3.5" />{' '}
@@ -1676,106 +2741,122 @@ const LessonPanel = memo(function LessonPanel({
               </div>
             </div>
 
-            {/* Video — keyed so it remounts cleanly between lessons */}
-            {hasVideo && (
-              <VideoPlayer
-                key={lesson.id}
-                lesson={lesson}
-                initialPosition={initialPosition}
-                onProgress={handleProgress}
-                onComplete={handleVideoComplete}
-              />
-            )}
-
-            {/* Completion toggle */}
-            <div
-              className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
-                localCompleted
-                  ? 'border-emerald-500/20 bg-emerald-500/5'
-                  : 'border-white/10 bg-white/2'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {localCompleted ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
-                ) : (
-                  <Circle className="h-5 w-5 shrink-0 text-gray-600" />
+              <>
+                {/* Video — keyed so it remounts cleanly between lessons */}
+                {hasVideo && (
+                  <VideoPlayer
+                    key={lesson.id}
+                    lesson={lesson}
+                    initialPosition={initialPosition}
+                    onProgress={handleProgress}
+                    onComplete={handleVideoComplete}
+                  />
                 )}
-                <div>
-                  <p
-                    className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}
+
+                {/* Completion toggle */}
+                <div
+                  className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
+                    localCompleted
+                      ? 'border-emerald-500/20 bg-emerald-500/5'
+                      : 'border-white/10 bg-white/2'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {localCompleted ? (
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                    ) : (
+                      <Circle className="h-5 w-5 shrink-0 text-gray-600" />
+                    )}
+                    <div>
+                      <p
+                        className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}
+                      >
+                        {localCompleted ? 'Completed!' : 'Mark as complete'}
+                      </p>
+                      <p className="text-[11px] text-gray-600">
+                        {localCompleted
+                          ? 'Great work — keep going!'
+                          : 'Mark done when finished'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleToggle}
+                    disabled={completing}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
+                      localCompleted
+                        ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
+                    }`}
                   >
-                    {localCompleted ? 'Lesson complete!' : 'Mark as complete'}
-                  </p>
-                  <p className="text-[11px] text-gray-600">
-                    {localCompleted
-                      ? 'Great work — keep going!'
-                      : 'Mark done when finished'}
-                  </p>
+                    {completing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {localCompleted ? '✓ Done' : 'Complete Curriculum Item'}
+                  </button>
                 </div>
-              </div>
-              <button
-                onClick={handleToggle}
-                disabled={completing}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
-                  localCompleted
-                    ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
-                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
-                }`}
-              >
-                {completing && <Loader2 className="h-4 w-4 animate-spin" />}
-                {localCompleted ? '✓ Done' : 'Complete Lesson'}
-              </button>
-            </div>
 
-            {/* Rich content */}
-            {lesson.content ? (
-              <Suspense fallback={<ChunkFallback label="Loading content…" />}>
-                <LessonContentRenderer
-                  key={lesson.id}
-                  content={lesson.content}
-                  lessonId={lesson.id}
-                  onProgress={handleProgress}
-                  onComplete={handleVideoComplete}
-                  initialPosition={initialPosition}
-                />
-              </Suspense>
-            ) : lesson._pendingContent ? (
-              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
-                <div className="spa-skeleton h-3 w-full rounded" />
-                <div className="spa-skeleton h-3 w-11/12 rounded" />
-                <div className="spa-skeleton h-3 w-9/12 rounded" />
-                <div className="spa-skeleton h-3 w-10/12 rounded" />
-              </div>
-            ) : null}
 
-            {/* Attachments */}
-            {lesson.attachments?.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
-                <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-                  <Download className="h-4 w-4 text-purple-400" />
-                  <h3 className="text-[13px] font-semibold text-white">
-                    Attachments
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {lesson.attachments.map((att, i) => (
-                    <a
-                      key={i}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/2 px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
-                    >
-                      <FileText className="h-4 w-4 shrink-0 text-gray-500" />
-                      <span className="truncate">
-                        {att.name || `Attachment ${i + 1}`}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+
+                {/* Rich content */}
+                {lesson.content ? (
+                  <Suspense fallback={<ChunkFallback label="Loading content…" />}>
+                    <LessonContentRenderer
+                      key={lesson.id}
+                      content={lesson.content}
+                      lessonId={lesson.id}
+                      onProgress={handleProgress}
+                      onComplete={handleVideoComplete}
+                      initialPosition={initialPosition}
+                      practiceProblemsComponent={(problems) => (
+                        <PracticeProblemsCockpit
+                          lesson={{
+                            ...lesson,
+                            practice_problems: problems
+                          }}
+                          lessonProgress={lessonProgress}
+                          onProgressUpdate={onProgressUpdate}
+                          bootcampId={bootcampId}
+                        />
+                      )}
+                      examComponent={(questions) => getExamPlayer(questions)}
+                    />
+                  </Suspense>
+                ) : lesson._pendingContent ? (
+                  <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
+                    <div className="spa-skeleton h-3 w-full rounded" />
+                    <div className="spa-skeleton h-3 w-11/12 rounded" />
+                    <div className="spa-skeleton h-3 w-9/12 rounded" />
+                    <div className="spa-skeleton h-3 w-10/12 rounded" />
+                  </div>
+                ) : null}
+
+                {/* Attachments */}
+                {lesson.attachments?.length > 0 && (
+                  <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
+                    <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+                      <Download className="h-4 w-4 text-purple-400" />
+                      <h3 className="text-[13px] font-semibold text-white">
+                        Attachments
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {lesson.attachments.map((att, i) => (
+                        <a
+                          key={i}
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/2 px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                          <span className="truncate">
+                            {att.name || `Attachment ${i + 1}`}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
 
             {/* Notes */}
             <NotesPanel
@@ -1881,6 +2962,578 @@ function getLessonIdFromUrl() {
   return m ? m[1] : null;
 }
 
+function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId }) {
+  const [selectedProblem, setSelectedProblem] = useState(null); // { problem, pIdx }
+  const [modalTab, setModalTab] = useState('editorial'); // 'editorial' | 'solution' | 'ai'
+  const [copiedIdx, setCopiedIdx] = useState(null);
+  const [toggling, setToggling] = useState({});
+
+  // Ask AI state
+  const [aiQuestion, setAiQuestion] = useState({}); // { [problemIdx]: string }
+  const [aiResponses, setAiResponses] = useState({}); // { [problemIdx]: string }
+  const [aiLoading, setAiLoading] = useState({}); // { [problemIdx]: boolean }
+  const [aiError, setAiError] = useState({}); // { [problemIdx]: string }
+
+  const [bookmarkedProblems, setBookmarkedProblems] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(`bookmarks_${bootcampId}_${lesson.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleToggleBookmark = (pIdx) => {
+    setBookmarkedProblems(prev => {
+      const next = prev.includes(pIdx) 
+        ? prev.filter(idx => idx !== pIdx) 
+        : [...prev, pIdx];
+      try {
+        localStorage.setItem(`bookmarks_${bootcampId}_${lesson.id}`, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
+  const solvedList = lessonProgress[lesson.id]?.solved_problems || [];
+  const problems = lesson.practice_problems || [];
+
+  const getPlatformName = (sourceStr) => {
+    if (!sourceStr) return '—';
+    if (sourceStr.startsWith('http')) {
+      try {
+        const url = new URL(sourceStr);
+        const host = url.hostname.replace('www.', '');
+        return host.split('.')[0].toUpperCase();
+      } catch {
+        return 'LINK';
+      }
+    }
+    const parts = sourceStr.split(/\s*-\s*/);
+    return parts[0] || '—';
+  };
+
+  const handleToggleSolved = async (pIdx, name) => {
+    if (toggling[pIdx]) return;
+    setToggling(prev => ({ ...prev, [pIdx]: true }));
+
+    const isSolved = solvedList.includes(pIdx);
+    
+    // Optimistic UI update
+    const nextSolved = isSolved 
+      ? solvedList.filter(idx => idx !== pIdx) 
+      : [...solvedList, pIdx];
+
+    const allSolved = problems.length > 0 && problems.every((_, idx) => nextSolved.includes(idx));
+
+    onProgressUpdate(prev => ({
+      ...prev,
+      [lesson.id]: {
+        ...prev[lesson.id],
+        solved_problems: nextSolved,
+        is_completed: allSolved,
+      }
+    }));
+
+    try {
+      await togglePracticeProblemSolved(lesson.id, pIdx, !isSolved, bootcampId);
+      if (!isSolved) {
+        toast.success(`Marked "${name}" as solved! 🌟`);
+      } else {
+        toast.success(`Marked "${name}" as unsolved.`);
+      }
+    } catch (err) {
+      console.error('Failed to toggle problem solve status:', err);
+      toast.error('Failed to update progress.');
+      // Rollback on error
+      onProgressUpdate(prev => ({
+        ...prev,
+        [lesson.id]: {
+          ...prev[lesson.id],
+          solved_problems: solvedList,
+          is_completed: solvedList.length > 0 && problems.every((_, idx) => solvedList.includes(idx)),
+        }
+      }));
+    } finally {
+      setToggling(prev => ({ ...prev, [pIdx]: false }));
+    }
+  };
+
+  const handleCopyCode = (code, idx) => {
+    navigator.clipboard.writeText(code);
+    setCopiedIdx(idx);
+    toast.success('Solution copied! 📋');
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  const handleAskAI = async (pIdx, p) => {
+    const question = aiQuestion[pIdx]?.trim() || `Help me understand how to approach this problem: ${p.name}. What is the correct logic?`;
+    if (!question) return;
+
+    setAiLoading(prev => ({ ...prev, [pIdx]: true }));
+    setAiError(prev => ({ ...prev, [pIdx]: null }));
+
+    try {
+      const res = await fetch('/api/code/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: p.solution_code || '// No code solved yet.',
+          language: 'cpp',
+          question: question,
+          history: []
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.explanation) {
+        setAiResponses(prev => ({ ...prev, [pIdx]: data.explanation }));
+      } else {
+        setAiError(prev => ({ ...prev, [pIdx]: data.error || 'Failed to get AI response. Please try again.' }));
+      }
+    } catch (err) {
+      console.error('AI tutor query error:', err);
+      setAiError(prev => ({ ...prev, [pIdx]: 'Network error. Please try again.' }));
+    } finally {
+      setAiLoading(prev => ({ ...prev, [pIdx]: false }));
+    }
+  };
+
+  if (problems.length === 0) return null;
+
+  // Calculate solved percent
+  const solvedCount = solvedList.length;
+  const totalCount = problems.length;
+  const percent = Math.round((solvedCount / totalCount) * 100);
+
+  return (
+    <div className="flex flex-col gap-6 mt-6">
+      {/* Cockpit Card Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-gradient-to-br from-teal-500/[0.03] to-transparent p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 border-b border-white/5 pb-5">
+          <div>
+            <span className="text-[10px] font-extrabold text-teal-400 tracking-wider uppercase bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-full">
+              Practice Cockpit
+            </span>
+            <h3 className="text-lg font-bold text-white mt-2 flex items-center gap-2">
+              {lesson.title}
+            </h3>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-full shrink-0">
+              {solvedCount} / {totalCount} Solved ({percent}%)
+            </span>
+          </div>
+        </div>
+
+        <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden mb-3">
+          <div 
+            className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500" 
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        {percent === 100 ? (
+          <p className="text-xs font-medium text-emerald-400 flex items-center gap-1.5 animate-bounce">
+            🎉 All practice problems solved! Outstanding job!
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            Complete all problems to finish this practice module and advance your ranking.
+          </p>
+        )}
+      </div>
+
+      {/* Arena view: Table of problems directly rendered */}
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/20 custom-scrollbar animate-in fade-in duration-200">
+        <table className="w-full text-left border-collapse min-w-[900px]">
+          <thead>
+            <tr className="border-b border-white/10 bg-white/[0.02]">
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-16 text-center">Status</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-24">Star</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Problem</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Workspace</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Editorial</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Video</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Code</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Ask AI</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">AC</th>
+              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-28">Source</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {problems.map((p, pIdx) => {
+              const isSolved = solvedList.includes(pIdx);
+
+              const workspaceUrl = p.url 
+                ? p.url 
+                : (p.source?.startsWith('http') 
+                  ? p.source 
+                  : `https://vjudge.net/problem/${encodeURIComponent(p.source || p.name)}`);
+
+              const videoUrl = p.video_url 
+                ? p.video_url 
+                : `https://www.youtube.com/results?search_query=${encodeURIComponent(p.name + ' ' + (p.source || '') + ' solution')}`;
+
+              return (
+                <Fragment key={p.id || pIdx}>
+                  <tr className={`hover:bg-white/[0.01] transition-colors ${isSolved ? 'bg-emerald-500/[0.01]' : ''}`}>
+                    {/* Status */}
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSolved(pIdx, p.name || `Problem ${pIdx + 1}`)}
+                        disabled={toggling[pIdx]}
+                        className="flex mx-auto h-5 w-5 items-center justify-center rounded-lg border transition-all cursor-pointer hover:scale-110 active:scale-95 disabled:opacity-50"
+                        style={{
+                          borderColor: isSolved ? '#10b981' : '#464554',
+                          backgroundColor: isSolved ? 'rgba(16, 185, 129, 0.1)' : 'transparent'
+                        }}
+                      >
+                        {toggling[pIdx] ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                        ) : isSolved ? (
+                          <motion.svg 
+                            initial={{ scale: 0 }} 
+                            animate={{ scale: 1 }} 
+                            className="h-3 w-3 text-emerald-400" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor" 
+                            strokeWidth="3"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </motion.svg>
+                        ) : null}
+                      </button>
+                    </td>
+
+                    {/* Star Bookmark */}
+                    <td className="p-4">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBookmark(pIdx)}
+                        className="group flex items-center justify-center transition-transform hover:scale-110 active:scale-90 cursor-pointer w-8 h-8 mx-auto"
+                        title={bookmarkedProblems.includes(pIdx) ? "Remove Bookmark" : "Bookmark Problem"}
+                      >
+                        <Star 
+                          className={`h-4.5 w-4.5 transition-colors ${
+                            bookmarkedProblems.includes(pIdx) 
+                              ? 'fill-amber-400 text-amber-400 filter drop-shadow-[0_0_2px_rgba(251,191,36,0.4)]' 
+                              : 'text-zinc-600 group-hover:text-zinc-400'
+                          }`}
+                        />
+                      </button>
+                    </td>
+
+                    {/* Problem Name */}
+                    <td className="p-4">
+                      <a
+                        href={workspaceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-sm font-semibold hover:text-teal-400 hover:underline transition-colors ${
+                          isSolved ? 'text-emerald-300/80 line-through decoration-white/10' : 'text-white'
+                        }`}
+                      >
+                        {p.name || `Problem ${pIdx + 1}`}
+                      </a>
+                    </td>
+
+                    {/* Workspace Link */}
+                    <td className="p-4 text-center">
+                      <a
+                        href={workspaceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center p-2 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/10 hover:border-teal-500/30 transition-all w-8 h-8 mx-auto"
+                        title="Open Solve Workspace"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </td>
+
+                    {/* Editorial Toggle */}
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        disabled={!p.editorial}
+                        onClick={() => {
+                          setSelectedProblem({ problem: p, pIdx });
+                          setModalTab('editorial');
+                        }}
+                        className={`flex items-center justify-center p-2 rounded-lg border transition-all w-8 h-8 mx-auto cursor-pointer ${
+                          !p.editorial 
+                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
+                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        }`}
+                        title={p.editorial ? "View Editorial" : "No Editorial"}
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </button>
+                    </td>
+
+                    {/* Video Link */}
+                    <td className="p-4 text-center">
+                      <a
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/10 hover:border-red-500/30 transition-all w-8 h-8 mx-auto"
+                        title={p.video_url ? "Watch Video Solution" : "Search Video Solution on YouTube"}
+                      >
+                        <Video className="h-4 w-4" />
+                      </a>
+                    </td>
+
+                    {/* Code Toggle */}
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        disabled={!p.solution_code}
+                        onClick={() => {
+                          setSelectedProblem({ problem: p, pIdx });
+                          setModalTab('solution');
+                        }}
+                        className={`flex items-center justify-center p-2 rounded-lg border transition-all w-8 h-8 mx-auto cursor-pointer ${
+                          !p.solution_code 
+                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
+                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        }`}
+                        title={p.solution_code ? "View Solution Code" : "No Code"}
+                      >
+                        <Code className="h-4 w-4" />
+                      </button>
+                    </td>
+
+                    {/* Ask AI Toggle */}
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProblem({ problem: p, pIdx });
+                          setModalTab('ai');
+                          if (!aiQuestion[pIdx]) {
+                            setAiQuestion(prev => ({ ...prev, [pIdx]: `Explain the logic and mathematical intuition behind: ${p.name}` }));
+                          }
+                        }}
+                        className="flex items-center justify-center p-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 hover:text-white transition-all w-8 h-8 mx-auto cursor-pointer"
+                        title="Ask AI Coding Tutor"
+                      >
+                        <Brain className="h-4 w-4" />
+                      </button>
+                    </td>
+
+                    {/* AC Count */}
+                    <td className="p-4 text-center">
+                      <div className="text-center text-[10px] font-bold text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded inline-block">
+                        {p.accepted_count ? `${p.accepted_count} AC` : '—'}
+                      </div>
+                    </td>
+
+                    {/* Source badge */}
+                    <td className="p-4 text-center">
+                      <div className="text-center text-[9px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2 py-0.5 rounded truncate uppercase tracking-widest inline-block max-w-[100px]" title={p.source}>
+                        {getPlatformName(p.source)}
+                      </div>
+                    </td>
+                  </tr>
+
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Practice Problem Solution & AI Tutor Hub Modal */}
+      {selectedProblem && (() => {
+        const p = selectedProblem.problem;
+        const pIdx = selectedProblem.pIdx;
+        
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="bg-[#05111d] border border-teal-500/25 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#010f1f]">
+                <div className="flex items-center gap-3">
+                  <div className="text-[10px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2.5 py-1 rounded truncate uppercase tracking-widest">
+                    {getPlatformName(p.source)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      {p.name || `Problem ${pIdx + 1}`}
+                      {solvedList.includes(pIdx) && (
+                        <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-wider">
+                          Solved
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProblem(null)}
+                  className="text-gray-400 hover:text-white transition-colors cursor-pointer bg-white/5 p-1.5 rounded-lg border border-white/10"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Tab Selector Bar */}
+              <div className="flex items-center border-b border-white/5 bg-[#020b15] px-6 py-1 gap-2">
+                {p.editorial && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('editorial')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                      modalTab === 'editorial'
+                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
+                        : 'border-transparent text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Editorial / Explanation
+                  </button>
+                )}
+                {p.solution_code && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('solution')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                      modalTab === 'solution'
+                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
+                        : 'border-transparent text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Code className="h-4 w-4" />
+                    Solution Code
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setModalTab('ai')}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                    modalTab === 'ai'
+                      ? 'border-violet-400 text-violet-300 bg-violet-500/5'
+                      : 'border-transparent text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <Brain className="h-4 w-4 text-violet-400" />
+                  AI Coding Tutor
+                </button>
+              </div>
+
+              {/* Modal Content Body */}
+              <div className="p-6 overflow-y-auto flex-1 text-left bg-zinc-950/20">
+                {modalTab === 'editorial' && p.editorial && (
+                  <div className="flex flex-col gap-2">
+                    <div className="bg-zinc-950/30 rounded-xl p-5 border border-white/5 leading-relaxed">
+                      <MarkdownDesc text={p.editorial} className="text-gray-300" />
+                    </div>
+                  </div>
+                )}
+
+                {modalTab === 'solution' && p.solution_code && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest">
+                        Clean Code Solution
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(p.solution_code, pIdx)}
+                        className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-gray-300 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                      >
+                        {copiedIdx === pIdx ? (
+                          <>
+                            <CheckSquare className="h-4 w-4 text-emerald-400" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            Copy Code
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="overflow-x-auto text-xs font-mono text-emerald-300 bg-zinc-950 rounded-xl p-5 border border-white/5 custom-scrollbar">
+                      <code>{p.solution_code}</code>
+                    </pre>
+                  </div>
+                )}
+
+                {modalTab === 'ai' && (
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-zinc-950/40 rounded-xl border border-white/5 p-5 flex flex-col gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={aiQuestion[pIdx] || ''}
+                          onChange={(e) => setAiQuestion(prev => ({ ...prev, [pIdx]: e.target.value }))}
+                          placeholder="Ask a question about this problem..."
+                          className="flex-1 bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:border-violet-500 outline-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAskAI(pIdx, p);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAskAI(pIdx, p)}
+                          disabled={aiLoading[pIdx] || !aiQuestion[pIdx]?.trim()}
+                          className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {aiLoading[pIdx] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          Ask Tutor
+                        </button>
+                      </div>
+
+                      {aiError[pIdx] && (
+                        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                          {aiError[pIdx]}
+                        </div>
+                      )}
+
+                      {aiLoading[pIdx] && (
+                        <div className="flex flex-col items-center justify-center py-6 gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
+                          <span className="text-[11px] text-gray-500 italic">AI Tutor is parsing problem parameters & creating guidelines...</span>
+                        </div>
+                      )}
+
+                      {aiResponses[pIdx] && !aiLoading[pIdx] && (
+                        <div className="border-t border-white/5 pt-4">
+                          <div 
+                            className="md-desc overflow-hidden prose prose-invert max-w-none text-xs text-gray-300 bg-black/10 rounded-xl p-5 border border-white/5"
+                            dangerouslySetInnerHTML={{ __html: (() => {
+                              let html = '';
+                              try {
+                                html = marked.parse(aiResponses[pIdx], { gfm: true, breaks: true });
+                              } catch {
+                                html = `<p>${aiResponses[pIdx]}</p>`;
+                              }
+                              return html;
+                            })() }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 export default function BootcampLearningClient({
   bootcamp,
   lessonProgress: initialProgress = {},
@@ -1918,12 +3571,16 @@ export default function BootcampLearningClient({
   }, [bootcamp?.courses]);
 
   const totalLessons = allLessons.length;
+  const totalWeight = allLessons.reduce((s, l) => s + (l.weight ?? 1), 0);
   const completedCount = allLessons.filter(
     (l) => lessonProgress?.[l.id]?.is_completed
   ).length;
+  const completedWeight = allLessons
+    .filter((l) => lessonProgress?.[l.id]?.is_completed)
+    .reduce((s, l) => s + (l.weight ?? 1), 0);
   const progressPercent =
-    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-  const isComplete = completedCount === totalLessons && totalLessons > 0;
+    totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
+  const isComplete = totalWeight > 0 && completedWeight >= totalWeight;
 
   const resumeLesson = useMemo(() => {
     // Find the most recently accessed lesson (by updated_at)

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardList, Search, Plus, Edit2, Trash2, X, Link as LinkIcon,
   Clock, Award, BookOpen,
-  Sparkles, ClipboardCheck, Paperclip,
+  Sparkles, ClipboardCheck, Paperclip, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
@@ -25,6 +25,10 @@ import {
   deleteWeeklyTaskAction,
   reviewTaskSubmissionAction,
 } from '@/app/_lib/mentor-actions';
+import {
+  getExamSubmissionsForMentor,
+  reviewExamSubmission,
+} from '@/app/_lib/bootcamp-actions';
 // shared primitives from member panel UI context
 import {
   PageShell,
@@ -121,6 +125,48 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
   useEffect(() => { setSubmissions(initialSubmissions); }, [initialSubmissions]);
   const [taskDeskSubTab, setTaskDeskSubTab] = useState('submissions');
+
+  const [examSubmissions, setExamSubmissions] = useState([]);
+  const [examSubmissionsLoading, setExamSubmissionsLoading] = useState(false);
+  const [activeExamSubmission, setActiveExamSubmission] = useState(null);
+  const [examGradeInput, setExamGradeInput] = useState('');
+  const [examRemarksInput, setExamRemarksInput] = useState('');
+  const [submittingExamReview, setSubmittingExamReview] = useState(false);
+  const [examBootcampFilter, setExamBootcampFilter] = useState('all');
+
+  // Fetch all exam submissions for assigned bootcamps
+  useEffect(() => {
+    if (bootcamps.length > 0) {
+      setExamSubmissionsLoading(true);
+      Promise.all(
+        bootcamps.map(b =>
+          getExamSubmissionsForMentor(b.id)
+            .catch(err => {
+              console.error(`[ExamSubmissions] Failed to fetch for bootcamp ${b.id} (${b.title}):`, err?.message || err);
+              return [];
+            })
+        )
+      )
+        .then(results => {
+          const allSubs = results.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          console.log(`[ExamSubmissions] Loaded ${allSubs.length} total submissions from ${bootcamps.length} bootcamps`);
+          setExamSubmissions(allSubs);
+        })
+        .catch(err => console.error('[ExamSubmissions] Unexpected error:', err))
+        .finally(() => setExamSubmissionsLoading(false));
+    }
+  }, [bootcamps]);
+
+  // Sync state when active exam submission changes
+  useEffect(() => {
+    if (activeExamSubmission) {
+      setExamGradeInput(activeExamSubmission.score != null ? String(activeExamSubmission.score) : '');
+      setExamRemarksInput(activeExamSubmission.mentor_feedback || '');
+    } else {
+      setExamGradeInput('');
+      setExamRemarksInput('');
+    }
+  }, [activeExamSubmission]);
   
   // Filtering and Searching states
   const [searchQuery, setSearchQuery] = useState('');
@@ -461,6 +507,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
         <TabBar
           tabs={[
             { value: 'submissions', label: 'Submissions', icon: ClipboardCheck, count: stats.pendingReview },
+            { value: 'exams', label: 'Exams', icon: Award, count: examSubmissions.filter(s => s.lessons?.exam_type !== 'mcq' && s.status !== 'reviewed').length },
             { value: 'assign', label: 'Create Task', icon: Plus }
           ]}
           value={taskDeskSubTab}
@@ -891,6 +938,445 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
                     </form>
 
+                  </div>
+                );
+              })()}
+            </GlassCard>
+
+          </div>
+        </div>
+      )}
+      {taskDeskSubTab === 'exams' && (
+        <div className="space-y-6">
+          {/* Main workspace container: split screen layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left columns: filter and submissions inbox (5/12 width) */}
+            <div className="lg:col-span-5 space-y-4">
+              
+              {/* Exam Filters Ribbon */}
+              <GlassCard padding="p-4" className="border border-white/10">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1.5">Select Bootcamp</label>
+                    <div className="relative">
+                      <select
+                        value={examBootcampFilter}
+                        onChange={(e) => {
+                          setExamBootcampFilter(e.target.value);
+                          setActiveExamSubmission(null);
+                        }}
+                        className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-2.5 text-xs text-gray-200 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                      >
+                        <option value="all">All Assigned Bootcamps</option>
+                        {bootcamps.map(b => (
+                          <option key={b.id} value={b.id}>{b.title}</option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-gray-500">
+                        <svg className="fill-current h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+
+              {/* Exam Submissions List container */}
+              <GlassCard padding="p-0" className="overflow-hidden border border-white/10">
+                <div className="border-b border-white/10 bg-white/[0.02] px-4.5 py-3.5 text-left flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-violet-400" />
+                    Exam Submissions Inbox
+                  </h3>
+                  {examSubmissionsLoading && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                  )}
+                </div>
+
+                <div className="spa-scroll max-h-[500px] overflow-y-auto divide-y divide-white/5">
+                  {(() => {
+                    const filtered = examSubmissions.filter(sub => {
+                      if (examBootcampFilter !== 'all' && sub.bootcamp_id !== examBootcampFilter) return false;
+                      if (sub.lessons?.exam_type === 'mcq') return false;
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="py-12 text-center">
+                          <EmptyState
+                            icon={ClipboardList}
+                            title="No exam submissions"
+                            description="No student exam submissions match the current filter."
+                            accent="gray"
+                          />
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((sub) => {
+                      const isSelected = activeExamSubmission?.id === sub.id;
+                      const studentName = sub.users?.full_name || 'Anonymous Student';
+                      const avatar = sub.users?.avatar_url;
+                      const examTitle = sub.lessons?.title || 'Untitled Exam';
+                      const isCQ = sub.lessons?.exam_type === 'cq';
+
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setActiveExamSubmission(sub)}
+                          className={`w-full flex items-start gap-3 p-4 text-left transition-all ${
+                            isSelected
+                              ? 'bg-violet-500/[0.08] border-l-2 border-violet-500'
+                              : 'hover:bg-white/[0.02] border-l-2 border-transparent'
+                          }`}
+                        >
+                          <Avatar src={avatar} name={studentName} size="sm" className="mt-0.5 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-200 truncate">{studentName}</span>
+                              <span className="text-[9px] text-gray-500 font-mono shrink-0">
+                                {new Date(sub.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-semibold truncate mt-0.5">{examTitle}</p>
+                            
+                            <div className="flex items-center justify-between mt-2.5">
+                              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-zinc-800 px-1.5 py-0.5 rounded">
+                                {sub.lessons?.exam_type === 'hybrid' ? 'Hybrid Exam' : isCQ ? 'CQ Exam' : 'MCQ Exam'}
+                              </span>
+                              <Pill tone={sub.status === 'reviewed' ? 'emerald' : 'amber'}>
+                                {sub.status === 'reviewed' ? 'Graded' : 'Awaiting Grading'}
+                              </Pill>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+              </GlassCard>
+
+            </div>
+
+            {/* Right columns: Workspace detail (7/12 width) */}
+            <GlassCard padding="p-6" className="lg:col-span-7 min-h-125 text-left">
+              {!activeExamSubmission ? (
+                <div className="h-112.5 flex items-center justify-center">
+                  <EmptyState
+                    icon={BookOpen}
+                    title="Select an exam"
+                    description="Pick an exam submission from the left inbox to view student solutions, award grades, and add mentor remarks."
+                    accent="gray"
+                  />
+                </div>
+              ) : (() => {
+                const sub = activeExamSubmission;
+                const studentName = sub.users?.full_name || 'Anonymous Student';
+                const studentEmail = sub.users?.email || '';
+                const studentId = sub.users?.member_profiles?.[0]?.student_id || 'N/A';
+                const avatar = sub.users?.avatar_url;
+                const maxPoints = (sub.lessons?.exam_questions || []).reduce((acc, q) => acc + (q.points || 5), 0);
+                const isCQ = sub.lessons?.exam_type === 'cq';
+                const isMcq = sub.lessons?.exam_type === 'mcq';
+                const isHybrid = sub.lessons?.exam_type === 'hybrid';
+
+                return (
+                  <div className="space-y-6">
+                    {/* Active Exam details header */}
+                    <div className="flex items-center justify-between flex-wrap gap-4 p-4.5 bg-gradient-to-r from-violet-500/[0.04] to-fuchsia-500/[0.04] border border-white/10 rounded-2xl">
+                      <div className="flex items-center gap-3.5">
+                        <Avatar src={avatar} name={studentName} size="md" />
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-200">{studentName}</h3>
+                          <span className="text-[10px] text-gray-500 font-mono block mt-0.5">{studentEmail}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <span className="text-[9px] text-gray-500 block uppercase font-bold tracking-wider">Student ID</span>
+                          <span className="text-xs font-mono font-bold text-violet-400">{studentId}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveExamSubmission(null)}
+                          className="rounded-full p-1.5 hover:bg-white/5 border border-white/5 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Metadata block */}
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-bold tracking-widest text-gray-500 uppercase block">Curriculum Exam</span>
+                      <h4 className="text-sm font-bold text-slate-200">{sub.lessons?.title || 'Untitled Exam'}</h4>
+                      {sub.lessons?.description && (
+                        <p className="text-xs text-slate-400 leading-relaxed mt-1">{sub.lessons.description}</p>
+                      )}
+                    </div>
+
+                    {/* Exam Guidelines / Prompt content (highly requested by mentor to see actual questions) */}
+                    {sub.lessons?.content && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                          <ClipboardList className="w-3.5 h-3.5 text-violet-400" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Exam Instructions & Questions</span>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/[0.01] p-4 text-xs text-gray-300 leading-relaxed max-h-[300px] overflow-y-auto spa-scroll">
+                          <LessonContentRenderer content={sub.lessons.content} lessonId={`exam-prompt-${sub.id}`} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CQ Questions panel — shown for CQ & Hybrid exams */}
+                    {(isCQ || isHybrid) && (() => {
+                      const questions = sub.lessons?.exam_questions || [];
+                      // Show only subjective/written questions — MCQ questions have an `options` array
+                      const cqQuestions = questions.filter(q => !Array.isArray(q.options) || q.options.length === 0);
+                      if (!cqQuestions.length) return null;
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-3.5 h-3.5 text-violet-400" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Exam Questions</span>
+                          </div>
+                          <div className="space-y-2">
+                            {cqQuestions.map((q, idx) => (
+                              <div key={q.id || idx} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                                <div className="flex items-start gap-3">
+                                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                                    {idx + 1}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-200 leading-relaxed">{q.question}</p>
+                                    {q.points != null && (
+                                      <span className="mt-1.5 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                        {q.points} pts
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Solutions View block */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between bg-zinc-950/80 px-4 py-3 border border-white/10 border-b-0 rounded-t-2xl text-[10px]">
+                        <span className="font-mono text-gray-400 font-bold flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+                          <span className="ml-1.5 font-bold uppercase tracking-widest text-slate-400">Student Solution</span>
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-950/80 p-5 rounded-b-2xl border border-white/10 space-y-4">
+                        {(isMcq || isHybrid) && (
+                          <div className="space-y-4 text-xs text-slate-300 leading-relaxed font-mono">
+                            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                              <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Auto-Graded MCQ Questions</h5>
+                              <p className="text-xs text-emerald-400 font-semibold font-sans">Student MCQ Score: {sub.score ?? 0} / {maxPoints} max points</p>
+                              <p className="text-[10px] text-gray-500 mt-1 font-sans">Answers are recorded automatically upon submission.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {(isCQ || isHybrid) && (() => {
+                          const cqData = isHybrid ? sub.submitted_answers?.cq : sub.submitted_answers;
+                          const answersByQuestion = cqData?.answers_by_question || {};
+                          const cqQuestions = (sub.lessons?.exam_questions || []).filter(
+                            q => !Array.isArray(q.options) || q.options.length === 0
+                          );
+                          const hasPerQuestion = Object.keys(answersByQuestion).length > 0;
+
+                          return (
+                            <div className="space-y-4 text-left">
+                              {/* Per-question answers */}
+                              {hasPerQuestion && cqQuestions.length > 0 ? (
+                                <div className="space-y-3">
+                                  {cqQuestions.map((q, idx) => {
+                                    const qId = q.id || String(idx);
+                                    const answerText = answersByQuestion[qId] || '';
+                                    return (
+                                      <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.01] overflow-hidden">
+                                        {/* Question */}
+                                        <div className="flex items-start gap-3 px-4 py-3 bg-white/[0.02] border-b border-white/5">
+                                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                                            {idx + 1}
+                                          </span>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-slate-200 leading-relaxed">{q.question}</p>
+                                            {q.points != null && (
+                                              <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                                {q.points} pts
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {/* Student Answer */}
+                                        <div className="px-4 py-3">
+                                          <span className="text-[10px] font-bold text-emerald-400/70 uppercase tracking-wider block mb-2">Student Answer</span>
+                                          {answerText ? (
+                                            <div className="text-xs text-slate-300 leading-relaxed">
+                                              <LessonContentRenderer content={answerText} lessonId={`exam-cq-${sub.id}-${qId}`} />
+                                            </div>
+                                          ) : (
+                                            <p className="text-xs text-gray-600 italic">No answer provided.</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : cqData?.answer ? (
+                                // Legacy fallback: single explanation block
+                                <div className="space-y-2">
+                                  <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest font-sans">Written Explanation</h5>
+                                  <div className="text-xs text-slate-300 bg-white/[0.01] border border-white/10 rounded-xl p-4 leading-relaxed font-sans">
+                                    <LessonContentRenderer content={cqData.answer} lessonId={`exam-cq-${sub.id}`} />
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {Array.isArray(cqData?.attachments) && cqData.attachments.length > 0 && (
+                                <div className="space-y-2 pt-4 border-t border-white/5">
+                                  <span className="text-[10px] font-bold text-violet-300 uppercase tracking-widest block font-sans">Attachments</span>
+                                  <AttachmentList files={cqData.attachments} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* CQ Exam Grading Form */}
+                    {(isCQ || isHybrid) && (
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (examGradeInput === '') {
+                            toast.error('Please assign points before submitting.');
+                            return;
+                          }
+
+                          const numericScore = Number(examGradeInput);
+                          if (isNaN(numericScore) || numericScore < 0 || numericScore > maxPoints) {
+                            toast.error(`Please assign a valid score between 0 and ${maxPoints}.`);
+                            return;
+                          }
+
+                          setSubmittingExamReview(true);
+                          try {
+                            await reviewExamSubmission(sub.id, numericScore, examRemarksInput, 'reviewed');
+                            setExamSubmissions(prev => prev.map(s => s.id === sub.id ? {
+                              ...s,
+                              score: numericScore,
+                              mentor_feedback: examRemarksInput,
+                              status: 'reviewed'
+                            } : s));
+                            setActiveExamSubmission(null);
+                            toast.success('Exam graded successfully!');
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to submit review');
+                          } finally {
+                            setSubmittingExamReview(false);
+                          }
+                        }}
+                        className="bg-gradient-to-b from-white/[0.02] to-transparent border border-white/10 rounded-2xl p-5 space-y-5"
+                      >
+                        <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                          <Award className="w-4 h-4 text-violet-400" />
+                          <h4 className="text-[10px] font-bold uppercase text-violet-400 tracking-wider">Review & Grade Submissions</h4>
+                        </div>
+
+                        {/* Presets ribbon */}
+                        <div className="space-y-2">
+                          <span className="text-[9px] text-gray-500 uppercase font-bold tracking-wider block">Score Presets</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setExamGradeInput(String(maxPoints)); setExamRemarksInput('Perfect! Outstanding implementation of all requirements.'); }}
+                              className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-[9px] font-bold hover:bg-emerald-500/25 transition-all cursor-pointer"
+                            >
+                              100% Score
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setExamGradeInput(String(Math.floor(maxPoints * 0.8))); setExamRemarksInput('Very good work! Fulfills all criteria with minor room for improvement.'); }}
+                              className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl text-[9px] font-bold hover:bg-purple-500/25 transition-all cursor-pointer"
+                            >
+                              80% Score
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setExamGradeInput(String(Math.floor(maxPoints * 0.5))); setExamRemarksInput('Satisfactory attempt, but please review the instructions and implement missing requirements.'); }}
+                              className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[9px] font-bold hover:bg-rose-500/25 transition-all cursor-pointer"
+                            >
+                              50% Score
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Points Awarded</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={maxPoints}
+                              value={examGradeInput}
+                              onChange={(e) => setExamGradeInput(e.target.value)}
+                              placeholder={`0 - ${maxPoints}`}
+                              className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 transition-all duration-300"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Max Possible Points</label>
+                            <div className="w-full rounded-xl border border-white/10 bg-white/[0.01] px-3.5 py-3 text-xs text-gray-500 select-none">
+                              {maxPoints} Max Points
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Mentor Remarks</label>
+                          <textarea
+                            value={examRemarksInput}
+                            onChange={(e) => setExamRemarksInput(e.target.value)}
+                            placeholder="Add your review feedback, tips or explanation here..."
+                            rows={4}
+                            className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50 transition-all duration-300"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-3 justify-end pt-3">
+                          <button
+                            type="submit"
+                            disabled={submittingExamReview}
+                            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-violet-500/25 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                          >
+                            {submittingExamReview ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5" />}
+                            Publish Grade
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveExamSubmission(null)}
+                            className="px-5 py-3 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold uppercase tracking-wider transition hover:bg-white/2"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 );
               })()}

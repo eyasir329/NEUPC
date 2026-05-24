@@ -335,7 +335,7 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
 
 // ─── Main renderer ────────────────────────────────────────────────────────────
 
-export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0, viewerMode = false }) {
+export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0, viewerMode = false, practiceProblemsComponent = null, examComponent = null }) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
@@ -538,6 +538,94 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           );
         }
 
+        if (block.type === 'practice') {
+          const problems = block.data?.practice_problems || [];
+          if (practiceProblemsComponent) {
+            return (
+              <div key={block.id} className="w-full">
+                {practiceProblemsComponent(problems)}
+              </div>
+            );
+          }
+          return (
+            <div key={block.id} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-violet-200 mb-4 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" /> Practice Problems Preview ({problems.length})
+              </h4>
+              {problems.length === 0 ? (
+                <p className="text-xs text-[#908fa0] italic">No problems added to this block.</p>
+              ) : (
+                <div className="space-y-2">
+                  {problems.map((p, idx) => (
+                    <div key={p.id || idx} className="flex items-center justify-between p-3 bg-white/2 border border-white/5 rounded-xl">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-semibold text-white/90">{p.name || 'Untitled Problem'}</span>
+                        {p.source && (
+                          <span className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-bold border border-zinc-700">
+                            {p.source}
+                          </span>
+                        )}
+                      </div>
+                      {p.url && (
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
+                          View Problem
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        if (block.type === 'exam') {
+          const questions = block.data?.exam_questions || [];
+          if (examComponent) {
+            return (
+              <div key={block.id} className="w-full">
+                {examComponent(questions)}
+              </div>
+            );
+          }
+          return (
+            <div key={block.id} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-violet-200 mb-4 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" /> Exam Module ({questions.length} Questions)
+              </h4>
+              {questions.length === 0 ? (
+                <p className="text-xs text-[#908fa0] italic">No questions added to this block.</p>
+              ) : (
+                <div className="space-y-4">
+                  {questions.map((q, idx) => (
+                    <div key={q.id || idx} className="p-4 bg-white/2 border border-white/5 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                          Q {idx + 1}
+                        </span>
+                        <p className="text-xs font-semibold text-white">{q.question || 'Untitled Question'}</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(q.options || ['', '', '', '']).map((opt, oIdx) => (
+                          <div key={oIdx} className="flex items-center gap-2 p-2 bg-black/20 border border-white/5 rounded-lg">
+                            <div className="h-3.5 w-3.5 rounded-full border border-zinc-700 flex items-center justify-center text-[8px] font-bold text-zinc-500">
+                              {String.fromCharCode(65 + oIdx)}
+                            </div>
+                            <span className="text-xs text-zinc-400">{opt || `Option ${String.fromCharCode(65 + oIdx)}`}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
         if (block.type === 'lessonPlan') {
           return (
             <div
@@ -547,7 +635,14 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
               <h4 className="text-lg font-bold text-violet-200 mb-6 flex items-center gap-3">
                 <BookOpen className="h-5 w-5" /> Lesson Plan
               </h4>
-              <LessonContentRenderer content={block.content} lessonId={lessonId} onProgress={onProgress} onComplete={onComplete} />
+              <LessonContentRenderer 
+                content={block.content} 
+                lessonId={lessonId} 
+                onProgress={onProgress} 
+                onComplete={onComplete}
+                practiceProblemsComponent={practiceProblemsComponent}
+                examComponent={examComponent}
+              />
             </div>
           );
         }
