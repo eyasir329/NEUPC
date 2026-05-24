@@ -485,7 +485,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
 
           <div className="space-y-6">
             {(form.exam_questions || []).map((q, qIdx) => (
-              <div key={q.id || qIdx} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
+              <div key={q.id ? `exam-q-${q.id}-${qIdx}` : `exam-q-idx-${qIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
                 <button
                   type="button"
                   onClick={() => {

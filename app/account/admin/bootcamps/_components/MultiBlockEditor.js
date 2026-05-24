@@ -955,7 +955,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
 
           <div className="space-y-6">
             {problems.map((p, pIdx) => (
-              <div key={p.id || pIdx} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
+              <div key={p.id ? `practice-block-p-${p.id}-${pIdx}` : `practice-block-p-idx-${pIdx}`} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
                 <div className="absolute top-4 right-4 flex items-center gap-2">
                   <button
                     type="button"
@@ -1186,7 +1186,7 @@ export default function MultiBlockEditor({ value, onChange, uploadImageAction: u
 
           <div className="space-y-6">
             {questions.map((q, qIdx) => (
-              <div key={q.id || qIdx} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
+              <div key={q.id ? `exam-block-q-${q.id}-${qIdx}` : `exam-block-q-idx-${qIdx}`} className="bg-[#010f1f] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group text-left">
                 <button
                   type="button"
                   onClick={() => {

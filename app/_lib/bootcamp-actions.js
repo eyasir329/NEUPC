@@ -3750,7 +3750,7 @@ OUTPUT FORMAT (return exactly this, no prose):
     }
 
     const normalized = parsed.map((q, idx) => ({
-      id: typeof q.id === 'string' && q.id.trim() ? q.id.trim() : `q-${Date.now()}-${idx}`,
+      id: crypto.randomUUID(),
       question: typeof q.question === 'string' && q.question.trim() ? q.question.trim() : 'Untitled Question',
       options: normaliseOptions(q.options),
       correct_option: normaliseCorrectOption(q.correct_option, 0),
@@ -3818,7 +3818,7 @@ OUTPUT FORMAT (return exactly this, no prose):
     }
 
     const normalized = parsed.map((p) => ({
-      id: typeof p.id === 'string' && p.id.trim() ? p.id.trim() : crypto.randomUUID(),
+      id: crypto.randomUUID(),
       name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : 'Untitled Problem',
       source: typeof p.source === 'string' && p.source.trim() ? p.source.trim() : 'Unknown',
       url: typeof p.url === 'string' ? p.url.trim() : '',
