@@ -1511,9 +1511,39 @@ const OverviewPanel = memo(function OverviewPanel({
       ? 'Resume'
       : 'Start learning';
 
+  const [tasks, setTasks] = useState([]);
+  const [sessions, setSessions] = useState([]);
+
+  useEffect(() => {
+    if (!bootcamp?.id) return;
+    getMemberBootcampTasks(bootcamp.id).then(setTasks).catch(() => {});
+    getMemberBootcampSessions(bootcamp.id).then(setSessions).catch(() => {});
+  }, [bootcamp?.id]);
+
+  const taskEarned = useMemo(() => {
+    return tasks.reduce((sum, t) => sum + (t.mySubmission?.points_earned || 0), 0);
+  }, [tasks]);
+
+  const taskMax = useMemo(() => {
+    return tasks.reduce((sum, t) => sum + (t.points || 0), 0);
+  }, [tasks]);
+
+  const sessionEarned = useMemo(() => {
+    return sessions.reduce((sum, s) => {
+      const myAtt = s.attendance_data?.find(a => a.user_id === enrollment?.user_id);
+      return sum + (myAtt?.points || 0);
+    }, 0);
+  }, [sessions, enrollment?.user_id]);
+
+  const sessionCount = useMemo(() => {
+    return sessions.filter(s => s.attendance_data?.some(a => a.user_id === enrollment?.user_id && a.attended)).length;
+  }, [sessions, enrollment?.user_id]);
+
   const totalPoints = useMemo(() => {
     return allLessons.reduce((s, l) => s + (l.points ?? 10), 0);
   }, [allLessons]);
+
+  const totalMaxPoints = totalPoints + taskMax;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
@@ -1647,12 +1677,12 @@ const OverviewPanel = memo(function OverviewPanel({
             </div>
             <div className="mt-1 text-2xl font-black text-white tabular-nums">
               {enrollment?.score || 0}
-              <span className="text-[11px] font-semibold text-gray-500 ml-1">pts</span>
+              <span className="text-[11px] font-semibold text-gray-500 ml-1">/{totalMaxPoints} pts</span>
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
               <div
                 className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-500"
-                style={{ width: `${totalPoints > 0 ? Math.min(100, Math.round(((enrollment?.score || 0) / totalPoints) * 100)) : 0}%` }}
+                style={{ width: `${totalMaxPoints > 0 ? Math.min(100, Math.round(((enrollment?.score || 0) / totalMaxPoints) * 100)) : 0}%` }}
               />
             </div>
           </div>
@@ -1665,6 +1695,77 @@ const OverviewPanel = memo(function OverviewPanel({
             </div>
             <div className="mt-2 text-[11px] text-gray-500 truncate">
               of {formatDurationSecs(totalDurationSecs) || '—'}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Points & Performance Breakdown */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+          Score Breakdown
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {/* Curriculum Points */}
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5" /> Curriculum
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+                Points from video lessons, interactive practice exercises, and curriculum exams.
+              </p>
+            </div>
+            <div className="mt-5 flex items-baseline justify-between">
+              <span className="text-xl font-extrabold text-white tabular-nums">
+                {Math.max(0, (enrollment?.score || 0) - taskEarned - sessionEarned)}
+                <span className="text-xs font-semibold text-gray-500 ml-1">/{totalPoints} pts</span>
+              </span>
+              <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-violet-500/20">
+                {totalPoints > 0 ? Math.round((Math.max(0, (enrollment?.score || 0) - taskEarned - sessionEarned) / totalPoints) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+
+          {/* Graded Task Points */}
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <CheckSquare className="h-3.5 w-3.5" /> Weekly Tasks
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+                Points earned from milestone homework assignments and reviewed programming tasks.
+              </p>
+            </div>
+            <div className="mt-5 flex items-baseline justify-between">
+              <span className="text-xl font-extrabold text-white tabular-nums">
+                {taskEarned}
+                <span className="text-xs font-semibold text-gray-500 ml-1">/{taskMax} pts</span>
+              </span>
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-amber-500/20">
+                {taskMax > 0 ? Math.round((taskEarned / taskMax) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+
+          {/* Sessions Attendance Points */}
+          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Live Sessions
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+                Bonus attendance points earned from attending live mentorship and cohort group sessions.
+              </p>
+            </div>
+            <div className="mt-5 flex items-baseline justify-between">
+              <span className="text-xl font-extrabold text-white tabular-nums">
+                {sessionEarned}
+                <span className="text-xs font-semibold text-gray-500 ml-1">pts</span>
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-emerald-500/20">
+                {sessionCount} attended
+              </span>
             </div>
           </div>
         </div>
