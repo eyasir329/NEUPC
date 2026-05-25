@@ -47,6 +47,7 @@ export default async function BootcampLayout({ params, children }) {
     <BootcampLearningClient
       bootcamp={bootcamp}
       lessonProgress={lessonProgress}
+      enrollment={enrollmentCheck.enrollment}
     />
   );
 }

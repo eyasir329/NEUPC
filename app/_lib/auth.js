@@ -12,7 +12,6 @@ import {
   getUserRoles,
   updateUser,
 } from './data-service';
-import { uploadAvatarFromUrl } from './avatar-actions';
 
 async function withTimeout(
   promise,
@@ -146,6 +145,7 @@ export const {
             try {
               const newUser = await getUserByEmail(user.email);
               if (newUser) {
+                const { uploadAvatarFromUrl } = await import('./avatar-actions');
                 const driveUrl = await uploadAvatarFromUrl(
                   user.image,
                   newUser.id

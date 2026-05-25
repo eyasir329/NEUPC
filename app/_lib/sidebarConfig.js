@@ -1,11 +1,3 @@
-/**
- * @file Sidebar navigation configuration with grouped sections.
- * Returns role-specific navigation items organized into logical groups
- * for a professional dashboard sidebar experience.
- *
- * @module sidebarConfig
- */
-
 import {
   Calendar,
   Trophy,
@@ -18,7 +10,6 @@ import {
   Shield,
   FileText,
   BookOpen,
-  Target,
   BarChart,
   Briefcase,
   MessageSquare,
@@ -34,31 +25,13 @@ import {
   FolderOpen,
   Code,
   MapPin,
-  Megaphone,
   Mail,
   PenTool,
   BarChart3,
-  Sparkles,
   GraduationCap,
+  Video,
 } from 'lucide-react';
 
-/**
- * Returns grouped sidebar navigation for the given role.
- *
- * Each group has:
- *  - `key`   — unique identifier
- *  - `label` — section heading (shown when expanded)
- *  - `items` — array of nav items
- *
- * Each item has:
- *  - `id`, `label`, `icon`, `href`
- *  - optional: `badge`, `badgeType`, `condition`
- *
- * @param {string} activeRole
- * @param {object} stats
- * @param {object} session
- * @returns {Array<{key:string, label:string, items:Array}>}
- */
 export function getSidebarNavigation(activeRole, stats, session) {
   const baseRole = activeRole || null;
 
@@ -66,7 +39,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
     // ─── Guest ────────────────────────────────────────────────────────────
     guest: [
       {
-        key: 'dashboard',
+        key: 'overview',
         label: '',
         items: [
           {
@@ -75,20 +48,20 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Home,
             href: '/account/guest',
           },
+          {
+            id: 'notifications',
+            label: 'Inbox',
+            icon: Bell,
+            href: '/account/guest/notifications',
+            badge: stats.notifications,
+            badgeType: 'alert',
+          },
         ],
       },
       {
         key: 'activity',
         label: 'Activity',
         items: [
-          {
-            id: 'notifications',
-            label: 'Notifications',
-            icon: Bell,
-            href: '/account/guest/notifications',
-            badge: stats.notifications,
-            badgeType: 'alert',
-          },
           {
             id: 'participation',
             label: 'My Participation',
@@ -159,6 +132,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             badge: stats.notifications,
             badgeType: 'alert',
           },
+          {
+            id: 'discussions',
+            label: 'Help Desk',
+            icon: MessageSquare,
+            href: '/account/member/discussions',
+          },
         ],
       },
       {
@@ -166,8 +145,8 @@ export function getSidebarNavigation(activeRole, stats, session) {
         label: 'Activities',
         items: [
           {
-            id: 'daily-activity',
-            label: 'Daily Activity',
+            id: 'todo-list',
+            label: 'Todo List',
             icon: CheckSquare,
             href: '/account/member/daily-activity',
           },
@@ -184,12 +163,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Problem Solving',
             icon: Code,
             href: '/account/member/problem-solving',
-          },
-          {
-            id: 'discussions',
-            label: 'Discussions',
-            icon: MessageSquare,
-            href: '/account/member/discussions',
           },
         ],
       },
@@ -211,8 +184,8 @@ export function getSidebarNavigation(activeRole, stats, session) {
           },
           {
             id: 'participation',
-            label: 'My Activity',
-            icon: CheckSquare,
+            label: 'My Participation',
+            icon: Trophy,
             href: '/account/member/participation',
           },
         ],
@@ -249,32 +222,11 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Home,
             href: '/account/executive',
           },
-        ],
-      },
-      {
-        key: 'management',
-        label: 'Management',
-        items: [
           {
-            id: 'events',
-            label: 'Event Management',
-            icon: Calendar,
-            href: '/account/executive/events',
-          },
-          {
-            id: 'contests',
-            label: 'Contest Management',
-            icon: Trophy,
-            href: '/account/executive/contests/manage',
-          },
-          {
-            id: 'members',
-            label: 'Member Approval',
-            icon: Users,
-            href: '/account/executive/members',
-            badge: stats.pendingMembers,
-            badgeType: 'alert',
-            condition: ({ stats }) => stats.pendingMembers > 0,
+            id: 'notices',
+            label: 'Inbox',
+            icon: Bell,
+            href: '/account/executive/notices/create',
           },
           {
             id: 'discussions',
@@ -285,30 +237,51 @@ export function getSidebarNavigation(activeRole, stats, session) {
         ],
       },
       {
+        key: 'management',
+        label: 'Management',
+        items: [
+          {
+            id: 'events',
+            label: 'Events',
+            icon: Calendar,
+            href: '/account/executive/events',
+          },
+          {
+            id: 'contests',
+            label: 'Contests',
+            icon: Trophy,
+            href: '/account/executive/contests/manage',
+          },
+          {
+            id: 'members',
+            label: 'Member Approvals',
+            icon: Users,
+            href: '/account/executive/members',
+            badge: stats.pendingMembers,
+            badgeType: 'alert',
+            condition: ({ stats }) => stats.pendingMembers > 0,
+          },
+        ],
+      },
+      {
         key: 'content',
         label: 'Content',
         items: [
           {
             id: 'blogs',
-            label: 'Blog Management',
+            label: 'Blogs',
             icon: PenTool,
             href: '/account/executive/blogs/manage',
           },
           {
             id: 'gallery',
-            label: 'Gallery Management',
+            label: 'Gallery',
             icon: Image,
             href: '/account/executive/gallery/manage',
           },
           {
-            id: 'notices',
-            label: 'Notices',
-            icon: Megaphone,
-            href: '/account/executive/notices/create',
-          },
-          {
             id: 'certificates',
-            label: 'Generate Certificates',
+            label: 'Certificates',
             icon: Award,
             href: '/account/executive/certificates/generate',
           },
@@ -358,6 +331,18 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: BarChart3,
             href: '/account/admin/analytics',
           },
+          {
+            id: 'notices',
+            label: 'Inbox',
+            icon: Bell,
+            href: '/account/admin/notices',
+          },
+          {
+            id: 'discussions',
+            label: 'Help Desk',
+            icon: MessageSquare,
+            href: '/account/admin/discussions',
+          },
         ],
       },
       {
@@ -366,14 +351,14 @@ export function getSidebarNavigation(activeRole, stats, session) {
         items: [
           {
             id: 'users',
-            label: 'User Management',
+            label: 'Users',
             icon: Users,
             href: '/account/admin/users',
             badge: stats.totalUsers,
           },
           {
             id: 'roles',
-            label: 'Role Management',
+            label: 'Roles',
             icon: Shield,
             href: '/account/admin/roles',
             condition: ({ activeRole }) => activeRole === 'admin',
@@ -390,24 +375,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: FileText,
             href: '/account/admin/applications',
           },
-          {
-            id: 'discussions',
-            label: 'Help Desk',
-            icon: MessageSquare,
-            href: '/account/admin/discussions',
-          },
         ],
       },
       {
         key: 'content',
         label: 'Content',
         items: [
-          {
-            id: 'notices',
-            label: 'Notices',
-            icon: Megaphone,
-            href: '/account/admin/notices',
-          },
           {
             id: 'events',
             label: 'Events',
@@ -431,7 +404,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Bootcamps',
             icon: GraduationCap,
             href: '/account/admin/bootcamps',
-            badge: 'Soon',
           },
           {
             id: 'resources',
@@ -459,7 +431,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
         items: [
           {
             id: 'contact',
-            label: 'Contact Submissions',
+            label: 'Contact',
             icon: Mail,
             href: '/account/admin/contact-submissions',
           },
@@ -485,7 +457,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           },
           {
             id: 'export',
-            label: 'Export Data',
+            label: 'Export',
             icon: Download,
             href: '/account/admin/export',
           },
@@ -505,17 +477,23 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Home,
             href: '/account/mentor',
           },
-        ],
-      },
-      {
-        key: 'bootcamps',
-        label: 'Bootcamps',
-        items: [
           {
-            id: 'bootcamps',
-            label: 'My Bootcamps',
-            icon: GraduationCap,
-            href: '/account/mentor/bootcamps',
+            id: 'notices',
+            label: 'Inbox',
+            icon: Bell,
+            href: '/account/mentor/notices',
+          },
+          {
+            id: 'discussions',
+            label: 'Help Desk',
+            icon: MessageSquare,
+            href: '/account/mentor/discussions',
+          },
+          {
+            id: 'events',
+            label: 'Events',
+            icon: Calendar,
+            href: '/account/mentor/events',
           },
         ],
       },
@@ -523,6 +501,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
         key: 'mentorship',
         label: 'Mentorship',
         items: [
+          {
+            id: 'bootcamps',
+            label: 'My Bootcamps',
+            icon: GraduationCap,
+            href: '/account/mentor/bootcamps',
+          },
           {
             id: 'assigned-members',
             label: 'Assigned Members',
@@ -540,21 +524,10 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'sessions',
             label: 'Sessions',
-            icon: Calendar,
+            icon: Video,
             href: '/account/mentor/sessions',
           },
-          {
-            id: 'recommendations',
-            label: 'Recommendations',
-            icon: Target,
-            href: '/account/mentor/recommendations',
-          },
-          {
-            id: 'discussions',
-            label: 'Help Desk',
-            icon: MessageSquare,
-            href: '/account/mentor/discussions',
-          },
+
         ],
       },
       {
@@ -566,18 +539,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Resources',
             icon: BookOpen,
             href: '/account/mentor/resources',
-          },
-          {
-            id: 'events',
-            label: 'Events',
-            icon: Calendar,
-            href: '/account/mentor/events',
-          },
-          {
-            id: 'notices',
-            label: 'Notices',
-            icon: Megaphone,
-            href: '/account/mentor/notices',
           },
         ],
       },
@@ -619,6 +580,18 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Layout,
             href: '/account/advisor/club-overview',
           },
+          {
+            id: 'notices',
+            label: 'Inbox',
+            icon: Bell,
+            href: '/account/advisor/notices',
+          },
+          {
+            id: 'discussions',
+            label: 'Help Desk',
+            icon: MessageSquare,
+            href: '/account/advisor/discussions',
+          },
         ],
       },
       {
@@ -651,12 +624,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Budget',
             icon: DollarSign,
             href: '/account/advisor/budget',
-          },
-          {
-            id: 'discussions',
-            label: 'Help Desk',
-            icon: MessageSquare,
-            href: '/account/advisor/discussions',
           },
         ],
       },
@@ -701,7 +668,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
 
   const groups = configs[baseRole] || configs.guest;
 
-  // Filter items within each group based on conditions, then remove empty groups
   return groups
     .map((group) => ({
       ...group,

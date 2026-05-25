@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { marked } from 'marked';
 import {
   Plus,
   Loader2,
@@ -25,6 +26,14 @@ import {
   Maximize2,
   Lock,
   Unlock,
+  CheckSquare,
+  HelpCircle,
+  PlusCircle,
+  Sparkles,
+  Star,
+  Clock,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   createCourse,
@@ -43,6 +52,8 @@ import {
   toggleCourseLock,
   toggleModuleLock,
   toggleLessonLock,
+  generateExamQuestionsAction,
+  generatePracticeProblemsAction,
 } from '@/app/_lib/bootcamp-actions';
 import {
   VIDEO_SOURCES,
@@ -54,6 +65,35 @@ import toast from 'react-hot-toast';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import MultiBlockEditor from './MultiBlockEditor';
 import LessonFullscreenEditorModal from './LessonFullscreenEditorModal';
+const MD_PREVIEW_STYLES = `
+.md-preview{display:grid;grid-template-columns:1fr;gap:.5rem;line-height:1.6;color:#908fa0;font-size:.75rem;}
+.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4{font-weight:700;color:#d4e4fa;margin-top:.5rem;margin-bottom:-.25rem;}
+.md-preview p{line-height:1.65;word-break:break-word;}
+.md-preview strong{color:#d4e4fa;font-weight:600;}
+.md-preview em{font-style:italic;}
+.md-preview a{color:#8083ff;text-decoration:none;}.md-preview a:hover{text-decoration:underline;}
+.md-preview ul,.md-preview ol{padding-left:1.25rem;display:flex;flex-direction:column;gap:.15rem;}
+.md-preview ul li{list-style-type:disc;}.md-preview ol li{list-style-type:decimal;}
+.md-preview li{padding-left:.2rem;}
+.md-preview code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .35em;border-radius:.3rem;font-size:.8em;font-family:monospace;}
+.md-preview blockquote{border-left:3px solid rgba(255,255,255,.12);padding:.4rem .75rem;background:rgba(255,255,255,.02);border-radius:0 .4rem .4rem 0;}
+`;
+
+function MarkdownPreview({ text, className = '' }) {
+  if (!text) return null;
+  let html = '';
+  try {
+    html = marked.parse(text, { gfm: true, breaks: true });
+  } catch {
+    html = `<p>${text}</p>`;
+  }
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: MD_PREVIEW_STYLES }} />
+      <div className={`md-preview ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
+    </>
+  );
+}
 
 // ─── Inline rename input ───────────────────────────────────────────────────────
 
@@ -100,6 +140,16 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
   const [driveValidation, setDriveValidation] = useState(null);
   const [errors, setErrors] = useState({});
   const [deleting, setDeleting] = useState(false);
+  const [openAiImport, setOpenAiImport] = useState(false);
+  const [aiInput, setAiInput] = useState('');
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [aiGuidelines, setAiGuidelines] = useState('');
+  const [aiDifficulty, setAiDifficulty] = useState('medium');
+
+  const [openAiProblemsImport, setOpenAiProblemsImport] = useState(false);
+  const [aiProblemsInput, setAiProblemsInput] = useState('');
+  const [generatingProblems, setGeneratingProblems] = useState(false);
+
 
 
   const [form, setForm] = useState(() => {
@@ -158,8 +208,15 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
       video_id: lesson.video_id || '',
       video_url: lesson.video_url || '',
       duration: lesson.duration || 0,
+      type: lesson.type || 'lesson',
+      exam_type: lesson.exam_type || 'mcq',
+      exam_questions: lesson.exam_questions || [],
+      practice_problems: lesson.practice_problems || [],
+      random_question_count: lesson.random_question_count || 0,
       is_free_preview: lesson.is_free_preview || false,
       is_published: lesson.is_published !== false,
+      weight: lesson.weight !== undefined ? lesson.weight : 1,
+      points: lesson.points !== undefined ? lesson.points : 10,
     };
   });
 
@@ -244,7 +301,9 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
     <div className="xl:col-span-8 min-w-0 flex flex-col gap-6">
       {/* Top Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#d4e4fa]">Edit Lesson</h3>
+        <h3 className="text-lg font-semibold text-[#d4e4fa]">
+          {form.type === 'practice' ? 'Edit Practice' : form.type === 'exam' ? 'Edit Exam' : 'Edit Lesson'}
+        </h3>
         <button
           type="button"
           onClick={() => setIsFullscreen(true)}
@@ -260,7 +319,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
-              Lesson Title
+              {form.type === 'practice' ? 'Practice Title' : form.type === 'exam' ? 'Exam Title' : 'Lesson Title'}
             </label>
             <input
               type="text"
@@ -293,7 +352,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-6">
           <div>
             <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
               Duration (mins)
@@ -304,6 +363,32 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
               onChange={(e) => set('duration', (parseInt(e.target.value) || 0) * 60)}
               min="0"
               className="w-24 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+              Weight
+            </label>
+            <input
+              type="number"
+              value={form.weight}
+              onChange={(e) => set('weight', Math.max(0, parseInt(e.target.value) || 0))}
+              min="0"
+              title="Progress weight. Higher values count more toward the member's overall progress percentage."
+              className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+              Points
+            </label>
+            <input
+              type="number"
+              value={form.points}
+              onChange={(e) => set('points', Math.max(0, parseInt(e.target.value) || 0))}
+              min="0"
+              title="Points / Max Score for this lesson on the leaderboard standings."
+              className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
             />
           </div>
           <div className="flex items-center gap-3 mt-5">
@@ -319,9 +404,540 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
             </label>
           </div>
         </div>
+
+        {form.type === 'exam' && (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between border-t border-[#464554]/30 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#908fa0] font-semibold tracking-wider uppercase">Exam Format:</span>
+              <div className="relative">
+                <select
+                  value={form.exam_type}
+                  onChange={(e) => set('exam_type', e.target.value)}
+                  className="appearance-none bg-[#0d1c2d] border border-[#464554] text-[#d4e4fa] text-xs font-semibold rounded-lg pl-4 pr-9 py-2 focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none cursor-pointer"
+                >
+                  <option value="mcq">Multiple Choice (MCQ)</option>
+                  <option value="cq">Subjective / Written (CQ)</option>
+                  <option value="hybrid">Hybrid / Nested (MCQ & CQ)</option>
+                </select>
+                <ChevronRight className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#908fa0] pointer-events-none h-4 w-4 rotate-90" />
+              </div>
+            </div>
+
+            {(form.exam_type === 'mcq' || form.exam_type === 'hybrid') && (
+              <div className="flex items-center gap-2 bg-[#0a1827] border border-[#464554]/40 px-3 py-1.5 rounded-xl">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                  Random Questions Per Attempt:
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0 (All)"
+                  value={form.random_question_count || ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? parseInt(e.target.value) || 0 : 0;
+                    set('random_question_count', val);
+                  }}
+                  className="w-16 bg-[#0d1c2d] border border-[#464554] text-[#d4e4fa] text-center text-xs font-bold rounded-lg py-1 focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+                />
+                <span className="text-[10px] text-gray-500 italic">
+                  (0 = show all questions)
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Legacy video block UI has been removed. Videos are now fully managed within the MultiBlockEditor below. */}
+      {/* MCQ questions builder */}
+      {form.type === 'exam' && (form.exam_type === 'mcq' || form.exam_type === 'hybrid') && (
+        <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-[#464554] pb-3">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-violet-400" />
+              <h4 className="text-base font-semibold text-[#d4e4fa]">MCQ Questions ({(form.exam_questions || []).filter(q => Array.isArray(q.options) && q.options.length > 0).length})</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAiInput('');
+                  setOpenAiImport(true);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                AI MCQ Generator
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuestions = [
+                    ...(form.exam_questions || []),
+                    {
+                      id: crypto.randomUUID(),
+                      question: '',
+                      options: ['', '', '', ''],
+                      correct_option: 0,
+                      points: 5,
+                    }
+                  ];
+                  set('exam_questions', newQuestions);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Question
+              </button>
+            </div>
+          </div>
+
+          {((form.exam_questions || []).filter(q => Array.isArray(q.options) && q.options.length > 0).length === 0) && (
+            <div className="text-center py-6 text-sm text-[#908fa0] italic">
+              No MCQ questions added yet. Click "Add Question" to start building your MCQ exam.
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {(form.exam_questions || [])
+              .map((q, originalIdx) => ({ q, originalIdx }))
+              .filter(item => Array.isArray(item.q.options) && item.q.options.length > 0)
+              .map(({ q, originalIdx }, filteredIdx) => (
+                <div key={q.id ? `exam-q-${q.id}-${originalIdx}` : `exam-q-idx-${originalIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestions = form.exam_questions.filter((_, idx) => idx !== originalIdx);
+                      set('exam_questions', newQuestions);
+                    }}
+                    className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      {filteredIdx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Question {filteredIdx + 1}</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text</label>
+                    <textarea
+                      value={q.question || ''}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], question: e.target.value };
+                        set('exam_questions', newQuestions);
+                      }}
+                      rows={6}
+                      placeholder="Enter the question prompt... (Markdown supported, code blocks and scenarios)"
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
+                    />
+                    {q.question && (
+                      <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
+                        <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" /> Live Markdown Preview
+                        </div>
+                        <MarkdownPreview text={q.question} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {['A', 'B', 'C', 'D'].map((optLabel, optIdx) => (
+                      <div key={optIdx} className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider">Option {optLabel}</label>
+                          <label className="flex items-center gap-1.5 text-[10px] text-gray-500 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name={`correct-${q.id || originalIdx}`}
+                              checked={q.correct_option === optIdx}
+                              onChange={() => {
+                                const newQuestions = [...form.exam_questions];
+                                newQuestions[originalIdx] = { ...newQuestions[originalIdx], correct_option: optIdx };
+                                set('exam_questions', newQuestions);
+                              }}
+                              className="text-violet-600 focus:ring-violet-500 bg-zinc-900 border-zinc-700"
+                            />
+                            Correct
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={q.options?.[optIdx] || ''}
+                          onChange={(e) => {
+                            const newQuestions = [...form.exam_questions];
+                            const newOptions = [...(newQuestions[originalIdx].options || ['', '', '', ''])];
+                            newOptions[optIdx] = e.target.value;
+                            newQuestions[originalIdx] = { ...newQuestions[originalIdx], options: newOptions };
+                            set('exam_questions', newQuestions);
+                          }}
+                          placeholder={`Option ${optLabel}...`}
+                          className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="w-32">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={q.points ?? 5}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], points: parseInt(e.target.value) || 0 };
+                        set('exam_questions', newQuestions);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* CQ questions builder */}
+      {form.type === 'exam' && (form.exam_type === 'cq' || form.exam_type === 'hybrid') && (
+        <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6 mt-6">
+          <div className="flex items-center justify-between border-b border-[#464554] pb-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-violet-400" />
+              <h4 className="text-base font-semibold text-[#d4e4fa]">
+                Creative / Subjective Questions (CQ) ({(form.exam_questions || []).filter(q => !Array.isArray(q.options) || q.options.length === 0).length})
+              </h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuestions = [
+                    ...(form.exam_questions || []),
+                    {
+                      id: crypto.randomUUID(),
+                      question: '',
+                      options: [],
+                      correct_option: 0,
+                      points: 10,
+                    }
+                  ];
+                  set('exam_questions', newQuestions);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add CQ Question
+              </button>
+            </div>
+          </div>
+
+          {((form.exam_questions || []).filter(q => !Array.isArray(q.options) || q.options.length === 0).length === 0) && (
+            <div className="text-center py-6 text-sm text-[#908fa0] italic">
+              No subjective questions added yet. Click "Add CQ Question" to start building your subjective/written exam.
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {(form.exam_questions || [])
+              .map((q, originalIdx) => ({ q, originalIdx }))
+              .filter(item => !Array.isArray(item.q.options) || item.q.options.length === 0)
+              .map(({ q, originalIdx }, filteredIdx) => (
+                <div key={q.id ? `exam-cq-q-${q.id}-${originalIdx}` : `exam-cq-q-idx-${originalIdx}`} className="bg-[#051424] rounded-lg border border-[#464554] p-4 flex flex-col gap-4 relative group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestions = form.exam_questions.filter((_, idx) => idx !== originalIdx);
+                      set('exam_questions', newQuestions);
+                    }}
+                    className="absolute top-4 right-4 text-gray-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      {filteredIdx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">CQ Question {filteredIdx + 1}</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Question Text *</label>
+                    <textarea
+                      required
+                      value={q.question || ''}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], question: e.target.value };
+                        set('exam_questions', newQuestions);
+                      }}
+                      rows={6}
+                      placeholder="Enter the subjective question prompt... (Markdown & math formulas supported)"
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none resize-y min-h-[120px]"
+                    />
+                    {q.question && (
+                      <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
+                        <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" /> Live Markdown & Formula Preview
+                        </div>
+                        <MarkdownPreview text={q.question} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-32">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block mb-1">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={q.points ?? 10}
+                      onChange={(e) => {
+                        const newQuestions = [...form.exam_questions];
+                        newQuestions[originalIdx] = { ...newQuestions[originalIdx], points: parseInt(e.target.value) || 0 };
+                        set('exam_questions', newQuestions);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Practice Problems builder */}
+      {form.type === 'practice' && (
+        <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-[#464554] pb-3">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-violet-400" />
+              <h4 className="text-base font-semibold text-[#d4e4fa]">Practice Problems ({form.practice_problems?.length || 0})</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenAiProblemsImport(true)}
+                className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Import with AI
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newProblems = [
+                    ...(form.practice_problems || []),
+                    {
+                      id: crypto.randomUUID(),
+                      name: '',
+                      source: '',
+                      url: '',
+                      video_url: '',
+                      editorial: '',
+                      solution_code: '',
+                      points: 5,
+                    }
+                  ];
+                  set('practice_problems', newProblems);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Problem
+              </button>
+            </div>
+          </div>
+
+          {(!form.practice_problems || form.practice_problems.length === 0) && (
+            <div className="text-center py-6 text-sm text-[#908fa0] italic">
+              No practice problems added yet. Click "Add Problem" to start building your practice list.
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {(form.practice_problems || []).map((p, pIdx) => (
+              <div key={p.id || pIdx} className="bg-[#051424] rounded-lg border border-[#464554] p-5 flex flex-col gap-4 relative group">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                  {/* Reorder Buttons */}
+                  <button
+                    type="button"
+                    disabled={pIdx === 0}
+                    onClick={() => {
+                      const newProblems = [...form.practice_problems];
+                      const temp = newProblems[pIdx];
+                      newProblems[pIdx] = newProblems[pIdx - 1];
+                      newProblems[pIdx - 1] = temp;
+                      set('practice_problems', newProblems);
+                    }}
+                    className="text-gray-500 hover:text-white p-1 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors cursor-pointer"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pIdx === form.practice_problems.length - 1}
+                    onClick={() => {
+                      const newProblems = [...form.practice_problems];
+                      const temp = newProblems[pIdx];
+                      newProblems[pIdx] = newProblems[pIdx + 1];
+                      newProblems[pIdx + 1] = temp;
+                      set('practice_problems', newProblems);
+                    }}
+                    className="text-gray-500 hover:text-white p-1 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors cursor-pointer"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newProblems = form.practice_problems.filter((_, idx) => idx !== pIdx);
+                      set('practice_problems', newProblems);
+                    }}
+                    className="text-gray-500 hover:text-red-400 p-1 transition-colors ml-2 cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                    {pIdx + 1}
+                  </span>
+                  <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Problem {pIdx + 1}</span>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Problem Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={p.name || ''}
+                    onChange={(e) => {
+                      const newProblems = [...form.practice_problems];
+                      newProblems[pIdx] = { ...newProblems[pIdx], name: e.target.value };
+                      set('practice_problems', newProblems);
+                    }}
+                    placeholder="e.g. Watermelon, Two Sum, etc."
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                  />
+                </div>
+
+                {/* Row: Source Platform, Problem Link, Video Solution Link, Points */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Source Platform */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Platform</label>
+                    <input
+                      type="text"
+                      value={p.source || ''}
+                      onChange={(e) => {
+                        const newProblems = [...form.practice_problems];
+                        newProblems[pIdx] = { ...newProblems[pIdx], source: e.target.value };
+                        set('practice_problems', newProblems);
+                      }}
+                      placeholder="e.g. Codeforces, LeetCode"
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+
+                  {/* Problem Link */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Problem URL / Link</label>
+                    <input
+                      type="url"
+                      value={p.url || ''}
+                      onChange={(e) => {
+                        const newProblems = [...form.practice_problems];
+                        newProblems[pIdx] = { ...newProblems[pIdx], url: e.target.value };
+                        set('practice_problems', newProblems);
+                      }}
+                      placeholder="https://..."
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+
+                  {/* Video Solution Link */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Video Solution URL</label>
+                    <input
+                      type="url"
+                      value={p.video_url || ''}
+                      onChange={(e) => {
+                        const newProblems = [...form.practice_problems];
+                        newProblems[pIdx] = { ...newProblems[pIdx], video_url: e.target.value };
+                        set('practice_problems', newProblems);
+                      }}
+                      placeholder="https://youtube.com/..."
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+
+                  {/* Points */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Points</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={p.points ?? 5}
+                      onChange={(e) => {
+                        const newProblems = [...form.practice_problems];
+                        newProblems[pIdx] = { ...newProblems[pIdx], points: parseInt(e.target.value) || 0 };
+                        set('practice_problems', newProblems);
+                      }}
+                      className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Editorial */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Editorial / Explanation</label>
+                  <textarea
+                    value={p.editorial || ''}
+                    onChange={(e) => {
+                      const newProblems = [...form.practice_problems];
+                      newProblems[pIdx] = { ...newProblems[pIdx], editorial: e.target.value };
+                      set('practice_problems', newProblems);
+                    }}
+                    rows={4}
+                    placeholder="Explain the logic, math, constraints, or step-by-step solution... (Markdown & math formulas supported)"
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] font-sans focus:border-[#c0c1ff] outline-none resize-y"
+                  />
+                  {p.editorial && (
+                    <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
+                      <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3" /> Live Markdown & Formula Preview
+                      </div>
+                      <MarkdownPreview text={p.editorial} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Solution Code */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Solution Code</label>
+                  <textarea
+                    value={p.solution_code || ''}
+                    onChange={(e) => {
+                      const newProblems = [...form.practice_problems];
+                      newProblems[pIdx] = { ...newProblems[pIdx], solution_code: e.target.value };
+                      set('practice_problems', newProblems);
+                    }}
+                    rows={6}
+                    placeholder="// Write your clean, commented C++, Python, or Java solution code here..."
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono focus:border-[#c0c1ff] outline-none resize-y"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Notes / content block */}
       <div className="bg-[#010f1f] rounded-xl border border-[#464554] relative group">
@@ -333,13 +949,15 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
             <span className="bg-[#122131] text-[#d4e4fa] p-2 rounded-lg">
               <BookOpen className="h-5 w-5" />
             </span>
-            <h4 className="text-base font-semibold text-[#d4e4fa]">Lesson Notes</h4>
+            <h4 className="text-base font-semibold text-[#d4e4fa]">
+              {form.type === 'practice' ? 'Practice Guidelines' : form.type === 'exam' ? 'Exam Guidelines / Prompt' : 'Lesson Notes'}
+            </h4>
           </div>
 
           {/* Content */}
           <div>
             <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
-              Lesson Content Blocks
+              {form.type === 'practice' ? 'Practice Content Blocks' : form.type === 'exam' ? 'Exam Content Blocks' : 'Lesson Content Blocks'}
             </label>
             <div className="rounded-lg overflow-hidden">
               <MultiBlockEditor
@@ -399,6 +1017,240 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
           lessonSerial={lessonSerial}
         />
       )}
+
+      {openAiImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#051424] border border-[#464554] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#464554] bg-[#010f1f]">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">AI MCQ Generator & Parser</h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Paste raw text, markdown, or quiz questions to structure them with AI.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenAiImport(false)}
+                className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Difficulty */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Difficulty Level</label>
+                  <select
+                    value={aiDifficulty}
+                    onChange={(e) => setAiDifficulty(e.target.value)}
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                  >
+                    <option value="easy">Easy (Conceptual & Basic)</option>
+                    <option value="medium">Medium (Analytical & Implementation)</option>
+                    <option value="hard">Hard (Advanced Problem Solving & Deep Logic)</option>
+                  </select>
+                </div>
+
+                {/* Custom Guidelines */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Custom / Formatting Guidelines</label>
+                  <input
+                    type="text"
+                    value={aiGuidelines}
+                    onChange={(e) => setAiGuidelines(e.target.value)}
+                    placeholder="e.g. Code snippets, LaTeX formulas, Bengali, etc."
+                    className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Exam Data or Topic Prompt</label>
+                <p className="text-[10px] text-gray-500 leading-normal">
+                  Our model will parse questions, options (A, B, C, D), correct answers, and points automatically. Or just type a topic and let AI generate detailed questions!
+                </p>
+              </div>
+
+              <textarea
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                placeholder="Paste your raw unstructured exam questions or topic description here..."
+                rows={7}
+                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all resize-y min-h-[120px]"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-[#464554] bg-[#010f1f] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOpenAiImport(false)}
+                className="px-4 py-2 rounded-xl border border-[#464554] text-xs font-semibold text-[#d4e4fa] hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={generatingQuestions || !aiInput.trim()}
+                onClick={async () => {
+                  setGeneratingQuestions(true);
+                  try {
+                    const res = await generateExamQuestionsAction(aiInput, aiGuidelines, aiDifficulty);
+                    if (res.error) {
+                      toast.error(res.error);
+                      return;
+                    }
+                    if (res.success && Array.isArray(res.questions)) {
+                      const mergedQuestions = [
+                        ...(form.exam_questions || []),
+                        ...res.questions
+                      ];
+                      set('exam_questions', mergedQuestions);
+                      setOpenAiImport(false);
+                      toast.success(`Successfully parsed and added ${res.questions.length} questions!`);
+                    }
+                  } catch (err) {
+                    toast.error('AI question generation failed. Try checking your format.');
+                  } finally {
+                    setGeneratingQuestions(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-xs font-bold text-white shadow-lg shadow-emerald-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+              >
+                {generatingQuestions ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    AI is Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Generate & Format Questions
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {openAiProblemsImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#051424] border border-[#464554] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#464554] bg-[#010f1f]">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-5 w-5 text-violet-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">AI Practice Problems Generator</h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Paste raw text, URLs, sheet descriptions, or YouTube links to automatically format practice problems.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenAiProblemsImport(false)}
+                className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Practice Problems Data Input</label>
+                <p className="text-[10px] text-gray-500 leading-normal">
+                  Our model will parse problem name, platform source, direct workspace link, YouTube video solution, step-by-step markdown editorials, and code templates automatically. Example input:
+                </p>
+                <div className="bg-black/35 rounded-lg p-2.5 border border-white/5 font-mono text-[9px] text-[#908fa0] whitespace-pre">
+                  {`1. Two Sum (https://leetcode.com/problems/two-sum)
+Video Solution: https://youtube.com/watch?v=WY
+Editorial: Use a hashmap to store seen values for O(n) lookup.
+Code:
+class Solution {
+    public int[] twoSum(int[] nums, int target) { ... }
+}`}
+                </div>
+              </div>
+
+              <textarea
+                value={aiProblemsInput}
+                onChange={(e) => setAiProblemsInput(e.target.value)}
+                placeholder="Paste your unstructured practice problems text, list, or description here..."
+                rows={10}
+                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all resize-y min-h-[160px]"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-[#464554] bg-[#010f1f] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOpenAiProblemsImport(false)}
+                className="px-4 py-2 rounded-xl border border-[#464554] text-xs font-semibold text-[#d4e4fa] hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={generatingProblems || !aiProblemsInput.trim()}
+                onClick={async () => {
+                  setGeneratingProblems(true);
+                  try {
+                    const res = await generatePracticeProblemsAction(aiProblemsInput);
+                    if (res.error) {
+                      toast.error(res.error);
+                      return;
+                    }
+                    if (res.success && Array.isArray(res.problems)) {
+                      const mapped = res.problems.map(p => ({
+                        id: p.id || crypto.randomUUID(),
+                        name: p.name || '',
+                        source: p.source || '',
+                        url: p.url || '',
+                        video_url: p.video_url || '',
+                        editorial: p.editorial || '',
+                        solution_code: p.solution_code || '',
+                        points: p.points || 5,
+                      }));
+                      const mergedProblems = [
+                        ...(form.practice_problems || []),
+                        ...mapped
+                      ];
+                      set('practice_problems', mergedProblems);
+                      setOpenAiProblemsImport(false);
+                      toast.success(`Successfully parsed and added ${res.problems.length} practice problems!`);
+                    }
+                  } catch (err) {
+                    toast.error('AI problem generation failed. Try checking your format.');
+                  } finally {
+                    setGeneratingProblems(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-xs font-bold text-white shadow-lg shadow-violet-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+              >
+                {generatingProblems ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    AI is Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Generate & Format Problems
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }
@@ -547,12 +1399,12 @@ function ModuleRow({
             );
           })}
 
-          {/* Add lesson */}
-          <div className="px-3 py-2 pl-10">
+          {/* Add actions */}
+          <div className="px-3 py-2 pl-10 flex flex-wrap items-center gap-3">
             <button
               onClick={async () => {
                 setAddingLesson(true);
-                await onAddLesson(module.id);
+                await onAddLesson(module.id, 'lesson');
                 setAddingLesson(false);
               }}
               disabled={addingLesson}
@@ -560,6 +1412,32 @@ function ModuleRow({
             >
               {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Add Lesson
+            </button>
+            <span className="text-[#464554] text-xs font-light">|</span>
+            <button
+              onClick={async () => {
+                setAddingLesson(true);
+                await onAddLesson(module.id, 'practice');
+                setAddingLesson(false);
+              }}
+              disabled={addingLesson}
+              className="text-xs text-[#908fa0] hover:text-teal-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
+            >
+              {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-teal-500" />}
+              Add Practice
+            </button>
+            <span className="text-[#464554] text-xs font-light">|</span>
+            <button
+              onClick={async () => {
+                setAddingLesson(true);
+                await onAddLesson(module.id, 'exam');
+                setAddingLesson(false);
+              }}
+              disabled={addingLesson}
+              className="text-xs text-[#908fa0] hover:text-violet-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
+            >
+              {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-violet-500" />}
+              Add Exam
             </button>
           </div>
         </div>
@@ -594,11 +1472,17 @@ function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onTo
     >
       <GripVertical className="h-3.5 w-3.5 text-[#464554] cursor-grab shrink-0" />
       <span className={`shrink-0 ${isActive ? 'text-[#d0bcff]' : 'text-[#908fa0]'}`}>
-        {isActive
-          ? <Check className="h-4 w-4 text-[#d0bcff]" />
-          : hasVideo
-          ? <Play className="h-4 w-4" />
-          : <BookOpen className="h-4 w-4" />}
+        {isActive ? (
+          <Check className="h-4 w-4 text-[#d0bcff]" />
+        ) : lesson.type === 'practice' ? (
+          <CheckSquare className="h-4 w-4 text-teal-400" />
+        ) : lesson.type === 'exam' ? (
+          <HelpCircle className="h-4 w-4 text-violet-400" />
+        ) : hasVideo ? (
+          <Play className="h-4 w-4" />
+        ) : (
+          <BookOpen className="h-4 w-4" />
+        )}
       </span>
 
       {renaming ? (
@@ -906,8 +1790,8 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
         }
         if (targetCourseId) {
           const course = courses.find(c => c.id === targetCourseId);
-          const module = course.modules.find(m => m.id === moduleId);
-          const newLessons = reorderList(module.lessons || []);
+          const targetModule = course.modules.find(m => m.id === moduleId);
+          const newLessons = reorderList(targetModule.lessons || []);
           if (newLessons) {
             sync(courses.map(c => c.id === targetCourseId ? {
               ...c,
@@ -1039,9 +1923,18 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
   };
 
   // ── Add lesson ──────────────────────────────────────────────────────────────
-  const handleAddLesson = async (moduleId) => {
+  const handleAddLesson = async (moduleId, type = 'lesson') => {
     try {
-      const lesson = await createLesson(moduleId, { title: 'New Lesson' });
+      let defaultTitle = 'New Lesson';
+      if (type === 'practice') defaultTitle = 'New Practice';
+      if (type === 'exam') defaultTitle = 'New Exam';
+
+      const lesson = await createLesson(moduleId, {
+        title: defaultTitle,
+        type: type,
+        exam_type: type === 'exam' ? 'mcq' : null,
+        exam_questions: type === 'exam' ? [] : null
+      });
       sync(courses.map((c) => ({
         ...c,
         modules: (c.modules || []).map((m) =>
@@ -1052,7 +1945,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
       })));
       setActiveLesson(lesson);
     } catch (err) {
-      toast.error('Failed to create lesson');
+      toast.error(`Failed to create ${type}`);
     }
   };
 

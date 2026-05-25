@@ -171,8 +171,8 @@ function TabBtn({ id, label, count, accent, activeTab, onSelect }) {
       onClick={() => onSelect(id)}
       className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
         activeTab === id
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
+          ? 'bg-white/10 text-white shadow-sm'
+          : 'text-gray-500 hover:bg-white/10 hover:text-gray-300'
       }`}
     >
       {label}
@@ -182,8 +182,8 @@ function TabBtn({ id, label, count, accent, activeTab, onSelect }) {
             accent
               ? 'bg-green-500/20 text-green-400'
               : activeTab === id
-                ? 'bg-white/15 text-white'
-                : 'bg-white/6 text-gray-600'
+                ? 'bg-violet-500/15 text-white'
+                : 'bg-white/5 text-gray-600'
           }`}
         >
           {count}
@@ -230,9 +230,9 @@ function SubmitModal({ task, existing, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-white/12 bg-gray-950 shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-zinc-900 shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-white/8 px-6 py-4">
+        <div className="flex items-start justify-between border-b border-white/10 px-6 py-4">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
               <span
@@ -269,7 +269,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* Problem links */}
           {task.problem_links?.length > 0 && (
-            <div className="rounded-xl border border-white/6 bg-white/2 px-3 py-2.5">
+            <div className="rounded-xl border border-white/10 bg-white/2 px-3 py-2.5">
               <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
                 Problem Links
               </p>
@@ -293,7 +293,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
 
           {/* Submission tabs */}
           <div>
-            <div className="mb-3 flex gap-1 rounded-xl border border-white/8 bg-white/3 p-1">
+            <div className="mb-3 flex gap-1 rounded-xl border border-white/10 bg-zinc-900/50 p-1">
               {[
                 { id: 'url', Icon: Link2, label: 'Solution URL' },
                 { id: 'code', Icon: Code2, label: 'Paste Code' },
@@ -304,7 +304,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
                   onClick={() => setTab(id)}
                   className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all ${
                     tab === id
-                      ? 'bg-white/12 text-white'
+                      ? 'bg-white/10 text-white'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
@@ -319,7 +319,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
                 placeholder="https://codeforces.com/contest/…"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
               />
             )}
             {tab === 'code' && (
@@ -328,7 +328,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
                 placeholder="// Paste your solution here…"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full resize-none rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 font-mono text-xs text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
+                className="w-full resize-none rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 font-mono text-xs text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
               />
             )}
           </div>
@@ -343,7 +343,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
               placeholder="Brief explanation of your approach…"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full resize-none rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
+              className="w-full resize-none rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-white/20 focus:outline-none"
             />
           </div>
 
@@ -361,7 +361,7 @@ function SubmitModal({ task, existing, onClose, onDone }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-white/8 bg-white/3 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/6"
+              className="flex-1 rounded-xl border border-white/10 bg-zinc-900/50 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10"
             >
               Cancel
             </button>
@@ -394,7 +394,7 @@ function TaskRow({ task, submission, onSubmit, index }) {
   const SubIcon = sc?.Icon;
 
   return (
-    <div className="group flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 px-4 py-3.5 transition-all hover:border-white/12 hover:bg-white/4">
+    <div className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/2 px-4 py-3.5 transition-all hover:border-white/20 hover:bg-zinc-900/70">
       {/* Index */}
       <span className="w-6 shrink-0 text-center text-xs text-gray-600 tabular-nums">
         {index}
@@ -461,7 +461,7 @@ function TaskRow({ task, submission, onSubmit, index }) {
             ? 'border-blue-500/25 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
             : past
               ? 'border-orange-500/20 bg-orange-500/8 text-orange-400 hover:bg-orange-500/15'
-              : 'border-white/10 bg-white/4 text-gray-300 hover:border-white/20 hover:bg-white/10'
+              : 'border-white/10 bg-zinc-900/70 text-gray-300 hover:border-white/20 hover:bg-white/10'
         }`}
       >
         {sub ? 'Update' : past ? 'Submit Late' : 'Submit'}
@@ -474,7 +474,7 @@ function TaskRow({ task, submission, onSubmit, index }) {
 
 function PlatformCard({ label, value, color, sub }) {
   return (
-    <div className="rounded-xl border border-white/6 bg-white/2 p-3 text-center">
+    <div className="rounded-xl border border-white/10 bg-white/2 p-3 text-center">
       <p className={`text-lg font-bold tabular-nums ${color}`}>
         {value ?? '—'}
       </p>
@@ -621,18 +621,19 @@ export default function MemberProblemSetClient({
         ].map(({ icon: Icon, label, value, color, bg }) => (
           <div
             key={label}
-            className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/3 px-4 py-3"
+            className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 px-4 py-3 shadow-lg shadow-black/20 backdrop-blur-xl transition-all hover:border-white/20"
           >
+            <div className={`pointer-events-none absolute -top-12 -right-12 h-24 w-24 rounded-full ${bg} opacity-40 blur-3xl transition-opacity group-hover:opacity-70`} />
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}
+              className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-white/10 ${bg}`}
             >
               <Icon className={`h-4 w-4 ${color}`} />
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-xl leading-none font-bold text-white tabular-nums">
                 {value}
               </p>
-              <p className="mt-0.5 text-[11px] text-gray-600">{label}</p>
+              <p className="mt-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">{label}</p>
             </div>
           </div>
         ))}
@@ -640,7 +641,7 @@ export default function MemberProblemSetClient({
 
       {/* ── Platform Stats (if available) ──────────────────────────────── */}
       {memberStats && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-400" />
             <h2 className="text-sm font-semibold text-white">
@@ -697,7 +698,7 @@ export default function MemberProblemSetClient({
             placeholder="Search tasks…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/4 py-2.5 pr-8 pl-9 text-sm text-white placeholder-gray-600 focus:border-white/20 focus:bg-white/6 focus:outline-none"
+            className="w-full rounded-xl border border-white/10 bg-zinc-900/70 py-2.5 pr-8 pl-9 text-sm text-white placeholder-gray-600 focus:border-white/20 focus:bg-white/5 focus:outline-none"
           />
           {search && (
             <button
@@ -715,7 +716,7 @@ export default function MemberProblemSetClient({
             <select
               value={diffFilter}
               onChange={(e) => setDiffFilter(e.target.value)}
-              className="w-32 appearance-none rounded-xl border border-white/10 bg-white/4 py-2.5 pr-8 pl-3.5 text-sm text-white focus:border-white/20 focus:outline-none [&>option]:bg-gray-900"
+              className="w-32 appearance-none rounded-xl border border-white/10 bg-zinc-900/70 py-2.5 pr-8 pl-3.5 text-sm text-white focus:border-white/20 focus:outline-none [&>option]:bg-gray-900"
             >
               <option value="all">All Levels</option>
               <option value="easy">Easy</option>
@@ -729,7 +730,7 @@ export default function MemberProblemSetClient({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-36 appearance-none rounded-xl border border-white/10 bg-white/4 py-2.5 pr-8 pl-3.5 text-sm text-white focus:border-white/20 focus:outline-none [&>option]:bg-gray-900"
+              className="w-36 appearance-none rounded-xl border border-white/10 bg-zinc-900/70 py-2.5 pr-8 pl-3.5 text-sm text-white focus:border-white/20 focus:outline-none [&>option]:bg-gray-900"
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -743,7 +744,7 @@ export default function MemberProblemSetClient({
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
+      <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-zinc-900/50 p-1.5">
         <TabBtn
           id="tasks"
           label="All Tasks"
@@ -789,7 +790,7 @@ export default function MemberProblemSetClient({
               : filteredTasks;
 
           return list.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-zinc-900/50 py-20 text-center">
               <Target className="mb-3 h-12 w-12 text-gray-700" />
               <p className="text-sm font-medium text-gray-500">
                 {activeTab === 'active'
@@ -810,9 +811,9 @@ export default function MemberProblemSetClient({
               )}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/3">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50">
               {/* Table header */}
-              <div className="hidden grid-cols-[2rem_2rem_1fr_6rem_8rem_6rem] items-center gap-3 border-b border-white/6 px-4 py-2.5 text-[10px] font-semibold tracking-wider text-gray-600 uppercase sm:grid">
+              <div className="hidden grid-cols-[2rem_2rem_1fr_6rem_8rem_6rem] items-center gap-3 border-b border-white/10 px-4 py-2.5 text-[10px] font-semibold tracking-wider text-gray-600 uppercase sm:grid">
                 <span>#</span>
                 <span></span>
                 <span>Title</span>
@@ -839,7 +840,7 @@ export default function MemberProblemSetClient({
            TAB: MY SUBMISSIONS HISTORY
       ═══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'history' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
           <div className="mb-4 flex items-center gap-2">
             <Send className="h-4 w-4 text-blue-400" />
             <h2 className="text-sm font-semibold text-white">My Submissions</h2>
@@ -871,7 +872,7 @@ export default function MemberProblemSetClient({
                 return (
                   <div
                     key={sub.id}
-                    className="rounded-xl border border-white/6 bg-white/2 px-4 py-3 transition-colors hover:bg-white/4"
+                    className="rounded-xl border border-white/10 bg-white/2 px-4 py-3 transition-colors hover:bg-zinc-900/70"
                   >
                     <div className="flex items-start gap-3">
                       <SubIcon
@@ -920,7 +921,7 @@ export default function MemberProblemSetClient({
                             href={sub.submission_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
+                            className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/70 px-2.5 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
                           >
                             <ExternalLink className="h-3 w-3" /> View
                           </a>
@@ -950,7 +951,7 @@ export default function MemberProblemSetClient({
         <div className="space-y-4">
           {/* Completion Rate Chart (visual bar) */}
           {tasks.length > 0 && (
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <BarChart2 className="h-4 w-4 text-blue-400" />
                 <h2 className="text-sm font-semibold text-white">
@@ -1016,7 +1017,7 @@ export default function MemberProblemSetClient({
 
           {/* Progress periods */}
           {progress.length > 0 && (
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-purple-400" />
                 <h2 className="text-sm font-semibold text-white">
@@ -1027,7 +1028,7 @@ export default function MemberProblemSetClient({
                 {progress.map((p) => (
                   <div
                     key={p.id}
-                    className="rounded-xl border border-white/6 bg-white/2 p-4"
+                    className="rounded-xl border border-white/10 bg-white/2 p-4"
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div>
@@ -1084,7 +1085,7 @@ export default function MemberProblemSetClient({
           )}
 
           {progress.length === 0 && tasks.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-zinc-900/50 py-20 text-center">
               <BarChart2 className="mb-3 h-12 w-12 text-gray-700" />
               <p className="text-sm font-medium text-gray-500">
                 No progress data yet

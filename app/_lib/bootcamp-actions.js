@@ -17,6 +17,7 @@ import {
   getFileMetadata,
   canAccessFile,
 } from './bootcamp-video';
+import { requireRole } from '@/app/_lib/auth-guard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -314,7 +315,7 @@ export async function getBootcampWithCurriculum(idOrSlug) {
           id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, content, video_source, video_id, video_url, duration, order_index,
-            is_free_preview, is_published, is_locked
+            is_free_preview, is_published, is_locked, type, exam_type, exam_questions, random_question_count, weight, practice_problems
           )
         )
       )
@@ -382,7 +383,7 @@ export async function getBootcampCurriculumLight(idOrSlug) {
           id, title, description, order_index, is_published, is_locked, total_lessons, total_duration,
           lessons (
             id, title, description, video_source, video_id, duration, order_index,
-            is_free_preview, is_published, is_locked
+            is_free_preview, is_published, is_locked, type, exam_type, random_question_count, weight, points, practice_problems
           )
         )
       )
@@ -974,6 +975,12 @@ export async function createLesson(moduleId, data) {
       is_published: data.is_published !== false,
       is_locked: data.is_locked === true,
       attachments: data.attachments || [],
+      type: data.type || 'lesson',
+      exam_type: data.exam_type || null,
+      exam_questions: data.exam_questions || [],
+      practice_problems: data.practice_problems || [],
+      weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : 1,
+      points: data.points !== undefined ? Math.max(0, parseInt(data.points) || 0) : 10,
     })
     .select()
     .single();
@@ -1034,6 +1041,13 @@ export async function updateLesson(lessonId, data) {
     is_published: data.is_published,
     is_locked: data.is_locked,
     attachments: data.attachments,
+    type: data.type,
+    exam_type: data.exam_type,
+    exam_questions: data.exam_questions,
+    practice_problems: data.practice_problems,
+    random_question_count: data.random_question_count !== undefined ? parseInt(data.random_question_count) || 0 : undefined,
+    weight: data.weight !== undefined ? Math.max(0, parseInt(data.weight) || 1) : undefined,
+    points: data.points !== undefined ? Math.max(0, parseInt(data.points) || 0) : undefined,
   };
 
   // Remove undefined values
@@ -1177,7 +1191,7 @@ export async function getLesson(lessonId) {
   const { data, error } = await supabaseAdmin
     .from('lessons')
     .select(
-      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_published, order_index'
+      'id, title, description, video_source, video_id, video_url, duration, content, attachments, is_published, order_index, type, exam_type, exam_questions, random_question_count, practice_problems'
     )
     .eq('id', lessonId)
     .single();
@@ -1197,7 +1211,7 @@ export async function getLessonContent(lessonId) {
 
   const { data, error } = await supabaseAdmin
     .from('lessons')
-    .select('id, content, attachments, video_url')
+    .select('id, content, attachments, video_url, type, exam_type, exam_questions, random_question_count, practice_problems')
     .eq('id', lessonId)
     .single();
 
@@ -1406,7 +1420,7 @@ export async function checkEnrollment(bootcampId) {
 
   const { data } = await supabaseAdmin
     .from('enrollments')
-    .select('id, status, progress_percent')
+    .select('id, status, progress_percent, score')
     .eq('user_id', userId)
     .eq('bootcamp_id', bootcampId)
     .single();
@@ -1807,6 +1821,95 @@ export async function saveLessonNotes(lessonId, notes) {
   return data;
 }
 
+/**
+ * Toggle a practice problem's solved status for a user.
+ * Automatically marks the entire lesson as completed when all problems are solved.
+ */
+export async function togglePracticeProblemSolved(lessonId, problemIndex, solved, bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  if (!bootcampId) {
+    const { data: lesson } = await supabaseAdmin
+      .from('lessons')
+      .select('module_id, modules(course_id, courses(bootcamp_id))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson?.modules?.courses?.bootcamp_id) throw new Error('Lesson not found');
+    bootcampId = lesson.modules.courses.bootcamp_id;
+  }
+
+  // Get current user progress
+  const { data: progress } = await supabaseAdmin
+    .from('user_progress')
+    .select('id, solved_problems, is_completed')
+    .eq('user_id', userId)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  // Get total practice problems configured
+  const { data: lessonData } = await supabaseAdmin
+    .from('lessons')
+    .select('practice_problems')
+    .eq('id', lessonId)
+    .single();
+
+  const totalProblems = lessonData?.practice_problems || [];
+  let currentSolved = progress?.solved_problems || [];
+
+  if (solved) {
+    if (!currentSolved.includes(problemIndex)) {
+      currentSolved = [...currentSolved, problemIndex];
+    }
+  } else {
+    currentSolved = currentSolved.filter((idx) => idx !== problemIndex);
+  }
+
+  // Determine if all practice problems are solved
+  // If no practice problems are configured, or all of them are solved
+  const isAllSolved = totalProblems.length > 0 && totalProblems.every((_, idx) => currentSolved.includes(idx));
+
+  const patch = {
+    solved_problems: currentSolved,
+    // If all are solved, auto mark lesson as completed
+    is_completed: isAllSolved,
+    completed_at: isAllSolved ? new Date().toISOString() : null,
+  };
+
+  let result;
+  if (progress) {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .update(patch)
+      .eq('id', progress.id)
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .insert({
+        user_id: userId,
+        lesson_id: lessonId,
+        bootcamp_id: bootcampId,
+        watch_time: 0,
+        last_position: 0,
+        ...patch,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  }
+
+  // Revalidate to show updated completion in progress calculations
+  revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+  revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
+
+  return result;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN ENROLLMENT MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2049,12 +2152,7 @@ export async function getEnrollmentsWithProgress(bootcampId) {
   const enrichedEnrollments = enrollments.map((enrollment) => ({
     ...enrollment,
     completed_lessons: completedMap[enrollment.user_id] || 0,
-    progress_percent:
-      totalLessons > 0
-        ? Math.round(
-            ((completedMap[enrollment.user_id] || 0) / totalLessons) * 100
-          )
-        : 0,
+    progress_percent: enrollment.progress_percent ?? 0,
   }));
 
   return { enrollments: enrichedEnrollments, totalLessons };
@@ -2075,7 +2173,7 @@ export async function adminGetStudentProgress(bootcampId, userId) {
           id, title, order_index,
           modules (
             id, title, order_index,
-            lessons (id, title, order_index, duration, is_published, video_source, video_id)
+            lessons (id, title, order_index, duration, is_published, video_source, video_id, type, exam_type, random_question_count, weight)
           )
         )
       `)
@@ -2344,7 +2442,8 @@ export async function finishBatchAndStartNew(bootcampId, newBatchData) {
           title, description, order_index, is_published, is_locked,
           lessons (
             title, description, content, video_source, video_id, video_url,
-            duration, order_index, is_free_preview, is_published, is_locked, attachments
+            duration, order_index, is_free_preview, is_published, is_locked, attachments,
+            type, exam_type, exam_questions, random_question_count, weight
           )
         )
       )
@@ -2436,6 +2535,7 @@ export async function finishBatchAndStartNew(bootcampId, newBatchData) {
             is_published: l.is_published,
             is_locked: l.is_locked,
             attachments: l.attachments,
+            weight: l.weight ?? 1,
           }))
         );
       }
@@ -2957,11 +3057,137 @@ export async function getMemberBootcampTasks(bootcampId) {
 
   const { data, error } = await supabaseAdmin
     .from('weekly_tasks')
-    .select('id, title, description, difficulty, deadline, problem_links, created_at')
+    .select('id, title, description, difficulty, deadline, problem_links, task_type, points, created_at')
     .eq('bootcamp_id', bootcampId)
     .order('created_at', { ascending: false });
   if (error) return [];
-  return data || [];
+
+  const tasks = data || [];
+  if (tasks.length === 0) return [];
+
+  // Attach this member's submission (if any) to each task
+  const taskIds = tasks.map((t) => t.id);
+  const { data: subs } = await supabaseAdmin
+    .from('task_submissions')
+    .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at, reviewed_by')
+    .eq('user_id', userId)
+    .in('task_id', taskIds);
+
+  // Fetch reviewer profiles separately (avoids relying on a specific FK constraint alias)
+  const reviewerIds = [...new Set((subs || []).map((s) => s.reviewed_by).filter(Boolean))];
+  let reviewerMap = {};
+  if (reviewerIds.length > 0) {
+    const { data: reviewers } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', reviewerIds);
+    reviewerMap = Object.fromEntries((reviewers || []).map((u) => [u.id, u]));
+  }
+
+  const subMap = Object.fromEntries((subs || []).map((s) => [
+    s.task_id,
+    { ...s, reviewer: s.reviewed_by ? (reviewerMap[s.reviewed_by] || null) : null },
+  ]));
+  return tasks.map((t) => ({ ...t, mySubmission: subMap[t.id] || null }));
+}
+
+/**
+ * Member: submit (or resubmit) a task.
+ */
+/**
+ * Upload a file (image, pdf, doc, archive) as an attachment for a member's
+ * task submission. Returns { url, name, size, type } on success.
+ */
+const MAX_TASK_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+export async function uploadTaskAttachmentAction(formData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const file = formData.get('file');
+    if (!file || !(file instanceof File) || file.size === 0) {
+      return { error: 'No file provided.' };
+    }
+    if (file.size > MAX_TASK_ATTACHMENT_SIZE) {
+      return { error: `File exceeds ${MAX_TASK_ATTACHMENT_SIZE / (1024 * 1024)}MB limit.` };
+    }
+
+    const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const ext = safeName.includes('.') ? safeName.split('.').pop() : 'bin';
+    const filename = `task_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const { fileId } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type || 'application/octet-stream',
+      'task-submissions'
+    );
+    const url = `https://drive.google.com/file/d/${fileId}/view`;
+    return { success: true, url, name: file.name || safeName, size: file.size, type: file.type || '' };
+  } catch (err) {
+    console.error('Task attachment upload error:', err);
+    return { error: err.message || 'Failed to upload file.' };
+  }
+}
+
+export async function submitTaskAction(formData) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const taskId = formData.get('task_id');
+    const submissionUrl = formData.get('submission_url')?.trim() || null;
+    const notes = formData.get('notes')?.trim() || null;
+    const attachmentsRaw = formData.get('attachments');
+    let attachments = null;
+    if (attachmentsRaw) {
+      try {
+        const parsed = JSON.parse(attachmentsRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) attachments = parsed;
+      } catch {}
+    }
+
+    if (!taskId) return { error: 'Missing task ID' };
+    if (!submissionUrl && !notes && !attachments) return { error: 'Provide content or a file.' };
+
+    // Check if already submitted
+    const { data: existing } = await supabaseAdmin
+      .from('task_submissions')
+      .select('id, status')
+      .eq('task_id', taskId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      // Allow resubmit only if redo is required
+      if (existing.status !== 'redo action required') {
+        return { error: 'Already submitted. Resubmission is only allowed when mentor requests a redo.' };
+      }
+      const { data, error } = await supabaseAdmin
+        .from('task_submissions')
+        .update({ submission_url: submissionUrl, notes, attachments, status: 'pending', submitted_at: new Date().toISOString(), feedback: null })
+        .eq('id', existing.id)
+        .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
+        .single();
+      if (error) return { error: error.message };
+      revalidatePath('/account/member/bootcamps');
+      revalidatePath('/account/mentor/tasks');
+      return { success: 'Resubmission sent!', data };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('task_submissions')
+      .insert({ task_id: taskId, user_id: userId, submission_url: submissionUrl, notes, attachments, status: 'pending', submitted_at: new Date().toISOString() })
+      .select('id, task_id, submission_url, notes, attachments, status, feedback, points_earned, submitted_at')
+      .single();
+    if (error) return { error: error.message };
+    revalidatePath('/account/member/bootcamps');
+    revalidatePath('/account/mentor/tasks');
+    return { success: 'Task submitted!', data };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
 /**
@@ -2982,36 +3208,925 @@ export async function getMemberBootcampSessions(bootcampId) {
     .maybeSingle();
   if (!enr) return [];
 
-  // Find mentorships where this user is the mentee and mentor is assigned to this bootcamp
+  const COLS = 'id, topic, description, session_date, scheduled_at, duration, attended, notes, status, meet_link, recording_url, target_type, target_student_ids, mentorship_id, bootcamp_id, created_by, attendance_data, location';
+
+  // 1. Bootcamp-wide sessions (broadcast or group) tied to this bootcamp
+  const { data: bcSessions } = await supabaseAdmin
+    .from('mentorship_sessions')
+    .select(COLS)
+    .eq('bootcamp_id', bootcampId)
+    .neq('status', 'cancelled')
+    .order('session_date', { ascending: false });
+
+  // Filter sessions to only those this member can see
+  const visibleBcSessions = (bcSessions || []).filter((s) => {
+    if (s.target_type === 'all-bootcamp') return true;
+    if (s.target_type === 'selected-group') return (s.target_student_ids || []).includes(userId);
+    if (s.target_type === 'one-on-one') return (s.target_student_ids || []).includes(userId);
+    return true; // no target_type set — show to all enrolled members
+  });
+
+  // 2. 1:1 mentorship sessions for mentorships within this bootcamp
   const { data: mentorRows } = await supabaseAdmin
     .from('bootcamp_mentors')
     .select('user_id')
     .eq('bootcamp_id', bootcampId);
 
   const mentorIds = (mentorRows || []).map((r) => r.user_id);
-  if (mentorIds.length === 0) return [];
 
-  const { data: mentorships } = await supabaseAdmin
-    .from('mentorships')
-    .select('id, mentor_id, users!mentorships_mentor_id_fkey(id, full_name, avatar_url)')
-    .eq('mentee_id', userId)
-    .in('mentor_id', mentorIds);
+  let mentorshipSessions = [];
+  let mentorMap = {};
 
-  if (!mentorships?.length) return [];
+  if (mentorIds.length > 0) {
+    const { data: mentorships } = await supabaseAdmin
+      .from('mentorships')
+      .select('id, mentor_id, users!mentorships_mentor_id_fkey(id, full_name, avatar_url)')
+      .eq('mentee_id', userId)
+      .in('mentor_id', mentorIds);
 
-  const mentorshipIds = mentorships.map((m) => m.id);
-  const mentorMap = Object.fromEntries(mentorships.map((m) => [m.id, m['users!mentorships_mentor_id_fkey']]));
+    if (mentorships?.length) {
+      const mentorshipIds = mentorships.map((m) => m.id);
+      mentorMap = Object.fromEntries(
+        mentorships.map((m) => [m.id, m['users!mentorships_mentor_id_fkey']])
+      );
 
-  const { data: sessions, error } = await supabaseAdmin
-    .from('mentorship_sessions')
-    .select('id, topic, session_date, duration, attended, notes')
-    .in('mentorship_id', mentorshipIds)
-    .order('session_date', { ascending: false });
+      const { data: msSessions } = await supabaseAdmin
+        .from('mentorship_sessions')
+        .select(COLS)
+        .in('mentorship_id', mentorshipIds)
+        .neq('status', 'cancelled')
+        .order('session_date', { ascending: false });
 
-  if (error) return [];
+      mentorshipSessions = (msSessions || []).map((s) => ({
+        ...s,
+        mentor: mentorMap[s.mentorship_id] || null,
+      }));
+    }
+  }
 
-  return (sessions || []).map((s) => ({
+  // Fetch mentor info for bootcamp sessions (created_by)
+  const creatorIds = [...new Set(visibleBcSessions.map((s) => s.created_by).filter(Boolean))];
+  let creatorMap = {};
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', creatorIds);
+    creatorMap = Object.fromEntries((creators || []).map((u) => [u.id, u]));
+  }
+
+  const bcSessionsMapped = visibleBcSessions.map((s) => ({
     ...s,
-    mentor: mentorMap[s.mentorship_id] || null,
+    mentor: creatorMap[s.created_by] || null,
+  }));
+
+  // Merge, deduplicate by id, sort by session_date desc
+  const all = [...bcSessionsMapped, ...mentorshipSessions];
+  const seen = new Set();
+  const deduped = all.filter((s) => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+  deduped.sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+  return deduped;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXAM SUBMISSION & ASSESSMENT ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Submit an exam answer (called by student).
+ */
+export async function submitExamSubmission(lessonId, bootcampId, answers, score, status = 'submitted') {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Unauthorized');
+
+  // Insert or update exam submission
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .upsert({
+      lesson_id: lessonId,
+      user_id: userId,
+      bootcamp_id: bootcampId,
+      submitted_answers: answers,
+      score: score,
+      status: status,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'lesson_id,user_id'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error submitting exam:', error);
+    throw error;
+  }
+
+  // Also mark the lesson as complete
+  await markLessonComplete(lessonId, bootcampId);
+
+  return data;
+}
+
+/**
+ * Get an exam submission (called by student or mentor).
+ */
+export async function getExamSubmission(lessonId, studentUserId = null) {
+  let userId = studentUserId;
+  if (!userId) {
+    userId = await getCurrentUserId();
+  }
+  if (!userId) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching exam submission:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Get all exam submissions for mentor grading.
+ * Dual-path: primary by bootcamp_id column, fallback via lesson IDs of the bootcamp.
+ */
+export async function getExamSubmissionsForMentor(bootcampId) {
+  await requireAdminOrBootcampMentor(bootcampId);
+
+  const SELECT_FRAGMENT = `
+    *,
+    users!user_id (
+      id,
+      full_name,
+      email,
+      avatar_url,
+      member_profiles!user_id (
+        student_id,
+        academic_session
+      )
+    ),
+    lessons (
+      id,
+      title,
+      exam_type,
+      exam_questions,
+      description,
+      content
+    )
+  `;
+
+  // ── Primary path: filter by bootcamp_id ───────────────────────────────────
+  const { data: byBootcamp, error: err1 } = await supabaseAdmin
+    .from('exam_submissions')
+    .select(SELECT_FRAGMENT)
+    .eq('bootcamp_id', bootcampId)
+    .order('created_at', { ascending: false });
+
+  if (!err1 && Array.isArray(byBootcamp) && byBootcamp.length > 0) {
+    console.log(`[getExamSubmissionsForMentor] bootcamp_id path: ${byBootcamp.length} rows for ${bootcampId}`);
+    return byBootcamp;
+  }
+
+  if (err1) {
+    console.warn('[getExamSubmissionsForMentor] bootcamp_id query failed:', err1.message, '— trying lesson-id fallback');
+  } else {
+    console.log(`[getExamSubmissionsForMentor] bootcamp_id returned 0 rows for ${bootcampId}, trying lesson-id fallback`);
+  }
+
+  // ── Fallback path: collect lesson IDs belonging to this bootcamp ──────────
+  const { data: lessonRows, error: lessonsErr } = await supabaseAdmin
+    .from('lessons')
+    .select('id, modules!inner(courses!inner(bootcamp_id))')
+    .eq('modules.courses.bootcamp_id', bootcampId);
+
+  if (lessonsErr || !lessonRows?.length) {
+    console.warn('[getExamSubmissionsForMentor] lesson fallback found no lessons for bootcamp', bootcampId);
+    return [];
+  }
+
+  const lessonIds = lessonRows.map(l => l.id);
+
+  const { data: byLesson, error: err2 } = await supabaseAdmin
+    .from('exam_submissions')
+    .select(SELECT_FRAGMENT)
+    .in('lesson_id', lessonIds)
+    .order('created_at', { ascending: false });
+
+  if (err2) {
+    console.error('[getExamSubmissionsForMentor] lesson-id fallback failed:', err2.message);
+    throw new Error(err2.message);
+  }
+
+  console.log(`[getExamSubmissionsForMentor] lesson-id path: ${byLesson?.length ?? 0} rows for bootcamp ${bootcampId}`);
+  return byLesson ?? [];
+}
+
+/**
+ * Review/assess a CQ exam submission.
+ */
+export async function reviewExamSubmission(submissionId, score, feedback, status) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error('Unauthorized');
+
+  const { data: mentor } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('email', session.user.email)
+    .single();
+  if (!mentor) throw new Error('Mentor not found');
+
+  // Verify mentor is authorized for this bootcamp
+  const { data: subCheck } = await supabaseAdmin
+    .from('exam_submissions')
+    .select('bootcamp_id')
+    .eq('id', submissionId)
+    .single();
+
+  if (!subCheck) throw new Error('Submission not found');
+  await requireAdminOrBootcampMentor(subCheck.bootcamp_id);
+
+  const { data, error } = await supabaseAdmin
+    .from('exam_submissions')
+    .update({
+      score: score,
+      mentor_feedback: feedback,
+      status: status,
+      graded_by: mentor.id,
+      graded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error reviewing exam submission:', error);
+    throw error;
+  }
+
+  // Trigger recalculation of enrollment progress and score
+  try {
+    await supabaseAdmin.rpc('calculate_enrollment_progress', {
+      p_user_id: data.user_id,
+      p_bootcamp_id: subCheck.bootcamp_id,
+    });
+  } catch (rpcErr) {
+    console.error('Error executing calculate_enrollment_progress RPC on grading:', rpcErr);
+  }
+
+  return data;
+}
+
+/**
+ * Robust JSON parser for AI outputs.
+ * Strategy (in order):
+ *   1. Strip markdown code-fence wrappers
+ *   2. Extract the outermost [...] via bracket-balanced scan
+ *   3. Standard JSON.parse on the extracted slice
+ *   4. Sanitise raw control chars inside strings (char-by-char), then retry
+ *   5. Bracket-balanced per-object extractor (handles nested arrays e.g. options:[...])
+ *   6. Strip trailing commas then retry
+ */
+function robustJsonParse(raw) {
+  // Step 1: strip markdown fences
+  let s = raw.trim();
+  // Remove leading ```lang and trailing ```
+  s = s.replace(/^```[a-zA-Z]*/, '').replace(/```\s*$/, '').trim();
+
+  // Step 2: bracket-balanced outermost [...] extraction
+  function extractOutermostArray(text) {
+    const start = text.indexOf('[');
+    if (start === -1) return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (esc)               { esc = false; continue; }
+      if (ch === '\\' && inStr) { esc = true; continue; }
+      if (ch === '"')        { inStr = !inStr; continue; }
+      if (inStr)             continue;
+      if (ch === '[')        depth++;
+      else if (ch === ']')   { depth--; if (depth === 0) return text.slice(start, i + 1); }
+    }
+    return depth > 0 ? text.slice(start) + ']' : null;
+  }
+
+  // Step 3: try standard parse
+  const arraySlice = extractOutermostArray(s) || s;
+  try { return JSON.parse(arraySlice); }
+  catch (e) { console.warn('[robustJsonParse] pass-1 failed:', e.message); }
+
+  // Step 4: sanitise raw control chars inside JSON strings using char-by-char walk
+  function sanitise(text) {
+    let out = '', inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (esc)                 { out += ch; esc = false; continue; }
+      if (ch === '\\' && inStr) { out += ch; esc = true; continue; }
+      if (ch === '"')          { inStr = !inStr; out += ch; continue; }
+      if (inStr) {
+        if (ch === '\n') { out += '\\n'; continue; }
+        if (ch === '\r') { out += '\\r'; continue; }
+        if (ch === '\t') { out += '\\t'; continue; }
+      }
+      out += ch;
+    }
+    return out;
+  }
+
+  try { return JSON.parse(sanitise(arraySlice)); }
+  catch (e) { console.warn('[robustJsonParse] pass-2 (sanitised) failed:', e.message); }
+
+  // Step 5: bracket-balanced per-object extraction (correctly handles nested arrays)
+  function extractObjects(text) {
+    const items = [];
+    let i = 0;
+    while (i < text.length) {
+      if (text[i] !== '{') { i++; continue; }
+      let depth = 0, inStr = false, esc = false;
+      const start = i;
+      for (; i < text.length; i++) {
+        const ch = text[i];
+        if (esc)                 { esc = false; continue; }
+        if (ch === '\\' && inStr) { esc = true; continue; }
+        if (ch === '"')          { inStr = !inStr; continue; }
+        if (inStr)               continue;
+        if (ch === '{')          depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) {
+            try {
+              const obj = JSON.parse(sanitise(text.slice(start, i + 1)));
+              if (obj && typeof obj === 'object') items.push(obj);
+            } catch {}
+            i++; break;
+          }
+        }
+      }
+    }
+    return items;
+  }
+
+  const objects = extractObjects(arraySlice);
+  if (objects.length > 0) {
+    console.log('[robustJsonParse] pass-3: extracted ' + objects.length + ' objects via bracket balancing');
+    return objects;
+  }
+
+  // Step 6: strip trailing commas then retry
+  try {
+    const fixed = sanitise(arraySlice).replace(/,\s*([\]}])/g, '$1');
+    return JSON.parse(fixed);
+  } catch (e) { console.warn('[robustJsonParse] pass-4 (trailing-comma) failed:', e.message); }
+
+  throw new Error('AI returned an unparseable response. Try with shorter or simpler input, or rephrase your questions.');
+}
+
+
+
+/**
+ * Shared AI call helper — supports Gemini (POST) and Pollinations (POST fallback).
+ * Automatically retries once with a reduced token limit if the first call fails.
+ */
+async function callAI(systemPrompt, userText, { maxTokens = 8192, temperature = 0.2, jsonMode = true } = {}) {
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+
+  async function tryGemini(tokens) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const body = {
+      contents: [{ parts: [{ text: `${systemPrompt}\n\n---\nRAW INPUT:\n${userText}` }] }],
+      generationConfig: {
+        maxOutputTokens: tokens,
+        temperature,
+        ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`Gemini API error ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    // Gemini can return multiple candidates/parts — join all text parts
+    return data?.candidates?.[0]?.content?.parts?.map(p => p.text ?? '').join('') ?? '';
+  }
+
+  async function tryPollinations(tokens) {
+    // Use POST to avoid 8KB URL limit
+    const res = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userText },
+        ],
+        model: 'openai',
+        max_tokens: Math.min(tokens, 4000),
+        temperature,
+        jsonMode: jsonMode,
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`Pollinations API error ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    const data = await res.json().catch(() => null);
+    // Pollinations returns OpenAI-compatible shape
+    return data?.choices?.[0]?.message?.content ?? await res.text().catch(() => '');
+  }
+
+  const caller = hasGemini ? tryGemini : tryPollinations;
+
+  // First attempt
+  try {
+    const text = await caller(maxTokens);
+    if (text && text.trim().length > 2) return text;
+    throw new Error('Empty response from AI');
+  } catch (firstErr) {
+    console.warn('[callAI] first attempt failed, retrying with smaller token limit:', firstErr.message);
+  }
+
+  // Retry with smaller limit
+  const text = await caller(Math.min(maxTokens, 4096));
+  if (!text || text.trim().length < 2) throw new Error('AI returned empty response on retry');
+  return text;
+}
+
+/**
+ * Pre-processes raw admin input before sending to AI.
+ * Normalises whitespace, removes invisible chars, and strips BOM.
+ */
+function preprocessRawInput(raw) {
+  return raw
+    .replace(/^\uFEFF/, '')                    // strip BOM
+    .replace(/\u00A0/g, ' ')                   // nbsp → space
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')     // zero-width chars
+    .replace(/\r\n/g, '\n')                    // normalise line endings
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, '  ')                      // tabs → 2 spaces
+    .replace(/[ \t]+$/gm, '')                  // trailing whitespace per line
+    .replace(/\n{4,}/g, '\n\n\n')              // max 3 consecutive blank lines
+    .trim();
+}
+
+/**
+ * Converts a correct-option value to a 0-based integer index.
+ * Handles: 0-3 (number), "0"-"3" (string number), "A"-"D" (letter), "a"-"d".
+ */
+function normaliseCorrectOption(raw, fallback = 0) {
+  if (typeof raw === 'number' && raw >= 0 && raw <= 3) return raw;
+  if (typeof raw === 'string') {
+    const upper = raw.trim().toUpperCase();
+    const letterMap = { A: 0, B: 1, C: 2, D: 3 };
+    if (upper in letterMap) return letterMap[upper];
+    const n = parseInt(upper, 10);
+    if (!isNaN(n) && n >= 0 && n <= 3) return n;
+  }
+  return fallback;
+}
+
+/**
+ * Pads or trims an options array to exactly 4 entries.
+ */
+function normaliseOptions(opts) {
+  const labels = ['Option A', 'Option B', 'Option C', 'Option D'];
+  if (!Array.isArray(opts)) return labels;
+  const trimmed = opts.slice(0, 4).map((o, i) => (typeof o === 'string' && o.trim()) ? o.trim() : labels[i]);
+  while (trimmed.length < 4) trimmed.push(labels[trimmed.length]);
+  return trimmed;
+}
+
+/**
+ * AI server action to parse raw unstructured text into structured MCQ questions.
+ * Handles: numbered/lettered options, Bengali text, embedded code/math, 2-3 option questions,
+ * "Ans: B" answer markers, missing answers (defaults to 0), mixed whitespace, and more.
+ */
+export async function generateExamQuestionsAction(rawText, guidelines = '', difficulty = 'medium') {
+  await requireAdmin();
+
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
+    return { error: 'Please provide some exam text to parse.' };
+  }
+
+  const input = preprocessRawInput(rawText);
+
+  const systemPrompt = `You are an expert exam content parser and developer. Convert the raw input into a JSON array of MCQ objects.
+
+ADDITIONAL PARAMETERS:
+- Target Difficulty: ${difficulty} (Ensure questions, coding logic, and conceptual depth reflect this level)
+- Custom/Formatting Guidelines: ${guidelines || 'None specified'}
+
+RULES:
+1. Each object must have exactly these keys:
+   - "id": unique string like "q-1", "q-2"
+   - "question": A highly clear, professional, and beautiful problem description.
+     - You MUST format any programming code inside markdown code blocks (e.g. \`\`\`javascript ... \`\`\`).
+     - You MUST format any mathematical formulas or equations beautifully using standard Markdown/LaTeX (e.g., $E = mc^2$ or $$ ... $$).
+     - Make descriptions rich, structured, and realistic (with scenarios, input/output structures, logic challenges, etc. where appropriate) instead of a simple single-line.
+     - No limit on the length or complexity of the descriptions.
+   - "options": array of EXACTLY 4 strings. If the source has fewer, generate plausible distractors. Strip leading "A." / "1." prefixes from option text.
+   - "correct_option": integer 0-3 (0=A, 1=B, 2=C, 3=D). Parse "Ans: B", "Answer: C", "*B*", "(B)" etc. Default 0 if not found.
+   - "points": integer, default 5
+
+2. If the user input is a brief topic or prompt, dynamically expand it to generate highly detailed, professional, and clear MCQ questions with complete multi-line problem descriptions.
+3. Do NOT include any text outside the JSON array.
+4. Do NOT wrap in markdown code fences.
+5. Escape all newlines inside string values as \\n.
+6. If text has multiple questions, return ALL of them as separate objects.
+7. If a question has more than 4 options keep the first 4.
+
+OUTPUT FORMAT (return exactly this, no prose):
+[{"id":"q-1","question":"...","options":["...","...","...","..."],"correct_option":0,"points":5}]`;
+
+  try {
+    const generatedText = await callAI(systemPrompt, input, { maxTokens: 8192, temperature: 0.15, jsonMode: true });
+    const parsed = robustJsonParse(generatedText);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('AI did not return a valid array of questions. Check your input format.');
+    }
+
+    const normalized = parsed.map((q, idx) => ({
+      id: crypto.randomUUID(),
+      question: typeof q.question === 'string' && q.question.trim() ? q.question.trim() : 'Untitled Question',
+      options: normaliseOptions(q.options),
+      correct_option: normaliseCorrectOption(q.correct_option, 0),
+      points: typeof q.points === 'number' && q.points > 0 ? Math.round(q.points) : 5,
+    }));
+
+    return { success: true, questions: normalized };
+  } catch (err) {
+    console.error('[generateExamQuestionsAction] error:', err);
+    return { error: err.message || 'Failed to parse exam text into MCQ questions.' };
+  }
+}
+
+/**
+ * AI server action to parse raw practice problem data into structured problems.
+ * Handles: problem links, editorials, solution code, YouTube links, star ratings, difficulty.
+ */
+export async function generatePracticeProblemsAction(rawText, guidelines = '', difficulty = 'medium') {
+  await requireAdmin();
+
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 5) {
+    return { error: 'Please provide some practice problems text to parse.' };
+  }
+
+  const input = preprocessRawInput(rawText);
+
+  const systemPrompt = `You are an expert competitive programming content parser and developer. Convert raw input into a JSON array of practice problem objects.
+
+ADDITIONAL PARAMETERS:
+- Target Difficulty: ${difficulty} (Ensure the explanation complexity and editorial depth reflect this level)
+- Custom/Formatting Guidelines: ${guidelines || 'None specified'}
+
+RULES:
+1. Each object must have exactly these keys:
+   - "id": unique string like "p-1", "p-2"
+   - "name": problem name (e.g. "Watermelon", "Two Sum", "A+B Problem")
+   - "source": platform name (e.g. "Codeforces", "LeetCode", "VJudge", "AtCoder", "HackerRank")
+   - "url": direct problem URL (http/https). Empty string if not found.
+   - "video_url": YouTube/solution video URL. Empty string if not found.
+   - "editorial": A highly clear, professional, and beautiful explanation in markdown. Ensure any formulas are in LaTeX/Markdown and formatting is completely clean. Use \\n for newlines.
+   - "solution_code": clean and beautifully structured solution code (C++/Python/Java). Use \\n for newlines inside code. Empty string if not found.
+
+2. Detect platform from URL patterns:
+   - codeforces.com → "Codeforces"
+   - leetcode.com → "LeetCode"
+   - vjudge.net → "VJudge"
+   - atcoder.jp → "AtCoder"
+   - spoj.com → "SPOJ"
+   - youtube.com / youtu.be → put in video_url, NOT url
+
+3. Do NOT include any text outside the JSON array.
+4. Do NOT wrap in markdown code fences.
+5. Escape all newlines inside string values as \\n.
+6. Parse ALL problems from the input — do not skip any.
+
+OUTPUT FORMAT (return exactly this, no prose):
+[{"id":"p-1","name":"Watermelon","source":"Codeforces","url":"https://...","video_url":"","editorial":"","solution_code":""}]`;
+
+  try {
+    const generatedText = await callAI(systemPrompt, input, { maxTokens: 8192, temperature: 0.15, jsonMode: true });
+    const parsed = robustJsonParse(generatedText);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('AI did not return a valid array of problems. Check your input format.');
+    }
+
+    const normalized = parsed.map((p) => ({
+      id: crypto.randomUUID(),
+      name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : 'Untitled Problem',
+      source: typeof p.source === 'string' && p.source.trim() ? p.source.trim() : 'Unknown',
+      url: typeof p.url === 'string' ? p.url.trim() : '',
+      video_url: typeof p.video_url === 'string' ? p.video_url.trim() : '',
+      editorial: typeof p.editorial === 'string' ? p.editorial : '',
+      solution_code: typeof p.solution_code === 'string' ? p.solution_code : '',
+    }));
+
+    return { success: true, problems: normalized };
+  } catch (err) {
+    console.error('[generatePracticeProblemsAction] error:', err);
+    return { error: err.message || 'Failed to parse practice problems text.' };
+  }
+}
+
+/**
+ * Get leaderboard for a specific bootcamp, ranking users by score.
+ */
+export async function getBootcampLeaderboard(bootcampId) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  // Verify enrollment
+  const { data: enrollment } = await supabaseAdmin
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('bootcamp_id', bootcampId)
+    .single();
+
+  if (!enrollment) throw new Error('Not enrolled in this bootcamp');
+
+  // Fetch all enrollments with scores, joined with users
+  const { data: leaderboard, error } = await supabaseAdmin
+    .from('enrollments')
+    .select(`
+      user_id,
+      score,
+      progress_percent,
+      enrolled_at,
+      users (id, full_name, avatar_url)
+    `)
+    .eq('bootcamp_id', bootcampId)
+    .order('score', { ascending: false })
+    .order('progress_percent', { ascending: false })
+    .order('enrolled_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching bootcamp leaderboard:', error);
+    throw error;
+  }
+
+  return (leaderboard || []).map((entry, idx) => ({
+    rank: idx + 1,
+    userId: entry.user_id,
+    score: entry.score || 0,
+    progressPercent: entry.progress_percent || 0,
+    userName: entry.users?.full_name || 'Member',
+    avatarUrl: entry.users?.avatar_url || null,
   }));
 }
+
+/**
+ * Member/Mentor/Admin: Get a comprehensive leaderboard across all bootcamps or a specific one,
+ * optionally filtered by timeframe (all, weekly, monthly).
+ */
+export async function getBootcampsLeaderboardAction({ bootcampId = 'all', timeframe = 'all' } = {}) {
+  try {
+    await requireRole('member');
+
+    // 1. Fetch active or completed enrollments
+    let query = supabaseAdmin
+      .from('enrollments')
+      .select(`
+        id,
+        user_id,
+        bootcamp_id,
+        score,
+        progress_percent,
+        enrolled_at,
+        users:user_id (id, full_name, avatar_url),
+        bootcamps:bootcamp_id (id, title)
+      `)
+      .in('status', ['active', 'completed']);
+
+    if (bootcampId !== 'all') {
+      query = query.eq('bootcamp_id', bootcampId);
+    }
+
+    const { data: enrollments, error: enrollError } = await query;
+    if (enrollError) throw enrollError;
+
+    if (!enrollments || enrollments.length === 0) {
+      return { success: true, leaderboard: [] };
+    }
+
+    // Get unique user and bootcamp IDs
+    const userIds = [...new Set(enrollments.map((e) => e.user_id))];
+    const bootcampIds = [...new Set(enrollments.map((e) => e.bootcamp_id))];
+
+    // Determine timeframe boundaries
+    let startDate = null;
+    if (timeframe === 'weekly') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (timeframe === 'monthly') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+    }
+
+    // 2. Query user progress
+    let progressQuery = supabaseAdmin
+      .from('user_progress')
+      .select('user_id, bootcamp_id, lesson_id, is_completed, watch_time, solved_problems, completed_at')
+      .in('user_id', userIds);
+
+    if (bootcampId !== 'all') {
+      progressQuery = progressQuery.eq('bootcamp_id', bootcampId);
+    }
+
+    const { data: progressList, error: progressError } = await progressQuery;
+    if (progressError) throw progressError;
+
+    // 3. Query Graded Task Submissions
+    let tasksQuery = supabaseAdmin
+      .from('task_submissions')
+      .select(`
+        user_id,
+        points_earned,
+        submitted_at,
+        weekly_tasks!inner (bootcamp_id)
+      `)
+      .in('user_id', userIds)
+      .eq('status', 'graded');
+
+    if (bootcampId !== 'all') {
+      tasksQuery = tasksQuery.eq('weekly_tasks.bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      tasksQuery = tasksQuery.gte('submitted_at', startDate.toISOString());
+    }
+
+    const { data: taskSubs, error: taskSubsError } = await tasksQuery;
+    if (taskSubsError) throw taskSubsError;
+
+    // 4. Query Exam Submissions
+    let examsQuery = supabaseAdmin
+      .from('exam_submissions')
+      .select('user_id, bootcamp_id, score, graded_at, status')
+      .in('user_id', userIds)
+      .eq('status', 'graded');
+
+    if (bootcampId !== 'all') {
+      examsQuery = examsQuery.eq('bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      examsQuery = examsQuery.gte('graded_at', startDate.toISOString());
+    }
+
+    const { data: examSubs, error: examSubsError } = await examsQuery;
+    if (examSubsError) throw examSubsError;
+
+    // 5. Query Mentorship Sessions for Attendance Data
+    let sessionsQuery = supabaseAdmin
+      .from('mentorship_sessions')
+      .select('id, topic, session_date, attendance_data, bootcamp_id');
+
+    if (bootcampId !== 'all') {
+      sessionsQuery = sessionsQuery.eq('bootcamp_id', bootcampId);
+    }
+    if (startDate) {
+      sessionsQuery = sessionsQuery.gte('session_date', startDate.toISOString());
+    }
+
+    const { data: sessions, error: sessionsError } = await sessionsQuery;
+    if (sessionsError) throw sessionsError;
+
+    // 6. Aggregate data per user
+    const statsMap = {};
+
+    userIds.forEach((uid) => {
+      const userEnrollments = enrollments.filter((e) => e.user_id === uid);
+      const mainEnrollment = userEnrollments[0];
+      statsMap[uid] = {
+        userId: uid,
+        userName: mainEnrollment.users?.full_name || 'Member',
+        avatarUrl: mainEnrollment.users?.avatar_url || null,
+        enrolledBootcampsCount: userEnrollments.length,
+        lessonsCompleted: 0,
+        practiceSolved: 0,
+        watchTime: 0,
+        sessionsAttended: 0,
+        score: 0,
+        allTimeScore: userEnrollments.reduce((sum, e) => sum + (e.score || 0), 0),
+        allTimeProgressPercent: Math.round(
+          userEnrollments.reduce((sum, e) => sum + (e.progress_percent || 0), 0) / userEnrollments.length
+        ),
+      };
+    });
+
+    // Aggregate user progress (lessons completed, solved problems, watch time)
+    progressList?.forEach((p) => {
+      const stats = statsMap[p.user_id];
+      if (!stats) return;
+
+      const isCompleted = p.is_completed;
+      const isCompletedInTimeframe = !startDate || (p.completed_at && new Date(p.completed_at) >= startDate);
+
+      if (isCompleted && isCompletedInTimeframe) {
+        stats.lessonsCompleted += 1;
+      }
+
+      stats.watchTime += p.watch_time || 0;
+
+      if (Array.isArray(p.solved_problems)) {
+        if (!startDate || (p.completed_at && new Date(p.completed_at) >= startDate)) {
+          stats.practiceSolved += p.solved_problems.length;
+        }
+      }
+    });
+
+    // Aggregate Task Points
+    taskSubs?.forEach((sub) => {
+      const stats = statsMap[sub.user_id];
+      if (stats) {
+        stats.score += sub.points_earned || 0;
+      }
+    });
+
+    // Aggregate Exam Points
+    examSubs?.forEach((sub) => {
+      const stats = statsMap[sub.user_id];
+      if (stats) {
+        stats.score += sub.score || 0;
+      }
+    });
+
+    // Aggregate Session Attendance Points
+    sessions?.forEach((s) => {
+      if (Array.isArray(s.attendance_data)) {
+        s.attendance_data.forEach((a) => {
+          const stats = statsMap[a.user_id];
+          if (stats) {
+            if (a.attended) {
+              stats.sessionsAttended += 1;
+            }
+            stats.score += a.points || 0;
+          }
+        });
+      }
+    });
+
+    // Format final list
+    const leaderboard = Object.values(statsMap).map((stats) => {
+      let finalScore = stats.score;
+      if (timeframe === 'all' && finalScore === 0) {
+        finalScore = stats.allTimeScore;
+      }
+
+      let progressPercent = 0;
+      if (bootcampId !== 'all') {
+        const matchingEnrollment = enrollments.find(
+          (e) => e.user_id === stats.userId && e.bootcamp_id === bootcampId
+        );
+        progressPercent = matchingEnrollment?.progress_percent || 0;
+      } else {
+        progressPercent = stats.allTimeProgressPercent;
+      }
+
+      return {
+        userId: stats.userId,
+        userName: stats.userName,
+        avatarUrl: stats.avatarUrl,
+        lessonsCompleted: stats.lessonsCompleted,
+        practiceSolved: stats.practiceSolved,
+        watchTime: stats.watchTime,
+        sessionsAttended: stats.sessionsAttended,
+        score: finalScore,
+        progressPercent,
+      };
+    });
+
+    // Sort by score desc, then progress percent desc
+    leaderboard.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.progressPercent - a.progressPercent;
+    });
+
+    // Add rankings
+    leaderboard.forEach((entry, idx) => {
+      entry.rank = idx + 1;
+    });
+
+    return { success: true, leaderboard };
+  } catch (error) {
+    console.error('Error fetching bootcamps leaderboard:', error);
+    return { success: false, error: error.message || 'Failed to fetch leaderboard' };
+  }
+}
+
+
+
+

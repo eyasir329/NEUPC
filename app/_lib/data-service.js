@@ -3710,7 +3710,8 @@ export async function getMentorshipsByMentor(mentorId) {
     .select(
       `
       *,
-      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, academic_session))
+      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, academic_session)),
+      mentorship_sessions(*)
     `
     )
     .eq('mentor_id', mentorId)
@@ -3799,7 +3800,7 @@ export async function deleteMentorshipSession(id) {
 
 // Get all weekly tasks.
 export async function getAllWeeklyTasks() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('weekly_tasks')
     .select('*, users!weekly_tasks_assigned_by_fkey(id, full_name)')
     .order('deadline', { ascending: false });
@@ -3878,6 +3879,30 @@ export async function getTaskSubmissions(taskId) {
     .eq('task_id', taskId)
     .order('submitted_at', { ascending: false });
   if (error) throw new Error(error.message);
+  return data;
+}
+
+// Get all submissions across all weekly tasks.
+export async function getAllTaskSubmissions() {
+  const { data, error } = await supabaseAdmin
+    .from('task_submissions')
+    .select(
+      `
+      *,
+      users!task_submissions_user_id_fkey(
+        id, full_name, email, avatar_url,
+        member_profiles!member_profiles_user_id_fkey(student_id, academic_session)
+      ),
+      weekly_tasks(
+        id, title, difficulty, deadline, target_audience, description, points
+      )
+    `
+    )
+    .order('submitted_at', { ascending: false, nullsFirst: false });
+  if (error) {
+    console.error('[getAllTaskSubmissions] query error:', error);
+    throw new Error(error.message);
+  }
   return data;
 }
 
@@ -5038,4 +5063,33 @@ export async function getPublicJourneyItems() {
     .order('year', { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// Get all members enrolled in bootcamps assigned to this mentor.
+export async function getMentorAssignedMembers(mentorId) {
+  const { data: bootcampRows, error: bErr } = await supabaseAdmin
+    .from('bootcamp_mentors')
+    .select('bootcamp_id, bootcamps(id, title, slug)')
+    .eq('user_id', mentorId);
+  if (bErr) throw new Error(bErr.message);
+
+  const bootcampIds = (bootcampRows || []).map((r) => r.bootcamp_id);
+  if (bootcampIds.length === 0) return [];
+
+  const bootcampMap = {};
+  (bootcampRows || []).forEach((r) => {
+    if (r.bootcamps) bootcampMap[r.bootcamp_id] = r.bootcamps;
+  });
+
+  const { data: enrollments, error: eErr } = await supabaseAdmin
+    .from('enrollments')
+    .select('id, user_id, bootcamp_id, status, enrolled_at, users(id, full_name, email, avatar_url, member_profiles(academic_session, student_id, department, semester))')
+    .in('bootcamp_id', bootcampIds)
+    .order('enrolled_at', { ascending: false });
+  if (eErr) throw new Error(eErr.message);
+
+  return (enrollments || []).map((e) => ({
+    ...e,
+    bootcamp: bootcampMap[e.bootcamp_id] || null,
+  }));
 }
