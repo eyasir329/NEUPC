@@ -63,7 +63,6 @@ export async function upvoteResourceAction(resourceId) {
   }
 
   revalidatePath('/account/member/resources');
-  revalidatePath('/account/guest/resources');
   revalidateTag('roadmaps');
   revalidatePath('/roadmaps');
   return { success: true, newCount };

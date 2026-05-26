@@ -73,8 +73,8 @@ export function PageHeader({ icon: Icon, title, subtitle, accent = 'blue', actio
 }
 
 export function GlassCard({ children, className = '', hover = false, padding = 'p-5', as: Tag = 'div', href, ...rest }) {
-  const base = `rounded-2xl border border-white/[0.08] bg-gray-900 ${padding} ${
-    hover ? 'transition-all hover:bg-white/[0.02] hover:border-white/[0.12]' : ''
+  const base = `rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl shadow-lg shadow-black/40 ${padding} ${
+    hover ? 'transition-all duration-300 hover:bg-white/[0.02] hover:border-white/20 hover:shadow-black/50' : ''
   } ${className}`;
   if (href) return <Link href={href} className={base} {...rest}>{children}</Link>;
   return <Tag className={base} {...rest}>{children}</Tag>;
@@ -120,15 +120,21 @@ export function StatCard({ icon: Icon, label, value, sublabel, accent = 'blue', 
         )}
       </div>
       <div className="mt-3">
-        <div className="text-xs text-gray-400">{label}</div>
-        <div className="mt-0.5 text-2xl font-bold text-white">{value}</div>
-        {sublabel && <div className="mt-0.5 text-[11px] text-gray-500">{sublabel}</div>}
+        <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">{label}</div>
+        <div className="mt-1 text-3.5xl leading-none font-bold text-white tracking-tight">{value}</div>
+        {sublabel && <div className="mt-1.5 text-xs font-medium text-zinc-500">{sublabel}</div>}
       </div>
     </>
   );
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay }} className="h-full">
-      <GlassCard hover href={href} padding="p-4" className="flex h-full flex-col">{inner}</GlassCard>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20, delay }}
+      className="h-full"
+    >
+      <GlassCard hover href={href} padding="p-5" className="flex h-full flex-col group relative overflow-hidden">{inner}</GlassCard>
     </motion.div>
   );
 }
@@ -223,12 +229,13 @@ export function EmptyState({ icon: Icon, title, description, action, accent = 'g
 }
 
 const BUTTON_TONES = {
-  primary: 'border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:border-blue-500/40',
-  ghost: 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.06] hover:text-white',
-  danger: 'border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20',
-  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20',
-  amber: 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20',
-  indigo: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20',
+  primary: 'border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:border-blue-500/40 active:scale-[0.98]',
+  ghost: 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.06] hover:text-white active:scale-[0.98]',
+  danger: 'border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 active:scale-[0.98]',
+  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 active:scale-[0.98]',
+  amber: 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 active:scale-[0.98]',
+  indigo: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 active:scale-[0.98]',
+  violet: 'border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 active:scale-[0.98]',
 };
 
 export function ActionButton({ children, tone = 'ghost', icon: Icon, href, className = '', type = 'button', ...props }) {

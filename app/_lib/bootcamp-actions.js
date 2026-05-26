@@ -1354,7 +1354,7 @@ export async function getMyEnrollments() {
     `
     )
     .eq('user_id', userId)
-    .in('status', ['active', 'completed'])
+    .in('status', ['active', 'completed', 'pending'])
     .order('last_accessed_at', { ascending: false, nullsFirst: false });
 
   if (error) throw error;

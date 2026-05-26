@@ -12,6 +12,8 @@ import {
   Pill, TabBar, ActionButton, PageShell,
 } from '../../_components/_ui';
 
+// ─── Formatting helpers ────────────────────────────────────────────────────────
+
 function fmtDate(str, opts = { year: 'numeric', month: 'short', day: 'numeric' }) {
   if (!str) return '—';
   return new Date(str).toLocaleDateString('en-US', opts);
@@ -29,7 +31,7 @@ function fmtMonthDay(str) {
 function timeAgo(str) {
   if (!str) return '';
   const diff = Math.floor((Date.now() - new Date(str)) / 1000);
-  if (diff < 60) return `${diff}s ago`;
+  if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
@@ -51,7 +53,7 @@ const EVT_CAT = {
 function regStatus(s) { return REG_STATUS[s] ?? REG_STATUS.registered; }
 function evtCat(c) { return EVT_CAT[c] ?? 'gray'; }
 
-// ─── Timeline Tab ─────────────────────────────────────────────────────────────
+// ─── Timeline Tab Component ───────────────────────────────────────────────────
 
 function TimelineTab({ registrations }) {
   const items = useMemo(() => {
@@ -66,7 +68,7 @@ function TimelineTab({ registrations }) {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [registrations]);
 
-  if (!items.length)
+  if (!items.length) {
     return (
       <EmptyState
         icon={TrendingUp}
@@ -74,38 +76,44 @@ function TimelineTab({ registrations }) {
         description="Join events to see your timeline."
       />
     );
+  }
 
   return (
-    <div className="flex flex-col">
-      {items.map((item, i) => {
-        const sConf = regStatus(item.status);
-        const Icon = sConf.icon;
-        return (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="flex gap-3.5 border-b border-white/6 py-3 last:border-b-0"
-          >
-            <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border bg-violet-500/10 border-violet-500/20 text-violet-400`}>
-              <CalendarDays size={14} strokeWidth={2} />
-            </div>
-            <div className="flex w-full flex-col gap-0.5">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[11.5px] font-medium uppercase tracking-[0.04em] text-gray-500">{item.kind}</span>
-                <span className="shrink-0 text-[11.5px] tabular-nums text-gray-400">{fmtDate(item.date)}</span>
+    <GlassCard className="border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
+      <div className="flex flex-col divide-y divide-white/5">
+        {items.map((item, i) => {
+          const sConf = regStatus(item.status);
+          return (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.25 }}
+              whileHover={{ backgroundColor: 'rgba(255,255,255,0.01)' }}
+              className="flex gap-4 px-5 py-4 transition-colors"
+            >
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border bg-violet-500/10 border-violet-500/20 text-violet-400 shadow-inner">
+                <CalendarDays className="h-4 w-4" strokeWidth={2} />
               </div>
-              <div className="text-[13.5px] font-medium leading-snug text-gray-200">{item.title}</div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
+              <div className="flex w-full flex-col gap-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{item.kind}</span>
+                  <span className="shrink-0 text-xs font-semibold text-zinc-400">{fmtDate(item.date)}</span>
+                </div>
+                <div className="text-[13.5px] font-bold leading-snug text-zinc-100">{item.title}</div>
+                <div className="mt-1">
+                  <Pill tone={sConf.tone} icon={sConf.icon} className="text-[10px] font-bold uppercase tracking-wider">{sConf.label}</Pill>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </GlassCard>
   );
 }
 
-// ─── Events Tab ───────────────────────────────────────────────────────────────
+// ─── Events Tab Component ──────────────────────────────────────────────────────
 
 function EventsTab({ registrations }) {
   const [filter, setFilter] = useState('all');
@@ -115,7 +123,7 @@ function EventsTab({ registrations }) {
     return registrations.filter((r) => r.status === filter);
   }, [registrations, filter]);
 
-  if (!registrations.length)
+  if (!registrations.length) {
     return (
       <EmptyState
         icon={CalendarDays}
@@ -125,6 +133,7 @@ function EventsTab({ registrations }) {
         action={<ActionButton href="/account/guest/events" tone="primary">Browse events</ActionButton>}
       />
     );
+  }
 
   const filterOpts = ['all', 'attended', 'confirmed', 'registered', 'cancelled'];
   const tabs = filterOpts
@@ -136,76 +145,85 @@ function EventsTab({ registrations }) {
     .filter((t) => t.count > 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {tabs.length > 1 && <TabBar tabs={tabs} value={filter} onChange={setFilter} />}
-      <div className="flex flex-col">
-        {filtered.map((reg, i) => {
-          const sConf = regStatus(reg.status);
-          const SIcon = sConf.icon;
-          const { mo, d } = fmtMonthDay(reg.events?.start_date);
-          return (
-            <motion.div
-              key={reg.id}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="flex items-center gap-4 border-b border-white/6 py-3 last:border-b-0"
-            >
-              <div className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-white/6 bg-white/2 py-1.5 text-center">
-                <span className="text-[9.5px] font-semibold uppercase tracking-widest text-violet-400">{mo}</span>
-                <span className="text-lg font-semibold leading-none tabular-nums text-gray-200">{d}</span>
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  {reg.events?.category && <Pill tone={evtCat(reg.events.category)}>{reg.events.category}</Pill>}
-                  {reg.attended && <Pill tone="emerald" icon={Check}>Attended</Pill>}
+      
+      <GlassCard padding="p-0" className="overflow-hidden border border-white/10 bg-zinc-900/50 backdrop-blur-xl">
+        <div className="divide-y divide-white/5">
+          {filtered.map((reg, i) => {
+            const sConf = regStatus(reg.status);
+            const SIcon = sConf.icon;
+            const { mo, d } = fmtMonthDay(reg.events?.start_date);
+            return (
+              <motion.div
+                key={reg.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                whileHover={{ backgroundColor: 'rgba(255,255,255,0.01)' }}
+                className="flex items-center gap-4 px-6 py-4.5 transition-colors"
+              >
+                <div className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-white/10 bg-zinc-950/40 py-2 text-center shadow-inner">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-violet-400">{mo}</span>
+                  <span className="text-xl font-extrabold leading-none text-zinc-100 mt-0.5">{d}</span>
                 </div>
-                <div className="text-[13.5px] font-semibold leading-snug text-gray-200">{reg.events?.title ?? 'Unknown Event'}</div>
-                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                  {reg.events?.start_date && (
-                    <span className="flex items-center gap-1"><CalendarDays size={12} /> {fmtDate(reg.events.start_date)}</span>
-                  )}
-                  {reg.registered_at && (
-                    <span className="flex items-center gap-1"><Clock size={12} /> Registered {timeAgo(reg.registered_at)}</span>
-                  )}
-                  {reg.team_name && (
-                    <span className="flex items-center gap-1"><Users size={12} /> {reg.team_name}</span>
-                  )}
+                
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {reg.events?.category && <Pill tone={evtCat(reg.events.category)} className="text-[10px] font-black uppercase tracking-wider">{reg.events.category}</Pill>}
+                    {reg.attended && <Pill tone="emerald" icon={Check} className="text-[10px] font-black uppercase tracking-wider">Attended</Pill>}
+                  </div>
+                  <div className="text-[14px] font-extrabold leading-snug text-zinc-100">{reg.events?.title ?? 'Unknown Event'}</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-500 font-semibold">
+                    {reg.events?.start_date && (
+                      <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {fmtDate(reg.events.start_date)}</span>
+                    )}
+                    {reg.registered_at && (
+                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Registered {timeAgo(reg.registered_at)}</span>
+                    )}
+                    {reg.team_name && (
+                      <span className="flex items-center gap-1 text-indigo-400"><Users className="h-3.5 w-3.5" /> {reg.team_name}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-2">
-                <Pill tone={sConf.tone} icon={SIcon}>{sConf.label}</Pill>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+                
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Pill tone={sConf.tone} icon={SIcon} className="text-[10px] font-bold uppercase tracking-wider">{sConf.label}</Pill>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </GlassCard>
     </div>
   );
 }
 
-// ─── Achievements Tab (locked for guests) ─────────────────────────────────────
+// ─── Achievements Tab (locked) ─────────────────────────────────────────────────
 
 function AchievementsTab() {
   return (
     <div className="space-y-6">
-      <GlassCard className="border-amber-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-amber-950/20">
+      <GlassCard className="border-amber-500/20 bg-gradient-to-br from-zinc-950 via-zinc-900/60 to-amber-950/20 relative overflow-hidden p-6 shadow-xl">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-amber-500/5 blur-3xl" />
+        </div>
         <EmptyState
           icon={Trophy}
-          title="Achievements are a member benefit"
-          description="Members earn contest rankings, badges, and achievement records that are tracked and verified by NEUPC."
+          title="Achievements are a Member benefit"
+          description="NEUPC officially audits and awards achievements, progress badges, and rankings to fully approved members."
           accent="amber"
           action={
-            <ActionButton href="/account/guest/membership-application" tone="amber" icon={Lock}>
-              Apply for membership
+            <ActionButton href="/account/guest/membership-application" tone="amber" icon={Lock} className="px-4 py-2">
+              Apply for Membership
             </ActionButton>
           }
         />
       </GlassCard>
 
       <div>
-        <SectionHeader icon={Lock} title="Locked Achievements" subtitle="Become a member to start earning" accent="gray" />
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <SectionHeader icon={Lock} title="Locked Achievements" subtitle="Become a member to start earning these awards" accent="gray" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {[
             { id: 'l1', title: 'ICPC Qualifier', icon: '🌍' },
             { id: 'l2', title: '100 Problems Solved', icon: '🎯' },
@@ -220,14 +238,17 @@ function AchievementsTab() {
               key={item.id}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2, delay: i * 0.025 }}
-              className="flex flex-col items-center gap-1.5 rounded-lg border border-white/6 bg-white/1.5 px-3 py-3.5 text-center opacity-60"
+              transition={{ duration: 0.25, delay: i * 0.025 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-white/5 bg-zinc-950/40 px-3 py-4 text-center opacity-40 hover:opacity-60 transition-all hover:border-white/10 hover:bg-zinc-900/40"
             >
               <div className="relative">
-                <div className="text-2xl grayscale">{item.icon}</div>
-                <Lock className="absolute -right-1 -bottom-1 h-3 w-3 rounded-full bg-gray-900 p-0.5 text-gray-400" />
+                <div className="text-3xl grayscale">{item.icon}</div>
+                <div className="absolute -right-1 -bottom-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-zinc-950 border border-white/10 text-zinc-400 p-0.5">
+                  <Lock className="h-2.5 w-2.5" />
+                </div>
               </div>
-              <p className="line-clamp-2 text-[11px] font-medium text-gray-300">{item.title}</p>
+              <p className="line-clamp-2 text-xs font-bold text-zinc-300 leading-snug">{item.title}</p>
             </motion.div>
           ))}
         </div>
@@ -236,21 +257,24 @@ function AchievementsTab() {
   );
 }
 
-// ─── Certificates Tab (locked for guests) ─────────────────────────────────────
+// ─── Certificates Tab (locked) ─────────────────────────────────────────────────
 
 function CertificatesTab({ attended }) {
   return (
-    <GlassCard className="border-violet-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-violet-950/20">
+    <GlassCard className="border-violet-500/20 bg-gradient-to-br from-zinc-950 via-zinc-900/60 to-violet-950/20 relative overflow-hidden p-6 shadow-xl">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-violet-500/5 blur-3xl" />
+      </div>
       <EmptyState
         icon={Award}
-        title="Certificates are a member benefit"
+        title="Certificates are a Member benefit"
         description={attended > 0
-          ? `You've attended ${attended} eligible event${attended !== 1 ? 's' : ''}. Apply for membership to claim and download your certificates.`
-          : 'Attend events and apply for membership to earn verified certificates.'}
+          ? `You have attended ${attended} verified event${attended !== 1 ? 's' : ''}. Upgrade to club membership to generate and claim your certificates.`
+          : 'Participate in club events and upgrade to full membership to earn official PDF credentials.'}
         accent="violet"
         action={
-          <ActionButton href="/account/guest/membership-application" tone="primary" icon={Lock}>
-            Apply for membership
+          <ActionButton href="/account/guest/membership-application" tone="violet" icon={Lock} className="px-4 py-2">
+            Apply for Membership
           </ActionButton>
         }
       />
@@ -258,7 +282,7 @@ function CertificatesTab({ attended }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 const FALLBACK_REGISTRATIONS = [
   {
@@ -351,7 +375,7 @@ export default function GuestParticipationClient({ registrations: rawRegistratio
   const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon, count: tabCounts[t.id] }));
 
   return (
-    <PageShell className="text-gray-300 selection:bg-violet-500/30">
+    <PageShell className="text-zinc-300 selection:bg-violet-500/30 space-y-6">
       <PageHeader
         icon={Activity}
         title="My Activity"
@@ -376,17 +400,22 @@ export default function GuestParticipationClient({ registrations: rawRegistratio
         </motion.div>
       </AnimatePresence>
 
-      <GlassCard className="border-emerald-500/20 bg-linear-to-br from-gray-900 via-gray-900 to-emerald-950/20">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-            <Sparkles className="h-5 w-5" />
+      <GlassCard className="border border-emerald-500/20 bg-gradient-to-br from-zinc-950 via-zinc-900/60 to-emerald-950/20 relative overflow-hidden shadow-xl p-5">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-500/5 blur-3xl" />
+        </div>
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 shadow-inner">
+            <Sparkles className="h-5 w-5 animate-pulse" />
           </div>
           <div className="flex-1">
-            <h3 className="text-[14px] font-semibold text-white">Unlock participation insights</h3>
-            <p className="mt-0.5 text-[12.5px] text-gray-400">Members see contest rankings, performance trends, leaderboard standings &amp; exportable reports.</p>
+            <h3 className="text-sm font-bold text-white">Unlock detailed participation analytics</h3>
+            <p className="mt-1 text-xs text-zinc-400 font-semibold leading-relaxed">
+              Full members unlock competitive stats, detailed performance metrics, cohort ranks, and global leaderboard integration.
+            </p>
           </div>
-          <ActionButton href="/account/guest/membership-application" tone="emerald" className="shrink-0">
-            Apply for membership
+          <ActionButton href="/account/guest/membership-application" tone="emerald" className="shrink-0 font-bold px-4 py-2">
+            Upgrade to Member
           </ActionButton>
         </div>
       </GlassCard>
