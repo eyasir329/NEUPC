@@ -116,7 +116,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Thumbnail upload error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to upload thumbnail' },
+      { error: 'Failed to upload thumbnail' },
       { status: 500 }
     );
   }

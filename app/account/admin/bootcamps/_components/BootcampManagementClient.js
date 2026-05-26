@@ -22,7 +22,7 @@ const PAGE_SIZE = 12;
 import BootcampCard from './BootcampCard';
 import BootcampFormModal from './BootcampFormModal';
 import BootcampTableRow from './BootcampTableRow';
-import { sortBootcamps, SORT_OPTIONS } from './bootcampConfig';
+import { sortBootcamps, SORT_OPTIONS } from '@/app/account/_components/bootcamps/bootcampConfig';
 import { deleteBootcamp, toggleBootcampFeatured } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { PageShell, PageHeader, StatCard, TabBar, EmptyState } from '../../_components/_ui';

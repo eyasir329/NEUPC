@@ -34,7 +34,7 @@ import {
 import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
 import ThumbnailUploader from '../../_components/ThumbnailUploader';
-import { getStatusConfig, BOOTCAMP_STATUSES } from '../../_components/bootcampConfig';
+import { getStatusConfig, BOOTCAMP_STATUSES } from '@/app/account/_components/bootcamps/bootcampConfig';
 import { updateBootcamp, uploadBootcampThumbnailAction, deleteBootcamp, getBootcampMentors, addBootcampMentor, removeBootcampMentor, searchMentorUsers, getBatchSummary, finishBatchAndStartNew } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { PageShell, PageHeader, TabBar, GlassCard, Pill } from '../../../_components/_ui';

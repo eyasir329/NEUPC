@@ -243,4 +243,7 @@ Sync button → fullSyncAction()
 - [Data Service](./data-service.md) — how the DB layer works
 - [Server Actions](./server-actions.md) — mutation patterns
 - [API Routes](./api-routes.md) — REST endpoint reference
+- [Bootcamps](./bootcamps.md) — bootcamp feature: data model, server actions, role panels, sync gaps
+- [Bootcamps — Panels](./bootcamps-panels.md) — per-role (admin/executive/advisor/mentor/member) functionality walkthrough
+- [Bootcamps — Security](./bootcamps-security.md) — auth helpers, role enforcement, audit notes
 - [Database Schema](../database/index.md) — table catalogue

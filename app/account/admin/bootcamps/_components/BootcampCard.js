@@ -19,7 +19,7 @@ import {
   formatDuration,
   formatPrice,
   formatRelativeDate,
-} from './bootcampConfig';
+} from '@/app/account/_components/bootcamps/bootcampConfig';
 
 export default function BootcampCard({
   bootcamp,

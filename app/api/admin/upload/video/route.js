@@ -32,7 +32,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/app/_lib/supabase';
+import { supabaseAdmin } from '@/app/_lib/supabase';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
 import {
   uploadVideo,
   isValidVideoType,
@@ -44,19 +45,6 @@ const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
 
 // In-memory store for chunked uploads (consider Redis for production)
 const uploadSessions = new Map();
-
-/**
- * Verify admin access
- */
-async function verifyAdmin(supabase, user) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  return profile && profile.role === 'admin';
-}
 
 /**
  * Handle direct upload (small files)
@@ -366,44 +354,25 @@ async function handleChunkComplete(request, supabase) {
 
 export async function POST(request) {
   try {
-    // Check authentication
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const authResult = await requireApiAuth(['admin', 'executive']);
+    if (isAuthError(authResult)) return authResult;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const isAdmin = await verifyAdmin(supabase, user);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    // Determine action type
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
     if (action === 'init') {
-      return await handleChunkInit(request, supabase);
+      return await handleChunkInit(request, supabaseAdmin);
     } else if (action === 'chunk') {
       return await handleChunkUpload(request);
     } else if (action === 'complete') {
-      return await handleChunkComplete(request, supabase);
+      return await handleChunkComplete(request, supabaseAdmin);
     } else {
-      // Default: direct upload
-      return await handleDirectUpload(request, supabase);
+      return await handleDirectUpload(request, supabaseAdmin);
     }
   } catch (error) {
     console.error('Video upload error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to upload video' },
+      { error: 'Failed to upload video' },
       { status: 500 }
     );
   }

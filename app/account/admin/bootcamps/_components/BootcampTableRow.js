@@ -12,7 +12,7 @@ import {
   BookOpen,
   ExternalLink,
 } from 'lucide-react';
-import { getStatusConfig, formatRelativeDate } from './bootcampConfig';
+import { getStatusConfig, formatRelativeDate } from '@/app/account/_components/bootcamps/bootcampConfig';
 
 export default function BootcampTableRow({
   bootcamp,

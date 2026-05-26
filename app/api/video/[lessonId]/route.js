@@ -20,6 +20,28 @@ import { supabaseAdmin } from '@/app/_lib/supabase';
 import { streamVideo } from '@/app/_lib/bootcamp-video';
 import { getYouTubeEmbedUrl, extractDriveFileId } from '@/app/_lib/utils';
 
+// Allowlist of hostnames the redirect responses may target.
+// YouTube stream URLs land on googlevideo.com; uploaded videos live on Drive
+// (served back through /api/image/...) or, in dev, on the local origin.
+const YOUTUBE_STREAM_HOSTS = ['googlevideo.com'];
+const UPLOAD_VIDEO_HOSTS = [
+  'drive.google.com',
+  'lh3.googleusercontent.com',
+  'storage.googleapis.com',
+];
+
+function isAllowedRedirectHost(url, allowedSuffixes) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    return allowedSuffixes.some(
+      (h) => u.hostname === h || u.hostname.endsWith(`.${h}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Collect every Drive fileId embedded in a lesson's content blocks.
  * Lessons can hold videos either in the legacy single video_id column
@@ -123,8 +145,13 @@ async function canAccessLesson(lessonId, userEmail) {
     lesson = data;
   }
 
-  // In local development, bypass enrollment and authentication checks to allow easy testing
-  if (process.env.NODE_ENV === 'development') {
+  // Local-dev bypass for easy testing. Guard with two checks so a misconfigured
+  // NODE_ENV in a real deploy can't silently disable enrollment enforcement.
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.VERCEL_ENV !== 'production' &&
+    process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production'
+  ) {
     return { allowed: true, lesson: lesson || {}, isAdmin: true };
   }
 
@@ -283,12 +310,12 @@ export async function GET(request, { params }) {
             { status: 400 }
           );
         }
-        
+
         const directUrl = await resolveYouTubeStreamUrl(videoId);
-        if (directUrl) {
+        if (directUrl && isAllowedRedirectHost(directUrl, YOUTUBE_STREAM_HOSTS)) {
           return NextResponse.redirect(directUrl);
         }
-        
+
         return NextResponse.json(
           { error: 'Failed to resolve direct YouTube stream URL' },
           { status: 400 }
@@ -301,6 +328,12 @@ export async function GET(request, { params }) {
           return NextResponse.json(
             { error: 'No video configured' },
             { status: 404 }
+          );
+        }
+        if (!isAllowedRedirectHost(lesson.video_url, UPLOAD_VIDEO_HOSTS)) {
+          return NextResponse.json(
+            { error: 'Invalid video URL' },
+            { status: 400 }
           );
         }
         return NextResponse.redirect(lesson.video_url);

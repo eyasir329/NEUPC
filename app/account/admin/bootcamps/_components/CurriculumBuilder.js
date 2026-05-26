@@ -60,7 +60,7 @@ import {
   getVideoSourceConfig,
   validateLesson as validateLessonData,
   formatDurationSeconds,
-} from './bootcampConfig';
+} from '@/app/account/_components/bootcamps/bootcampConfig';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import MultiBlockEditor from './MultiBlockEditor';
