@@ -15,6 +15,7 @@ import {
   getPublishedEvents,
   getUserEventRegistrations,
   getActiveNotices,
+  getJoinRequestByEmail,
 } from '@/app/_lib/data-service';
 import AccountLoading from '../_components/AccountLoading';
 
@@ -28,10 +29,11 @@ export const metadata = { title: 'Dashboard | Guest | NEUPC' };
 export default async function GuestDashboardPage() {
   const { user } = await requireRole('guest', { checkIsActive: false });
 
-  const [events, registrations, allNotices] = await Promise.all([
+  const [events, registrations, allNotices, joinRequests] = await Promise.all([
     getPublishedEvents().catch(() => []),
     getUserEventRegistrations(user.id).catch(() => []),
     getActiveNotices().catch(() => []),
+    getJoinRequestByEmail(user.email).catch(() => []),
   ]);
 
   const notices = allNotices.filter((n) => {
@@ -39,12 +41,15 @@ export default async function GuestDashboardPage() {
     return n.target_audience.includes('all') || n.target_audience.includes('guest');
   });
 
+  const latestApplication = joinRequests?.[0] ?? null;
+
   return (
     <GuestDashboardClient
       user={user}
       events={events}
       registrations={registrations}
       notices={notices}
+      latestApplication={latestApplication}
     />
   );
 }

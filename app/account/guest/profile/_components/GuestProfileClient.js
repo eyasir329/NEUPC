@@ -59,42 +59,48 @@ function DeleteModal({ onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-md rounded-2xl border border-rose-500/20 bg-gray-900 p-6"
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        className="w-full max-w-md rounded-2xl border border-rose-500/20 bg-zinc-950 p-6 shadow-2xl relative"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="absolute right-4 top-4">
+          <button onClick={onClose} className="p-1 rounded-lg text-zinc-500 hover:text-white transition-colors">
+            <X className="h-4.5 w-4.5" />
+          </button>
+        </div>
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400">
-            <AlertTriangle className="h-4.5 w-4.5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/25 bg-rose-500/10 text-rose-400">
+            <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-[15px] font-semibold text-white">Delete account</h3>
-            <p className="text-[12px] text-gray-500">This action is irreversible.</p>
+            <h3 className="text-base font-extrabold text-white">Delete Account</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Irreversible Action</p>
           </div>
         </div>
-        <p className="mb-4 text-[13px] leading-relaxed text-gray-300">
-          Deleting your account permanently removes your data, registrations, and any pending applications. Type{' '}
-          <span className="font-mono text-rose-400">DELETE</span> to confirm.
+        <p className="mb-4 text-xs leading-relaxed text-zinc-400 font-semibold">
+          Deleting your account permanently removes your registration history, active logs, and membership queue requests. Type{' '}
+          <span className="font-bold text-rose-400 font-mono">DELETE</span> below to confirm.
         </p>
         <input
           value={confirmed}
           onChange={(e) => setConfirmed(e.target.value)}
           placeholder="Type DELETE to confirm"
-          className="mb-3 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-rose-500/30"
+          className="mb-4 w-full rounded-xl border border-white/10 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 outline-none focus:border-rose-500/40 focus:bg-zinc-900 shadow-inner transition-all duration-200"
         />
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             disabled={confirmed !== 'DELETE'}
-            className="flex-1 rounded-lg border border-rose-500/30 bg-rose-500/10 py-2 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-40"
+            className="flex-1 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-bold uppercase tracking-wider text-rose-300 transition-all hover:bg-rose-500/25 disabled:opacity-30 disabled:cursor-not-allowed shadow-md"
           >
-            Delete account
+            Confirm Delete
           </button>
-          <button onClick={onClose} className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.02] py-2 text-sm font-semibold text-gray-300 transition hover:bg-white/[0.06]">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-white/10 bg-zinc-900 py-2.5 text-xs font-bold uppercase tracking-wider text-zinc-400 transition-all hover:bg-zinc-800 shadow-md">
             Cancel
           </button>
         </div>
@@ -119,29 +125,31 @@ function EditInfoForm({ user, onCancel, onSaved }) {
     });
   }
 
+  const inputCls = "w-full rounded-xl border border-white/10 bg-zinc-950/45 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 outline-none transition focus:border-blue-500/50 focus:bg-zinc-950/70 focus:shadow-[0_0_8px_rgba(59,130,246,0.15)] shadow-inner";
+
   return (
-    <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
       <div>
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Full name *</label>
-        <input className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-white/[0.16]" name="full_name" defaultValue={user.full_name ?? ''} required />
+        <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-zinc-500">Full Name *</label>
+        <input className={inputCls} name="full_name" defaultValue={user.full_name ?? ''} required />
       </div>
       <div>
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-gray-500">Phone</label>
-        <input className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-white/[0.16]" name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1xxx xxxxxx" />
+        <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-zinc-500">Phone</label>
+        <input className={inputCls} name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1xxx xxxxxx" />
       </div>
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-300 sm:col-span-2">
-          <XCircle className="h-3.5 w-3.5 shrink-0" /> {error}
+        <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2.5 text-xs font-bold text-rose-300 sm:col-span-2">
+          <XCircle className="h-4 w-4 shrink-0" /> {error}
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300 sm:col-span-2">
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Profile updated.
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-xs font-bold text-emerald-300 sm:col-span-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> Profile updated successfully.
         </div>
       )}
-      <div className="flex gap-2 sm:col-span-2">
-        <ActionButton tone="primary" icon={Save}>{isPending ? 'Saving…' : 'Save changes'}</ActionButton>
-        <ActionButton tone="ghost" icon={X} onClick={onCancel}>Cancel</ActionButton>
+      <div className="flex gap-2 sm:col-span-2 mt-2">
+        <ActionButton type="submit" tone="primary" icon={isPending ? Loader2 : Save} className="px-4 py-2">{isPending ? 'Saving…' : 'Save Changes'}</ActionButton>
+        <ActionButton tone="ghost" icon={X} onClick={onCancel} className="px-4 py-2">Cancel</ActionButton>
       </div>
     </form>
   );
@@ -177,34 +185,34 @@ function AvatarUploader({ user, name }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3">
       <div className="relative">
         {isImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.avatar_url} alt={user.full_name ?? 'Avatar'} className="h-20 w-20 rounded-2xl border border-white/10 object-cover" />
+          <img src={user.avatar_url} alt={user.full_name ?? 'Avatar'} className="h-20 w-20 rounded-2xl border border-white/10 object-cover shadow-lg" />
         ) : (
           <Avatar name={name} size="xl" />
         )}
       </div>
-      <div className="flex items-center gap-1.5">
-        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs font-semibold text-gray-300 transition hover:bg-white/[0.06]">
+      <div className="flex items-center gap-2">
+        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/5 bg-zinc-950/40 px-3 py-2 text-xs font-bold text-zinc-300 transition-all hover:bg-zinc-900/60 hover:border-white/10 shadow-sm active:scale-95">
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} Upload
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" disabled={uploading} onChange={handleFileChange} />
         </label>
         {isImage && (
-          <ActionButton tone="danger" icon={Trash2} onClick={handleRemove} disabled={uploading}>Remove</ActionButton>
+          <ActionButton tone="danger" icon={Trash2} onClick={handleRemove} disabled={uploading} className="px-3 py-2">Remove</ActionButton>
         )}
       </div>
-      {error && <p className="text-[10.5px] text-rose-400">{error}</p>}
+      {error && <p className="text-[10px] font-bold text-rose-400">{error}</p>}
     </div>
   );
 }
 
 function InfoRow({ label, value, badge }) {
   return (
-    <div>
-      <p className="mb-1 font-mono text-[10.5px] uppercase tracking-wider text-gray-600">{label}</p>
-      <div className="flex items-center gap-2 text-[13.5px] text-gray-200">
+    <div className="border-b border-white/5 py-3 last:border-b-0">
+      <p className="mb-1 font-mono text-[9px] font-black uppercase tracking-wider text-zinc-500">{label}</p>
+      <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
         {value}
         {badge}
       </div>
@@ -221,48 +229,50 @@ export default function GuestProfileClient({ user, stats }) {
   const verified = user.email_verified || user.is_email_verified;
 
   return (
-    <PageShell>
+    <PageShell className="text-zinc-300 selection:bg-blue-500/30 space-y-6">
       <AnimatePresence>{showDelete && <DeleteModal onClose={() => setShowDelete(false)} />}</AnimatePresence>
 
       <PageHeader
         icon={User}
-        title="My profile"
-        subtitle="Manage your account information and visibility."
+        title="My Profile"
+        subtitle="Manage your guest account details and verify academic fields."
         accent="blue"
         actions={
           !editing && (
-            <ActionButton tone="ghost" icon={Pencil} onClick={() => setEditing(true)}>Edit profile</ActionButton>
+            <ActionButton tone="ghost" icon={Pencil} className="px-4 py-2" onClick={() => setEditing(true)}>Edit Profile</ActionButton>
           )
         }
       />
 
       {/* Hero card */}
-      <GlassCard className="relative overflow-hidden">
+      <GlassCard className="relative overflow-hidden border border-white/10 bg-zinc-900/50 backdrop-blur-xl shadow-xl p-6">
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-blue-500/5 blur-3xl" />
         </div>
-        <div className="relative flex flex-wrap items-center gap-5">
+        <div className="relative flex flex-wrap items-center gap-6">
           <AvatarUploader user={user} name={name} />
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight text-white">{user.full_name || 'Guest user'}</h2>
-              <Pill tone="emerald"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" /> {user.account_status ?? 'active'}</Pill>
-              <Pill tone="violet">Guest account</Pill>
+          
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-xl font-extrabold tracking-tight text-white">{user.full_name || 'Guest User'}</h2>
+              <Pill tone="emerald" className="text-[10px] font-bold uppercase tracking-wider"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" /> {user.account_status ?? 'active'}</Pill>
+              <Pill tone="violet" className="text-[10px] font-bold uppercase tracking-wider">Guest Account</Pill>
             </div>
-            <p className="font-mono text-[12.5px] text-gray-500">{user.email} · Joined {formatDate(user.created_at)}</p>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="text-[11.5px] text-gray-500">Profile completeness</span>
+            <p className="font-mono text-xs text-zinc-500 font-bold leading-normal">{user.email} · Joined {formatDate(user.created_at)}</p>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <span className="text-xs font-bold text-zinc-500">Profile Completeness</span>
               <div className="w-32 flex-1 max-w-[200px]">
-                <GradientBar value={completion} max={100} tone="blue" height="h-1.5" />
+                <GradientBar value={completion} max={100} tone="blue" height="h-2" />
               </div>
-              <span className="font-mono text-[12px] font-bold text-white">{completion}%</span>
+              <span className="font-mono text-xs font-black text-white">{completion}%</span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="mb-1 font-mono text-[11px] uppercase tracking-wider text-gray-600">Last active</p>
-            <p className="text-[12.5px] font-medium text-gray-200">{formatDateTime(user.last_login)}</p>
+          <div className="text-left sm:text-right shrink-0">
+            <p className="mb-0.5 font-mono text-[9px] font-black uppercase tracking-wider text-zinc-500">Last Active</p>
+            <p className="text-xs font-extrabold text-zinc-200">{formatDateTime(user.last_login)}</p>
           </div>
         </div>
+        
         <AnimatePresence>
           {editing && (
             <motion.div
@@ -271,7 +281,7 @@ export default function GuestProfileClient({ user, stats }) {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="mt-5 border-t border-white/[0.06] pt-5">
+              <div className="mt-6 border-t border-white/5 pt-6">
                 <EditInfoForm user={user} onCancel={() => setEditing(false)} onSaved={() => setEditing(false)} />
               </div>
             </motion.div>
@@ -279,7 +289,7 @@ export default function GuestProfileClient({ user, stats }) {
         </AnimatePresence>
       </GlassCard>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={Calendar} label="Registered" value={stats.eventsRegistered} accent="blue" delay={0} />
         <StatCard icon={CheckCircle2} label="Attended" value={stats.eventsAttended} accent="emerald" delay={0.05} />
@@ -287,61 +297,63 @@ export default function GuestProfileClient({ user, stats }) {
         <StatCard icon={Bell} label="Notifications" value={stats.notices} accent="amber" delay={0.15} />
       </div>
 
-      {/* Info cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <GlassCard>
+      {/* Details layout Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <GlassCard className="border border-white/10 bg-zinc-900/50 backdrop-blur-xl p-5">
           <SectionHeader
             icon={User}
-            title="Personal information"
+            title="Personal Details"
             accent="blue"
             action={
               !editing && (
-                <ActionButton tone="ghost" icon={Pencil} onClick={() => setEditing(true)}>Edit</ActionButton>
+                <ActionButton tone="ghost" icon={Pencil} className="px-3 py-1.5" onClick={() => setEditing(true)}>Edit</ActionButton>
               )
             }
           />
-          <div className="grid gap-4">
-            <InfoRow label="Full name" value={user.full_name || '—'} />
+          <div className="flex flex-col mt-2">
+            <InfoRow label="Full Name" value={user.full_name || '—'} />
             <InfoRow
-              label="Email"
+              label="Email Address"
               value={user.email}
               badge={
                 verified
-                  ? <Pill tone="emerald">verified</Pill>
-                  : <Pill tone="gray">unverified</Pill>
+                  ? <Pill tone="emerald" className="text-[9px] font-black uppercase tracking-wider">verified</Pill>
+                  : <Pill tone="rose" className="text-[9px] font-black uppercase tracking-wider">unverified</Pill>
               }
             />
-            <InfoRow label="Phone" value={user.phone || '—'} />
-            <InfoRow label="Account role" value="Guest" badge={<Pill tone="amber">Upgrade available</Pill>} />
+            <InfoRow label="Mobile Phone" value={user.phone || '—'} />
+            <InfoRow label="Account Access" value="Guest Level" badge={<Pill tone="amber" className="text-[9px] font-black uppercase tracking-wider">Upgrade Available</Pill>} />
           </div>
         </GlassCard>
 
-        <GlassCard>
-          <SectionHeader icon={Shield} title="Security" accent="violet" />
-          <div className="grid gap-4">
+        <GlassCard className="border border-white/10 bg-zinc-900/50 backdrop-blur-xl p-5">
+          <SectionHeader icon={Shield} title="Security & Logs" accent="violet" />
+          <div className="flex flex-col mt-2">
             <InfoRow
-              label="Sign-in method"
+              label="Sign-in provider"
               value={
-                <span className="flex items-center gap-2">
-                  <Github className="h-3.5 w-3.5" /> Google OAuth · Managed externally
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Github className="h-4 w-4 text-zinc-400" /> Managed Google OAuth
                 </span>
               }
             />
-            <InfoRow label="Last login" value={formatDateTime(user.last_login)} />
-            <div>
-              <p className="mb-1 font-mono text-[10.5px] uppercase tracking-wider text-gray-600">2FA</p>
-              <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[12.5px] text-gray-500">
-                <Lock className="h-3.5 w-3.5 shrink-0 text-gray-600" />
-                <span className="flex-1">Two-factor authentication</span>
-                <Pill tone="gray">Members only</Pill>
+            <InfoRow label="Last recorded Session" value={formatDateTime(user.last_login)} />
+            
+            <div className="py-3">
+              <p className="mb-2 font-mono text-[9px] font-black uppercase tracking-wider text-zinc-500">MFA Status</p>
+              <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-zinc-950/40 px-3 py-2 text-xs font-bold text-zinc-500 shadow-inner">
+                <Lock className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
+                <span className="flex-1">Multi-factor Authentication</span>
+                <Pill tone="gray" className="text-[9px] font-black uppercase tracking-wider">Members only</Pill>
               </div>
             </div>
+            
             {user.suspension_expires_at && new Date(user.suspension_expires_at) > new Date() && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2.5">
-                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-                <div className="text-[12.5px]">
-                  <p className="font-semibold text-amber-300">Account suspended</p>
-                  <p className="text-amber-400/70">Expires: {formatDateTime(user.suspension_expires_at)}</p>
+              <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 shadow-md">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-400 animate-pulse" />
+                <div className="text-xs font-bold leading-normal">
+                  <p className="text-amber-300">Account under suspension</p>
+                  <p className="text-amber-400/60 mt-0.5">Expires: {formatDateTime(user.suspension_expires_at)}</p>
                 </div>
               </div>
             )}
@@ -349,53 +361,60 @@ export default function GuestProfileClient({ user, stats }) {
         </GlassCard>
       </div>
 
-      {/* Upgrade banner */}
-      <GlassCard className="border-indigo-500/20 bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30">
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
-            <Sparkles className="h-5 w-5" />
+      {/* Premium members banner */}
+      <GlassCard className="border border-indigo-500/20 bg-gradient-to-br from-zinc-950 via-zinc-900/60 to-indigo-950/20 relative overflow-hidden shadow-xl p-6">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-indigo-500/5 blur-3xl animate-pulse" />
+        </div>
+        <div className="relative flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 shadow-inner">
+            <Sparkles className="h-5.5 w-5.5 animate-pulse" />
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <h3 className="text-[14px] font-semibold text-white">Upgrade to full membership</h3>
-            <p className="mt-0.5 text-[12px] text-gray-400">Unlock the complete NEUPC experience.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="flex-1 min-w-[200px] space-y-1">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Upgrade to Club Membership</h3>
+            <p className="text-xs text-zinc-400 font-semibold leading-relaxed">
+              Applying for full membership allows you to enjoy verified credentials and contest ranking logs.
+            </p>
+            <div className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2">
               {[
-                'Contest participation & rankings',
-                'Performance analytics dashboard',
-                'Members-only resources & editorials',
-                'Achievement badges & certificates',
-                'Advanced notification system',
-                'Mentor access & guidance',
+                'Contest leaderboard standings',
+                'Performance analytics graphs',
+                'Advanced resources & library guides',
+                'Verified achievement credentials',
+                'Premium Telegram log warnings',
+                '1-on-1 CP mentor guides',
               ].map((t) => (
-                <div key={t} className="flex items-center gap-2 text-[12.5px] text-gray-300">
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-indigo-400" /> {t}
+                <div key={t} className="flex items-center gap-2 text-xs text-zinc-300 font-semibold">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-400" /> {t}
                 </div>
               ))}
             </div>
           </div>
-          <ActionButton href="/account/guest/membership-application" tone="indigo" className="shrink-0">Apply now →</ActionButton>
+          <ActionButton href="/account/guest/membership-application" tone="indigo" className="shrink-0 font-bold px-4 py-2.5">
+            Apply Now
+          </ActionButton>
         </div>
       </GlassCard>
 
-      {/* Danger zone */}
-      <GlassCard className="border-rose-500/10">
-        <SectionHeader icon={LogOut} title="Danger zone" accent="rose" />
-        <div className="grid gap-3">
-          <div className="flex items-center justify-between gap-4">
+      {/* Danger Zone */}
+      <GlassCard className="border border-rose-500/10 bg-zinc-950/25 p-5">
+        <SectionHeader icon={LogOut} title="Danger Zone" accent="rose" />
+        <div className="flex flex-col gap-4 mt-2 divide-y divide-white/5">
+          <div className="flex items-center justify-between gap-4 pt-1">
             <div>
-              <p className="text-[13px] font-medium text-gray-200">Sign out</p>
-              <p className="text-[11.5px] text-gray-500">End your current session.</p>
+              <p className="text-xs font-bold text-zinc-200">Sign Out</p>
+              <p className="text-[11px] text-zinc-500 font-semibold leading-normal mt-0.5">Logout from this browser session.</p>
             </div>
             <form action={signOutAction}>
-              <ActionButton tone="ghost" icon={LogOut}>Sign out</ActionButton>
+              <ActionButton type="submit" tone="ghost" icon={LogOut} className="px-4 py-2">Sign Out</ActionButton>
             </form>
           </div>
-          <div className="flex items-center justify-between gap-4 border-t border-white/[0.06] pt-3">
+          <div className="flex items-center justify-between gap-4 pt-4">
             <div>
-              <p className="text-[13px] font-medium text-gray-200">Delete account</p>
-              <p className="text-[11.5px] text-gray-500">Permanently remove your account and all associated data.</p>
+              <p className="text-xs font-bold text-zinc-200">Delete Account</p>
+              <p className="text-[11px] text-zinc-500 font-semibold leading-normal mt-0.5">Permanently remove your account and credentials from NEUPC.</p>
             </div>
-            <ActionButton tone="danger" icon={X} onClick={() => setShowDelete(true)}>Delete</ActionButton>
+            <ActionButton tone="danger" icon={X} className="px-4 py-2" onClick={() => setShowDelete(true)}>Delete</ActionButton>
           </div>
         </div>
       </GlassCard>

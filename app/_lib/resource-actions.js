@@ -57,7 +57,6 @@ function revalidateResources() {
   revalidateTag('resources');
   revalidatePath('/account/admin/resources');
   revalidatePath('/account/member/resources');
-  revalidatePath('/account/guest/resources');
 }
 
 function shouldPublishNow(status, scheduledFor) {

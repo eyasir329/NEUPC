@@ -66,13 +66,15 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
         href={item.href}
         onClick={onClick}
         className={cn(
-          'group/nav relative flex items-center rounded-lg transition-all duration-150 outline-none',
+          'group/nav relative flex items-center rounded-lg transition-all duration-150 outline-none border border-transparent',
           'focus-visible:ring-2 focus-visible:ring-white/20',
           collapsed
             ? 'h-9 w-9 justify-center'
             : 'h-11 gap-3 px-3 md:h-9',
           isActive
             ? cn('font-semibold shadow-sm', theme.active)
+            : item.accent
+            ? 'bg-gradient-to-r from-indigo-500/10 to-violet-500/10 text-indigo-400 hover:from-indigo-500/15 hover:to-violet-500/15 hover:text-indigo-300 font-bold border-indigo-500/20 shadow-[0_0_12px_rgba(99,102,241,0.08)]'
             : 'text-gray-500 hover:bg-white/[0.04] hover:text-gray-200 active:bg-white/[0.07]'
         )}
       >
@@ -86,9 +88,13 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
         )}
         <Icon
           className={cn(
-            'shrink-0 transition-colors duration-150',
+            'shrink-0 transition-all duration-150',
             collapsed ? 'h-[18px] w-[18px]' : 'h-[16px] w-[16px]',
-            isActive ? '' : 'opacity-60 group-hover/nav:opacity-100'
+            isActive
+              ? ''
+              : item.accent
+              ? 'text-indigo-400 opacity-90 group-hover/nav:opacity-100 group-hover/nav:text-indigo-300'
+              : 'opacity-60 group-hover/nav:opacity-100'
           )}
         />
         {!collapsed && (
