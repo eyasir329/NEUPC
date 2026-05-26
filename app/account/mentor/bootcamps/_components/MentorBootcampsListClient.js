@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GraduationCap, Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
@@ -83,14 +84,62 @@ function BootcampCard({ bootcamp, index }) {
 }
 
 export default function MentorBootcampsListClient({ bootcamps }) {
+  const [activeTab, setActiveTab] = useState('active');
+
+  const activeBootcamps = bootcamps.filter(bc => bc.status === 'published');
+  const archivedBootcamps = bootcamps.filter(bc => bc.status !== 'published');
+
+  const visibleBootcamps = activeTab === 'active' ? activeBootcamps : archivedBootcamps;
+
   return (
     <PageShell>
       <PageHeader
         icon={GraduationCap}
         title="My Bootcamps"
-        subtitle={bootcamps.length > 0 ? `${bootcamps.length} bootcamp${bootcamps.length === 1 ? '' : 's'} assigned to you` : undefined}
+        subtitle={bootcamps.length > 0 ? `${activeBootcamps.length} active, ${archivedBootcamps.length} archived/inactive` : undefined}
         accent="violet"
       />
+
+      {bootcamps.length > 0 && (
+        <div className="mb-6 flex gap-2 border-b border-white/5 pb-px">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`relative pb-3 text-sm font-semibold transition-all px-2 flex items-center ${
+              activeTab === 'active' ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-300'
+            }`}
+          >
+            Active Cohorts
+            <span className="ml-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+              {activeBootcamps.length}
+            </span>
+            {activeTab === 'active' && (
+              <motion.div
+                layoutId="list-active-tab-bar"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('archived')}
+            className={`relative pb-3 text-sm font-semibold transition-all px-2 flex items-center ${
+              activeTab === 'archived' ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-300'
+            }`}
+          >
+            Archived & Inactive
+            <span className="ml-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+              {archivedBootcamps.length}
+            </span>
+            {activeTab === 'archived' && (
+              <motion.div
+                layoutId="list-active-tab-bar"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+          </button>
+        </div>
+      )}
 
       {bootcamps.length === 0 ? (
         <EmptyState
@@ -99,9 +148,16 @@ export default function MentorBootcampsListClient({ bootcamps }) {
           description="You haven't been assigned to any bootcamps yet. Contact an admin to get assigned."
           accent="violet"
         />
+      ) : visibleBootcamps.length === 0 ? (
+        <EmptyState
+          icon={GraduationCap}
+          title={activeTab === 'active' ? "No active bootcamps" : "No archived bootcamps"}
+          description={activeTab === 'active' ? "You don't have any active bootcamps right now." : "You don't have any archived or inactive bootcamps."}
+          accent="violet"
+        />
       ) : (
         <div className="space-y-3">
-          {bootcamps.map((bc, i) => (
+          {visibleBootcamps.map((bc, i) => (
             <BootcampCard key={bc.id} bootcamp={bc} index={i} />
           ))}
         </div>

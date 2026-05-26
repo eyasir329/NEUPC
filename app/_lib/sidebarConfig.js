@@ -274,6 +274,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/executive/blogs/manage',
           },
           {
+            id: 'bootcamps',
+            label: 'Bootcamps',
+            icon: GraduationCap,
+            href: '/account/executive/bootcamps',
+          },
+          {
             id: 'gallery',
             label: 'Gallery',
             icon: Image,
@@ -636,6 +642,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Analytics',
             icon: TrendingUp,
             href: '/account/advisor/analytics',
+          },
+          {
+            id: 'bootcamps',
+            label: 'Bootcamps',
+            icon: GraduationCap,
+            href: '/account/advisor/bootcamps',
           },
           {
             id: 'achievements',

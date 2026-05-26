@@ -233,7 +233,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   const [taskFormDifficulty, setTaskFormDifficulty] = useState('medium');
   const [taskFormPoints, setTaskFormPoints] = useState(10);
   const [taskFormDueDate, setTaskFormDueDate] = useState('');
-  const [taskFormBootcamp, setTaskFormBootcamp] = useState(bootcamps[0]?.id ?? '');
+  const activeBootcamps = useMemo(() => bootcamps.filter(bc => bc.status === 'published'), [bootcamps]);
+  const [taskFormBootcamp, setTaskFormBootcamp] = useState(() => {
+    const active = bootcamps.filter(bc => bc.status === 'published');
+    return active[0]?.id ?? '';
+  });
 
   const [editingTask, setEditingTask] = useState(null);
 
@@ -593,7 +597,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   >
                     <option value="all">All Bootcamps</option>
                     {bootcamps.map(b => (
-                      <option key={b.id} value={b.id}>{b.title.split(':')[0]}</option>
+                      <option key={b.id} value={b.id}>
+                        {b.title.split(':')[0]} {b.status !== 'published' ? '(Archived)' : ''}
+                      </option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-gray-500">
@@ -1012,7 +1018,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       >
                         <option value="all">All Assigned Bootcamps</option>
                         {bootcamps.map(b => (
-                          <option key={b.id} value={b.id}>{b.title}</option>
+                          <option key={b.id} value={b.id}>
+                            {b.title} {b.status !== 'published' ? '(Archived)' : ''}
+                          </option>
                         ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-gray-500">
@@ -1464,8 +1472,8 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                     {!editingTask && (
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Target Bootcamp Track</label>
-                        {bootcamps.length === 0 ? (
-                          <p className="text-xs text-amber-400">No bootcamps assigned to you yet.</p>
+                        {activeBootcamps.length === 0 ? (
+                          <p className="text-xs text-amber-400">No active bootcamps assigned to you yet.</p>
                         ) : (
                           <div className="relative">
                             <select
@@ -1474,7 +1482,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                               onChange={(e) => setTaskFormBootcamp(e.target.value)}
                               className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300 cursor-pointer"
                             >
-                              {bootcamps.map(b => (
+                              {activeBootcamps.map(b => (
                                 <option key={b.id} value={b.id}>{b.title}</option>
                               ))}
                             </select>

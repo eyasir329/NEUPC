@@ -134,7 +134,7 @@ const VIDEO_ICONS = {
 
 // ─── Lesson editor (right panel) ───────────────────────────────────────────────
 
-function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFullscreen, setIsFullscreen, lessonSaveRef }) {
+function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFullscreen, setIsFullscreen, lessonSaveRef, readOnly = false }) {
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [driveValidation, setDriveValidation] = useState(null);
@@ -299,6 +299,15 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
 
   return (
     <div className="xl:col-span-8 min-w-0 flex flex-col gap-6">
+      {readOnly && (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold">⚠️</span>
+          <div className="flex-1">
+            <p className="font-semibold text-xs uppercase tracking-wider text-amber-400">Read-Only Mode</p>
+            <p className="text-xs text-amber-200/80 mt-0.5">This lesson belongs to an archived bootcamp and cannot be modified.</p>
+          </div>
+        </div>
+      )}
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[#d4e4fa]">
@@ -326,6 +335,7 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
               name="title"
               value={form.title}
               onChange={handleChange}
+              disabled={readOnly}
               className={`w-full text-2xl font-bold text-[#d4e4fa] bg-transparent border-0 border-b-2 focus:ring-0 px-0 py-1 outline-none transition-colors ${
                 errors.title ? 'border-red-500' : 'border-[#464554] focus:border-[#c0c1ff]'
               }`}
@@ -982,22 +992,34 @@ function LessonEditor({ lesson, lessonSerial, onSaved, onClose, syllabusUI, isFu
           <Maximize2 className="h-4 w-4" />
           Fullscreen Editor
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-6 py-2 rounded-full border border-[#464554] text-[#d4e4fa] text-sm font-semibold hover:bg-[#0d1c2d] transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="px-6 py-2 rounded-full bg-[#8083ff] text-white text-sm font-semibold hover:bg-[#c0c1ff] hover:text-[#1000a9] transition-colors flex items-center gap-2 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save Changes
-        </button>
+        {readOnly ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2 rounded-full bg-zinc-800 text-[#d4e4fa] text-sm font-semibold hover:bg-zinc-700 transition-colors"
+          >
+            Close
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 rounded-full border border-[#464554] text-[#d4e4fa] text-sm font-semibold hover:bg-[#0d1c2d] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 rounded-full bg-[#8083ff] text-white text-sm font-semibold hover:bg-[#c0c1ff] hover:text-[#1000a9] transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Changes
+            </button>
+          </>
+        )}
       </div>
 
       {isFullscreen && (
@@ -1275,6 +1297,7 @@ function ModuleRow({
   draggedItem,
   courseId,
   courseLocked,
+  readOnly = false,
 }) {
   const [expanded, setExpanded] = useState(true);
   const [renaming, setRenaming] = useState(false);
@@ -1288,10 +1311,10 @@ function ModuleRow({
 
   return (
     <div
-      draggable
-      onDragStart={(e) => { e.stopPropagation(); onDragStart('module', module.id, courseId); }}
+      draggable={!readOnly}
+      onDragStart={(e) => { e.stopPropagation(); !readOnly && onDragStart('module', module.id, courseId); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      onDrop={(e) => { e.stopPropagation(); onDrop('module', module.id, courseId); }}
+      onDrop={(e) => { e.stopPropagation(); !readOnly && onDrop('module', module.id, courseId); }}
       className={`border border-[#464554] rounded-lg bg-[#051424] ${isDragged ? 'opacity-50' : ''}`}
     >
       {/* Module header */}
@@ -1330,7 +1353,7 @@ function ModuleRow({
         )}
 
         {/* Lock toggle — only when course is not locked */}
-        {!courseLocked && (
+        {!readOnly && !courseLocked && (
           <button
             onClick={async () => {
               setTogglingLock(true);
@@ -1346,33 +1369,35 @@ function ModuleRow({
         )}
 
         {/* Menu */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="opacity-0 group-hover/mod:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-6 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-36">
-                <button
-                  onClick={() => { setRenaming(true); setMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
-                >
-                  Rename
-                </button>
-                <button
-                  onClick={() => { onDeleteModule(module.id); setMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  Delete Module
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {!readOnly && (
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="opacity-0 group-hover/mod:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-6 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-36">
+                  <button
+                    onClick={() => { setRenaming(true); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => { onDeleteModule(module.id); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    Delete Module
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Lessons */}
@@ -1395,51 +1420,54 @@ function ModuleRow({
                 draggedItem={draggedItem}
                 moduleId={module.id}
                 moduleLocked={effectiveModuleLocked}
+                readOnly={readOnly}
               />
             );
           })}
 
           {/* Add actions */}
-          <div className="px-3 py-2 pl-10 flex flex-wrap items-center gap-3">
-            <button
-              onClick={async () => {
-                setAddingLesson(true);
-                await onAddLesson(module.id, 'lesson');
-                setAddingLesson(false);
-              }}
-              disabled={addingLesson}
-              className="text-xs text-[#908fa0] hover:text-[#c0c1ff] flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
-            >
-              {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Add Lesson
-            </button>
-            <span className="text-[#464554] text-xs font-light">|</span>
-            <button
-              onClick={async () => {
-                setAddingLesson(true);
-                await onAddLesson(module.id, 'practice');
-                setAddingLesson(false);
-              }}
-              disabled={addingLesson}
-              className="text-xs text-[#908fa0] hover:text-teal-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
-            >
-              {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-teal-500" />}
-              Add Practice
-            </button>
-            <span className="text-[#464554] text-xs font-light">|</span>
-            <button
-              onClick={async () => {
-                setAddingLesson(true);
-                await onAddLesson(module.id, 'exam');
-                setAddingLesson(false);
-              }}
-              disabled={addingLesson}
-              className="text-xs text-[#908fa0] hover:text-violet-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
-            >
-              {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-violet-500" />}
-              Add Exam
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="px-3 py-2 pl-10 flex flex-wrap items-center gap-3">
+              <button
+                onClick={async () => {
+                  setAddingLesson(true);
+                  await onAddLesson(module.id, 'lesson');
+                  setAddingLesson(false);
+                }}
+                disabled={addingLesson}
+                className="text-xs text-[#908fa0] hover:text-[#c0c1ff] flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
+              >
+                {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Add Lesson
+              </button>
+              <span className="text-[#464554] text-xs font-light">|</span>
+              <button
+                onClick={async () => {
+                  setAddingLesson(true);
+                  await onAddLesson(module.id, 'practice');
+                  setAddingLesson(false);
+                }}
+                disabled={addingLesson}
+                className="text-xs text-[#908fa0] hover:text-teal-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
+              >
+                {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-teal-500" />}
+                Add Practice
+              </button>
+              <span className="text-[#464554] text-xs font-light">|</span>
+              <button
+                onClick={async () => {
+                  setAddingLesson(true);
+                  await onAddLesson(module.id, 'exam');
+                  setAddingLesson(false);
+                }}
+                disabled={addingLesson}
+                className="text-xs text-[#908fa0] hover:text-violet-400 flex items-center gap-1 transition-colors font-medium disabled:opacity-50"
+              >
+                {addingLesson ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-violet-500" />}
+                Add Exam
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1448,7 +1476,7 @@ function ModuleRow({
 
 // ─── Lesson row ────────────────────────────────────────────────────────────────
 
-function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onToggleLock, onDragStart, onDrop, draggedItem, moduleId, moduleLocked }) {
+function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onToggleLock, onDragStart, onDrop, draggedItem, moduleId, moduleLocked, readOnly = false }) {
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
@@ -1459,10 +1487,10 @@ function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onTo
 
   return (
     <div
-      draggable
-      onDragStart={(e) => { e.stopPropagation(); onDragStart('lesson', lesson.id, moduleId); }}
+      draggable={!readOnly}
+      onDragStart={(e) => { e.stopPropagation(); !readOnly && onDragStart('lesson', lesson.id, moduleId); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      onDrop={(e) => { e.stopPropagation(); onDrop('lesson', lesson.id, moduleId); }}
+      onDrop={(e) => { e.stopPropagation(); !readOnly && onDrop('lesson', lesson.id, moduleId); }}
       className={`px-3 py-2 flex items-center gap-2 pl-8 cursor-pointer group/lesson border-l-4 transition-colors ${
         isActive
           ? 'bg-[#c0c1ff]/10 border-[#c0c1ff]'
@@ -1519,7 +1547,7 @@ function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onTo
       )}
 
       {/* Lock toggle — only for lesson-level lock; module lock is handled on the module */}
-      {!moduleLocked && (
+      {!readOnly && !moduleLocked && (
         <button
           onClick={async (e) => {
             e.stopPropagation();
@@ -1536,33 +1564,35 @@ function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onTo
       )}
 
       {/* Context menu */}
-      <div className="relative shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-          className="opacity-0 group-hover/lesson:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
-        >
-          <MoreVertical className="h-3.5 w-3.5" />
-        </button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 top-5 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-32">
-              <button
-                onClick={(e) => { e.stopPropagation(); setRenaming(true); setMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
-              >
-                Rename
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      {!readOnly && (
+        <div className="relative shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+            className="opacity-0 group-hover/lesson:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
+          >
+            <MoreVertical className="h-3.5 w-3.5" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-5 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-32">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setRenaming(true); setMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1588,6 +1618,7 @@ function CourseRow({
   onDragStart,
   onDrop,
   draggedItem,
+  readOnly = false,
 }) {
   const [renaming, setRenaming] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -1600,10 +1631,10 @@ function CourseRow({
 
   return (
     <div
-      draggable
-      onDragStart={(e) => { e.stopPropagation(); onDragStart('course', course.id, null); }}
+      draggable={!readOnly}
+      onDragStart={(e) => { e.stopPropagation(); !readOnly && onDragStart('course', course.id, null); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      onDrop={(e) => { e.stopPropagation(); onDrop('course', course.id, null); }}
+      onDrop={(e) => { e.stopPropagation(); !readOnly && onDrop('course', course.id, null); }}
       className={`border border-[#464554] rounded-lg bg-[#051424] ${isDragged ? 'opacity-50' : ''}`}
     >
       {/* Course header — acts as top-level module group */}
@@ -1635,60 +1666,66 @@ function CourseRow({
           </span>
         )}
 
-        <button
-          onClick={async () => {
-            setAddingModule(true);
-            await onAddModule(course.id);
-            setAddingModule(false);
-          }}
-          disabled={addingModule}
-          className="opacity-0 group-hover/course:opacity-100 text-[#c0c1ff] hover:text-[#e1e0ff] text-xs flex items-center gap-1 font-medium transition-all disabled:opacity-50 shrink-0"
-        >
-          {addingModule ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-          Module
-        </button>
+        {!readOnly && (
+          <button
+            onClick={async () => {
+              setAddingModule(true);
+              await onAddModule(course.id);
+              setAddingModule(false);
+            }}
+            disabled={addingModule}
+            className="opacity-0 group-hover/course:opacity-100 text-[#c0c1ff] hover:text-[#e1e0ff] text-xs flex items-center gap-1 font-medium transition-all disabled:opacity-50 shrink-0"
+          >
+            {addingModule ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+            Module
+          </button>
+        )}
 
         {/* Course lock toggle */}
-        <button
-          onClick={async () => {
-            setTogglingLock(true);
-            await onToggleCourseLock(course.id, !course.is_locked);
-            setTogglingLock(false);
-          }}
-          disabled={togglingLock}
-          title={course.is_locked ? 'Unlock course' : 'Lock course'}
-          className={`opacity-0 group-hover/course:opacity-100 transition-all p-0.5 rounded disabled:opacity-50 shrink-0 ${course.is_locked ? 'text-amber-400 hover:text-amber-300 opacity-100' : 'text-[#908fa0] hover:text-amber-400'}`}
-        >
-          {togglingLock ? <Loader2 className="h-4 w-4 animate-spin" /> : course.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-        </button>
-
-        <div className="relative shrink-0">
+        {!readOnly && (
           <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="opacity-0 group-hover/course:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
+            onClick={async () => {
+              setTogglingLock(true);
+              await onToggleCourseLock(course.id, !course.is_locked);
+              setTogglingLock(false);
+            }}
+            disabled={togglingLock}
+            title={course.is_locked ? 'Unlock course' : 'Lock course'}
+            className={`opacity-0 group-hover/course:opacity-100 transition-all p-0.5 rounded disabled:opacity-50 shrink-0 ${course.is_locked ? 'text-amber-400 hover:text-amber-300 opacity-100' : 'text-[#908fa0] hover:text-amber-400'}`}
           >
-            <MoreVertical className="h-4 w-4" />
+            {togglingLock ? <Loader2 className="h-4 w-4 animate-spin" /> : course.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
           </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-6 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-36">
-                <button
-                  onClick={() => { setRenaming(true); setMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
-                >
-                  Rename
-                </button>
-                <button
-                  onClick={() => { onDeleteCourse(course.id); setMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  Delete Course
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        )}
+
+        {!readOnly && (
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="opacity-0 group-hover/course:opacity-100 text-[#908fa0] hover:text-[#d4e4fa] transition-all p-0.5 rounded"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-6 z-20 bg-[#122131] border border-[#464554] rounded-lg shadow-xl overflow-hidden w-36">
+                  <button
+                    onClick={() => { setRenaming(true); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-[#d4e4fa] hover:bg-[#1c2b3c] transition-colors"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => { onDeleteCourse(course.id); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    Delete Course
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modules */}
@@ -1719,6 +1756,7 @@ function CourseRow({
               draggedItem={draggedItem}
               courseId={course.id}
               courseLocked={course.is_locked}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -1729,7 +1767,7 @@ function CourseRow({
 
 // ─── Main CurriculumBuilder ────────────────────────────────────────────────────
 
-export default function CurriculumBuilder({ bootcampId, initialCourses = [], onCoursesChange, lessonSaveRef }) {
+export default function CurriculumBuilder({ bootcampId, initialCourses = [], onCoursesChange, lessonSaveRef, readOnly = false }) {
   const router = useRouter();
   const [courses, setCourses] = useState(
     initialCourses.sort((a, b) => a.order_index - b.order_index)
@@ -2044,14 +2082,16 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
               {courses.length} course{courses.length !== 1 ? 's' : ''} · {totalModules} module{totalModules !== 1 ? 's' : ''} · {totalLessons} lesson{totalLessons !== 1 ? 's' : ''}
             </p>
           </div>
-          <button
-            onClick={handleAddCourse}
-            disabled={addingCourse}
-            className="text-[#c0c1ff] hover:text-[#e1e0ff] text-sm flex items-center gap-1 font-medium transition-colors disabled:opacity-50"
-          >
-            {addingCourse ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Add Course
-          </button>
+          {!readOnly && (
+            <button
+              onClick={handleAddCourse}
+              disabled={addingCourse}
+              className="text-[#c0c1ff] hover:text-[#e1e0ff] text-sm flex items-center gap-1 font-medium transition-colors disabled:opacity-50"
+            >
+              {addingCourse ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Add Course
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
@@ -2082,6 +2122,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
                 onDragStart={handleDragStart}
                 onDrop={handleDrop}
                 draggedItem={draggedItem}
+                readOnly={readOnly}
               />
             ))
           )}
@@ -2113,6 +2154,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
           isFullscreen={isFullscreen}
           setIsFullscreen={setIsFullscreen}
           lessonSaveRef={lessonSaveRef}
+          readOnly={readOnly}
         />
       ) : (
         <div className="xl:col-span-8">

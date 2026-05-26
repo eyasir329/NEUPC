@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -64,6 +64,9 @@ const SELECT_CLASS =
 
 export default function BootcampDetailClient({ bootcamp }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isExecutive = pathname?.includes('/account/executive');
+  const basePath = isExecutive ? '/account/executive/bootcamps' : '/account/admin/bootcamps';
   const [activeTab, setActiveTab] = useState('details');
   const [saving, setSaving] = useState(false);
   const [bootcampData, setBootcampData] = useState(bootcamp);
@@ -228,7 +231,7 @@ export default function BootcampDetailClient({ bootcamp }) {
     try {
       await deleteBootcamp(bootcamp.id);
       toast.success('Bootcamp deleted');
-      router.push('/account/admin/bootcamps');
+      router.push(basePath);
     } catch (err) {
       toast.error(err.message || 'Failed to delete');
       setDeleting(false);
@@ -288,7 +291,7 @@ export default function BootcampDetailClient({ bootcamp }) {
       const result = await finishBatchAndStartNew(bootcamp.id, newBatch);
       toast.success('Batch finished! New batch created as draft.');
       setBatchModal(false);
-      router.push(`/account/admin/bootcamps/${result.newBootcampId}`);
+      router.push(`${basePath}/${result.newBootcampId}`);
     } catch (err) {
       toast.error(err.message || 'Failed to finish batch');
     } finally {
@@ -320,7 +323,7 @@ export default function BootcampDetailClient({ bootcamp }) {
         actions={
           <div className="flex items-center gap-3">
             <Link
-              href="/account/admin/bootcamps"
+              href={basePath}
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors font-medium"
             >
               <ChevronLeft className="h-3 w-3" />

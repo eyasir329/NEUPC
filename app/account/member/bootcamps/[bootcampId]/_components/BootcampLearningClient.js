@@ -764,7 +764,7 @@ function CurriculumRail({
 
 // ─── Notes Panel ──────────────────────────────────────────────────────────────
 
-function NotesPanel({ lessonId, initialNotes, onSave }) {
+function NotesPanel({ lessonId, initialNotes, onSave, isArchived = false }) {
   const [notes, setNotes] = useState(initialNotes || '');
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -781,7 +781,7 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   // On lesson change: flush unsaved diff for previous lesson, then load new
   useEffect(() => {
     const prevLessonId = prevLessonRef.current;
-    if (prevLessonId && prevLessonId !== lessonId) {
+    if (!isArchived && prevLessonId && prevLessonId !== lessonId) {
       const pending = notesRef.current;
       if (pending !== lastSavedRef.current && onSave) {
         onSave(prevLessonId, pending).catch(() => {});
@@ -792,9 +792,10 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
     lastSavedRef.current = initialNotes || '';
     setIsEditing(false);
     setIsExpanded(false);
-  }, [lessonId, initialNotes, onSave]);
+  }, [lessonId, initialNotes, onSave, isArchived]);
 
   const handleSave = useCallback(() => {
+    if (isArchived) return;
     startSaving(async () => {
       try {
         if (onSave) await onSave(lessonId, notes);
@@ -804,7 +805,7 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
         setTimeout(() => setSaved(false), 2000);
       } catch {}
     });
-  }, [lessonId, notes, onSave]);
+  }, [lessonId, notes, onSave, isArchived]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2 transition-all duration-300">
@@ -834,7 +835,7 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
             )}
           </button>
 
-          {isEditing ? (
+          {!isArchived && (isEditing ? (
             <button
               onClick={() => setIsEditing(false)}
               className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
@@ -852,23 +853,25 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
               <Pencil className="h-3.5 w-3.5 text-yellow-400" />
               Edit
             </button>
-          )}
+          ))}
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg bg-[#8083ff]/10 hover:bg-[#8083ff]/20 px-3 py-1.5 text-[11px] font-medium text-[#c0c1ff] transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {saving ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : saved ? (
-              <>
-                <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved
-              </>
-            ) : (
-              'Save'
-            )}
-          </button>
+          {!isArchived && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 rounded-lg bg-[#8083ff]/10 hover:bg-[#8083ff]/20 px-3 py-1.5 text-[11px] font-medium text-[#c0c1ff] transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : saved ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Saved
+                </>
+              ) : (
+                'Save'
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1064,7 +1067,7 @@ function AttachmentList({ files, onRemove }) {
   );
 }
 
-function TaskSubmitForm({ task, onSubmitted }) {
+function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
   const [content, setContent] = useState(
     () => task.mySubmission?.notes
       || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
@@ -1078,7 +1081,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
   const fileInputRef = useRef(null);
 
   const isRedo = task.mySubmission?.status === 'redo action required';
-  const canSubmit = !task.mySubmission || isRedo;
+  const canSubmit = (!task.mySubmission || isRedo) && !isArchived;
 
   const handleFiles = async (files) => {
     if (!files?.length) return;
@@ -1155,7 +1158,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
   );
 }
 
-function MemberTasksPanel({ bootcampId }) {
+function MemberTasksPanel({ bootcampId, isArchived = false }) {
   const [tasks, setTasks] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -1173,6 +1176,12 @@ function MemberTasksPanel({ bootcampId }) {
 
   return (
     <div className="space-y-2">
+      {isArchived && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-amber-300 text-[12.5px] font-medium leading-normal mb-3 shadow-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>This bootcamp is archived. Task submissions and modifications are disabled.</span>
+        </div>
+      )}
       {tasks.map((task) => {
         const sub = task.mySubmission;
         const isExpanded = expanded === task.id;
@@ -1249,7 +1258,14 @@ function MemberTasksPanel({ bootcampId }) {
                   </div>
                 )}
 
-                <TaskSubmitForm task={task} onSubmitted={handleSubmitted} />
+                {isArchived ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 text-amber-300 text-[12px] font-medium leading-relaxed">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <span>This bootcamp is archived. Task submissions and edits are disabled.</span>
+                  </div>
+                ) : (
+                  <TaskSubmitForm task={task} onSubmitted={handleSubmitted} isArchived={isArchived} />
+                )}
               </div>
             )}
           </div>
@@ -1261,7 +1277,7 @@ function MemberTasksPanel({ bootcampId }) {
 
 const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
 
-function MemberSessionRow({ s }) {
+function MemberSessionRow({ s, isArchived = false }) {
   const [open, setOpen] = useState(false);
   const mentorName = s.mentor?.full_name || '—';
   const dt = new Date(s.scheduled_at || s.session_date);
@@ -1327,16 +1343,23 @@ function MemberSessionRow({ s }) {
                 {s.location}
               </span>
             ) : s.meet_link && (
-              <a
-                href={s.meet_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"
-              >
-                <Video className="h-3 w-3" />
-                {isUpcoming ? 'Join Meet' : 'Open Meet'}
-                <ChevronRight className="h-3 w-3 opacity-70" />
-              </a>
+              isArchived ? (
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-gray-500 ring-1 ring-white/10">
+                  <Video className="h-3.5 w-3.5 text-gray-600" />
+                  Session Concluded
+                </span>
+              ) : (
+                <a
+                  href={s.meet_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"
+                >
+                  <Video className="h-3 w-3" />
+                  {isUpcoming ? 'Join Meet' : 'Open Meet'}
+                  <ChevronRight className="h-3 w-3 opacity-70" />
+                </a>
+              )
             )}
             {s.recording_url && (
               <a
@@ -1357,7 +1380,7 @@ function MemberSessionRow({ s }) {
   );
 }
 
-function MemberSessionsPanel({ bootcampId }) {
+function MemberSessionsPanel({ bootcampId, isArchived = false }) {
   const [sessions, setSessions] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'upcoming' | 'past'
 
@@ -1377,6 +1400,12 @@ function MemberSessionsPanel({ bootcampId }) {
 
   return (
     <div className="space-y-4">
+      {isArchived && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>This bootcamp is archived. Join links for scheduled live sessions are concluded.</span>
+        </div>
+      )}
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         {[
@@ -1409,14 +1438,14 @@ function MemberSessionsPanel({ bootcampId }) {
         <PanelEmpty message={`No ${filter} sessions.`} />
       ) : (
         <div className="space-y-2">
-          {visible.map(s => <MemberSessionRow key={s.id} s={s} />)}
+          {visible.map(s => <MemberSessionRow key={s.id} s={s} isArchived={isArchived} />)}
         </div>
       )}
     </div>
   );
 }
 
-function MemberHelpDeskPanel({ bootcampId }) {
+function MemberHelpDeskPanel({ bootcampId, isArchived = false }) {
   const [tickets, setTickets] = useState(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -1429,6 +1458,7 @@ function MemberHelpDeskPanel({ bootcampId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isArchived) return;
     if (!subject.trim() || !body.trim()) return;
     setSending(true);
     const fd = new FormData();
@@ -1446,16 +1476,23 @@ function MemberHelpDeskPanel({ bootcampId }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 space-y-3 shadow-lg shadow-black/20 backdrop-blur-xl">
-        <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.08] blur-[60px]" />
-        <p className="relative z-10 text-[11px] font-bold tracking-widest text-violet-300 uppercase">Ask for help</p>
-        <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="relative z-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
-        <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="relative z-10 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
-        <button type="submit" disabled={sending} className="relative z-10 flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/15 px-4 py-2 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-50">
-          {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-          {sending ? 'Sending…' : 'Submit'}
-        </button>
-      </form>
+      {isArchived ? (
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>This bootcamp is archived. The Help Desk is in read-only mode, and submitting new support tickets is disabled.</span>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 space-y-3 shadow-lg shadow-black/20 backdrop-blur-xl">
+          <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.08] blur-[60px]" />
+          <p className="relative z-10 text-[11px] font-bold tracking-widest text-violet-300 uppercase">Ask for help</p>
+          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="relative z-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
+          <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="relative z-10 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
+          <button type="submit" disabled={sending} className="relative z-10 flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/15 px-4 py-2 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-50">
+            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            {sending ? 'Sending…' : 'Submit'}
+          </button>
+        </form>
+      )}
 
       {tickets === null ? (
         <PanelLoader />
@@ -1521,7 +1558,13 @@ const OverviewPanel = memo(function OverviewPanel({
   }, [bootcamp?.id]);
 
   const taskEarned = useMemo(() => {
-    return tasks.reduce((sum, t) => sum + (t.mySubmission?.points_earned || 0), 0);
+    return tasks.reduce((sum, t) => {
+      const sub = t.mySubmission;
+      if (sub && sub.status === 'graded') {
+        return sum + (sub.points_earned || 0);
+      }
+      return sum;
+    }, 0);
   }, [tasks]);
 
   const taskMax = useMemo(() => {
@@ -1828,6 +1871,7 @@ const LessonPanel = memo(function LessonPanel({
   bootcampId,
   onProgressUpdate,
   onRefreshEnrollment,
+  isArchived = false,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -2017,6 +2061,10 @@ const LessonPanel = memo(function LessonPanel({
   };
 
   const handleRetakeMcq = () => {
+    if (isArchived) {
+      toast.error('This bootcamp is archived. Retaking exams is disabled.');
+      return;
+    }
     const history = examSub?.submitted_answers?.attempts_history || [];
     const currentAttempt = {
       attempt_number: (history.length || 0) + 1,
@@ -2050,6 +2098,10 @@ const LessonPanel = memo(function LessonPanel({
   };
 
   const handleRetakeCq = () => {
+    if (isArchived) {
+      toast.error('This bootcamp is archived. Retaking exams is disabled.');
+      return;
+    }
     const history = examSub?.submitted_answers?.attempts_history || [];
     const currentAttempt = {
       attempt_number: (history.length || 0) + 1,
@@ -2085,6 +2137,10 @@ const LessonPanel = memo(function LessonPanel({
   };
 
   const handleMcqSubmit = async () => {
+    if (isArchived) {
+      toast.error('This bootcamp is archived. Exam submissions are disabled.');
+      return;
+    }
     const allQuestions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
       ? selectedQuestions
       : parseExamQuestions(lesson.exam_questions, lesson);
@@ -2163,6 +2219,10 @@ const LessonPanel = memo(function LessonPanel({
   };
 
   const handleCqSubmit = async () => {
+    if (isArchived) {
+      toast.error('This bootcamp is archived. Exam submissions are disabled.');
+      return;
+    }
     // Validate: at least one question answer must have content, or there's an attachment
     const hasAnyAnswer = Object.values(cqAnswersByQuestion).some(val => {
       if (!val) return false;
@@ -2349,13 +2409,15 @@ const LessonPanel = memo(function LessonPanel({
   );
 
   const handleVideoComplete = useCallback(async () => {
+    if (isArchived) return;
     if (!localCompleted) {
       setLocalCompleted(true);
       onMarkComplete(lesson.id);
     }
-  }, [lesson.id, localCompleted, onMarkComplete]);
+  }, [lesson.id, localCompleted, onMarkComplete, isArchived]);
 
   const handleToggle = useCallback(() => {
+    if (isArchived) return;
     if (localCompleted) {
       setLocalCompleted(false);
       onMarkIncomplete(lesson.id);
@@ -2363,7 +2425,7 @@ const LessonPanel = memo(function LessonPanel({
       setLocalCompleted(true);
       onMarkComplete(lesson.id);
     }
-  }, [lesson.id, localCompleted, onMarkComplete, onMarkIncomplete]);
+  }, [lesson.id, localCompleted, onMarkComplete, onMarkIncomplete, isArchived]);
 
   const getExamPlayer = (overrideQuestions = null) => {
     if (lesson.type !== 'exam') return null;
@@ -2474,7 +2536,7 @@ const LessonPanel = memo(function LessonPanel({
                   </p>
                 </div>
                 
-                {!isCq && (
+                {!isCq && !isArchived && (
                   <button
                     type="button"
                     onClick={(isMcq || isHybrid) ? handleRetakeMcq : handleRetakeCq}
@@ -2686,6 +2748,13 @@ const LessonPanel = memo(function LessonPanel({
           </p>
         </div>
 
+        {isArchived && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>This bootcamp is archived. The exam player is in read-only mode, and retakes/submissions are disabled.</span>
+          </div>
+        )}
+
         {/* NOTE: lesson content/instructions are rendered once by the parent LessonContentRenderer.
              No duplicate rendering needed here. */}
 
@@ -2742,14 +2811,16 @@ const LessonPanel = memo(function LessonPanel({
                       You scored <span className="text-emerald-400 font-bold">{examSub?.submitted_answers?.mcq_score || examSub?.score || 0}</span> out of {mcqMaxPoints} points on your latest MCQ attempt.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRetakeMcq}
-                    className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Retake MCQ Section
-                  </button>
+                  {!isArchived && (
+                    <button
+                      type="button"
+                      onClick={handleRetakeMcq}
+                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Retake MCQ Section
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-6">
@@ -2834,9 +2905,13 @@ const LessonPanel = memo(function LessonPanel({
                             key={optIdx}
                             type="button"
                             onClick={() => {
+                              if (isArchived) return;
                               setMcqAnswers((p) => ({ ...p, [q.id]: optIdx }));
                             }}
-                            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-xs transition-all cursor-pointer ${
+                            disabled={isArchived}
+                            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-xs transition-all ${
+                              isArchived ? 'cursor-not-allowed border-white/5 opacity-60' : 'cursor-pointer'
+                            } ${
                               isSelected
                                 ? 'border-violet-500 bg-violet-500/10 text-white font-semibold'
                                 : 'border-white/5 bg-white/[0.01] text-gray-400 hover:border-white/15 hover:bg-white/5'
@@ -2855,17 +2930,19 @@ const LessonPanel = memo(function LessonPanel({
                   </div>
                 ))}
 
-                <div className="flex justify-end pt-4">
-                  <button
-                    type="button"
-                    disabled={submittingExam}
-                    onClick={handleMcqSubmit}
-                    className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    Submit & Grade MCQ Answers
-                  </button>
-                </div>
+                {!isArchived && (
+                  <div className="flex justify-end pt-4">
+                    <button
+                      type="button"
+                      disabled={submittingExam}
+                      onClick={handleMcqSubmit}
+                      className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      Submit & Grade MCQ Answers
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2990,10 +3067,11 @@ const LessonPanel = memo(function LessonPanel({
                             {/* Answer editor */}
                             <div className="p-3">
                               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2 font-sans">Your Answer</span>
-                              <div className="rounded-xl overflow-hidden border border-white/10">
+                              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/10">
                                 <MultiBlockEditor
                                   value={answerVal}
                                   onChange={(val) => setCqAnswersByQuestion(prev => ({ ...prev, [qId]: val }))}
+                                  readOnly={isArchived}
                                 />
                               </div>
                             </div>
@@ -3005,8 +3083,8 @@ const LessonPanel = memo(function LessonPanel({
                     // Fallback: no structured questions — show single editor
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Explanation / Remarks (Required)</label>
-                      <div className="rounded-xl overflow-hidden border border-white/10">
-                        <MultiBlockEditor value={cqAnswerText} onChange={setCqAnswerText} />
+                      <div className="rounded-xl overflow-hidden border border-white/10 bg-black/10">
+                        <MultiBlockEditor value={cqAnswerText} onChange={setCqAnswerText} readOnly={isArchived} />
                       </div>
                     </div>
                   )}
@@ -3014,7 +3092,7 @@ const LessonPanel = memo(function LessonPanel({
                   {/* Attachments */}
                   <div className="space-y-2 pt-2 border-t border-white/5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Attachments (Optional)</label>
-                    <AttachmentList files={cqAttachments} onRemove={(i) => setCqAttachments(prev => prev.filter((_, j) => j !== i))} />
+                    <AttachmentList files={cqAttachments} onRemove={isArchived ? undefined : (i) => setCqAttachments(prev => prev.filter((_, j) => j !== i))} />
                     <input
                       type="file"
                       multiple
@@ -3022,28 +3100,32 @@ const LessonPanel = memo(function LessonPanel({
                       className="hidden"
                       id="cq-file-input"
                     />
-                    <button
-                      type="button"
-                      onClick={() => document.getElementById('cq-file-input')?.click()}
-                      disabled={cqUploading}
-                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
-                    >
-                      {cqUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                      {cqUploading ? 'Uploading…' : 'Add files'}
-                    </button>
+                    {!isArchived && (
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('cq-file-input')?.click()}
+                        disabled={cqUploading}
+                        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
+                      >
+                        {cqUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                        {cqUploading ? 'Uploading…' : 'Add files'}
+                      </button>
+                    )}
                   </div>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      disabled={submittingExam || cqUploading}
-                      onClick={handleCqSubmit}
-                      className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
-                    >
-                      {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      Submit CQ Solution to Mentor
-                    </button>
-                  </div>
+                  {!isArchived && (
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        disabled={submittingExam || cqUploading}
+                        onClick={handleCqSubmit}
+                        className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
+                      >
+                        {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        Submit CQ Solution to Mentor
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -3142,7 +3224,7 @@ const LessonPanel = memo(function LessonPanel({
                   </div>
                   <button
                     onClick={handleToggle}
-                    disabled={completing}
+                    disabled={completing || isArchived}
                     className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
                       localCompleted
                         ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
@@ -3176,6 +3258,7 @@ const LessonPanel = memo(function LessonPanel({
                           onProgressUpdate={onProgressUpdate}
                           bootcampId={bootcampId}
                           onRefreshEnrollment={onRefreshEnrollment}
+                          isArchived={isArchived}
                         />
                       )}
                       examComponent={(questions) => getExamPlayer(questions)}
@@ -3201,6 +3284,7 @@ const LessonPanel = memo(function LessonPanel({
                     onProgressUpdate={onProgressUpdate}
                     bootcampId={bootcampId}
                     onRefreshEnrollment={onRefreshEnrollment}
+                    isArchived={isArchived}
                   />
                 )}
 
@@ -3238,6 +3322,7 @@ const LessonPanel = memo(function LessonPanel({
               lessonId={lesson.id}
               initialNotes={lessonProgress[lesson.id]?.notes}
               onSave={onSaveNotes}
+              isArchived={isArchived}
             />
           </div>
         </div>
@@ -3337,7 +3422,7 @@ function getLessonIdFromUrl() {
   return m ? m[1] : null;
 }
 
-function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId, onRefreshEnrollment }) {
+function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId, onRefreshEnrollment, isArchived = false }) {
   const [selectedProblem, setSelectedProblem] = useState(null); // { problem, pIdx }
   const [modalTab, setModalTab] = useState('editorial'); // 'editorial' | 'solution' | 'ai'
   const [copiedIdx, setCopiedIdx] = useState(null);
@@ -3392,6 +3477,10 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   };
 
   const handleToggleSolved = async (pIdx, name) => {
+    if (isArchived) {
+      toast.error('This bootcamp is archived. Toggling problem solve status is disabled.');
+      return;
+    }
     if (toggling[pIdx]) return;
     setToggling(prev => ({ ...prev, [pIdx]: true }));
 
@@ -3491,6 +3580,12 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
 
   return (
     <div className="flex flex-col gap-6 mt-6">
+      {isArchived && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>This bootcamp is archived. Toggling problem solve status is disabled.</span>
+        </div>
+      )}
       {/* Cockpit Card Header */}
       <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-gradient-to-br from-teal-500/[0.03] to-transparent p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 border-b border-white/5 pb-5">
@@ -3570,8 +3665,10 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                       <button
                         type="button"
                         onClick={() => handleToggleSolved(pIdx, p.name || `Problem ${pIdx + 1}`)}
-                        disabled={toggling[pIdx]}
-                        className="flex mx-auto h-5 w-5 items-center justify-center rounded-lg border transition-all cursor-pointer hover:scale-110 active:scale-95 disabled:opacity-50"
+                        disabled={toggling[pIdx] || isArchived}
+                        className={`flex mx-auto h-5 w-5 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
+                          isArchived ? 'cursor-not-allowed border-gray-600' : 'cursor-pointer hover:scale-110 active:scale-95'
+                        }`}
                         style={{
                           borderColor: isSolved ? '#10b981' : '#464554',
                           backgroundColor: isSolved ? 'rgba(16, 185, 129, 0.1)' : 'transparent'
@@ -3940,6 +4037,7 @@ export default function BootcampLearningClient({
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
+  const isArchived = bootcamp?.status === 'archived';
 
   const refreshEnrollment = useCallback(async () => {
     try {
@@ -4233,6 +4331,7 @@ export default function BootcampLearningClient({
 
   const handleMarkComplete = useCallback(
     (lessonId) => {
+      if (isArchived) return;
       startCompleting(async () => {
         await markLessonComplete(lessonId, bootcamp?.id);
         const nextProgress = {
@@ -4263,10 +4362,11 @@ export default function BootcampLearningClient({
         refreshEnrollment();
       });
     },
-    [bootcamp, moduleIndex, lessonProgress, refreshEnrollment]
+    [bootcamp, moduleIndex, lessonProgress, refreshEnrollment, isArchived]
   );
 
   const handleMarkIncomplete = useCallback((lessonId) => {
+    if (isArchived) return;
     startCompleting(async () => {
       await markLessonIncomplete(lessonId, bootcamp?.id);
       setLessonProgress((prev) => ({
@@ -4275,15 +4375,16 @@ export default function BootcampLearningClient({
       }));
       refreshEnrollment();
     });
-  }, [bootcamp?.id, refreshEnrollment]);
+  }, [bootcamp?.id, refreshEnrollment, isArchived]);
 
   const handleSaveNotes = useCallback(async (lessonId, notes) => {
+    if (isArchived) return;
     await saveLessonNotes(lessonId, notes);
     setLessonProgress((prev) => ({
       ...prev,
       [lessonId]: { ...prev[lessonId], notes },
     }));
-  }, []);
+  }, [isArchived]);
 
   const ctaLabel = isComplete
     ? 'Review'
@@ -4488,6 +4589,7 @@ export default function BootcampLearningClient({
                 bootcampId={bootcamp?.id}
                 onProgressUpdate={setLessonProgress}
                 onRefreshEnrollment={refreshEnrollment}
+                isArchived={isArchived}
               />
             </div>
           ) : (
@@ -4507,6 +4609,7 @@ export default function BootcampLearningClient({
               coursesCount={coursesCount}
               modulesCount={modulesCount}
               enrollment={enrollment}
+              isArchived={isArchived}
             />
           )}
         </main>

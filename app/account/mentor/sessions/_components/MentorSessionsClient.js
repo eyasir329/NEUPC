@@ -159,7 +159,14 @@ export default function MentorSessionsClient({
         notes: s.description || null,
         meet_link: null,
         targetType: s.targetType,
-        bootcampTitle: s.bootcampTitle || '',
+        bootcampTitle: (() => {
+          const bc = bootcamps.find(b => b.id === s.bootcamp_id);
+          const title = s.bootcampTitle || bc?.title || '';
+          if (bc && bc.status !== 'published') {
+            return `${title} (Archived)`;
+          }
+          return title;
+        })(),
         menteeName: s.targetType === 'one-on-one'
           ? (s.targetStudentName || 'Unknown')
           : s.targetType === 'selected-group'
@@ -191,7 +198,14 @@ export default function MentorSessionsClient({
       notes: s.description || null,
       meet_link: null,
       targetType: s.targetType,
-      bootcampTitle: s.bootcampTitle || '',
+      bootcampTitle: (() => {
+        const bc = bootcamps.find(b => b.id === s.bootcamp_id);
+        const title = s.bootcampTitle || bc?.title || '';
+        if (bc && bc.status !== 'published') {
+          return `${title} (Archived)`;
+        }
+        return title;
+      })(),
       menteeName: s.targetType === 'one-on-one'
         ? (s.targetStudentName || 'Unknown')
         : s.targetType === 'selected-group'
@@ -320,7 +334,11 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   const [search, setSearch] = useState('');
 
   // Form state
-  const [bootcampId, setBootcampId] = useState(bootcamps[0]?.id ?? '');
+  const activeBootcamps = useMemo(() => bootcamps.filter(bc => bc.status === 'published'), [bootcamps]);
+  const [bootcampId, setBootcampId] = useState(() => {
+    const active = bootcamps.filter(bc => bc.status === 'published');
+    return active[0]?.id ?? '';
+  });
   const [topic, setTopic] = useState('');
   const [targetType, setTargetType] = useState('all-bootcamp');
   const [singleId, setSingleId] = useState('');
@@ -405,7 +423,10 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     }
 
     const bc = bootcamps.find((b) => b.id === bootcampId);
-    const bootcampTitle = bc?.title?.split(':')[0] ?? 'General';
+    let bootcampTitle = bc?.title?.split(':')[0] ?? 'General';
+    if (bc && bc.status !== 'published') {
+      bootcampTitle = `${bootcampTitle} (Archived)`;
+    }
 
     const targetStudentName = targetType === 'one-on-one'
       ? students.find((s) => s.id === effectiveSingleId)?.name || ''
@@ -667,9 +688,23 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                   {bootcamps.length === 0 ? (
                     <option>None assigned</option>
                   ) : (
-                    bootcamps.map((b) => (
-                      <option key={b.id} value={b.id}>{b.title}</option>
-                    ))
+                    (() => {
+                      const options = activeBootcamps.slice();
+                      if (editingSession && editingSession.bootcamp_id) {
+                        const exists = options.some(o => o.id === editingSession.bootcamp_id);
+                        if (!exists) {
+                          const originalBc = bootcamps.find(b => b.id === editingSession.bootcamp_id);
+                          if (originalBc) {
+                            options.push(originalBc);
+                          }
+                        }
+                      }
+                      return options.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.title} {b.status !== 'published' ? '(Archived)' : ''}
+                        </option>
+                      ));
+                    })()
                   )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
@@ -1056,6 +1091,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
     : { label: 'Broadcast', icon: GraduationCap, tone: 'sky' };
 
   const bc = bootcamps?.find((b) => b.id === s.bootcampId);
+  const isArchived = bc ? bc.status !== 'published' : false;
   const allStudents = bc?.students ?? [];
   const sessionStudents = isOneOnOne
     ? allStudents.filter((u) => u.id === s.targetStudentId)
@@ -1160,6 +1196,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                   sessionId={s.id}
                   initialUrl={s.recording_url}
                   onUploaded={(url) => onRecordingUploaded?.(s.id, url)}
+                  readOnly={isArchived}
                 />
               </div>
             )}
@@ -1189,31 +1226,35 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                     {hasEnded ? 'Session Completed' : 'No Meet Link'}
                   </span>
                 )}
-                <button
-                  onClick={() => setShowAttendance(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors"
-                  title="Mark attendance sheet"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  Attendance Sheet
-                </button>
-                <button
-                  disabled={endingSession}
-                  onClick={async () => {
-                    setEndingSession(true);
-                    const fd = new FormData();
-                    fd.set('sessionId', s.id);
-                    const res = await endSessionAction(fd);
-                    if (res?.error) { toast.error(res.error); setEndingSession(false); return; }
-                    toast.success('Session ended');
-                    onEndOnly?.();
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 py-2 text-xs font-semibold text-rose-300 transition-colors disabled:opacity-50"
-                  title="End mentorship room"
-                >
-                  {endingSession ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                  End Session
-                </button>
+                {!isArchived && (
+                  <>
+                    <button
+                      onClick={() => setShowAttendance(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors"
+                      title="Mark attendance sheet"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                      Attendance Sheet
+                    </button>
+                    <button
+                      disabled={endingSession}
+                      onClick={async () => {
+                        setEndingSession(true);
+                        const fd = new FormData();
+                        fd.set('sessionId', s.id);
+                        const res = await endSessionAction(fd);
+                        if (res?.error) { toast.error(res.error); setEndingSession(false); return; }
+                        toast.success('Session ended');
+                        onEndOnly?.();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 py-2 text-xs font-semibold text-rose-300 transition-colors disabled:opacity-50"
+                      title="End mentorship room"
+                    >
+                      {endingSession ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      End Session
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               <>
@@ -1221,22 +1262,24 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                   <Clock className="h-3.5 w-3.5 animate-pulse text-amber-405" />
                   {countdown ?? 'Scheduled'}
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={onEdit}
-                    className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-gray-500 hover:text-emerald-300 transition-colors"
-                    title="Edit scheduled room details"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={onCancel}
-                    className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
-                    title="Cancel room slot"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {!isArchived && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={onEdit}
+                      className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-gray-500 hover:text-emerald-300 transition-colors"
+                      title="Edit scheduled room details"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={onCancel}
+                      className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
+                      title="Cancel room slot"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1347,6 +1390,13 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
     if (!selectedSessionId) return null;
     return sessions.find(s => s.id === selectedSessionId) || null;
   }, [sessions, selectedSessionId]);
+
+  const selectedSessionBootcamp = useMemo(() => {
+    if (!selectedSession) return null;
+    return bootcamps.find(b => b.id === selectedSession.bootcamp_id || b.id === selectedSession.bootcampId);
+  }, [selectedSession, bootcamps]);
+
+  const isSelectedSessionArchived = selectedSessionBootcamp ? selectedSessionBootcamp.status !== 'published' : false;
 
   const sessionStudents = useMemo(() => {
     if (!selectedSession) return [];
@@ -1584,14 +1634,16 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleDeleteInspectorSession}
-                      disabled={deleting}
-                      className="p-2 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-300 transition-colors disabled:opacity-50"
-                      title="Delete interaction log"
-                    >
-                      {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    </button>
+                    {!isSelectedSessionArchived && (
+                      <button
+                        onClick={handleDeleteInspectorSession}
+                        disabled={deleting}
+                        className="p-2 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-300 transition-colors disabled:opacity-50"
+                        title="Delete interaction log"
+                      >
+                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    )}
                     <button
                       onClick={() => setSelectedSessionId(null)}
                       className="p-2 rounded-lg border border-white/5 bg-white/2 hover:bg-white/5 text-gray-500 hover:text-white transition-colors"
@@ -1623,6 +1675,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                       onUploaded={(url) => {
                         setSessions((prev) => prev.map((r) => r.id === s.id ? { ...r, recording_url: url } : r))
                       }}
+                      readOnly={isSelectedSessionArchived}
                     />
                   </div>
                 </div>
@@ -1630,14 +1683,16 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                 {/* Attendance audit sheet */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Attendance Audit Sheet</h4>
-                    <button
-                      onClick={() => setShowAttendanceEdit(true)}
-                      className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      Manage
-                    </button>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-555">Attendance Audit Sheet</h4>
+                    {!isSelectedSessionArchived && (
+                      <button
+                        onClick={() => setShowAttendanceEdit(true)}
+                        className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Manage
+                      </button>
+                    )}
                   </div>
                   {s.attendance_data?.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/20 p-3 border border-white/5 rounded-2xl">
@@ -1705,7 +1760,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                       <MessageSquare className="h-4 w-4 text-emerald-400" />
                       <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Interactive Discussion logs</h4>
                     </div>
-                    {s.notes && !isEditingNotes && (
+                    {s.notes && !isEditingNotes && !isSelectedSessionArchived && (
                       <button
                         onClick={() => {
                           setNotesInput(ensureJsonDescription(s.notes));
@@ -1720,7 +1775,7 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                   </div>
 
                   <div className="space-y-3.5 text-left">
-                    {(!s.notes || isEditingNotes) ? (
+                    {(!s.notes || isEditingNotes) && !isSelectedSessionArchived ? (
                       <>
                         <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
                           <MultiBlockEditor
@@ -1762,7 +1817,11 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                       </>
                     ) : (
                       <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
-                        <TaskDescriptionRenderer content={s.notes} />
+                        {s.notes ? (
+                          <TaskDescriptionRenderer content={s.notes} />
+                        ) : (
+                          <p className="text-zinc-500 italic text-xs">No notes logged for this archived session.</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1998,7 +2057,7 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
 
 // ─── Recording Upload ─────────────────────────────────────────────────────────
 
-function RecordingUpload({ sessionId, initialUrl, onUploaded }) {
+function RecordingUpload({ sessionId, initialUrl, onUploaded, readOnly = false }) {
   const [uploading, setUploading] = useState(false);
   const [recordingUrl, setRecordingUrl] = useState(initialUrl || null);
 
@@ -2034,31 +2093,35 @@ function RecordingUpload({ sessionId, initialUrl, onUploaded }) {
           View Recording
           <ExternalLink className="h-3 w-3 opacity-70" />
         </a>
+      ) : readOnly ? (
+        <span className="text-gray-555 text-[10px] italic">No recording uploaded</span>
       ) : null}
-      <label className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-colors ${
-        uploading
-          ? 'border-white/10 bg-white/2 text-gray-500 cursor-not-allowed'
-          : 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300'
-      }`}>
-        {uploading ? (
-          <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Uploading…
-          </>
-        ) : (
-          <>
-            <Upload className="h-3.5 w-3.5" />
-            {recordingUrl ? 'Replace video' : 'Upload MP4'}
-          </>
-        )}
-        <input
-          type="file"
-          accept="video/*"
-          className="sr-only"
-          disabled={uploading}
-          onChange={handleFile}
-        />
-      </label>
+      {!readOnly && (
+        <label className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-colors ${
+          uploading
+            ? 'border-white/10 bg-white/2 text-gray-500 cursor-not-allowed'
+            : 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300'
+        }`}>
+          {uploading ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Uploading…
+            </>
+          ) : (
+            <>
+              <Upload className="h-3.5 w-3.5" />
+              {recordingUrl ? 'Replace video' : 'Upload MP4'}
+            </>
+          )}
+          <input
+            type="file"
+            accept="video/*"
+            className="sr-only"
+            disabled={uploading}
+            onChange={handleFile}
+          />
+        </label>
+      )}
     </div>
   );
 }

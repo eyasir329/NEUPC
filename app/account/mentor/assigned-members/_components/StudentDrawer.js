@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Award, MessageSquare, CheckCircle2,
   TrendingUp, Star, BookOpen, Plus, Loader2, Calendar,
+  Clock, FileText, GraduationCap, Video,
 } from 'lucide-react';
 import { getMemberProgressAction, saveMentorNotesAction } from '@/app/_lib/mentor-actions';
 
@@ -192,7 +193,7 @@ function RecommendationForm({ menteeId, currentNote, onDone }) {
 
 // ─── Main drawer ─────────────────────────────────────────────────────────────
 
-export function StudentDrawer({ student, onClose, lessonProgressMap }) {
+export function StudentDrawer({ student, onClose, detailedStats }) {
   const [tab, setTab] = useState('syllabus');
   const [progress, setProgress] = useState([]);
   const [progressLoading, setProgressLoading] = useState(false);
@@ -204,7 +205,6 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
 
   useEffect(() => {
     if (!menteeId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgressLoading(true);
     getMemberProgressAction(menteeId).then(({ progress: p }) => {
       const entries = p || [];
@@ -220,16 +220,28 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
   const user = student.users;
   const name = user?.full_name || 'Candidate';
   const initials = name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-  const lessons = lessonProgressMap?.[student.user_id]?.curriculum?.courses?.flatMap((c) =>
+
+  // Use detailedStats curriculum if loaded, else fall back
+  const lessons = detailedStats?.curriculum?.courses?.flatMap((c) =>
     c.modules?.flatMap((m) => m.lessons || []) || []
   ) || [];
-  const completedCount = lessons.filter((l) => l.progress?.is_completed).length;
-  const pct = lessons.length > 0
-    ? Math.round((completedCount / lessons.length) * 100)
-    : (student.finalPercent || 0);
+  const completedCount = detailedStats?.lessonsCompleted ?? lessons.filter((l) => l.progress?.is_completed).length;
+  const totalLessons = lessons.length;
+  const pct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : (student.progress_percent || 0);
+  const scoreBreakdown = detailedStats?.scoreBreakdown;
+  const totalScore = scoreBreakdown?.total ?? student.score ?? 0;
+  const totalWatchTime = detailedStats?.totalWatchTime || 0;
+  const sessionsAttended = detailedStats?.sessionsAttended || 0;
 
   const totalProblems = progress.reduce((s, p) => s + (p.problems_solved || 0), 0);
   const totalContests = progress.reduce((s, p) => s + (p.contests_participated || 0), 0);
+
+  function fmtSecs(s) {
+    if (!s) return '0m';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
 
   return (
     <AnimatePresence>
@@ -265,13 +277,13 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
             </button>
           </div>
 
-          {/* Stats cockpit cards */}
+          {/* Stats cockpit */}
           <div className="grid grid-cols-4 border-b border-white/10 bg-white/2 shrink-0 p-3 gap-2">
             {[
-              { label: 'Progress', value: `${pct}%`, color: 'text-violet-400', bg: 'bg-violet-500/[0.03] border-violet-500/10' },
+              { label: 'Score', value: detailedStats?.loading ? '…' : totalScore, color: 'text-amber-400', bg: 'bg-amber-500/[0.03] border-amber-500/10' },
+              { label: 'Watch', value: detailedStats?.loading ? '…' : fmtSecs(totalWatchTime), color: 'text-violet-400', bg: 'bg-violet-500/[0.03] border-violet-500/10' },
+              { label: 'Sessions', value: detailedStats?.loading ? '…' : sessionsAttended, color: 'text-sky-400', bg: 'bg-sky-500/[0.03] border-sky-500/10' },
               { label: 'Logs', value: progress.length, color: 'text-blue-400', bg: 'bg-blue-500/[0.03] border-blue-500/10' },
-              { label: 'Problems', value: totalProblems, color: 'text-emerald-400', bg: 'bg-emerald-500/[0.03] border-emerald-500/10' },
-              { label: 'Contests', value: totalContests, color: 'text-amber-400', bg: 'bg-amber-500/[0.03] border-amber-500/10' },
             ].map((s) => (
               <div key={s.label} className={`py-2 px-1 rounded-xl border ${s.bg} text-center`}>
                 <p className={`text-xs font-bold font-mono tracking-tight ${s.color}`}>{s.value}</p>
@@ -311,28 +323,57 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
             {/* Syllabus tab */}
             {tab === 'syllabus' && (
               <div className="space-y-4">
+                {/* Info grid */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl bg-zinc-950/80/40 border border-white/10 p-3">
+                  <div className="rounded-xl bg-zinc-950/60 border border-white/10 p-3">
                     <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Status</span>
-                    <span className="text-violet-300 font-bold capitalize text-xs">{student.status}</span>
+                    <span className="text-violet-300 font-bold capitalize">{student.status}</span>
                   </div>
-                  <div className="rounded-xl bg-zinc-950/80/40 border border-white/10 p-3">
+                  <div className="rounded-xl bg-zinc-950/60 border border-white/10 p-3">
                     <span className="text-gray-500 block mb-1 uppercase tracking-wider text-[9px] font-bold">Enrolled</span>
-                    <span className="text-slate-200 font-bold text-xs">{new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span className="text-slate-200 font-bold">{new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                 </div>
 
+                {/* Score breakdown */}
+                {scoreBreakdown && (
+                  <div className="rounded-2xl border border-white/10 bg-zinc-950/60 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5 bg-white/2">
+                      <Award className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Score Breakdown</span>
+                      <span className="ml-auto text-xs font-black text-amber-300 tabular-nums">{scoreBreakdown.total} pts total</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-px bg-white/5">
+                      {[
+                        { label: 'Lessons', value: scoreBreakdown.lesson, color: 'text-violet-400' },
+                        { label: 'Tasks', value: scoreBreakdown.task, color: 'text-emerald-400' },
+                        { label: 'Exams', value: scoreBreakdown.exam, color: 'text-fuchsia-400' },
+                        { label: 'Sessions', value: scoreBreakdown.session, color: 'text-sky-400' },
+                      ].map(s => (
+                        <div key={s.label} className="bg-zinc-950/80 px-2 py-3 text-center">
+                          <p className={`text-sm font-black tabular-nums ${s.color}`}>{s.value}</p>
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider mt-0.5">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress bar */}
                 <div className="space-y-2 px-0.5">
                   <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-gray-500">
                     <span>Lesson progress</span>
-                    <span className="text-slate-300 font-bold">{completedCount}/{lessons.length} · {pct}%</span>
+                    <span className="text-slate-300">{completedCount}/{totalLessons} · {pct}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-white/5 overflow-hidden border border-white/5">
                     <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
 
-                {lessons.length > 0 ? (
+                {/* Lesson list */}
+                {detailedStats?.loading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>
+                ) : lessons.length > 0 ? (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center bg-zinc-950/80 px-4 py-2.5 border border-white/10 border-b-0 rounded-t-2xl text-[9px]">
                       <span className="font-mono text-gray-400 font-bold flex items-center gap-1.5">
@@ -341,16 +382,23 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                         <span className="w-2 h-2 rounded-full bg-emerald-500/60" />
                         <span className="ml-1 font-bold uppercase tracking-widest text-slate-400">Syllabus Logs</span>
                       </span>
+                      {totalWatchTime > 0 && (
+                        <span className="text-violet-400 font-mono font-bold flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{fmtSecs(totalWatchTime)}
+                        </span>
+                      )}
                     </div>
-                    <div className="bg-zinc-950/80 p-3.5 rounded-b-2xl border border-white/10 space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                    <div className="bg-zinc-950/80 p-3.5 rounded-b-2xl border border-white/10 space-y-1.5 max-h-72 overflow-y-auto pr-1">
                       {lessons.map((l) => {
                         const done = l.progress?.is_completed;
+                        const exam = l.examSubmission;
+                        const wt = l.progress?.watch_time;
                         return (
                           <div key={l.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/2 border border-white/5 text-xs transition hover:border-white/10">
-                            {done
-                              ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              : <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />}
-                            <span className={`truncate font-mono ${done ? 'text-gray-500 line-through' : 'text-gray-300'}`}>{l.title}</span>
+                            {done ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />}
+                            <span className={`truncate flex-1 font-mono ${done ? 'text-gray-500' : 'text-gray-300'}`}>{l.title}</span>
+                            {exam?.status === 'graded' && <span className="shrink-0 text-[9px] font-bold text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-full px-1.5 py-0.5">{exam.score}pt</span>}
+                            {wt > 0 && <span className="shrink-0 text-[9px] text-zinc-600 font-mono">{fmtSecs(wt)}</span>}
                           </div>
                         );
                       })}
@@ -358,6 +406,49 @@ export function StudentDrawer({ student, onClose, lessonProgressMap }) {
                   </div>
                 ) : (
                   <p className="text-xs text-gray-500 italic text-center py-6 font-mono">No lesson data available</p>
+                )}
+
+                {/* Task submissions */}
+                {detailedStats?.taskSubmissions?.length > 0 && (
+                  <div className="rounded-2xl border border-white/10 bg-zinc-950/60 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5 bg-white/2">
+                      <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Task Submissions</span>
+                    </div>
+                    <div className="p-3 space-y-1.5">
+                      {detailedStats.taskSubmissions.map(t => (
+                        <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white/2 border border-white/5 text-xs">
+                          <span className="truncate text-gray-300 flex-1">{t.weekly_tasks?.title || 'Task'}</span>
+                          <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                            t.status === 'graded' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                            t.status === 'pending' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                            'text-gray-400 bg-white/5 border-white/10'
+                          }`}>{t.status === 'graded' ? `${t.points_earned}pt` : t.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Session attendance */}
+                {detailedStats?.sessionDetails?.length > 0 && (
+                  <div className="rounded-2xl border border-white/10 bg-zinc-950/60 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5 bg-white/2">
+                      <Video className="w-3.5 h-3.5 text-sky-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sessions</span>
+                      <span className="ml-auto text-[9px] text-sky-400 font-bold">{sessionsAttended}/{detailedStats.sessionDetails.length} attended</span>
+                    </div>
+                    <div className="p-3 space-y-1.5 max-h-40 overflow-y-auto">
+                      {detailedStats.sessionDetails.map(s => (
+                        <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white/2 border border-white/5 text-xs">
+                          <span className="truncate text-gray-300 flex-1">{s.topic || new Date(s.session_date).toLocaleDateString()}</span>
+                          {s.attended
+                            ? <span className="shrink-0 text-[9px] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-1.5 py-0.5">{s.points > 0 ? `+${s.points}pt` : '✓'}</span>
+                            : <span className="shrink-0 text-[9px] font-bold text-zinc-600 bg-white/5 border border-white/10 rounded-full px-1.5 py-0.5">absent</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
