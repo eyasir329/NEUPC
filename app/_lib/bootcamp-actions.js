@@ -2142,12 +2142,13 @@ export async function getEnrollmentsWithProgress(bootcampId) {
     watchTimeMap[p.user_id] = (watchTimeMap[p.user_id] || 0) + (p.watch_time || 0);
   });
 
-  // Get graded task points per user for this bootcamp
+  // Get reviewed task points per user for this bootcamp
+  // Task statuses after mentor review: 'completed', 'late', 'accepted', 'bonus deserved'
   const { data: taskSubs } = await supabaseAdmin
     .from('task_submissions')
     .select('user_id, points_earned, weekly_tasks!inner(bootcamp_id)')
     .in('user_id', userIds)
-    .eq('status', 'graded')
+    .in('status', ['completed', 'late', 'accepted', 'bonus deserved'])
     .eq('weekly_tasks.bootcamp_id', bootcampId);
 
   const taskPtsMap = {};
@@ -2155,13 +2156,14 @@ export async function getEnrollmentsWithProgress(bootcampId) {
     taskPtsMap[s.user_id] = (taskPtsMap[s.user_id] || 0) + (s.points_earned || 0);
   });
 
-  // Get graded exam scores per user for this bootcamp
+  // Get reviewed exam scores per user for this bootcamp
+  // Exam status after grading (MCQ auto-grade or mentor CQ review): 'reviewed'
   const { data: examSubs } = await supabaseAdmin
     .from('exam_submissions')
     .select('user_id, score')
     .in('user_id', userIds)
     .eq('bootcamp_id', bootcampId)
-    .eq('status', 'graded');
+    .eq('status', 'reviewed');
 
   const examPtsMap = {};
   examSubs?.forEach((s) => {
@@ -3394,6 +3396,26 @@ export async function submitExamSubmission(lessonId, _ignoredBootcampId, answers
   // Also mark the lesson as complete
   await markLessonComplete(lessonId, bootcampId);
 
+  // For auto-graded MCQ exams (status='reviewed'), recalculate enrollment score
+  // so that the exam points are immediately reflected in the member's dashboard.
+  if (status === 'reviewed') {
+    try {
+      await supabaseAdmin.rpc('calculate_enrollment_progress', {
+        p_user_id: userId,
+        p_bootcamp_id: bootcampId,
+      });
+    } catch (rpcErr) {
+      console.error('[submitExamSubmission] calculate_enrollment_progress RPC failed:', rpcErr);
+    }
+    revalidatePath('/account/member/bootcamps');
+    revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+    revalidatePath('/account/mentor/tasks');
+  } else {
+    // CQ / hybrid pending_review — just bust member cache so latest submission shows
+    revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+    revalidatePath('/account/mentor/tasks');
+  }
+
   return data;
 }
 
@@ -3511,19 +3533,26 @@ export async function reviewExamSubmission(submissionId, score, feedback, status
   if (!mentor) throw new Error('Mentor not found');
 
   // Verify mentor is authorized for this bootcamp
+  // Also fetch submitted_answers (for mcq_score) and exam_type (to detect hybrid)
   const { data: subCheck } = await supabaseAdmin
     .from('exam_submissions')
-    .select('bootcamp_id')
+    .select('bootcamp_id, submitted_answers, lessons!inner(exam_type)')
     .eq('id', submissionId)
     .single();
 
   if (!subCheck) throw new Error('Submission not found');
   await requireAdminOrBootcampMentor(subCheck.bootcamp_id);
 
+  // For hybrid exams: total score = MCQ auto-grade + CQ mentor score
+  // The mentor's input (score) is the CQ portion only
+  const isHybrid = subCheck.lessons?.exam_type === 'hybrid';
+  const storedMcqScore = subCheck.submitted_answers?.mcq_score || 0;
+  const finalScore = isHybrid && storedMcqScore > 0 ? storedMcqScore + score : score;
+
   const { data, error } = await supabaseAdmin
     .from('exam_submissions')
     .update({
-      score: score,
+      score: finalScore,
       mentor_feedback: cleanRichText(feedback, 20000),
       status: status,
       graded_by: mentor.id,
@@ -3548,6 +3577,12 @@ export async function reviewExamSubmission(submissionId, score, feedback, status
   } catch (rpcErr) {
     console.error('Error executing calculate_enrollment_progress RPC on grading:', rpcErr);
   }
+
+  // Invalidate member and mentor page caches so the updated score is immediately visible
+  revalidatePath('/account/member/bootcamps');
+  revalidatePath(`/account/member/bootcamps/${subCheck.bootcamp_id}`);
+  revalidatePath('/account/mentor/tasks');
+  revalidatePath('/account/admin/bootcamps');
 
   return data;
 }
@@ -4066,7 +4101,8 @@ export async function getBootcampsLeaderboardAction({ bootcampId = 'all', timefr
     const { data: progressList, error: progressError } = await progressQuery;
     if (progressError) throw progressError;
 
-    // 3. Query Graded Task Submissions
+    // 3. Query Reviewed Task Submissions
+    // Task statuses set by mentor after review: 'completed', 'late', 'accepted', 'bonus deserved'
     let tasksQuery = supabaseAdmin
       .from('task_submissions')
       .select(`
@@ -4076,7 +4112,7 @@ export async function getBootcampsLeaderboardAction({ bootcampId = 'all', timefr
         weekly_tasks!inner (bootcamp_id)
       `)
       .in('user_id', userIds)
-      .eq('status', 'graded');
+      .in('status', ['completed', 'late', 'accepted', 'bonus deserved']);
 
     if (bootcampId !== 'all') {
       tasksQuery = tasksQuery.eq('weekly_tasks.bootcamp_id', bootcampId);
@@ -4088,12 +4124,13 @@ export async function getBootcampsLeaderboardAction({ bootcampId = 'all', timefr
     const { data: taskSubs, error: taskSubsError } = await tasksQuery;
     if (taskSubsError) throw taskSubsError;
 
-    // 4. Query Exam Submissions
+    // 4. Query Reviewed Exam Submissions
+    // Exam status after MCQ auto-grade or mentor CQ review: 'reviewed'
     let examsQuery = supabaseAdmin
       .from('exam_submissions')
       .select('user_id, bootcamp_id, score, graded_at, status')
       .in('user_id', userIds)
-      .eq('status', 'graded');
+      .eq('status', 'reviewed');
 
     if (bootcampId !== 'all') {
       examsQuery = examsQuery.eq('bootcamp_id', bootcampId);
