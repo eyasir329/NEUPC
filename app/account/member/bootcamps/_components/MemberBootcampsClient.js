@@ -528,7 +528,7 @@ function LearningCalendar({ enrolledBootcamps, archivedBootcamps = [], courses =
                 {day}
                 {isToday && count === 0 && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-violet-500/60" />}
                 {count > 0 && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-auto origin-bottom">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-50 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto origin-bottom">
                     <div className="bg-zinc-800 border border-white/10 text-white text-xs rounded-xl p-3 shadow-xl min-w-[160px] max-w-[240px]">
                       <p className="font-semibold text-gray-400 mb-2">{count} lesson{count > 1 ? 's' : ''} completed</p>
                       <ul className="space-y-1.5">
@@ -2511,7 +2511,7 @@ function SessionsTab({ enrolledBootcamps, user }) {
 
 // ─── Leaderboard Tab ──────────────────────────────────────────────────────────
 
-function LeaderboardTab({ enrolledBootcamps, user }) {
+function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
   const [leaderboard, setLeaderboard] = useState(null);
   const [bootcampFilter, setBootcampFilter] = useState('all');
   const [timeframeFilter, setTimeframeFilter] = useState('all');
@@ -2605,26 +2605,41 @@ function LeaderboardTab({ enrolledBootcamps, user }) {
       </div>
 
       {/* Filters: Bootcamp Wise and Timeframe */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-zinc-950/20 border border-white/5 rounded-2xl p-4.5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white/[0.02] border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-xl">
         {/* Bootcamp select filter */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 shrink-0">Bootcamp:</span>
-          <select
-            value={bootcampFilter}
-            onChange={(e) => setBootcampFilter(e.target.value)}
-            className="h-9.5 px-3 bg-zinc-900 border border-white/10 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-violet-500/50 transition-colors cursor-pointer w-full sm:w-64"
-          >
-            <option value="all">🏆 Combined (All Bootcamps)</option>
-            {enrolledBootcamps.map(({ bootcamp }) => (
-              <option key={bootcamp.id} value={bootcamp.id}>
-                📖 {bootcamp.title.split(':')[0].trim()}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-3 w-full sm:w-auto relative group">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-400 shrink-0">Cohort</span>
+          <div className="relative flex-1 sm:flex-none">
+            <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400 pointer-events-none z-10 transition-transform group-hover:scale-110" />
+            <select
+              value={bootcampFilter}
+              onChange={(e) => setBootcampFilter(e.target.value)}
+              className="h-10 pl-10 pr-10 w-full sm:w-72 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/10 transition-all appearance-none cursor-pointer hover:border-white/20 select-none shadow-inner"
+            >
+              <option value="all" className="bg-zinc-950 font-bold text-amber-400">🏆 Combined (All Bootcamps)</option>
+              <optgroup label="Active Bootcamps" className="bg-zinc-950 text-gray-500 font-extrabold">
+                {enrolledBootcamps.map(({ bootcamp }) => (
+                  <option key={bootcamp.id} value={bootcamp.id} className="bg-zinc-950 text-white font-semibold">
+                    📖 {bootcamp.title.split(':')[0].trim()}
+                  </option>
+                ))}
+              </optgroup>
+              {archivedBootcamps.length > 0 && (
+                <optgroup label="Archived Bootcamps" className="bg-zinc-950 text-gray-500 font-extrabold">
+                  {archivedBootcamps.map(({ bootcamp }) => (
+                    <option key={bootcamp.id} value={bootcamp.id} className="bg-zinc-950 text-gray-400 font-semibold">
+                      📁 {bootcamp.title.split(':')[0].trim()} (Archived)
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 transition-colors group-hover:text-white" />
+          </div>
         </div>
 
         {/* Timeframe pills */}
-        <div className="flex items-center gap-2 bg-black/20 border border-white/5 rounded-xl p-1 w-full sm:w-auto justify-center sm:justify-start">
+        <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 w-full sm:w-auto justify-center sm:justify-start gap-1 shadow-inner">
           {[
             ['all', 'All Time'],
             ['monthly', 'Monthly'],
@@ -2634,10 +2649,10 @@ function LeaderboardTab({ enrolledBootcamps, user }) {
               key={v}
               onClick={() => setTimeframeFilter(v)}
               className={cn(
-                'rounded-lg px-4 py-1.5 text-[11.5px] font-bold transition-all duration-200 flex-1 sm:flex-none text-center',
+                'rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-300 flex-1 sm:flex-none text-center select-none active:scale-95',
                 timeframeFilter === v
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10'
-                  : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20 ring-1 ring-violet-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5 bg-transparent border border-transparent'
               )}
             >
               {label}
@@ -3004,7 +3019,7 @@ export default function MemberBootcampsClient({ user, bootcamps = [], enrollment
       case 'sessions':
         return <SessionsTab enrolledBootcamps={enrolledBootcamps} user={user} />;
       case 'leaderboard':
-        return <LeaderboardTab enrolledBootcamps={enrolledBootcamps} user={user} />;
+        return <LeaderboardTab enrolledBootcamps={enrolledBootcamps} archivedBootcamps={archivedBootcamps} user={user} />;
       case 'catalog':
         return (
           <CatalogTab

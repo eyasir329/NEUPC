@@ -233,7 +233,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
   const [taskFormDifficulty, setTaskFormDifficulty] = useState('medium');
   const [taskFormPoints, setTaskFormPoints] = useState(10);
   const [taskFormDueDate, setTaskFormDueDate] = useState('');
-  const [taskFormBootcamp, setTaskFormBootcamp] = useState(bootcamps[0]?.id ?? '');
+  const activeBootcamps = useMemo(() => bootcamps.filter(bc => bc.status === 'published'), [bootcamps]);
+  const [taskFormBootcamp, setTaskFormBootcamp] = useState(() => {
+    const active = bootcamps.filter(bc => bc.status === 'published');
+    return active[0]?.id ?? '';
+  });
 
   const [editingTask, setEditingTask] = useState(null);
 
@@ -593,7 +597,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                   >
                     <option value="all">All Bootcamps</option>
                     {bootcamps.map(b => (
-                      <option key={b.id} value={b.id}>{b.title.split(':')[0]}</option>
+                      <option key={b.id} value={b.id}>
+                        {b.title.split(':')[0]} {b.status !== 'published' ? '(Archived)' : ''}
+                      </option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-gray-500">
@@ -1012,7 +1018,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                       >
                         <option value="all">All Assigned Bootcamps</option>
                         {bootcamps.map(b => (
-                          <option key={b.id} value={b.id}>{b.title}</option>
+                          <option key={b.id} value={b.id}>
+                            {b.title} {b.status !== 'published' ? '(Archived)' : ''}
+                          </option>
                         ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-gray-500">
@@ -1119,10 +1127,20 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                 const studentEmail = sub.users?.email || '';
                 const studentId = sub.users?.member_profiles?.[0]?.student_id || 'N/A';
                 const avatar = sub.users?.avatar_url;
-                const maxPoints = (sub.lessons?.exam_questions || []).reduce((acc, q) => acc + (q.points || 5), 0);
                 const isCQ = sub.lessons?.exam_type === 'cq';
                 const isMcq = sub.lessons?.exam_type === 'mcq';
                 const isHybrid = sub.lessons?.exam_type === 'hybrid';
+
+                // Use the student's actual selected questions (respects random subsets)
+                // Fall back to lesson's full exam_questions if not stored
+                const examQuestions = sub.submitted_answers?.selected_questions || sub.lessons?.exam_questions || [];
+                const cqQuestions = examQuestions.filter(q => !Array.isArray(q.options) || q.options.length === 0);
+                const mcqQuestions = examQuestions.filter(q => Array.isArray(q.options) && q.options.length > 0);
+                // For grading: mentor only grades the CQ portion
+                const cqMaxPoints = cqQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+                const mcqMaxPoints = mcqQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+                // maxPoints = what the mentor can award (CQ only for CQ/hybrid, full for MCQ)
+                const maxPoints = isMcq ? mcqMaxPoints : cqMaxPoints;
 
                 return (
                   <div className="space-y-6">
@@ -1226,7 +1244,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           <div className="space-y-4 text-xs text-slate-300 leading-relaxed font-mono">
                             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                               <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Auto-Graded MCQ Questions</h5>
-                              <p className="text-xs text-emerald-400 font-semibold font-sans">Student MCQ Score: {sub.score ?? 0} / {maxPoints} max points</p>
+                              <p className="text-xs text-emerald-400 font-semibold font-sans">Student MCQ Score: {sub.submitted_answers?.mcq_score ?? sub.score ?? 0} / {mcqMaxPoints} max points</p>
                               <p className="text-[10px] text-gray-500 mt-1 font-sans">Answers are recorded automatically upon submission.</p>
                             </div>
                           </div>
@@ -1373,7 +1391,9 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Points Awarded</label>
+                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                              {isHybrid ? 'CQ Points Awarded' : 'Points Awarded'}
+                            </label>
                             <input
                               type="number"
                               min={0}
@@ -1386,9 +1406,11 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                           </div>
 
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Max Possible Points</label>
+                            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                              {isHybrid ? 'CQ Max Points' : 'Max Possible Points'}
+                            </label>
                             <div className="w-full rounded-xl border border-white/10 bg-white/[0.01] px-3.5 py-3 text-xs text-gray-500 select-none">
-                              {maxPoints} Max Points
+                              {maxPoints} pts{isHybrid ? ` (+ ${mcqMaxPoints} MCQ auto)` : ''}
                             </div>
                           </div>
                         </div>
@@ -1464,8 +1486,8 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                     {!editingTask && (
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Target Bootcamp Track</label>
-                        {bootcamps.length === 0 ? (
-                          <p className="text-xs text-amber-400">No bootcamps assigned to you yet.</p>
+                        {activeBootcamps.length === 0 ? (
+                          <p className="text-xs text-amber-400">No active bootcamps assigned to you yet.</p>
                         ) : (
                           <div className="relative">
                             <select
@@ -1474,7 +1496,7 @@ export default function MentorTasksClient({ tasks: initialTasks = [], submission
                               onChange={(e) => setTaskFormBootcamp(e.target.value)}
                               className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-xs text-gray-200 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all duration-300 cursor-pointer"
                             >
-                              {bootcamps.map(b => (
+                              {activeBootcamps.map(b => (
                                 <option key={b.id} value={b.id}>{b.title}</option>
                               ))}
                             </select>

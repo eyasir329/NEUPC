@@ -27,7 +27,7 @@ import {
   getVideoSourceConfig,
   validateLesson,
   formatDurationSeconds,
-} from './bootcampConfig';
+} from '@/app/account/_components/bootcamps/bootcampConfig';
 import toast from 'react-hot-toast';
 import MultiBlockEditor from './MultiBlockEditor';
 

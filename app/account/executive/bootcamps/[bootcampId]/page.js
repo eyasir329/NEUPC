@@ -1,24 +1,24 @@
 /**
- * @file Admin bootcamp detail/edit page with curriculum builder.
- * @module AdminBootcampDetailPage
+ * @file Executive bootcamp detail/edit page with curriculum builder.
+ * @module ExecutiveBootcampDetailPage
  */
 
 import { notFound } from 'next/navigation';
 import { getBootcampWithCurriculum } from '@/app/_lib/bootcamp-actions';
 import BootcampErrorState from '@/app/account/_components/bootcamps/BootcampErrorState';
 import { safeFetch } from '@/app/account/_components/bootcamps/bootcampPageHelpers';
-import BootcampDetailClient from './_components/BootcampDetailClient';
+import BootcampDetailClient from '../../../admin/bootcamps/[bootcampId]/_components/BootcampDetailClient';
 
 export async function generateMetadata({ params }) {
   const { bootcampId } = await params;
   const { data: bootcamp } = await safeFetch(() => getBootcampWithCurriculum(bootcampId));
   return {
-    title: `${bootcamp?.title || 'Edit Bootcamp'} | Admin`,
+    title: `${bootcamp?.title || 'Edit Bootcamp'} | Executive`,
     description: 'Edit bootcamp details and curriculum',
   };
 }
 
-export default async function AdminBootcampDetailPage({ params }) {
+export default async function ExecutiveBootcampDetailPage({ params }) {
   const { bootcampId } = await params;
   const { data: bootcamp, error } = await safeFetch(() => getBootcampWithCurriculum(bootcampId));
 

@@ -13,7 +13,7 @@ import {
   adminApproveEnrollment,
   adminRejectEnrollment,
   exportEnrollmentsCSV,
-  adminGetStudentProgress,
+  getMentorStudentDetailedStats,
 } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import {
@@ -122,20 +122,29 @@ export default function AssignedMembersClient({ bootcamps }) {
   const expandRow = async (student) => {
     if (expandedId === student.id) { setExpandedId(null); return; }
     setExpandedId(student.id);
-    if (!lessonCache[student.user_id]) {
-      setLessonCache(p => ({ ...p, [student.user_id]: { loading: true } }));
+    // Cache key is bootcampId+userId so different bootcamps don't collide
+    const cacheKey = `${student.bootcampId}:${student.user_id}`;
+    if (!lessonCache[cacheKey]) {
+      setLessonCache(p => ({ ...p, [cacheKey]: { loading: true } }));
       try {
-        const curriculum = await adminGetStudentProgress(student.bootcampId, student.user_id);
-        setLessonCache(p => ({ ...p, [student.user_id]: { loading: false, curriculum } }));
+        const stats = await getMentorStudentDetailedStats(student.bootcampId, student.user_id);
+        setLessonCache(p => ({ ...p, [cacheKey]: { loading: false, ...stats } }));
       } catch {
-        setLessonCache(p => ({ ...p, [student.user_id]: { loading: false, curriculum: null } }));
+        setLessonCache(p => ({ ...p, [cacheKey]: { loading: false, curriculum: null } }));
       }
     }
   };
 
+  const activeBootcamps = useMemo(() => bootcamps.filter(bc => bc.status === 'published'), [bootcamps]);
+  const archivedBootcamps = useMemo(() => bootcamps.filter(bc => bc.status !== 'published'), [bootcamps]);
+
+  const selectedBootcamp = useMemo(() => bootcamps.find(bc => bc.id === bootcampFilter), [bootcamps, bootcampFilter]);
+  const isSelectedArchived = selectedBootcamp ? selectedBootcamp.status !== 'published' : false;
+
   const allEnrollments = useMemo(() => {
     const list = [];
-    bootcamps.forEach(bc => {
+    const targets = bootcampFilter === 'all' ? activeBootcamps : bootcamps;
+    targets.forEach(bc => {
       const info = enrollmentMap[bc.id];
       if (!info) return;
       info.enrollments.forEach(e => list.push({
@@ -146,7 +155,7 @@ export default function AssignedMembersClient({ bootcamps }) {
       }));
     });
     return list;
-  }, [bootcamps, enrollmentMap]);
+  }, [bootcamps, activeBootcamps, bootcampFilter, enrollmentMap]);
 
   const pending = useMemo(
     () => allEnrollments.filter(e => e.status === 'pending' && (bootcampFilter === 'all' || e.bootcampId === bootcampFilter)),
@@ -190,9 +199,11 @@ export default function AssignedMembersClient({ bootcamps }) {
             <ActionButton tone="ghost" icon={FileSpreadsheet} onClick={handleExport}>
               Export CSV
             </ActionButton>
-            <ActionButton tone="violet" icon={Plus} onClick={() => setEnrollOpen(true)}>
-              Enroll
-            </ActionButton>
+            {!isSelectedArchived && bootcampFilter !== 'all' && (
+              <ActionButton tone="violet" icon={Plus} onClick={() => setEnrollOpen(true)}>
+                Enroll
+              </ActionButton>
+            )}
             <ActionButton tone="ghost" onClick={() => fetchData(true)} disabled={refreshing} aria-label="Refresh">
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             </ActionButton>
@@ -241,24 +252,54 @@ export default function AssignedMembersClient({ bootcamps }) {
       </div>
 
       {/* Bootcamp tabs */}
-      <div className="flex flex-wrap gap-1.5 rounded-2xl border border-white/10 bg-zinc-900/50 p-2 shadow-lg backdrop-blur-xl">
-        <FilterTab active={bootcampFilter === 'all'} onClick={() => setBootcampFilter('all')}>
-          All bootcamps
-        </FilterTab>
-        {bootcamps.map(bc => {
-          const info = enrollmentMap[bc.id] || { enrollments: [] };
-          const count = info.enrollments.filter(e => e.status !== 'pending').length;
-          return (
-            <FilterTab
-              key={bc.id}
-              active={bootcampFilter === bc.id}
-              onClick={() => setBootcampFilter(bc.id)}
-              count={count}
-            >
-              {bc.title.split(':')[0]}
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900/50 p-3 shadow-lg backdrop-blur-xl">
+        {/* Active Cohorts Section */}
+        <div>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-violet-400 block mb-2 px-1">Active Cohorts</span>
+          <div className="flex flex-wrap gap-1.5">
+            <FilterTab active={bootcampFilter === 'all'} onClick={() => setBootcampFilter('all')}>
+              All active bootcamps
             </FilterTab>
-          );
-        })}
+            {activeBootcamps.map(bc => {
+              const info = enrollmentMap[bc.id] || { enrollments: [] };
+              const count = info.enrollments.filter(e => e.status !== 'pending').length;
+              return (
+                <FilterTab
+                  key={bc.id}
+                  active={bootcampFilter === bc.id}
+                  onClick={() => setBootcampFilter(bc.id)}
+                  count={count}
+                >
+                  {bc.title.split(':')[0]}
+                </FilterTab>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Archived Cohorts Section */}
+        {archivedBootcamps.length > 0 && (
+          <div className="border-t border-white/5 pt-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block mb-2 px-1">Archived Cohorts (Read-Only)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {archivedBootcamps.map(bc => {
+                const info = enrollmentMap[bc.id] || { enrollments: [] };
+                const count = info.enrollments.filter(e => e.status !== 'pending').length;
+                return (
+                  <FilterTab
+                    key={bc.id}
+                    active={bootcampFilter === bc.id}
+                    onClick={() => setBootcampFilter(bc.id)}
+                    count={count}
+                    tone="zinc"
+                  >
+                    🚫 {bc.title.split(':')[0]}
+                  </FilterTab>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pending requests */}
@@ -370,17 +411,23 @@ export default function AssignedMembersClient({ bootcamps }) {
           />
         ) : (
           <div className="space-y-3">
-            {students.map(student => (
-              <StudentRow
-                key={student.id}
-                student={student}
-                expanded={expandedId === student.id}
-                lessons={lessonCache[student.user_id]}
-                onExpand={() => expandRow(student)}
-                onInspect={() => setDrawerStudent(student)}
-                onRemove={(name) => handleRemove(student.id, name)}
-              />
-            ))}
+            {students.map(student => {
+              const bc = bootcamps.find(b => b.id === student.bootcampId);
+              const isBcArchived = bc ? bc.status !== 'published' : false;
+              const cacheKey = `${student.bootcampId}:${student.user_id}`;
+              return (
+                <StudentRow
+                  key={student.id}
+                  student={student}
+                  expanded={expandedId === student.id}
+                  detailedStats={lessonCache[cacheKey]}
+                  onExpand={() => expandRow(student)}
+                  onInspect={() => setDrawerStudent(student)}
+                  onRemove={(name) => handleRemove(student.id, name)}
+                  readOnly={isBcArchived}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -390,7 +437,7 @@ export default function AssignedMembersClient({ bootcamps }) {
           <StudentDrawer
             student={drawerStudent}
             onClose={() => setDrawerStudent(null)}
-            lessonProgressMap={lessonCache}
+            detailedStats={lessonCache[`${drawerStudent.bootcampId}:${drawerStudent.user_id}`]}
           />
         )}
       </AnimatePresence>
@@ -428,14 +475,27 @@ function FilterTab({ active, onClick, count, children }) {
   );
 }
 
-function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove }) {
+function formatWatchSecs(s) {
+  if (!s) return '0m';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function StudentRow({ student, expanded, detailedStats, onExpand, onInspect, onRemove, readOnly = false }) {
   const name = student.users?.full_name || 'Candidate';
   const completed = student.completed_lessons || 0;
   const total = student.totalLessons || 1;
   const pct = Math.min(100, Math.round((completed / total) * 100));
   const tone = STATUS_TONE[student.status] || 'gray';
+  const score = student.score || 0;
+  const watchTime = student.watch_time || 0;
+  const taskPts = student.task_points || 0;
+  const examPts = student.exam_points || 0;
+  const sessionsAtt = student.sessions_attended || 0;
 
-  const flatLessons = lessons?.curriculum?.courses?.flatMap(c =>
+  const flatLessons = detailedStats?.curriculum?.courses?.flatMap(c =>
     c.modules?.flatMap(m => m.lessons || []) || []
   ) || [];
 
@@ -446,15 +506,10 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
         : 'border-white/10 bg-zinc-900/50 hover:border-white/20 hover:bg-zinc-900/70'
     }`}>
       <div className={`pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full blur-[80px] transition-opacity ${expanded ? 'bg-violet-500/15 opacity-100' : 'bg-violet-500/5 opacity-0 group-hover:opacity-100'}`} />
-      {/* Active state stripe */}
-      {expanded && (
-        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-400 to-fuchsia-500" />
-      )}
+      {expanded && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-400 to-fuchsia-500" />}
 
-      <div
-        onClick={onExpand}
-        className="relative z-10 flex cursor-pointer flex-col justify-between gap-4 px-5 py-4 select-none md:flex-row md:items-center"
-      >
+      <div onClick={onExpand} className="relative z-10 flex cursor-pointer flex-col justify-between gap-4 px-5 py-4 select-none md:flex-row md:items-center">
+        {/* Identity */}
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
           <Avatar name={name} src={student.users?.avatar_url} size="md" />
           <div className="min-w-0 flex-1">
@@ -463,22 +518,39 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
           </div>
         </div>
 
+        {/* Bootcamp + enrolled date */}
         <div className="hidden min-w-0 max-w-50 shrink-0 text-left md:block">
           <p className="truncate text-xs font-semibold text-violet-300">{student.bootcampTitle.split(':')[0]}</p>
           <p className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
-            <Clock className="h-3 w-3 text-zinc-500" />
+            <Clock className="h-3 w-3" />
             Enrolled {new Date(student.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        <div className="w-full shrink-0 space-y-1.5 text-left md:w-48">
-          <div className="flex justify-between text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-            <span>Progress</span>
-            <span className="font-bold tabular-nums text-zinc-200">{pct}% · {completed}/{total}</span>
+        {/* Score + progress bar */}
+        <div className="w-full shrink-0 space-y-2 md:w-52">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Award className="h-3 w-3 text-amber-400" />
+              <span className="text-[10px] font-bold text-amber-300 tabular-nums">{score} pts</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+              {watchTime > 0 && <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{formatWatchSecs(watchTime)}</span>}
+              {sessionsAtt > 0 && <span className="text-sky-400 font-semibold">{sessionsAtt} sess</span>}
+              {taskPts > 0 && <span className="text-emerald-400 font-semibold">{taskPts}t</span>}
+              {examPts > 0 && <span className="text-fuchsia-400 font-semibold">{examPts}e</span>}
+            </div>
           </div>
-          <GradientBar value={pct} tone={student.status === 'completed' ? 'emerald' : 'violet'} height="h-1.5" />
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+              <span>Progress</span>
+              <span className="tabular-nums text-zinc-200">{pct}% · {completed}/{total}</span>
+            </div>
+            <GradientBar value={pct} tone={student.status === 'completed' ? 'emerald' : 'violet'} height="h-1.5" />
+          </div>
         </div>
 
+        {/* Status + chevron */}
         <div className="flex shrink-0 items-center justify-between gap-3 md:justify-end">
           <Pill tone={tone}>
             <span className={`mr-1 h-1.5 w-1.5 rounded-full bg-current ${student.status === 'active' ? 'animate-pulse shadow-[0_0_6px_currentColor]' : ''}`} />
@@ -490,7 +562,26 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
 
       <AnimatePresence>
         {expanded && (
-          <div className="relative z-10 space-y-5 border-t border-white/5 bg-black/20 p-5">
+          <div className="relative z-10 space-y-4 border-t border-white/5 bg-black/20 p-5">
+
+            {/* Score breakdown mini-row */}
+            {!detailedStats?.loading && detailedStats?.scoreBreakdown && (
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Lessons', value: detailedStats.scoreBreakdown.lesson, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+                  { label: 'Tasks', value: detailedStats.scoreBreakdown.task, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                  { label: 'Exams', value: detailedStats.scoreBreakdown.exam, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10 border-fuchsia-500/20' },
+                  { label: 'Sessions', value: detailedStats.scoreBreakdown.session, color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20' },
+                ].map(s => (
+                  <div key={s.label} className={`rounded-xl border ${s.bg} px-2 py-2.5 text-center`}>
+                    <p className={`text-sm font-black tabular-nums ${s.color}`}>{s.value}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Lesson list */}
             <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60">
               <div className="flex items-center justify-between border-b border-white/5 bg-white/2 px-4 py-3">
                 <h4 className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
@@ -498,29 +589,29 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
                   Lesson progress
                 </h4>
                 <span className="font-mono text-[11px] font-bold text-violet-300 tabular-nums">
-                  {completed}/{total} completed
+                  {detailedStats?.lessonsCompleted ?? completed}/{total} done
                 </span>
               </div>
-
               <div className="p-4">
-                {lessons?.loading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
-                  </div>
+                {detailedStats?.loading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-violet-400" /></div>
                 ) : flatLessons.length > 0 ? (
-                  <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                  <div className="grid max-h-52 grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2">
                     {flatLessons.map(l => {
                       const done = l.progress?.is_completed;
+                      const exam = l.examSubmission;
                       return (
-                        <div key={l.id} className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-xs transition hover:border-white/10 hover:bg-white/4">
-                          {done ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
-                          ) : (
-                            <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20" />
+                        <div key={l.id} className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-xs transition hover:border-white/10">
+                          {done
+                            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                            : <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20" />}
+                          <span className={`truncate flex-1 ${done ? 'text-zinc-400' : 'text-zinc-200'}`}>{l.title}</span>
+                          {exam?.status === 'graded' && (
+                            <span className="shrink-0 text-[9px] font-bold text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-full px-1.5 py-0.5">{exam.score}pt</span>
                           )}
-                          <span className={`truncate ${done ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
-                            {l.title}
-                          </span>
+                          {done && l.progress?.watch_time > 0 && (
+                            <span className="shrink-0 text-[9px] text-zinc-600 font-mono">{formatWatchSecs(l.progress.watch_time)}</span>
+                          )}
                         </div>
                       );
                     })}
@@ -532,16 +623,12 @@ function StudentRow({ student, expanded, lessons, onExpand, onInspect, onRemove 
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3">
-              <ActionButton tone="violet" onClick={onInspect}>
-                View full profile
-              </ActionButton>
-              <button
-                onClick={() => onRemove(name)}
-                className="cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/10 p-2 text-rose-300 transition hover:bg-rose-500/20"
-                title="Remove enrollment"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <ActionButton tone="violet" onClick={onInspect}>View full profile</ActionButton>
+              {!readOnly && (
+                <button onClick={() => onRemove(name)} className="cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/10 p-2 text-rose-300 transition hover:bg-rose-500/20" title="Remove enrollment">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )}

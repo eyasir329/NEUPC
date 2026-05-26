@@ -22,3 +22,11 @@ seed.sql
 *.backup.sql
 *_data.sql
 *_dump.sql
+
+# SQL data chunks
+local_chunks/
+
+# Local dev utility scripts (never commit)
+split_sql.py
+truncate_all.sql
+

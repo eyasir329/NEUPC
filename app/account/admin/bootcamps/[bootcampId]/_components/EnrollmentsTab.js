@@ -38,6 +38,8 @@ import {
   UserCheck,
   UserX,
   Award,
+  FileText,
+  Video,
 } from 'lucide-react';
 import {
   getEnrollmentsWithProgress,
@@ -49,7 +51,7 @@ import {
   adminApproveEnrollment,
   adminRejectEnrollment,
   exportEnrollmentsCSV,
-  adminGetStudentProgress,
+  getMentorStudentDetailedStats,
 } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { StatCard } from '../../../_components/_ui';
@@ -95,6 +97,8 @@ const SORT_OPTIONS = [
   { value: 'name_desc', label: 'Name Z-A' },
   { value: 'progress_desc', label: 'Most Progress' },
   { value: 'progress_asc', label: 'Least Progress' },
+  { value: 'score_desc', label: 'Highest Score' },
+  { value: 'score_asc', label: 'Lowest Score' },
 ];
 
 const FILTER_OPTIONS = [
@@ -168,17 +172,17 @@ export default function EnrollmentsTab({ bootcampId }) {
         case 'enrolled_at_asc':
           return new Date(a.enrolled_at) - new Date(b.enrolled_at);
         case 'name_asc':
-          return (a.users?.full_name || '').localeCompare(
-            b.users?.full_name || ''
-          );
+          return (a.users?.full_name || '').localeCompare(b.users?.full_name || '');
         case 'name_desc':
-          return (b.users?.full_name || '').localeCompare(
-            a.users?.full_name || ''
-          );
+          return (b.users?.full_name || '').localeCompare(a.users?.full_name || '');
         case 'progress_desc':
           return (b.progress_percent || 0) - (a.progress_percent || 0);
         case 'progress_asc':
           return (a.progress_percent || 0) - (b.progress_percent || 0);
+        case 'score_desc':
+          return (b.score || 0) - (a.score || 0);
+        case 'score_asc':
+          return (a.score || 0) - (b.score || 0);
         default:
           return 0;
       }
@@ -669,9 +673,24 @@ function EnrollmentRow({
             {enrollment.completed_lessons || 0}/{totalLessons}
           </span>
         </div>
-        <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-violet-400">
-          <Award className="h-3 w-3 text-amber-500" />
-          <span>Score: {enrollment.score || 0} pts</span>
+        <div className="mt-1 flex items-center gap-2 text-[10px] font-medium">
+          <span className="flex items-center gap-0.5 text-amber-400">
+            <Award className="h-3 w-3" />{enrollment.score || 0}pt
+          </span>
+          {enrollment.watch_time > 0 && (
+            <span className="text-zinc-500 flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" />{fmtTime(enrollment.watch_time)}
+            </span>
+          )}
+          {enrollment.sessions_attended > 0 && (
+            <span className="text-sky-400">{enrollment.sessions_attended} sess</span>
+          )}
+          {enrollment.task_points > 0 && (
+            <span className="text-emerald-400">{enrollment.task_points}t</span>
+          )}
+          {enrollment.exam_points > 0 && (
+            <span className="text-fuchsia-400">{enrollment.exam_points}e</span>
+          )}
         </div>
       </td>
       <td className="px-4 py-3">
@@ -747,18 +766,21 @@ function EnrollmentRow({
 }
 
 function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, formatDate }) {
-  const [curriculum, setCurriculum] = useState(null);
+  const [detailedStats, setDetailedStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminGetStudentProgress(bootcampId, enrollment.user_id)
-      .then(setCurriculum)
+    getMentorStudentDetailedStats(bootcampId, enrollment.user_id)
+      .then((stats) => setDetailedStats(stats))
       .catch(() => toast.error('Failed to load progress'))
       .finally(() => setLoading(false));
   }, [bootcampId, enrollment.user_id]);
 
   const sc = STATUS_CONFIG[enrollment.status] || STATUS_CONFIG.active;
   const user = enrollment.users;
+  const scoreBreakdown = detailedStats?.scoreBreakdown;
+  const totalWatchTime = detailedStats?.totalWatchTime || 0;
+  const sessionsAttended = detailedStats?.sessionsAttended || 0;
 
   return (
     <>
@@ -794,10 +816,7 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
               <p className="text-[11px] text-gray-500">{user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-white"
-          >
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -818,53 +837,124 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
           </div>
           <div className="px-2 py-3 text-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Score</p>
-            <p className="mt-1 text-sm font-bold text-violet-400">{enrollment.score || 0}</p>
+            <p className="mt-1 text-sm font-bold text-amber-400">{scoreBreakdown?.total ?? enrollment.score ?? 0}</p>
             <p className="text-[10px] text-gray-600">points</p>
           </div>
           <div className="px-2 py-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Enrolled</p>
-            <p className="mt-1 text-xs text-gray-300 truncate">{formatDate(enrollment.enrolled_at)}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Watch</p>
+            <p className="mt-1 text-xs font-bold text-violet-400">{fmtTime(totalWatchTime) || '0m'}</p>
+            {sessionsAttended > 0 && <p className="text-[9px] text-sky-400">{sessionsAttended} sess</p>}
           </div>
         </div>
 
         {/* Progress bar */}
         <div className="px-5 py-3 border-b border-white/5 shrink-0">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-linear-to-r from-violet-500 to-pink-500 transition-all"
-              style={{ width: `${enrollment.progress_percent || 0}%` }}
-            />
+            <div className="h-full rounded-full bg-linear-to-r from-violet-500 to-pink-500 transition-all" style={{ width: `${enrollment.progress_percent || 0}%` }} />
           </div>
         </div>
 
+        {/* Score breakdown */}
+        {scoreBreakdown && (
+          <div className="px-5 pt-4 shrink-0">
+            <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Score Breakdown</span>
+                <span className="ml-auto text-xs font-black text-amber-300 tabular-nums">{scoreBreakdown.total} pts</span>
+              </div>
+              <div className="grid grid-cols-4 gap-px bg-white/5">
+                {[
+                  { label: 'Lessons', value: scoreBreakdown.lesson, color: 'text-violet-400' },
+                  { label: 'Tasks', value: scoreBreakdown.task, color: 'text-emerald-400' },
+                  { label: 'Exams', value: scoreBreakdown.exam, color: 'text-fuchsia-400' },
+                  { label: 'Sessions', value: scoreBreakdown.session, color: 'text-sky-400' },
+                ].map(s => (
+                  <div key={s.label} className="bg-[#0d1117] px-2 py-2.5 text-center">
+                    <p className={`text-sm font-black tabular-nums ${s.color}`}>{s.value}</p>
+                    <p className="text-[9px] text-gray-600 uppercase tracking-wider mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Curriculum */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
             </div>
           ) : (
-            <div className="space-y-4">
-              {curriculum?.courses?.map((course) => (
-                <div key={course.id}>
-                  {curriculum.courses.length > 1 && (
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{course.title}</p>
-                  )}
-                  <div className="space-y-3">
-                    {course.modules?.map((module) => (
-                      <ModuleProgressBlock key={module.id} module={module} />
+            <>
+              {/* Lesson curriculum */}
+              <div className="space-y-3">
+                {detailedStats?.curriculum?.courses?.map((course) => (
+                  <div key={course.id}>
+                    {detailedStats.curriculum.courses.length > 1 && (
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{course.title}</p>
+                    )}
+                    <div className="space-y-3">
+                      {course.modules?.map((module) => (
+                        <ModuleProgressBlock key={module.id} module={module} />
+                      ))}
+                    </div>
+                    <CourseTotalWatchTime modules={course.modules || []} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Task submissions */}
+              {detailedStats?.taskSubmissions?.length > 0 && (
+                <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5">
+                    <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Task Submissions</span>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {detailedStats.taskSubmissions.map(t => (
+                      <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="truncate text-xs text-gray-300 flex-1">{t.weekly_tasks?.title || 'Task'}</span>
+                        <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                          t.status === 'graded' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                          t.status === 'pending' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                          'text-gray-400 bg-white/5 border-white/10'
+                        }`}>{t.status === 'graded' ? `${t.points_earned}pt` : t.status}</span>
+                      </div>
                     ))}
                   </div>
-                  <CourseTotalWatchTime modules={course.modules || []} />
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Session attendance */}
+              {detailedStats?.sessionDetails?.length > 0 && (
+                <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5">
+                    <Video className="w-3.5 h-3.5 text-sky-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sessions</span>
+                    <span className="ml-auto text-[9px] text-sky-400 font-bold">{sessionsAttended}/{detailedStats.sessionDetails.length} attended</span>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-40 overflow-y-auto">
+                    {detailedStats.sessionDetails.map(s => (
+                      <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="truncate text-xs text-gray-300 flex-1">{s.topic || formatDate(s.session_date)}</span>
+                        {s.attended
+                          ? <span className="shrink-0 text-[9px] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-1.5 py-0.5">{s.points > 0 ? `+${s.points}pt` : '✓'}</span>
+                          : <span className="shrink-0 text-[9px] font-bold text-zinc-600 bg-white/5 border border-white/10 rounded-full px-1.5 py-0.5">absent</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </motion.div>
     </>
   );
 }
+
 
 function fmtTime(seconds) {
   if (!seconds || seconds <= 0) return null;

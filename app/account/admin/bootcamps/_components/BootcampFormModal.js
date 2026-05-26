@@ -26,7 +26,7 @@ import {
   BOOTCAMP_STATUSES,
   getStatusConfig,
   validateBootcamp,
-} from './bootcampConfig';
+} from '@/app/account/_components/bootcamps/bootcampConfig';
 import toast from 'react-hot-toast';
 
 const INPUT_CLASS = (err) =>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Terminal,
   Edit3,
@@ -11,7 +12,7 @@ import {
   BookOpen,
   ExternalLink,
 } from 'lucide-react';
-import { getStatusConfig, formatRelativeDate } from './bootcampConfig';
+import { getStatusConfig, formatRelativeDate } from '@/app/account/_components/bootcamps/bootcampConfig';
 
 export default function BootcampTableRow({
   bootcamp,
@@ -19,6 +20,12 @@ export default function BootcampTableRow({
   onDelete,
   deleteLoading,
 }) {
+  const pathname = usePathname();
+  const isExecutive = pathname?.includes('/account/executive');
+  const editUrl = isExecutive
+    ? `/account/executive/bootcamps/${bootcamp.id}`
+    : `/account/admin/bootcamps/${bootcamp.id}`;
+
   const sc = getStatusConfig(bootcamp.status);
 
   return (
@@ -26,7 +33,7 @@ export default function BootcampTableRow({
       {/* Track */}
       <td className="py-3.5 px-5">
         <Link
-          href={`/account/admin/bootcamps/${bootcamp.id}`}
+          href={editUrl}
           className="flex items-center gap-3"
         >
           <div className="h-11 w-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden group-hover:border-violet-500/40 transition-colors">
@@ -94,7 +101,7 @@ export default function BootcampTableRow({
       <td className="py-3.5 px-5">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Link
-            href={`/account/admin/bootcamps/${bootcamp.id}`}
+            href={editUrl}
             className="p-1.5 text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-all border border-transparent hover:border-violet-500/20"
             title="Edit"
           >

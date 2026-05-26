@@ -103,6 +103,7 @@ scripts/codeforces-scrape-progress.json
 supabase/remote_data.sql
 supabase/seed.sql
 supabase/migrations/
+supabase/local_chunks/
 *.sql.bak
 cloud_*.sql
 remote_*.sql

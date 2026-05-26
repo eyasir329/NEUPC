@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   GraduationCap,
   Star,
@@ -18,7 +19,7 @@ import {
   formatDuration,
   formatPrice,
   formatRelativeDate,
-} from './bootcampConfig';
+} from '@/app/account/_components/bootcamps/bootcampConfig';
 
 export default function BootcampCard({
   bootcamp,
@@ -26,6 +27,12 @@ export default function BootcampCard({
   onDelete,
   deleteLoading,
 }) {
+  const pathname = usePathname();
+  const isExecutive = pathname?.includes('/account/executive');
+  const editUrl = isExecutive
+    ? `/account/executive/bootcamps/${bootcamp.id}`
+    : `/account/admin/bootcamps/${bootcamp.id}`;
+
   const sc = getStatusConfig(bootcamp.status);
   const price = formatPrice(bootcamp.price);
 
@@ -166,7 +173,7 @@ export default function BootcampCard({
               </button>
 
               <Link
-                href={`/account/admin/bootcamps/${bootcamp.id}`}
+                href={editUrl}
                 className="flex h-7 items-center justify-center gap-1 rounded-lg px-2 text-gray-500 transition-all hover:bg-violet-500/15 hover:text-violet-400 text-[11px] font-medium ml-1"
                 title="Edit & Curriculum"
               >

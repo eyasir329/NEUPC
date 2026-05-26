@@ -30,7 +30,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { html } from '@codemirror/lang-html';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { VIDEO_SOURCES, getVideoSourceConfig, formatDurationSeconds } from './bootcampConfig';
+import { VIDEO_SOURCES, getVideoSourceConfig, formatDurationSeconds } from '@/app/account/_components/bootcamps/bootcampConfig';
 import { validateDriveVideo, uploadLessonImageAction, generateExamQuestionsAction, generatePracticeProblemsAction } from '@/app/_lib/bootcamp-actions';
 import { extractDriveFileId, driveImageUrl } from '@/app/_lib/utils';
 import { marked } from 'marked';

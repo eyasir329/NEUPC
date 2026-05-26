@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Save, Loader2, Star, GraduationCap } from 'lucide-react';
 import CurriculumBuilder from '@/app/account/admin/bootcamps/_components/CurriculumBuilder';
-import { getStatusConfig } from '@/app/account/admin/bootcamps/_components/bootcampConfig';
+import { getStatusConfig } from '@/app/account/_components/bootcamps/bootcampConfig';
 import { PageShell, PageHeader, Pill } from '@/app/account/mentor/_components/_ui';
 import toast from 'react-hot-toast';
 
@@ -34,6 +34,7 @@ export default function MentorBootcampDetailClient({ bootcamp }) {
 
   const sc = getStatusConfig(bootcamp.status);
   const tone = STATUS_TONE[bootcamp.status] ?? 'gray';
+  const isArchived = bootcamp.status === 'archived';
 
   return (
     <PageShell>
@@ -61,23 +62,36 @@ export default function MentorBootcampDetailClient({ bootcamp }) {
               <ChevronLeft className="h-3 w-3" />
               My Bootcamps
             </Link>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,92,255,0.4)] transition-all disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
+            {!isArchived && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,92,255,0.4)] transition-all disabled:opacity-60"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            )}
           </div>
         }
       />
+
+      {isArchived && (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold">⚠️</span>
+          <div className="flex-1">
+            <p className="font-semibold text-xs uppercase tracking-wider text-amber-400">Archived Cohort (Read-Only)</p>
+            <p className="text-xs text-amber-200/80 mt-0.5">This bootcamp has been archived. You can view the curriculum and lesson contents, but all syllabus edits, module additions, and lesson updates are disabled.</p>
+          </div>
+        </div>
+      )}
 
       <CurriculumBuilder
         bootcampId={bootcamp.id}
         initialCourses={bootcampData.courses || []}
         onCoursesChange={handleCoursesChange}
         lessonSaveRef={lessonSaveRef}
+        readOnly={isArchived}
       />
     </PageShell>
   );
