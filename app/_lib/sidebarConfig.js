@@ -25,7 +25,7 @@ import {
   Download,
   FolderOpen,
   Code,
-  MapPin,
+  Compass,
   Mail,
   PenTool,
   BarChart3,
@@ -401,7 +401,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'roadmaps',
             label: 'Roadmaps',
-            icon: MapPin,
+            icon: Compass,
             href: '/account/admin/roadmaps',
           },
           {

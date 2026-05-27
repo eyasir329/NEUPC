@@ -57,7 +57,8 @@ import {
 import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/image-gen';
 import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
 import { driveImageUrl } from '@/app/_lib/utils';
-import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
+import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import { createLowlight, common } from 'lowlight';
 import { toHtml } from 'hast-util-to-html';
 
@@ -266,15 +267,20 @@ function LivePreview({
   const previewRef = useRef(null);
   const cc = getCategoryConfig(category);
 
+  const isJsonContent = useMemo(() => {
+    if (!content) return false;
+    return typeof content === 'string' && content.trim().startsWith('[');
+  }, [content]);
+
   // Pre-process content: syntax highlighting + line wrapping (synchronous)
   const enhancedContent = useMemo(
-    () => highlightCodeBlocksAdmin(content),
-    [content]
+    () => (isJsonContent ? '' : highlightCodeBlocksAdmin(content)),
+    [content, isJsonContent]
   );
 
   // Copy-to-clipboard buttons (needs DOM)
   useEffect(() => {
-    if (!previewRef.current) return;
+    if (!previewRef.current || isJsonContent) return;
     const codeBlocks = previewRef.current.querySelectorAll('pre code');
     codeBlocks.forEach((block) => {
       const pre = block.parentElement;
@@ -393,16 +399,21 @@ function LivePreview({
 
       {/* Content */}
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {content && (
+        {content ? (
           <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <div
-              ref={previewRef}
-              className="blog-content text-xs leading-relaxed text-gray-300"
-              dangerouslySetInnerHTML={{ __html: enhancedContent }}
-            />
+            {isJsonContent ? (
+              <div className="blog-content text-xs leading-relaxed text-gray-300">
+                <LessonContentRenderer content={content} viewerMode={true} />
+              </div>
+            ) : (
+              <div
+                ref={previewRef}
+                className="blog-content text-xs leading-relaxed text-gray-300"
+                dangerouslySetInnerHTML={{ __html: enhancedContent }}
+              />
+            )}
           </div>
-        )}
-        {!content && (
+        ) : (
           <div className="flex items-center justify-center rounded-xl border border-dashed border-white/8 py-12 text-center">
             <div>
               <BookOpen className="mx-auto mb-2 h-8 w-8 text-gray-700" />
@@ -1066,39 +1077,17 @@ export default function BlogFormPanel({ post, onClose, onSaved }) {
                       <div>
                         <div className="mb-1.5 flex items-center justify-between gap-2">
                           <label className={labelCls}>
-                            Content <span className="text-red-400">*</span>
+                            Blog Content Blocks <span className="text-red-400">*</span>
                           </label>
-                          <div className="flex items-center gap-1.5">
-                            <AiWriteButton
-                              mode="content"
-                              onGenerated={(html) => setContent(html)}
-                              context={`${title || ''} — ${excerpt || ''}`}
-                            />
-                            {content && (
-                              <AiWriteButton
-                                mode="improve"
-                                onGenerated={(html) => setContent(html)}
-                                existingContent={content}
-                              />
-                            )}
-                          </div>
                         </div>
-                        <RichTextEditor
+                        <MultiBlockEditor
                           value={content}
                           onChange={setContent}
-                          placeholder="Write your blog content here…"
+                          lessonTitle={title}
                           uploadImageAction={uploadBlogImageAction}
-                          onDeleteImage={(url) => {
-                            deleteBlogImageAction(url).catch(() => {});
-                          }}
-                          uploadedUrlsRef={contentUploadedUrlsRef}
-                          containedFullscreen
-                          fullscreenContainerRef={bodyRef}
                         />
                         <p className={hintCls}>
-                          Visible on the blog detail page. Use the toolbar to
-                          format text, add headings, lists, code blocks, images,
-                          and more.
+                          Design your blog layout dynamically. Add rich text, markdown, HTML, code snippets, videos, and images.
                         </p>
                       </div>
                     </FormSection>

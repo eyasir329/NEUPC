@@ -37,9 +37,10 @@ import {
   ThumbsDown,
   MessageSquare,
   ShieldCheck,
+  ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { motion } from 'framer-motion';
 import ApplicationDetailModal from './ApplicationDetailModal';
 import { getStatusConfig, ALL_STATUSES } from './applicationConfig';
 import {
@@ -56,66 +57,71 @@ import {
   rejectGuestAction,
 } from '@/app/_lib/user-actions';
 
-// ─── Shared: Stat Card ────────────────────────────────────────────────────────
+// Shared UI components
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  SectionHeader,
+  IconChip,
+  StatCard as StandardStatCard,
+  Pill,
+  TabBar,
+  EmptyState,
+  ActionButton,
+  Avatar,
+  StaggerList,
+} from '../../_components/_ui';
 
-function StatCard({ icon: Icon, label, value, colorClass, active, onClick }) {
+// Static accent class maps matching dashboard.js token maps
+const ACCENT_CARD_ACTIVE = {
+  blue: 'border-blue-500/40 bg-white/[0.04] ring-1 ring-blue-500/20',
+  emerald: 'border-emerald-500/40 bg-white/[0.04] ring-1 ring-emerald-500/20',
+  amber: 'border-amber-500/40 bg-white/[0.04] ring-1 ring-amber-500/20',
+  rose: 'border-rose-500/40 bg-white/[0.04] ring-1 ring-rose-500/20',
+  violet: 'border-violet-500/40 bg-white/[0.04] ring-1 ring-violet-500/20',
+  orange: 'border-orange-500/40 bg-white/[0.04] ring-1 ring-orange-500/20',
+};
+
+// ─── Interactive Stat Card ──────────────────────────────────────────────────
+function InteractiveStatCard({ icon: Icon, label, value, accent = 'blue', active, onClick, delay = 0 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left backdrop-blur-sm transition-all ${
-        active
-          ? 'border-white/20 bg-white/8 shadow-lg shadow-black/20'
-          : 'border-white/8 bg-white/4 hover:border-white/12 hover:bg-white/6'
-      }`}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay }}
+      className="h-full"
     >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
+      <button
+        type="button"
+        onClick={onClick}
+        className={`flex h-full w-full flex-col text-left rounded-2xl border p-4 transition-all ${
+          active
+            ? ACCENT_CARD_ACTIVE[accent] ?? ACCENT_CARD_ACTIVE.blue
+            : 'border-white/[0.08] bg-gray-900 hover:bg-white/[0.02] hover:border-white/[0.12]'
+        }`}
       >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xl leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-xs text-gray-500">{label}</p>
-      </div>
-    </button>
-  );
-}
-
-// ─── Shared: Tab Button ───────────────────────────────────────────────────────
-
-function TabButton({ active, onClick, children, count }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-            active ? 'bg-white/15 text-white' : 'bg-white/6 text-gray-600'
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
+        <div className="flex min-h-9 items-start justify-between gap-3">
+          <IconChip icon={Icon} accent={accent} />
+        </div>
+        <div className="mt-3">
+          <div className="text-xs text-gray-400">{label}</div>
+          <div className="mt-0.5 text-2xl font-bold text-white tabular-nums">{value}</div>
+        </div>
+      </button>
+    </motion.div>
   );
 }
 
 // ─── Shared: Flash Message ────────────────────────────────────────────────────
-
 function FlashMsg({ msg, type }) {
   if (!msg) return null;
   return (
-    <div
-      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm backdrop-blur-md ${
         type === 'error'
           ? 'border-red-500/30 bg-red-500/10 text-red-300'
           : 'border-green-500/30 bg-green-500/10 text-green-300'
@@ -127,12 +133,11 @@ function FlashMsg({ msg, type }) {
         <CheckCircle2 className="h-4 w-4 shrink-0" />
       )}
       {msg}
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
-
 function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChange }) {
   if (totalPages <= 1) return null;
 
@@ -156,34 +161,36 @@ function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChang
   };
 
   return (
-    <div className="flex items-center justify-between border-t border-white/6 pt-4">
+    <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/[0.06] sm:flex-row sm:justify-between">
       <span className="text-xs text-gray-500">
         Showing{' '}
-        <span className="font-medium text-gray-400 tabular-nums">{from}–{to}</span>
+        <span className="font-semibold text-gray-300 tabular-nums">{from}–{to}</span>
         {' '}of{' '}
-        <span className="font-medium text-gray-400 tabular-nums">{totalItems}</span>
+        <span className="font-semibold text-gray-300 tabular-nums">{totalItems}</span>
       </span>
       <div className="flex items-center gap-1">
         <button
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/8 text-gray-400 transition-colors hover:bg-white/6 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
         {getPages().map((page, i) =>
           page === '...' ? (
-            <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-600">
+            <span key={`ellipsis-${i}`} className="px-1.5 text-xs text-gray-600 select-none">
               …
             </span>
           ) : (
             <button
+              type="button"
               key={page}
               onClick={() => onPageChange(page)}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-medium transition-colors ${
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
                 currentPage === page
-                  ? 'border-white/20 bg-white/12 text-white'
-                  : 'border-white/8 text-gray-500 hover:bg-white/6 hover:text-gray-300'
+                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                  : 'border border-white/6 bg-white/2 text-gray-400 hover:bg-white/5 hover:text-gray-300'
               }`}
             >
               {page}
@@ -191,23 +198,19 @@ function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChang
           )
         )}
         <button
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/8 text-gray-400 transition-colors hover:bg-white/6 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MEMBERSHIP APPLICATIONS PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // ─── Bulk Action Bar ──────────────────────────────────────────────────────────
-
 function BulkActionBar({
   selectedCount,
   onClear,
@@ -221,7 +224,7 @@ function BulkActionBar({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center gap-2">
         <SquareCheck className="h-4 w-4 text-blue-400" />
         <span className="text-sm font-semibold text-blue-300">
@@ -235,16 +238,17 @@ function BulkActionBar({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Rejection reason (optional)"
-            className="w-52 rounded-lg border border-red-500/20 bg-white/5 px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500/30 focus:outline-none"
+            className="w-52 rounded-lg border border-red-500/20 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:border-red-500/30 focus:outline-none"
           />
           <button
+            type="button"
             onClick={() => {
               setShowRejectInput(false);
               onReject(reason);
               setReason('');
             }}
             disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
           >
             {isPending ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -254,65 +258,67 @@ function BulkActionBar({
             Confirm Reject
           </button>
           <button
+            type="button"
             onClick={() => setShowRejectInput(false)}
-            className="px-1 text-xs text-gray-500 transition-colors hover:text-gray-300"
+            className="px-1 text-xs text-gray-500 transition-colors hover:text-gray-300 font-medium"
           >
             Cancel
           </button>
         </div>
       ) : (
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button
+          <ActionButton
             onClick={onApprove}
+            tone="emerald"
+            icon={isPending ? Loader2 : CheckCircle2}
             disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-300 transition-colors hover:bg-green-500/20 disabled:opacity-50"
           >
-            {isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3 w-3" />
-            )}
             Approve All
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => setShowRejectInput(true)}
+            tone="danger"
+            icon={XCircle}
             disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
           >
-            <XCircle className="h-3 w-3" /> Reject All
-          </button>
+            Reject All
+          </ActionButton>
           {deleteConfirm ? (
             <>
               <span className="text-xs text-gray-400">
                 Delete {selectedCount}?
               </span>
               <button
+                type="button"
                 onClick={() => {
                   setDeleteConfirm(false);
                   onDelete();
                 }}
                 disabled={isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
               >
                 <Trash2 className="h-3 w-3" /> Confirm
               </button>
               <button
+                type="button"
                 onClick={() => setDeleteConfirm(false)}
-                className="px-1 text-xs text-gray-500 hover:text-gray-300"
+                className="px-1 text-xs text-gray-500 hover:text-gray-300 font-medium"
               >
                 Cancel
               </button>
             </>
           ) : (
-            <button
+            <ActionButton
               onClick={() => setDeleteConfirm(true)}
+              tone="danger"
+              icon={Trash2}
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/15 disabled:opacity-50"
             >
-              <Trash2 className="h-3 w-3" /> Delete
-            </button>
+              Delete
+            </ActionButton>
           )}
           <button
+            type="button"
             onClick={onClear}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
           >
@@ -325,7 +331,6 @@ function BulkActionBar({
 }
 
 // ─── Application Row ──────────────────────────────────────────────────────────
-
 function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
   const sc = getStatusConfig(req.status);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -385,23 +390,31 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
     });
   }
 
+  // Pill tone logic matching STATUS_CONFIG
+  const getPillTone = (status) => {
+    if (status === 'approved') return 'emerald';
+    if (status === 'rejected') return 'rose';
+    return 'amber';
+  };
+
   return (
     <div
-      className={`group relative flex items-start gap-3 rounded-2xl border bg-white/3 px-4 py-4 transition-all duration-150 hover:bg-white/5 sm:items-center ${
+      className={`group relative flex items-start gap-4 rounded-xl border bg-gray-900/40 p-4 transition-all duration-150 hover:bg-white/[0.02] sm:items-center ${
         selected
-          ? 'border-blue-500/25 bg-blue-500/5'
-          : 'border-white/8 hover:border-white/12'
+          ? 'border-blue-500/30 bg-blue-500/5'
+          : 'border-white/[0.06] hover:border-white/[0.12]'
       } ${sc.rowHighlight}`}
     >
       {/* Checkbox */}
       <button
+        type="button"
         onClick={() => onToggleSelect(req.id)}
-        className="mt-0.5 shrink-0 text-gray-500 transition-colors hover:text-blue-400 sm:mt-0"
+        className="mt-1 shrink-0 text-gray-500 transition-colors hover:text-blue-400 sm:mt-0"
       >
         {selected ? (
-          <SquareCheck className="h-4 w-4 text-blue-400" />
+          <SquareCheck className="h-4.5 w-4.5 text-blue-400" />
         ) : (
-          <Square className="h-4 w-4" />
+          <Square className="h-4.5 w-4.5" />
         )}
       </button>
 
@@ -410,58 +423,53 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
         className="min-w-0 flex-1 cursor-pointer"
         onClick={() => onOpen(req)}
       >
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <div className="flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-            <span className="text-sm font-semibold text-white">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <Avatar name={displayName} src={req.avatar} size="sm" />
+            <span className="text-sm font-semibold text-white group-hover:text-violet-400 transition-colors">
               {displayName}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Mail className="h-3 w-3 shrink-0 text-gray-600" />
+            <Mail className="h-3 w-3 shrink-0 text-gray-500" />
             <span className="truncate text-xs text-gray-400">{req.email}</span>
           </div>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {req.student_id && (
-            <span className="flex items-center gap-1 text-[11px] text-gray-500">
-              <Hash className="h-3 w-3" />
+            <Pill tone="gray" icon={Hash} className="py-0.5 px-2">
               {req.student_id}
-            </span>
+            </Pill>
           )}
           {req.batch && (
-            <span className="flex items-center gap-1 text-[11px] text-gray-500">
-              <CalendarDays className="h-3 w-3" />
+            <Pill tone="gray" icon={CalendarDays} className="py-0.5 px-2">
               {req.batch}
-            </span>
+            </Pill>
           )}
           {req.department && (
-            <span className="flex items-center gap-1 text-[11px] text-gray-500">
-              <BookOpen className="h-3 w-3" />
-              <span className="max-w-45 truncate">{req.department}</span>
-            </span>
+            <Pill tone="gray" icon={BookOpen} className="py-0.5 px-2 max-w-48 truncate">
+              {req.department}
+            </Pill>
           )}
         </div>
 
         {(req.codeforces_handle || req.github) && (
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          <div className="mt-2 flex flex-wrap gap-2">
             {req.codeforces_handle && (
-              <span className="flex items-center gap-1 text-[11px] text-gray-600">
-                <Code className="h-3 w-3" />
+              <Pill tone="blue" icon={Code} className="py-0.5 px-2">
                 {req.codeforces_handle}
-              </span>
+              </Pill>
             )}
             {req.github && (
-              <span className="flex items-center gap-1 text-[11px] text-gray-600">
-                <Github className="h-3 w-3" />
-                {req.github}
-              </span>
+              <Pill tone="violet" icon={Github} className="py-0.5 px-2">
+                {req.github.replace(/https?:\/\/(www\.)?github\.com\//, '')}
+              </Pill>
             )}
           </div>
         )}
 
-        <p className="mt-2 text-[11px] text-gray-600">{dateStr}</p>
+        <p className="mt-2.5 text-[10px] font-medium text-gray-500">{dateStr}</p>
       </div>
 
       {/* Right — status badge + actions */}
@@ -478,11 +486,12 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
               placeholder="Reason (optional)"
               className="w-44 rounded-lg border border-red-500/20 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none"
             />
-            <div className="flex gap-1">
+            <div className="flex gap-1 justify-end">
               <button
+                type="button"
                 onClick={quickReject}
                 disabled={isPending}
-                className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/15 px-2.5 py-1 text-[11px] font-medium text-red-300 hover:bg-red-500/25"
+                className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/15 px-2.5 py-1 text-[11px] font-semibold text-red-300 hover:bg-red-500/25"
               >
                 {isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -492,8 +501,9 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                 Confirm
               </button>
               <button
+                type="button"
                 onClick={() => setShowRejectInput(false)}
-                className="px-1.5 text-[11px] text-gray-500 hover:text-gray-300"
+                className="px-1.5 text-[11px] text-gray-500 hover:text-gray-300 font-medium"
               >
                 Cancel
               </button>
@@ -503,36 +513,41 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
           <>
             <div className="relative">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setStatusOpen((v) => !v);
                 }}
                 disabled={isPending}
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50 ${sc.badgeClass}`}
+                className="hover:scale-[1.03] active:scale-95 transition-all disabled:opacity-50"
               >
-                {isPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <sc.icon className="h-3 w-3" />
-                )}
-                {sc.label}
-                <ChevronDown
-                  className={`h-2.5 w-2.5 transition-transform ${statusOpen ? 'rotate-180' : ''}`}
-                />
+                <Pill
+                  tone={getPillTone(req.status)}
+                  icon={isPending ? Loader2 : sc.icon}
+                  className="py-1 px-3 text-xs font-semibold cursor-pointer border hover:border-white/10"
+                >
+                  <span className="flex items-center gap-1">
+                    {sc.label}
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform ${statusOpen ? 'rotate-180' : ''}`}
+                    />
+                  </span>
+                </Pill>
               </button>
 
               {statusOpen && (
                 <div
-                  className="absolute top-full right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-white/12 bg-gray-950 shadow-2xl"
+                  className="absolute top-full right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl backdrop-blur-md"
                   onMouseLeave={() => setStatusOpen(false)}
                 >
                   {req.status !== 'approved' && (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         quickApprove();
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/6"
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/5"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
                       Approve
@@ -540,12 +555,13 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                   )}
                   {req.status !== 'rejected' && (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setStatusOpen(false);
                         setShowRejectInput(true);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/6"
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/5"
                     >
                       <XCircle className="h-3.5 w-3.5 text-red-400" />
                       Reject
@@ -553,11 +569,12 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                   )}
                   {req.status !== 'pending' && (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         quickReset();
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/6"
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-gray-300 transition-colors hover:bg-white/5"
                     >
                       <RotateCcw className="h-3.5 w-3.5 text-yellow-400" />
                       Reset to Pending
@@ -569,11 +586,12 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
 
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpen(req);
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
                 title="View details"
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -584,26 +602,29 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
+                    type="button"
                     onClick={handleDelete}
                     disabled={isPending}
-                    className="rounded border border-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 hover:bg-red-500/10"
+                    className="rounded border border-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 hover:bg-red-500/10 font-semibold"
                   >
                     Del
                   </button>
                   <button
+                    type="button"
                     onClick={() => setDeleteConfirm(false)}
-                    className="px-0.5 text-[10px] text-gray-500 hover:text-gray-300"
+                    className="px-0.5 text-[10px] text-gray-500 hover:text-gray-300 font-medium"
                   >
                     No
                   </button>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setDeleteConfirm(true);
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
                   title="Delete"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -617,61 +638,7 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
   );
 }
 
-// ─── Membership Empty State ───────────────────────────────────────────────────
-
-function MembershipEmpty({ tab }) {
-  const msgs = {
-    all: {
-      title: 'No applications yet',
-      sub: 'Join requests will appear here once submitted.',
-    },
-    pending: { title: 'No pending applications', sub: 'All caught up!' },
-    approved: { title: 'No approved applications', sub: '' },
-    rejected: { title: 'No rejected applications', sub: '' },
-  };
-  const { title, sub } = msgs[tab] ?? msgs.all;
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
-      <GraduationCap className="mb-4 h-12 w-12 text-gray-700" />
-      <p className="text-sm font-semibold text-gray-400">{title}</p>
-      {sub && <p className="mt-1 text-xs text-gray-600">{sub}</p>}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GUEST ACCESS PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── Avatar helper ────────────────────────────────────────────────────────────
-
-function GuestAvatar({ user }) {
-  const isUrl = user.avatar?.startsWith('http') || user.avatar?.startsWith('/');
-
-  if (isUrl) {
-    return (
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10">
-        <Image
-          src={user.avatar}
-          alt={user.name}
-          fill
-          className="object-cover"
-        />
-      </div>
-    );
-  }
-
-  // Initials fallback
-  const initials = user.avatar || '?';
-  return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-linear-to-br from-indigo-500/30 to-purple-500/30 text-sm font-bold text-white">
-      {initials}
-    </div>
-  );
-}
-
-// ─── Guest Application Row ────────────────────────────────────────────────────
-
+// ─── Guest Application Card ──────────────────────────────────────────────────
 function GuestRow({ user, onApprove, onReject, onFlash }) {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [reason, setReason] = useState('');
@@ -724,139 +691,123 @@ function GuestRow({ user, onApprove, onReject, onFlash }) {
   }
 
   return (
-    <div
-      className={`group rounded-2xl border bg-white/3 p-4 transition-all hover:bg-white/5 ${
+    <GlassCard
+      className={`group relative flex flex-col justify-between overflow-hidden border bg-gray-900/40 p-5 transition-all hover:border-white/[0.12] ${
         isAppeal
-          ? 'border-orange-500/20 bg-orange-500/3'
-          : 'border-white/8 hover:border-white/12'
+          ? 'border-orange-500/20 bg-orange-950/5'
+          : 'border-white/[0.06]'
       }`}
     >
-      {isAppeal && (
-        <div className="mb-3 flex items-center gap-1.5">
-          <RotateCcw className="h-3 w-3 text-orange-400" />
-          <span className="text-[10px] font-semibold tracking-wider text-orange-400 uppercase">
-            Appeal
-          </span>
-        </div>
-      )}
+      <div>
+        {isAppeal && (
+          <div className="mb-3.5">
+            <Pill tone="orange" icon={RotateCcw}>
+              Appeal
+            </Pill>
+          </div>
+        )}
 
-      <div className="flex items-start gap-3">
-        <GuestAvatar user={user} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">
-            {user.name}
-          </p>
-          <p className="truncate text-xs text-gray-500">{user.email}</p>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-            {joinedStr && (
-              <span className="flex items-center gap-1 text-[10px] text-gray-600">
-                <CalendarDays className="h-2.5 w-2.5" />
-                Joined {joinedStr}
-              </span>
-            )}
-            {lastLoginStr && (
-              <span className="text-[10px] text-gray-600">
-                Last seen {lastLoginStr}
-              </span>
-            )}
+        <div className="flex items-start gap-3">
+          <Avatar name={user.name} src={user.avatar} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white group-hover:text-violet-400 transition-colors">
+              {user.name}
+            </p>
+            <p className="truncate text-xs text-gray-500 mt-0.5">{user.email}</p>
+            <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1">
+              {joinedStr && (
+                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-medium">
+                  <CalendarDays className="h-3 w-3" />
+                  Joined {joinedStr}
+                </span>
+              )}
+              {lastLoginStr && (
+                <span className="text-[10px] text-gray-500 font-medium">
+                  Last seen {lastLoginStr}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* User message */}
+        {user.statusReason && user.statusChangedBy === user.id && (
+          <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-blue-400" />
+              <span className="text-[9px] font-bold tracking-wider text-blue-400 uppercase">
+                Message from user
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-gray-300">
+              {user.statusReason}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* User's own message / reason */}
-      {user.statusReason && user.statusChangedBy === user.id && (
-        <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
-          <div className="mb-1 flex items-center gap-1.5">
-            <MessageSquare className="h-3 w-3 text-blue-400" />
-            <span className="text-[10px] font-semibold tracking-wider text-blue-400 uppercase">
-              Message from user
-            </span>
-          </div>
-          <p className="text-xs leading-relaxed text-gray-300">
-            {user.statusReason}
-          </p>
-        </div>
-      )}
-
       {/* Actions */}
-      {showRejectInput ? (
-        <div className="mt-3 space-y-2">
-          <input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Rejection reason (optional)"
-            className="w-full rounded-lg border border-red-500/20 bg-white/5 px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500/30 focus:outline-none"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={handleReject}
-              disabled={isPending}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/15 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
-            >
-              {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <ThumbsDown className="h-3 w-3" />
-              )}
-              Confirm Reject
-            </button>
-            <button
-              onClick={() => setShowRejectInput(false)}
-              className="px-3 text-xs text-gray-500 hover:text-gray-300"
-            >
-              Cancel
-            </button>
+      <div className="mt-5 border-t border-white/[0.06] pt-4">
+        {showRejectInput ? (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Rejection reason (optional)"
+              className="w-full rounded-lg border border-red-500/20 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:border-red-500/30 focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleReject}
+                disabled={isPending}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/15 py-1.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <ThumbsDown className="h-3 w-3" />
+                )}
+                Confirm Reject
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRejectInput(false)}
+                className="px-3 text-xs text-gray-500 hover:text-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            onClick={handleApprove}
-            disabled={isPending}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 py-2 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <ThumbsUp className="h-3.5 w-3.5" />
-            )}
-            Approve
-          </button>
-          <button
-            onClick={() => setShowRejectInput(true)}
-            disabled={isPending}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-          >
-            <ThumbsDown className="h-3.5 w-3.5" />
-            Reject
-          </button>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton
+              onClick={handleApprove}
+              tone="emerald"
+              icon={isPending ? Loader2 : ThumbsUp}
+              disabled={isPending}
+              className="justify-center py-2"
+            >
+              Approve
+            </ActionButton>
+            <ActionButton
+              onClick={() => setShowRejectInput(true)}
+              tone="danger"
+              icon={ThumbsDown}
+              disabled={isPending}
+              className="justify-center py-2"
+            >
+              Reject
+            </ActionButton>
+          </div>
+        )}
+      </div>
+    </GlassCard>
   );
 }
 
-// ─── Guest Empty State ────────────────────────────────────────────────────────
-
-function GuestEmpty() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
-      <UserCheck className="mb-4 h-12 w-12 text-gray-700" />
-      <p className="text-sm font-semibold text-gray-400">
-        No pending guest applications
-      </p>
-      <p className="mt-1 text-xs text-gray-600">
-        New sign-ups will appear here for review.
-      </p>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ─── Main Component ──────────────────────────────────────────────────────────
 const MEMBER_PAGE_SIZE = 15;
 const GUEST_PAGE_SIZE = 12;
 
@@ -865,10 +816,7 @@ export default function ApplicationsClient({
   initialGuestApps,
   adminId,
 }) {
-  // ── Top-level panel switcher ──────────────────────────────────────────────
   const [panel, setPanel] = useState('membership'); // 'membership' | 'guest'
-
-  // ── Flash message ─────────────────────────────────────────────────────────
   const [flashMsg, setFlashMsg] = useState(null);
 
   function flash(msg, type = 'success') {
@@ -876,10 +824,7 @@ export default function ApplicationsClient({
     setTimeout(() => setFlashMsg(null), 3500);
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // MEMBERSHIP STATE
-  // ══════════════════════════════════════════════════════════════════════════
-
+  // ── MEMBERSHIP STATE ───────────────────────────────────────────────────────
   const [requests, setRequests] = useState(initialRequests ?? []);
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
@@ -923,7 +868,6 @@ export default function ApplicationsClient({
   const totalMemberPages = Math.ceil(
     filteredRequests.length / MEMBER_PAGE_SIZE
   );
-  // Clamp page so deletions never leave us stranded on an empty page
   const safeMemberPage = Math.min(memberPage, totalMemberPages || 1);
   const paginatedRequests = filteredRequests.slice(
     (safeMemberPage - 1) * MEMBER_PAGE_SIZE,
@@ -1026,10 +970,7 @@ export default function ApplicationsClient({
     setDetailReq(null);
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // GUEST ACCESS STATE
-  // ══════════════════════════════════════════════════════════════════════════
-
+  // ── GUEST ACCESS STATE ─────────────────────────────────────────────────────
   const [guestApps, setGuestApps] = useState(initialGuestApps ?? []);
   const [guestSearch, setGuestSearch] = useState('');
   const [guestPage, setGuestPage] = useState(1);
@@ -1067,219 +1008,164 @@ export default function ApplicationsClient({
     setGuestApps((prev) => prev.filter((u) => u.id !== userId));
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // RENDER
-  // ══════════════════════════════════════════════════════════════════════════
-
-  const MEMBER_STAT_CARDS = [
+  // ── TAB CONFIGS ────────────────────────────────────────────────────────────
+  const panelTabs = [
     {
+      value: 'membership',
+      label: 'Membership Applications',
+      count: memberStats.pending > 0 ? memberStats.pending : undefined,
       icon: GraduationCap,
-      label: 'Total',
-      value: memberStats.total,
-      colorClass: 'bg-blue-500/15 text-blue-400',
-      tab: 'all',
     },
     {
-      icon: Clock,
-      label: 'Pending',
-      value: memberStats.pending,
-      colorClass: 'bg-yellow-500/15 text-yellow-400',
-      tab: 'pending',
-    },
-    {
-      icon: CheckCircle2,
-      label: 'Approved',
-      value: memberStats.approved,
-      colorClass: 'bg-green-500/15 text-green-400',
-      tab: 'approved',
-    },
-    {
-      icon: XCircle,
-      label: 'Rejected',
-      value: memberStats.rejected,
-      colorClass: 'bg-red-500/15 text-red-400',
-      tab: 'rejected',
+      value: 'guest',
+      label: 'Guest Access Reviews',
+      count: guestStats.total > 0 ? guestStats.total : undefined,
+      icon: ShieldCheck,
     },
   ];
 
+  const membershipTabs = [
+    { value: 'all', label: 'All Applications', count: memberStats.total, icon: GraduationCap },
+    { value: 'pending', label: 'Pending', count: memberStats.pending, icon: Clock },
+    { value: 'approved', label: 'Approved', count: memberStats.approved, icon: CheckCircle2 },
+    { value: 'rejected', label: 'Rejected', count: memberStats.rejected, icon: XCircle },
+  ];
+
   return (
-    <>
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-yellow-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-orange-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Applications</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-500/15 ring-1 ring-yellow-500/25">
-                <GraduationCap className="h-5 w-5 text-yellow-400" />
-              </div>
-              Applications
-            </h1>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              Review membership and guest access applications
-              {memberStats.pending > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/25 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-semibold text-yellow-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-400" />
-                  {memberStats.pending} membership pending
-                </span>
-              )}
-              {guestStats.pending > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
-                  {guestStats.pending} guest pending
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <Link
-              href="/account/admin/users"
-              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-xs font-medium text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
-            >
+    <PageShell>
+      {/* Page Header */}
+      <PageHeader
+        icon={GraduationCap}
+        title="Applications Review"
+        subtitle="Review and manage student membership requests and guest access applications"
+        accent="yellow"
+        actions={
+          <div className="flex items-center gap-2">
+            <ActionButton href="/account/admin/users" tone="primary" icon={Users}>
               User Management
-            </Link>
-            <Link
-              href="/account/admin/roles"
-              className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-xs font-medium text-purple-300 transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
-            >
+            </ActionButton>
+            <ActionButton href="/account/admin/roles" tone="violet" icon={ShieldCheck}>
               Role Management
-            </Link>
-            <Link
-              href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
+            </ActionButton>
+            <ActionButton href="/account/admin" tone="ghost" icon={ArrowLeft}>
+              Dashboard
+            </ActionButton>
           </div>
-        </div>
-      </div>
-
-      {/* ─── Panel Switcher ──────────────────────────────────────────────────── */}
-      <div className="flex overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-1.5">
-        <button
-          onClick={() => setPanel('membership')}
-          className={`flex flex-1 items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
-            panel === 'membership'
-              ? 'bg-white/10 text-white shadow-sm'
-              : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-          }`}
-        >
-          <GraduationCap className="h-4 w-4" />
-          Membership Applications
-          {memberStats.pending > 0 && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
-                panel === 'membership'
-                  ? 'bg-yellow-500/20 text-yellow-300'
-                  : 'bg-white/6 text-gray-600'
-              }`}
-            >
-              {memberStats.pending} pending
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setPanel('guest')}
-          className={`flex flex-1 items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
-            panel === 'guest'
-              ? 'bg-white/10 text-white shadow-sm'
-              : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-          }`}
-        >
-          <ShieldCheck className="h-4 w-4" />
-          Guest Access
-          {guestStats.total > 0 && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
-                panel === 'guest'
-                  ? 'bg-indigo-500/20 text-indigo-300'
-                  : 'bg-white/6 text-gray-600'
-              }`}
-            >
-              {guestStats.total} {guestStats.total === 1 ? 'review' : 'reviews'}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ─── Flash ──────────────────────────────────────────────────────────── */}
-      <FlashMsg msg={flashMsg?.msg} type={flashMsg?.type} />
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          MEMBERSHIP PANEL
-          ═══════════════════════════════════════════════════════════════════════ */}
-      {panel === 'membership' && (
-        <>
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {MEMBER_STAT_CARDS.map(
-              ({ icon, label, value, colorClass, tab }) => (
-                <StatCard
-                  key={tab}
-                  icon={icon}
-                  label={label}
-                  value={value}
-                  colorClass={colorClass}
-                  active={activeTab === tab}
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setSelectedIds([]);
-                    setMemberPage(1);
-                  }}
-                />
-              )
+        }
+        meta={
+          <div className="flex flex-wrap gap-2">
+            {memberStats.pending > 0 && (
+              <Pill tone="amber" icon={Clock}>
+                {memberStats.pending} membership pending
+              </Pill>
+            )}
+            {guestStats.pending > 0 && (
+              <Pill tone="indigo" icon={ShieldCheck}>
+                {guestStats.pending} guest pending
+              </Pill>
             )}
           </div>
+        }
+      />
 
-          {/* Filters row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
-              {['all', 'pending', 'approved', 'rejected'].map((t) => (
-                <TabButton
-                  key={t}
-                  active={activeTab === t}
-                  onClick={() => {
-                    setActiveTab(t);
-                    setSelectedIds([]);
-                    setMemberPage(1);
-                  }}
-                  count={t === 'all' ? memberStats.total : memberStats[t]}
-                >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </TabButton>
-              ))}
-            </div>
+      {/* Top Level Panel Switcher TabBar */}
+      <TabBar tabs={panelTabs} value={panel} onChange={setPanel} />
 
+      {/* Flash Message */}
+      <FlashMsg msg={flashMsg?.msg} type={flashMsg?.type} />
+
+      {/* ── MEMBERSHIP APPLICATIONS PANEL ────────────────────────────────────── */}
+      {panel === 'membership' && (
+        <div className="space-y-6">
+          {/* Stat Cards Grid */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <InteractiveStatCard
+              icon={GraduationCap}
+              label="Total Applications"
+              value={memberStats.total}
+              accent="violet"
+              active={activeTab === 'all'}
+              onClick={() => {
+                setActiveTab('all');
+                setSelectedIds([]);
+                setMemberPage(1);
+              }}
+              delay={0}
+            />
+            <InteractiveStatCard
+              icon={Clock}
+              label="Pending Applications"
+              value={memberStats.pending}
+              accent="amber"
+              active={activeTab === 'pending'}
+              onClick={() => {
+                setActiveTab('pending');
+                setSelectedIds([]);
+                setMemberPage(1);
+              }}
+              delay={0.04}
+            />
+            <InteractiveStatCard
+              icon={CheckCircle2}
+              label="Approved Applications"
+              value={memberStats.approved}
+              accent="emerald"
+              active={activeTab === 'approved'}
+              onClick={() => {
+                setActiveTab('approved');
+                setSelectedIds([]);
+                setMemberPage(1);
+              }}
+              delay={0.08}
+            />
+            <InteractiveStatCard
+              icon={XCircle}
+              label="Rejected Applications"
+              value={memberStats.rejected}
+              accent="rose"
+              active={activeTab === 'rejected'}
+              onClick={() => {
+                setActiveTab('rejected');
+                setSelectedIds([]);
+                setMemberPage(1);
+              }}
+              delay={0.12}
+            />
+          </div>
+
+          {/* Sub Filters Row */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <TabBar
+              tabs={membershipTabs}
+              value={activeTab}
+              onChange={(v) => {
+                setActiveTab(v);
+                setSelectedIds([]);
+                setMemberPage(1);
+              }}
+            />
+
+            {/* Search applicant */}
             <div className="relative w-full sm:w-72">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search name, email, ID, session…"
+                placeholder="Search name, email, student ID, department..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setMemberPage(1);
                 }}
-                className="w-full rounded-xl border border-white/10 bg-white/4 py-2.5 pr-4 pl-9 text-sm text-white placeholder-gray-600 backdrop-blur-sm transition-all focus:border-white/20 focus:bg-white/6 focus:outline-none"
+                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
               />
               {search && (
                 <button
+                  type="button"
                   onClick={() => {
                     setSearch('');
                     setMemberPage(1);
                   }}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1299,11 +1185,12 @@ export default function ApplicationsClient({
             />
           )}
 
-          {/* List header */}
+          {/* List Toolbar / Header */}
           {filteredRequests.length > 0 && (
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={toggleSelectAll}
                   className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/3 px-2.5 py-1.5 text-xs text-gray-400 transition-all hover:bg-white/6 hover:text-gray-200"
                 >
@@ -1314,7 +1201,7 @@ export default function ApplicationsClient({
                   )}
                   {allSelected ? 'Deselect all' : 'Select all'}
                 </button>
-                <span className="text-xs text-gray-600 tabular-nums">
+                <span className="text-xs text-gray-500 font-medium tabular-nums">
                   {filteredRequests.length > MEMBER_PAGE_SIZE
                     ? `${(safeMemberPage - 1) * MEMBER_PAGE_SIZE + 1}–${Math.min(safeMemberPage * MEMBER_PAGE_SIZE, filteredRequests.length)} of ${filteredRequests.length}`
                     : `${filteredRequests.length} result${filteredRequests.length !== 1 ? 's' : ''}`}
@@ -1323,25 +1210,32 @@ export default function ApplicationsClient({
             </div>
           )}
 
-          {/* List */}
+          {/* List items */}
           {filteredRequests.length === 0 ? (
-            <MembershipEmpty tab={activeTab} />
+            <EmptyState
+              icon={GraduationCap}
+              title={search ? 'No applications match search' : 'No applications found'}
+              description={search ? 'Try adjusting your search criteria.' : 'Submitted membership applications will appear here.'}
+              accent="yellow"
+            />
           ) : (
-            <div className="space-y-2">
-              {paginatedRequests.map((req) => (
-                <ApplicationRow
-                  key={req.id}
-                  req={req}
-                  selected={selectedIds.includes(req.id)}
-                  onToggleSelect={toggleSelect}
-                  onOpen={setDetailReq}
-                  onRefresh={(newStatus) => handleRowRefresh(req.id, newStatus)}
-                />
-              ))}
+            <div className="space-y-3">
+              <StaggerList delay={0.02}>
+                {paginatedRequests.map((req) => (
+                  <ApplicationRow
+                    key={req.id}
+                    req={req}
+                    selected={selectedIds.includes(req.id)}
+                    onToggleSelect={toggleSelect}
+                    onOpen={setDetailReq}
+                    onRefresh={(newStatus) => handleRowRefresh(req.id, newStatus)}
+                  />
+                ))}
+              </StaggerList>
             </div>
           )}
 
-          {/* Membership Pagination */}
+          {/* Pagination */}
           <Pagination
             currentPage={safeMemberPage}
             totalPages={totalMemberPages}
@@ -1359,80 +1253,74 @@ export default function ApplicationsClient({
               onDeleted={handleDetailDelete}
             />
           )}
-        </>
+        </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          GUEST ACCESS PANEL
-          ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── GUEST ACCESS APPLICATIONS PANEL ──────────────────────────────────── */}
       {panel === 'guest' && (
-        <>
-          {/* Guest stat cards */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatCard
+        <div className="space-y-6">
+          {/* Guest Stat Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StandardStatCard
               icon={Users}
               label="Total Reviews"
               value={guestStats.total}
-              colorClass="bg-indigo-500/15 text-indigo-400"
-              active={false}
-              onClick={() => {}}
+              accent="violet"
             />
-            <StatCard
+            <StandardStatCard
               icon={Clock}
               label="Awaiting Review"
               value={guestStats.pending}
-              colorClass="bg-yellow-500/15 text-yellow-400"
-              active={false}
-              onClick={() => {}}
+              accent="amber"
             />
-            <StatCard
+            <StandardStatCard
               icon={RotateCcw}
-              label="Appeals"
+              label="Rejection Appeals"
               value={guestStats.appeals}
-              colorClass="bg-orange-500/15 text-orange-400"
-              active={false}
-              onClick={() => {}}
+              accent="orange"
             />
           </div>
 
-          {/* Panel description */}
-          <div className="rounded-xl border border-indigo-500/15 bg-indigo-500/5 px-4 py-3">
-            <div className="flex items-start gap-2.5">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
+          {/* Panel description card */}
+          <GlassCard className="border-indigo-500/15 bg-indigo-950/10 p-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-2.5">
+                <ShieldCheck className="h-5 w-5 text-indigo-400" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-indigo-300">
+                <p className="text-sm font-semibold text-indigo-300">
                   Guest Access Applications
                 </p>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  These are new users who signed up via Google and are awaiting
-                  admin approval to access the guest panel. Approving a user
-                  grants them guest-level access with no member privileges.
+                <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                  These are new users who registered via OAuth / Google sign-up and are awaiting admin authorization to access the guest panel.
+                  Approving a user grants them restricted, guest-level platform exploration rights without core member privileges.
                 </p>
               </div>
             </div>
-          </div>
+          </GlassCard>
 
-          {/* Search */}
+          {/* Filters & Search */}
           {guestApps.length > 0 && (
             <div className="relative w-full sm:w-80">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search name or email…"
+                placeholder="Search name or email..."
                 value={guestSearch}
                 onChange={(e) => {
                   setGuestSearch(e.target.value);
                   setGuestPage(1);
                 }}
-                className="w-full rounded-xl border border-white/10 bg-white/4 py-2.5 pr-4 pl-9 text-sm text-white placeholder-gray-600 backdrop-blur-sm transition-all focus:border-white/20 focus:bg-white/6 focus:outline-none"
+                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
               />
               {guestSearch && (
                 <button
+                  type="button"
                   onClick={() => {
                     setGuestSearch('');
                     setGuestPage(1);
                   }}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1440,60 +1328,58 @@ export default function ApplicationsClient({
             </div>
           )}
 
-          {/* Pending section */}
-          {paginatedGuests.filter((u) => u.accountStatus === 'pending').length >
-            0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-2 px-1">
-                <Clock className="h-4 w-4 text-yellow-400" />
-                <h3 className="text-sm font-semibold text-white">
-                  Awaiting Review
-                </h3>
-                <span className="rounded-full border border-yellow-500/25 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold text-yellow-300">
+          {/* Awaiting Review Section */}
+          {paginatedGuests.filter((u) => u.accountStatus === 'pending').length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                <Clock className="h-4.5 w-4.5 text-yellow-400" />
+                <h3 className="text-sm font-bold text-white">Awaiting Review</h3>
+                <Pill tone="amber" className="py-0.5 px-2 text-[10px]">
                   {guestStats.pending}
-                </span>
+                </Pill>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {paginatedGuests
-                  .filter((u) => u.accountStatus === 'pending')
-                  .map((user) => (
-                    <GuestRow
-                      key={user.id}
-                      user={user}
-                      onApprove={handleGuestApproved}
-                      onReject={handleGuestRejected}
-                      onFlash={flash}
-                    />
-                  ))}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <StaggerList delay={0.02}>
+                  {paginatedGuests
+                    .filter((u) => u.accountStatus === 'pending')
+                    .map((user) => (
+                      <GuestRow
+                        key={user.id}
+                        user={user}
+                        onApprove={handleGuestApproved}
+                        onReject={handleGuestRejected}
+                        onFlash={flash}
+                      />
+                    ))}
+                </StaggerList>
               </div>
             </div>
           )}
 
-          {/* Appeals section */}
-          {paginatedGuests.filter((u) => u.accountStatus === 'rejected')
-            .length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center gap-2 px-1">
-                <RotateCcw className="h-4 w-4 text-orange-400" />
-                <h3 className="text-sm font-semibold text-white">
-                  Rejection Appeals
-                </h3>
-                <span className="rounded-full border border-orange-500/25 bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-300">
+          {/* Appeals Section */}
+          {paginatedGuests.filter((u) => u.accountStatus === 'rejected').length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1 border-t border-white/[0.06] pt-6">
+                <RotateCcw className="h-4.5 w-4.5 text-orange-400" />
+                <h3 className="text-sm font-bold text-white">Rejection Appeals</h3>
+                <Pill tone="orange" className="py-0.5 px-2 text-[10px]">
                   {guestStats.appeals}
-                </span>
+                </Pill>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {paginatedGuests
-                  .filter((u) => u.accountStatus === 'rejected')
-                  .map((user) => (
-                    <GuestRow
-                      key={user.id}
-                      user={user}
-                      onApprove={handleGuestApproved}
-                      onReject={handleGuestRejected}
-                      onFlash={flash}
-                    />
-                  ))}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <StaggerList delay={0.02}>
+                  {paginatedGuests
+                    .filter((u) => u.accountStatus === 'rejected')
+                    .map((user) => (
+                      <GuestRow
+                        key={user.id}
+                        user={user}
+                        onApprove={handleGuestApproved}
+                        onReject={handleGuestRejected}
+                        onFlash={flash}
+                      />
+                    ))}
+                </StaggerList>
               </div>
             </div>
           )}
@@ -1509,20 +1395,26 @@ export default function ApplicationsClient({
             />
           )}
 
-          {/* Empty state */}
-          {guestApps.length === 0 && <GuestEmpty />}
-
-          {/* Search no results */}
-          {guestApps.length > 0 && filteredGuests.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-12 text-center">
-              <Search className="mb-3 h-8 w-8 text-gray-700" />
-              <p className="text-sm text-gray-500">
-                No users match &ldquo;{guestSearch}&rdquo;
-              </p>
-            </div>
+          {/* Guest Access empty states */}
+          {guestApps.length === 0 && (
+            <EmptyState
+              icon={ShieldCheck}
+              title="No pending guest requests"
+              description="New sign-ups awaiting guest dashboard authorization will appear here."
+              accent="indigo"
+            />
           )}
-        </>
+
+          {guestApps.length > 0 && filteredGuests.length === 0 && (
+            <EmptyState
+              icon={Search}
+              title="No guest reviews match search"
+              description={`No users found matching "${guestSearch}".`}
+              accent="gray"
+            />
+          )}
+        </div>
       )}
-    </>
+    </PageShell>
   );
 }

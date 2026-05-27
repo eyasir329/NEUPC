@@ -7,32 +7,29 @@
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Mail,
   Search,
   Clock,
   Eye,
-  MessageSquare,
   Archive,
   CheckCircle2,
   Trash2,
   Loader2,
-  RefreshCw,
   ChevronDown,
   ChevronUp,
   User,
-  Filter,
   SquareCheck,
   Square,
   X,
-  ChevronRight,
   Phone,
   MapPin,
   Globe,
   ExternalLink,
   HelpCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 import SubmissionDetailModal from './SubmissionDetailModal';
 import { getStatusConfig, ALL_STATUSES } from './contactConfig';
 import {
@@ -42,61 +39,68 @@ import {
   bulkDeleteContactSubmissionsAction,
   markContactReadAction,
 } from '@/app/_lib/contact-actions';
+import {
+  PageShell,
+  PageHeader,
+  TabBar,
+  GlassCard,
+  EmptyState,
+  ActionButton,
+} from '../../_components/_ui';
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
+// ─── Custom Interactive Stat Card ──────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, colorClass, active, onClick }) {
+function StatCard({ icon: Icon, label, value, accent = 'blue', active, onClick }) {
+  const accentClasses = {
+    blue: {
+      bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+      activeBorder: 'border-blue-500/40 bg-blue-500/10 ring-1 ring-blue-500/20 shadow-md shadow-blue-900/10',
+    },
+    purple: {
+      bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+      activeBorder: 'border-purple-500/40 bg-purple-500/10 ring-1 ring-purple-500/20 shadow-md shadow-purple-900/10',
+    },
+    sky: {
+      bg: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+      activeBorder: 'border-sky-500/40 bg-sky-500/10 ring-1 ring-sky-500/20 shadow-md shadow-sky-900/10',
+    },
+    green: {
+      bg: 'bg-green-500/10 text-green-400 border-green-500/20',
+      activeBorder: 'border-green-500/40 bg-green-500/10 ring-1 ring-green-500/20 shadow-md shadow-green-900/10',
+    },
+    yellow: {
+      bg: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+      activeBorder: 'border-yellow-500/40 bg-yellow-500/10 ring-1 ring-yellow-500/20 shadow-md shadow-yellow-900/10',
+    },
+  };
+
+  const style = accentClasses[accent] || accentClasses.blue;
+
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left backdrop-blur-sm transition-all ${
+      className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left backdrop-blur-md transition-all duration-300 ${
         active
-          ? 'border-white/20 bg-white/8 shadow-lg shadow-black/20'
-          : 'border-white/8 bg-white/4 hover:border-white/12 hover:bg-white/6'
+          ? `${style.activeBorder}`
+          : 'border-white/[0.06] bg-slate-950/20 hover:border-white/[0.12] hover:bg-slate-900/40'
       }`}
     >
       <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all ${
+          active ? style.bg : 'border-white/[0.08] bg-white/5 text-gray-400'
+        }`}
       >
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-xl leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-xs text-gray-500">{label}</p>
+        <div className="text-xs text-gray-400 font-medium tracking-wide uppercase">{label}</div>
+        <div className="mt-0.5 text-2xl font-black text-white tabular-nums">{value}</div>
       </div>
     </button>
   );
 }
 
-// ─── Tab Button ───────────────────────────────────────────────────────────────
-
-function TabButton({ active, onClick, children, count }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-            active ? 'bg-white/15 text-white' : 'bg-white/6 text-gray-600'
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-// ─── Action Row ───────────────────────────────────────────────────────────────
+// ─── Bulk Action Bar ───────────────────────────────────────────────────────────
 
 function BulkActionBar({
   selectedCount,
@@ -108,10 +112,10 @@ function BulkActionBar({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-2.5">
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center gap-2">
-        <SquareCheck className="h-4 w-4 text-blue-400" />
-        <span className="text-sm font-semibold text-blue-300">
+        <SquareCheck className="h-4 w-4 text-amber-400 animate-pulse" />
+        <span className="text-sm font-semibold text-amber-300">
           {selectedCount} selected
         </span>
       </div>
@@ -119,27 +123,27 @@ function BulkActionBar({
         <button
           onClick={() => onBulkStatus('read')}
           disabled={isPending}
-          className="flex items-center gap-1.5 rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-xl border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/20 disabled:opacity-50"
         >
           <Eye className="h-3 w-3" /> Mark Read
         </button>
         <button
           onClick={() => onBulkStatus('replied')}
           disabled={isPending}
-          className="flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-300 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-xl border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-300 transition-all hover:bg-green-500/20 disabled:opacity-50"
         >
           <CheckCircle2 className="h-3 w-3" /> Mark Replied
         </button>
         <button
           onClick={() => onBulkStatus('archived')}
           disabled={isPending}
-          className="flex items-center gap-1.5 rounded-lg border border-yellow-500/25 bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-300 transition-colors hover:bg-yellow-500/20 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-xl border border-yellow-500/25 bg-yellow-500/10 px-3 py-1.5 text-xs font-semibold text-yellow-300 transition-all hover:bg-yellow-500/20 disabled:opacity-50"
         >
           <Archive className="h-3 w-3" /> Archive
         </button>
         {deleteConfirm ? (
           <>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-rose-300 font-semibold">
               Delete {selectedCount}?
             </span>
             <button
@@ -148,13 +152,13 @@ function BulkActionBar({
                 onBulkDelete();
               }}
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-300 transition-all hover:bg-rose-500/25 disabled:opacity-50"
             >
-              <Trash2 className="h-3 w-3" /> Confirm Delete
+              <Trash2 className="h-3 w-3" /> Confirm
             </button>
             <button
               onClick={() => setDeleteConfirm(false)}
-              className="px-1 py-1.5 text-xs text-gray-500 hover:text-gray-300"
+              className="px-2 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200"
             >
               Cancel
             </button>
@@ -163,14 +167,14 @@ function BulkActionBar({
           <button
             onClick={() => setDeleteConfirm(true)}
             disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/15 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-1.5 text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500/15 disabled:opacity-50"
           >
             <Trash2 className="h-3 w-3" /> Delete
           </button>
         )}
         <button
           onClick={onClearSelection}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-white"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -218,6 +222,7 @@ function SubmissionRow({
       fd.set('status', newStatus);
       await updateContactStatusAction(fd);
       onStatusChange?.();
+      toast.success(`Status updated to ${newStatus}`);
     });
   }
 
@@ -227,22 +232,27 @@ function SubmissionRow({
       fd.set('id', sub.id);
       await deleteContactSubmissionAction(fd);
       onDelete?.();
+      toast.success('Submission deleted successfully');
     });
   }
 
   return (
-    <div
-      className={`group relative flex items-start gap-3 rounded-2xl border bg-white/3 px-4 py-4 transition-all hover:border-white/12 hover:bg-white/6 sm:items-center ${
-        selected ? 'border-blue-500/30 bg-blue-500/5' : 'border-white/8'
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 25 } },
+      }}
+      className={`group relative flex items-start gap-4 rounded-2xl border bg-slate-950/20 px-4 py-4 transition-all duration-300 hover:border-white/12 hover:bg-slate-900/40 sm:items-center ${
+        selected ? 'border-amber-500/30 bg-amber-500/[0.02]' : 'border-white/[0.06]'
       } ${sc.rowClass}`}
     >
       {/* Checkbox */}
       <button
         onClick={() => onToggleSelect(sub.id)}
-        className="mt-0.5 shrink-0 text-gray-500 transition-colors hover:text-blue-400 sm:mt-0"
+        className="mt-0.5 shrink-0 text-gray-500 transition-colors hover:text-amber-400 sm:mt-0"
       >
         {selected ? (
-          <SquareCheck className="h-4 w-4 text-blue-400" />
+          <SquareCheck className="h-4 w-4 text-amber-500" />
         ) : (
           <Square className="h-4 w-4" />
         )}
@@ -250,7 +260,7 @@ function SubmissionRow({
 
       {/* New dot */}
       {sub.status === 'new' && (
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-purple-400 sm:mt-0" />
+        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-400 sm:mt-0 animate-pulse shadow-md shadow-amber-500/50" />
       )}
 
       {/* Main content — clickable */}
@@ -261,20 +271,20 @@ function SubmissionRow({
         {/* Top row */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <User className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-            <span className="truncate text-sm font-semibold text-white">
+            <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            <span className="truncate text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
               {sub.name}
             </span>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
-            <Mail className="h-3 w-3 shrink-0 text-gray-600" />
+            <Mail className="h-3 w-3 shrink-0 text-gray-500" />
             <span className="truncate text-xs text-gray-400">{sub.email}</span>
           </div>
         </div>
 
         {/* Subject */}
         {sub.subject && (
-          <p className="mt-1 truncate text-sm font-medium text-gray-300">
+          <p className="mt-1 truncate text-sm font-semibold text-gray-300">
             {sub.subject}
           </p>
         )}
@@ -286,14 +296,14 @@ function SubmissionRow({
 
         {/* Date */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[11px] text-gray-600">
+          <span className="text-[11px] text-gray-500 font-medium">
             {dateStr} · {timeStr}
           </span>
         </div>
       </div>
 
       {/* Right side — badges + actions */}
-      <div className="ml-2 flex shrink-0 flex-col items-end gap-2">
+      <div className="ml-2 flex shrink-0 flex-col items-end gap-2.5">
         {/* Status badge with dropdown */}
         <div className="relative">
           <button
@@ -357,9 +367,9 @@ function SubmissionRow({
                 handleDelete();
               }}
               disabled={isPending}
-              className="rounded border border-red-500/20 px-2 py-0.5 text-[10px] font-medium text-red-400 hover:bg-red-500/10"
+              className="rounded border border-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-400 hover:bg-rose-500/10"
             >
-              Delete
+              Confirm
             </button>
             <button
               onClick={(e) => {
@@ -377,45 +387,20 @@ function SubmissionRow({
               e.stopPropagation();
               setDeleteConfirm(true);
             }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-400"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
-function EmptyState({ tab }) {
-  const msgs = {
-    all: {
-      title: 'No submissions yet',
-      sub: 'Contact form submissions will appear here.',
-    },
-    new: { title: 'No new messages', sub: 'All messages have been reviewed.' },
-    read: { title: 'No read messages', sub: '' },
-    replied: { title: 'No replied messages', sub: '' },
-    archived: { title: 'No archived messages', sub: '' },
-  };
-
-  const { title, sub } = msgs[tab] ?? msgs.all;
-
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
-      <Mail className="mb-4 h-12 w-12 text-gray-700" />
-      <p className="text-sm font-semibold text-gray-400">{title}</p>
-      {sub && <p className="mt-1 text-xs text-gray-600">{sub}</p>}
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Contact Page Live Info Panel ────────────────────────────────────────────
 
 function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
@@ -428,13 +413,13 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm">
+    <GlassCard className="overflow-hidden !p-0">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-3.5 text-left"
+        className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
       >
         <span className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-          <Globe className="h-3.5 w-3.5 text-blue-400" />
+          <Globe className="h-3.5 w-3.5 text-blue-400 animate-pulse" />
           Contact Page Live Info
           <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300">
             Public
@@ -458,114 +443,124 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
         </div>
       </button>
 
-      {open && (
-        <div className="border-t border-white/8 px-5 py-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {contactInfo?.email && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
-                <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
-                    Email
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-gray-300">
-                    {contactInfo.email}
-                  </p>
-                </div>
-              </div>
-            )}
-            {contactInfo?.phone && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
-                <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
-                    Phone
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-gray-300">
-                    {contactInfo.phone}
-                  </p>
-                </div>
-              </div>
-            )}
-            {contactInfo?.officeHours && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
-                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
-                    Hours
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-gray-300">
-                    {contactInfo.officeHours}
-                  </p>
-                </div>
-              </div>
-            )}
-            {contactInfo?.address && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
-                    Address
-                  </p>
-                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-300">
-                    {contactInfo.address}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {(hasSocials || (faqs && faqs.length > 0)) && (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              {hasSocials && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
-                    Social:
-                  </span>
-                  <div className="flex gap-1.5">
-                    {Object.entries(socialLinks).map(([key, url]) =>
-                      url ? (
-                        <a
-                          key={key}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-400 transition-colors hover:border-white/20 hover:text-gray-200"
-                        >
-                          {SOCIAL_LABELS[key] ?? key}
-                        </a>
-                      ) : null
-                    )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.06] bg-slate-900/10 px-5 py-5 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {contactInfo?.email && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-slate-950/20 px-3.5 py-3">
+                    <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Email
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-300">
+                        {contactInfo.email}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {faqs && faqs.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <HelpCircle className="h-3 w-3 text-gray-600" />
-                  <span className="text-[11px] text-gray-500">
-                    {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} published
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+                {contactInfo?.phone && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-slate-950/20 px-3.5 py-3">
+                    <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Phone
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-300">
+                        {contactInfo.phone}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contactInfo?.officeHours && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-slate-950/20 px-3.5 py-3">
+                    <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Hours
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-300">
+                        {contactInfo.officeHours}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contactInfo?.address && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-slate-950/20 px-3.5 py-3">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Address
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-300 leading-relaxed">
+                        {contactInfo.address}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          {!contactInfo?.email &&
-            !contactInfo?.phone &&
-            !contactInfo?.address && (
-              <p className="text-xs text-gray-600">
-                No contact info configured yet.{' '}
-                <a
-                  href="/account/admin/settings"
-                  className="text-blue-400 underline hover:text-blue-300"
-                >
-                  Configure in Settings
-                </a>
-              </p>
-            )}
-        </div>
-      )}
-    </div>
+              {(hasSocials || (faqs && faqs.length > 0)) && (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.04]">
+                  {hasSocials && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Social links:
+                      </span>
+                      <div className="flex gap-1.5">
+                        {Object.entries(socialLinks).map(([key, url]) =>
+                          url ? (
+                            <a
+                              key={key}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-lg border border-white/[0.08] bg-white/3 px-2 py-0.5 text-[10px] font-medium text-gray-400 transition-colors hover:border-white/15 hover:text-gray-200"
+                            >
+                              {SOCIAL_LABELS[key] ?? key}
+                            </a>
+                          ) : null
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {faqs && faqs.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <HelpCircle className="h-3 w-3 text-gray-500" />
+                      <span className="text-[11px] text-gray-400">
+                        {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} published
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!contactInfo?.email &&
+                !contactInfo?.phone &&
+                !contactInfo?.address && (
+                  <p className="text-xs text-gray-500">
+                    No contact info configured yet.{' '}
+                    <a
+                      href="/account/admin/settings"
+                      className="text-amber-400 underline hover:text-amber-300"
+                    >
+                      Configure in Settings
+                    </a>
+                  </p>
+                )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </GlassCard>
   );
 }
 
@@ -583,12 +578,6 @@ export default function ContactSubmissionsClient({
   const [selectedIds, setSelectedIds] = useState([]);
   const [detailSub, setDetailSub] = useState(null);
   const [bulkPending, startBulkTransition] = useTransition();
-  const [flashMsg, setFlashMsg] = useState(null);
-
-  function flash(msg, type = 'success') {
-    setFlashMsg({ msg, type });
-    setTimeout(() => setFlashMsg(null), 3000);
-  }
 
   // ── stats ──────────────────────────────────────────────────────────────────
   const stats = useMemo(
@@ -655,13 +644,13 @@ export default function ContactSubmissionsClient({
       fd.set('status', status);
       const result = await bulkUpdateContactStatusAction(fd);
       if (result?.error) {
-        flash(result.error, 'error');
+        toast.error(result.error);
       } else {
         setSubmissions((prev) =>
           prev.map((s) => (selectedIds.includes(s.id) ? { ...s, status } : s))
         );
         setSelectedIds([]);
-        flash(
+        toast.success(
           `${result.updated} submission${result.updated > 1 ? 's' : ''} marked as ${status}`
         );
       }
@@ -674,13 +663,13 @@ export default function ContactSubmissionsClient({
       fd.set('ids', JSON.stringify(selectedIds));
       const result = await bulkDeleteContactSubmissionsAction(fd);
       if (result?.error) {
-        flash(result.error, 'error');
+        toast.error(result.error);
       } else {
         setSubmissions((prev) =>
           prev.filter((s) => !selectedIds.includes(s.id))
         );
         setSelectedIds([]);
-        flash(
+        toast.success(
           `${result.deleted} submission${result.deleted > 1 ? 's' : ''} deleted`
         );
       }
@@ -700,85 +689,61 @@ export default function ContactSubmissionsClient({
       icon: Mail,
       label: 'Total',
       value: stats.total,
-      colorClass: 'bg-blue-500/15 text-blue-400',
+      accent: 'blue',
       tab: 'all',
     },
     {
       icon: Clock,
       label: 'New',
       value: stats.new,
-      colorClass: 'bg-purple-500/15 text-purple-400',
+      accent: 'purple',
       tab: 'new',
     },
     {
       icon: Eye,
       label: 'Read',
       value: stats.read,
-      colorClass: 'bg-sky-500/15 text-sky-400',
+      accent: 'sky',
       tab: 'read',
     },
     {
       icon: CheckCircle2,
       label: 'Replied',
       value: stats.replied,
-      colorClass: 'bg-green-500/15 text-green-400',
+      accent: 'green',
       tab: 'replied',
     },
     {
       icon: Archive,
       label: 'Archived',
       value: stats.archived,
-      colorClass: 'bg-yellow-500/15 text-yellow-400',
+      accent: 'yellow',
       tab: 'archived',
     },
   ];
 
   return (
-    <>
+    <PageShell>
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-violet-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">
-                Contact Submissions
-              </span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/15 ring-1 ring-purple-500/25">
-                <Mail className="h-5 w-5 text-purple-400" />
-              </div>
-              Contact Submissions
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Manage and respond to contact form submissions
-              {stats.new > 0 && (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-purple-500/25 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
-                  {stats.new} new
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="self-start sm:self-auto">
-            <Link
-              href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Contact Submissions"
+        subtitle="Manage, organize, and follow up on inquiries from members and the public"
+        icon={Mail}
+        accent="purple"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/account/admin' },
+          { label: 'Submissions' },
+        ]}
+        actions={
+          <ActionButton
+            href="/account/admin"
+            tone="gray"
+            className="text-xs font-semibold animate-pulse"
+          >
+            ← Dashboard
+          </ActionButton>
+        }
+      />
 
       {/* ─── Contact Page Live Info ─────────────────────────────────────────── */}
       {(contactInfo || socialLinks || (faqs && faqs.length > 0)) && (
@@ -789,33 +754,15 @@ export default function ContactSubmissionsClient({
         />
       )}
 
-      {/* ─── Flash message ──────────────────────────────────────────────────── */}
-      {flashMsg && (
-        <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-            flashMsg.type === 'error'
-              ? 'border-red-500/30 bg-red-500/10 text-red-300'
-              : 'border-green-500/30 bg-green-500/10 text-green-300'
-          }`}
-        >
-          {flashMsg.type === 'error' ? (
-            <X className="h-4 w-4 shrink-0" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          )}
-          {flashMsg.msg}
-        </div>
-      )}
-
       {/* ─── Stat Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {STAT_CARDS.map(({ icon, label, value, colorClass, tab }) => (
+        {STAT_CARDS.map(({ icon, label, value, accent, tab }) => (
           <StatCard
             key={tab}
             icon={icon}
             label={label}
             value={value}
-            colorClass={colorClass}
+            accent={accent}
             active={activeTab === tab}
             onClick={() => {
               setActiveTab(tab);
@@ -825,121 +772,121 @@ export default function ContactSubmissionsClient({
         ))}
       </div>
 
-      {/* ─── Filters Row ────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Tabs */}
-        <div className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
-          <TabButton
-            active={activeTab === 'all'}
-            onClick={() => {
-              setActiveTab('all');
+      {/* ─── Tabs & Filters Row ────────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <TabBar
+            tabs={STAT_CARDS.map((tc) => ({
+              value: tc.tab,
+              label: tc.label,
+              count: tc.value,
+              icon: tc.icon,
+            }))}
+            value={activeTab}
+            onChange={(val) => {
+              setActiveTab(val);
               setSelectedIds([]);
             }}
-            count={stats.total}
-          >
-            All
-          </TabButton>
-          <TabButton
-            active={activeTab === 'new'}
-            onClick={() => {
-              setActiveTab('new');
-              setSelectedIds([]);
-            }}
-            count={stats.new}
-          >
-            New
-          </TabButton>
-          <TabButton
-            active={activeTab === 'read'}
-            onClick={() => {
-              setActiveTab('read');
-              setSelectedIds([]);
-            }}
-            count={stats.read}
-          >
-            Read
-          </TabButton>
-          <TabButton
-            active={activeTab === 'replied'}
-            onClick={() => {
-              setActiveTab('replied');
-              setSelectedIds([]);
-            }}
-            count={stats.replied}
-          >
-            Replied
-          </TabButton>
-          <TabButton
-            active={activeTab === 'archived'}
-            onClick={() => {
-              setActiveTab('archived');
-              setSelectedIds([]);
-            }}
-            count={stats.archived}
-          >
-            Archived
-          </TabButton>
+          />
+
+          {/* Search Glass Toolbar */}
+          <GlassCard className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between !p-2 md:!p-1.5 md:bg-transparent md:border-none md:shadow-none" padding="p-2">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search sender, email, subject..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-white/[0.06] bg-slate-950/40 py-2 pr-10 pl-10 text-xs text-gray-200 placeholder-gray-600 outline-none transition-all hover:bg-slate-950/60 focus:border-amber-500/20 focus:ring-1 focus:ring-amber-500/10"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </GlassCard>
         </div>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search name, email, subject…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/4 py-2.5 pr-4 pl-9 text-sm text-white placeholder-gray-600 backdrop-blur-sm transition-all focus:border-white/20 focus:bg-white/6 focus:outline-none"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        {/* Selection Details Header */}
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-slate-950/20 px-3 py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+              >
+                {allFilteredSelected ? (
+                  <SquareCheck className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Square className="h-3.5 w-3.5" />
+                )}
+                {allFilteredSelected ? 'Deselect all' : 'Select all'}
+              </button>
+              <span className="text-xs text-gray-500 font-medium">
+                {filtered.length} matching submission{filtered.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── Bulk Action Bar ────────────────────────────────────────────────── */}
-      {selectedIds.length > 0 && (
-        <BulkActionBar
-          selectedCount={selectedIds.length}
-          onClearSelection={() => setSelectedIds([])}
-          onBulkStatus={handleBulkStatus}
-          onBulkDelete={handleBulkDelete}
-          isPending={bulkPending}
-        />
-      )}
-
-      {/* ─── List Header ────────────────────────────────────────────────────── */}
-      {filtered.length > 0 && (
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSelectAll}
-              className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/3 px-2.5 py-1.5 text-xs text-gray-400 transition-all hover:bg-white/6 hover:text-gray-200"
-            >
-              {allFilteredSelected ? (
-                <SquareCheck className="h-3.5 w-3.5 text-blue-400" />
-              ) : (
-                <Square className="h-3.5 w-3.5" />
-              )}
-              {allFilteredSelected ? 'Deselect all' : 'Select all'}
-            </button>
-            <span className="text-xs text-gray-600">
-              {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2 }}
+          >
+            <BulkActionBar
+              selectedCount={selectedIds.length}
+              onClearSelection={() => setSelectedIds([])}
+              onBulkStatus={handleBulkStatus}
+              onBulkDelete={handleBulkDelete}
+              isPending={bulkPending}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Submissions List ────────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <EmptyState tab={activeTab} />
+        <EmptyState
+          icon={Mail}
+          title={
+            activeTab === 'all' ? 'No submissions yet' :
+            activeTab === 'new' ? 'No new messages' :
+            activeTab === 'read' ? 'No read messages' :
+            activeTab === 'replied' ? 'No replied messages' :
+            'No archived messages'
+          }
+          description={
+            search
+              ? 'Try adjusting your search terms or filters.'
+              : activeTab === 'all'
+              ? 'All contact form messages will appear here.'
+              : activeTab === 'new'
+              ? 'All messages have been reviewed. Excellent!'
+              : 'No messages found in this status.'
+          }
+          accent="purple"
+        />
       ) : (
-        <div className="space-y-2">
+        <motion.div
+          variants={{
+            hidden: { opacity: 0 },
+            show: { opacity: 1, transition: { staggerChildren: 0.05 } }
+          }}
+          initial="hidden"
+          animate="show"
+          className="space-y-3"
+        >
           {filtered.map((sub) => (
             <SubmissionRow
               key={sub.id}
@@ -954,7 +901,7 @@ export default function ContactSubmissionsClient({
               }}
             />
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* ─── Detail Modal ───────────────────────────────────────────────────── */}
@@ -965,6 +912,6 @@ export default function ContactSubmissionsClient({
           onUpdated={handleDetailUpdate}
         />
       )}
-    </>
+    </PageShell>
   );
 }

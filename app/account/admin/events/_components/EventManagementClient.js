@@ -54,7 +54,7 @@ function filterFn(event, tab) {
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
-export default function EventManagementClient({ initialEvents }) {
+export default function EventManagementClient({ initialEvents, roles = [] }) {
   const [events, setEvents] = useState(initialEvents);
   const [createModal, setCreateModal] = useState(false);
   const [viewRegEvent, setViewRegEvent] = useState(null);
@@ -86,6 +86,7 @@ export default function EventManagementClient({ initialEvents }) {
             event={event}
             onBack={onBack}
             allCategories={allCategories}
+            roles={roles}
             saveAction={updateEventAction}
             uploadImageAction={uploadEventImageAction}
             deleteImageAction={deleteEventImageAction}
@@ -115,6 +116,7 @@ export default function EventManagementClient({ initialEvents }) {
           createAction={createEventAction}
           uploadImageAction={uploadEventImageAction}
           allCategories={allCategories}
+          roles={roles}
         />
       )}
 

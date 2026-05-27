@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   ACHIEVEMENT_CATEGORIES,
@@ -24,6 +25,7 @@ import {
 import { useScrollLock } from '@/app/_lib/hooks';
 
 export default function AchievementFormModal({ achievement, onClose }) {
+  const router = useRouter();
   const isEdit = Boolean(achievement);
   useScrollLock();
   const formRef = useRef(null);
@@ -87,6 +89,7 @@ export default function AchievementFormModal({ achievement, onClose }) {
     if (res?.error) {
       setError(res.error);
     } else {
+      router.refresh();
       onClose();
     }
   }

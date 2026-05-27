@@ -1,656 +1,328 @@
-/**
- * @file Roadmap management client — full-featured admin interface for listing,
- *   filtering, creating, editing, and managing club roadmaps with stats and
- *   grid / table views.
- * @module AdminRoadmapManagementClient
- */
-
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-  Map,
-  Star,
+  Compass,
+  Plus,
   Search,
-  PlusCircle,
-  Eye,
-  FileEdit,
-  CheckCircle2,
-  Archive,
-  Layers,
+  Terminal,
   LayoutGrid,
   LayoutList,
-  ArrowUpDown,
-  Edit3,
-  Trash2,
-  Loader2,
+  Star,
+  Zap,
+  Eye,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
-  TrendingUp,
+  X,
 } from 'lucide-react';
+
+const PAGE_SIZE = 12;
 import RoadmapCard from './RoadmapCard';
+import RoadmapTableRow from './RoadmapTableRow';
 import RoadmapFormPanel from './RoadmapFormPanel';
 import {
-  getStatusConfig,
-  getCategoryConfig,
-  getDifficultyConfig,
-  formatRoadmapDate,
   sortRoadmaps,
+  SORT_OPTIONS,
   CATEGORIES,
   DIFFICULTIES,
-  SORT_OPTIONS,
+  getCategoryConfig,
+  getDifficultyConfig,
 } from './roadmapConfig';
+import toast from 'react-hot-toast';
+import { PageShell, PageHeader, StatCard, TabBar, EmptyState } from '../../_components/_ui';
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
+const STATUS_TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'published', label: 'Published' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'archived', label: 'Archived' },
+];
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  colorClass,
-  sub,
-  accentGradient,
-}) {
-  return (
-    <div className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/6 bg-[#161b22] px-4 py-3.5 transition-all hover:border-white/10 hover:bg-[#1c2128]">
-      {accentGradient && (
-        <div
-          className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 ${accentGradient}`}
-        />
-      )}
-      <div
-        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="relative min-w-0">
-        <p className="font-mono text-lg leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate font-mono text-[10px] text-gray-600">
-          {label}
-        </p>
-        {sub && (
-          <p className="mt-0.5 truncate font-mono text-[9px] text-amber-500/70">
-            {sub}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
-function EmptyState({ tab, onCreateClick }) {
-  const msgs = {
-    all: {
-      icon: Map,
-      title: 'No roadmaps yet',
-      sub: 'Create your first roadmap to guide members on their learning journeys.',
-    },
-    draft: {
-      icon: FileEdit,
-      title: 'No draft roadmaps',
-      sub: 'Drafts appear here when saved unpublished.',
-    },
-    published: { icon: CheckCircle2, title: 'No published roadmaps', sub: '' },
-    archived: { icon: Archive, title: 'No archived roadmaps', sub: '' },
-  };
-  const { icon: Icon, title, sub } = msgs[tab] ?? msgs.all;
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-20 text-center">
-      <Icon className="mb-4 h-12 w-12 text-gray-700" />
-      <p className="text-sm font-semibold text-gray-400">{title}</p>
-      {sub && <p className="mt-1 text-xs text-gray-600">{sub}</p>}
-      {tab === 'all' && (
-        <button
-          onClick={onCreateClick}
-          className="mt-5 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-500"
-        >
-          <PlusCircle className="h-3.5 w-3.5" /> New Roadmap
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ─── Tab Button ───────────────────────────────────────────────────────────────
-
-function TabButton({ active, onClick, children, count }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${active ? 'bg-white/15 text-white' : 'bg-white/6 text-gray-600'}`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-// ─── Main Client ──────────────────────────────────────────────────────────────
-
-export default function RoadmapManagementClient({ initialRoadmaps, stats }) {
+export default function RoadmapManagementClient({ initialRoadmaps }) {
   const router = useRouter();
   const [roadmaps, setRoadmaps] = useState(initialRoadmaps ?? []);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState('');
+  const [sortKey, setSortKey] = useState('newest');
+  const [viewMode, setViewMode] = useState('grid');
+  const [formModal, setFormModal] = useState(null); // null | { mode, roadmap? }
+  const [page, setPage] = useState(1);
 
-  // Sync local state when server re-renders with fresh data (after router.refresh())
+  // Sync server changes to local state
   useEffect(() => {
     setRoadmaps(initialRoadmaps ?? []);
   }, [initialRoadmaps]);
 
-  const [activeTab, setActiveTab] = useState('all');
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('');
-  const [formModal, setFormModal] = useState(null); // null | { mode, roadmap? }
-  const [sortBy, setSortBy] = useState('newest');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
-  const [sortOpen, setSortOpen] = useState(false);
-
-  // ── state sync handlers ───────────────────────────────────────────────
-  const handleRoadmapChange = useCallback((roadmapId, changes) => {
-    setRoadmaps((prev) =>
-      prev.map((r) => (r.id === roadmapId ? { ...r, ...changes } : r))
-    );
-  }, []);
-
-  const handleRoadmapDelete = useCallback((roadmapId) => {
-    setRoadmaps((prev) => prev.filter((r) => r.id !== roadmapId));
-  }, []);
-
   const handleSaved = useCallback(() => {
-    // Refresh server data so local state picks up new/edited roadmaps
     router.refresh();
-    // Re-fetch fresh roadmaps after a short delay for revalidation to complete
-    const timer = setTimeout(() => {
-      router.refresh();
-    }, 500);
-    return () => clearTimeout(timer);
+    setFormModal(null);
   }, [router]);
 
-  // ── derived stats ─────────────────────────────────────────────────────────
-  const live = {
+  const stats = useMemo(() => ({
     total: roadmaps.length,
     published: roadmaps.filter((r) => r.status === 'published').length,
     draft: roadmaps.filter((r) => r.status === 'draft').length,
-    archived: roadmaps.filter((r) => r.status === 'archived').length,
     featured: roadmaps.filter((r) => r.is_featured).length,
     totalViews: roadmaps.reduce((s, r) => s + (r.views ?? 0), 0),
-  };
+  }), [roadmaps]);
 
-  // ── filtered + sorted roadmaps ─────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const result = roadmaps.filter((r) => {
-      const matchesTab = activeTab === 'all' || r.status === activeTab;
-      const matchesSearch =
+    let result = roadmaps.filter((r) => {
+      const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+      const matchCategory = !categoryFilter || r.category === categoryFilter;
+      const matchDifficulty = !difficultyFilter || r.difficulty === difficultyFilter;
+      const matchSearch =
         !search ||
         r.title?.toLowerCase().includes(search.toLowerCase()) ||
         r.description?.toLowerCase().includes(search.toLowerCase()) ||
         r.category?.toLowerCase().includes(search.toLowerCase());
-      const matchesCat = !categoryFilter || r.category === categoryFilter;
-      const matchesDiff =
-        !difficultyFilter || r.difficulty === difficultyFilter;
-      return matchesTab && matchesSearch && matchesCat && matchesDiff;
+      return matchStatus && matchCategory && matchDifficulty && matchSearch;
     });
-    return sortRoadmaps(result, sortBy);
-  }, [roadmaps, activeTab, search, categoryFilter, difficultyFilter, sortBy]);
+    return sortRoadmaps(result, sortKey);
+  }, [roadmaps, statusFilter, categoryFilter, difficultyFilter, search, sortKey]);
+
+  // Reset to page 1 when filters/sort change
+  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter, difficultyFilter, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const statusTabs = STATUS_TABS.map((t) => ({
+    ...t,
+    count: t.value === 'all' ? roadmaps.length : roadmaps.filter((r) => r.status === t.value).length,
+  }));
 
   return (
     <>
-      <div className="space-y-6">
-        {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-          {/* decorative orbs */}
-          <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-blue-500/6 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-violet-500/5 blur-3xl" />
+      <PageShell>
+        <PageHeader
+          icon={Compass}
+          title="Roadmap Management"
+          subtitle={`${stats.total} learning paths · ${stats.totalViews.toLocaleString()} total views`}
+          accent="blue"
+          actions={
+            <button
+              onClick={() => setFormModal({ mode: 'create' })}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.35)]"
+            >
+              <Plus className="h-4 w-4" />
+              New Roadmap
+            </button>
+          }
+        />
 
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <nav className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
-                <Link
-                  href="/account/admin"
-                  className="transition-colors hover:text-gray-300"
-                >
-                  Dashboard
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-gray-400">Roadmap Management</span>
-              </nav>
-              <h1 className="flex items-center gap-3 text-xl font-bold text-white sm:text-2xl">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20 ring-1 ring-blue-500/30">
-                  <Map className="h-5 w-5 text-blue-400" />
-                </div>
-                Roadmap Management
-              </h1>
-              <p className="mt-1.5 text-sm text-gray-500">
-                {live.total} roadmap{live.total !== 1 ? 's' : ''} ·{' '}
-                {live.published} published · {live.totalViews.toLocaleString()}{' '}
-                total views
-              </p>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <Link
-                href="/account/admin"
-                className="rounded-xl bg-white/6 px-4 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                ← Dashboard
-              </Link>
-              <button
-                onClick={() => setFormModal({ mode: 'create' })}
-                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-blue-500 active:scale-95"
-              >
-                <PlusCircle className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
-                New Roadmap
-              </button>
-            </div>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard icon={Compass} label="Total Paths" value={stats.total} accent="blue" delay={0} />
+          <StatCard icon={Zap} label="Published" value={stats.published} accent="emerald" delay={0.05} />
+          <StatCard icon={Star} label="Featured" value={stats.featured} accent="amber" delay={0.1} />
+          <StatCard icon={Eye} label="Total Views" value={stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}k` : stats.totalViews.toLocaleString()} accent="sky" delay={0.15} />
         </div>
 
-        {/* ── Stats row ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard
-            icon={Layers}
-            label="Total Roadmaps"
-            value={live.total}
-            colorClass="bg-gray-700/50 text-gray-300"
-            accentGradient="bg-linear-to-br from-gray-500/5 to-transparent"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Published"
-            value={live.published}
-            colorClass="bg-emerald-500/15 text-emerald-400"
-            accentGradient="bg-linear-to-br from-emerald-500/8 to-transparent"
-          />
-          <StatCard
-            icon={FileEdit}
-            label="Drafts"
-            value={live.draft}
-            colorClass="bg-gray-600/20 text-gray-400"
-            accentGradient="bg-linear-to-br from-gray-500/6 to-transparent"
-          />
-          <StatCard
-            icon={Star}
-            label="Featured"
-            value={live.featured}
-            colorClass="bg-amber-500/15 text-amber-400"
-            accentGradient="bg-linear-to-br from-amber-500/8 to-transparent"
-          />
-          <StatCard
-            icon={Eye}
-            label="Total Views"
-            value={
-              live.totalViews >= 1000
-                ? `${(live.totalViews / 1000).toFixed(1)}k`
-                : live.totalViews
-            }
-            colorClass="bg-blue-500/15 text-blue-400"
-            accentGradient="bg-linear-to-br from-blue-500/8 to-transparent"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Trending"
-            value={roadmaps.filter((r) => (r.views ?? 0) > 100).length}
-            colorClass="bg-violet-500/15 text-violet-400"
-            accentGradient="bg-linear-to-br from-violet-500/8 to-transparent"
-          />
-        </div>
+        {/* Status Tabs */}
+        <TabBar tabs={statusTabs} value={statusFilter} onChange={(v) => { setStatusFilter(v); }} />
 
-        {/* ── Tabs + filters ────────────────────────────────────────────────── */}
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="scrollbar-hide flex gap-1 overflow-x-auto pb-1">
-              <TabButton
-                active={activeTab === 'all'}
-                onClick={() => setActiveTab('all')}
-                count={live.total}
-              >
-                All
-              </TabButton>
-              <TabButton
-                active={activeTab === 'published'}
-                onClick={() => setActiveTab('published')}
-                count={live.published}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{' '}
-                Published
-              </TabButton>
-              <TabButton
-                active={activeTab === 'draft'}
-                onClick={() => setActiveTab('draft')}
-                count={live.draft}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-400" /> Draft
-              </TabButton>
-              <TabButton
-                active={activeTab === 'archived'}
-                onClick={() => setActiveTab('archived')}
-                count={live.archived}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />{' '}
-                Archived
-              </TabButton>
-            </div>
-
-            {/* View mode toggle */}
-            <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-0.5">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Search bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search roadmaps by title, description, category…"
+              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 placeholder:text-gray-600 transition-all"
+            />
+            {search && (
               <button
-                onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-white/12 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Grid
+                <X className="h-3.5 w-3.5" />
               </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-white/12 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                <LayoutList className="h-3.5 w-3.5" />
-                Table
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Search + Sort + Category + Difficulty */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search roadmaps by title, description, category…"
-                className="w-full rounded-xl border border-white/8 bg-white/4 py-2 pr-3 pl-8 text-xs text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-              />
-            </div>
-
-            {/* Sort dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setSortOpen((o) => !o)}
-                className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-xs text-gray-300 transition-colors hover:border-white/15 hover:text-white"
-              >
-                <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                {SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'Sort'}
-                <ChevronDown className="h-3 w-3 text-gray-600" />
-              </button>
-              {sortOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setSortOpen(false)}
-                  />
-                  <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl">
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => {
-                          setSortBy(opt.key);
-                          setSortOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-white/6 ${
-                          sortBy === opt.key
-                            ? 'bg-white/6 text-white'
-                            : 'text-gray-400'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Category filter */}
+          {/* Filters Select row */}
+          <div className="flex items-center flex-wrap gap-2 sm:ml-auto">
+            {/* Category Filter */}
             <div className="relative">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-white/8 bg-white/4 py-2 pr-8 pl-3 text-xs text-gray-300 outline-none focus:border-white/20"
+                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
                 style={{ colorScheme: 'dark' }}
               >
-                <option value="">All categories</option>
+                <option value="">All Categories</option>
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
-                    {getCategoryConfig(cat).label}
+                    {getCategoryConfig(cat).short || cat}
                   </option>
                 ))}
               </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
             </div>
 
-            {/* Difficulty filter */}
+            {/* Difficulty Filter */}
             <div className="relative">
               <select
                 value={difficultyFilter}
                 onChange={(e) => setDifficultyFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-white/8 bg-white/4 py-2 pr-8 pl-3 text-xs text-gray-300 outline-none focus:border-white/20"
+                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
                 style={{ colorScheme: 'dark' }}
               >
-                <option value="">All levels</option>
-                {DIFFICULTIES.map((d) => {
-                  const cfg = getDifficultyConfig(d);
-                  return (
-                    <option key={d} value={d}>
-                      {cfg.label}
-                    </option>
-                  );
-                })}
+                <option value="">All Levels</option>
+                {DIFFICULTIES.map((d) => (
+                  <option key={d} value={d}>
+                    {getDifficultyConfig(d).label}
+                  </option>
+                ))}
               </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+            </div>
+
+            {/* Sorting */}
+            <div className="relative">
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                style={{ colorScheme: 'dark' }}
+              >
+                {SORT_OPTIONS.map(({ key, label }) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 bg-white/3 border border-white/8 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                title="List view"
+              >
+                <LayoutList className="h-4 w-4" />
+              </button>
             </div>
           </div>
-
-          {/* Results count */}
-          {(search ||
-            categoryFilter ||
-            difficultyFilter ||
-            activeTab !== 'all') && (
-            <p className="text-[11px] text-gray-600">
-              Showing {filtered.length} of {roadmaps.length} roadmap
-              {roadmaps.length !== 1 ? 's' : ''}
-              {search && (
-                <span>
-                  {' '}
-                  matching &quot;
-                  <span className="text-gray-400">{search}</span>&quot;
-                </span>
-              )}
-            </p>
-          )}
         </div>
 
-        {/* ── Roadmap grid / table ──────────────────────────────────────────– */}
-        {filtered.length === 0 ? (
-          <EmptyState
-            tab={activeTab}
-            onCreateClick={() => setFormModal({ mode: 'create' })}
-          />
-        ) : viewMode === 'table' ? (
-          /* ── Table View ────────────────────────────────────────────────── */
-          <div className="overflow-x-auto rounded-xl border border-white/8 bg-[#0d1117]">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr className="border-b border-white/6 bg-[#161b22]">
-                  <th className="w-8 px-3 py-3 text-center font-medium text-gray-700">
-                    #
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    roadmap
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium text-gray-500 md:table-cell">
-                    category
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium text-gray-500 lg:table-cell">
-                    difficulty
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    status
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">
-                    views
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium text-gray-500 lg:table-cell">
-                    date
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">
-                    actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/4">
-                {filtered.map((roadmap, rowIdx) => {
-                  const tsc = getStatusConfig(roadmap.status);
-                  const tcc = getCategoryConfig(roadmap.category);
-                  const tdc = getDifficultyConfig(roadmap.difficulty);
-                  return (
-                    <tr
-                      key={roadmap.id}
-                      className="group transition-colors hover:bg-[#161b22]"
-                    >
-                      {/* line number */}
-                      <td className="px-3 py-3 text-center font-mono text-[10px] text-gray-700 select-none">
-                        {String(rowIdx + 1).padStart(2, '0')}
-                      </td>
-                      <td className="max-w-xs px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`hidden h-8 w-12 shrink-0 items-center justify-center rounded-md bg-linear-to-br sm:flex ${tcc.gradient}`}
-                          >
-                            <span className="text-sm opacity-50">
-                              {tcc.emoji}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-mono text-xs font-semibold text-gray-200">
-                              {roadmap.title}
-                            </p>
-                            {roadmap.is_featured && (
-                              <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[9px] text-amber-400">
-                                <Star className="h-2.5 w-2.5 fill-current" />{' '}
-                                featured
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden px-4 py-3 md:table-cell">
-                        {roadmap.category ? (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium ${tcc.badge}`}
-                          >
-                            <span>{tcc.icon}</span>
-                            {tcc.short}
-                          </span>
-                        ) : (
-                          <span className="text-gray-600">—</span>
-                        )}
-                      </td>
-                      <td className="hidden px-4 py-3 lg:table-cell">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${tdc.badge}`}
-                        >
-                          {tdc.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${tsc.badge}`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${tsc.dot}`}
-                          />
-                          {tsc.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-500 tabular-nums">
-                        {(roadmap.views ?? 0).toLocaleString()}
-                      </td>
-                      <td
-                        className="hidden px-4 py-3 font-mono text-[11px] text-gray-700 lg:table-cell"
-                        title={formatRoadmapDate(roadmap.created_at)}
-                      >
-                        {formatRoadmapDate(roadmap.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() =>
-                              setFormModal({ mode: 'edit', roadmap })
-                            }
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-blue-400"
-                            title="Edit"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleRoadmapDelete(roadmap.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-red-400"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* ── Grid View ────────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((roadmap) => (
-              <RoadmapCard
-                key={roadmap.id}
-                roadmap={roadmap}
-                onEdit={(r) => setFormModal({ mode: 'edit', roadmap: r })}
-                onRoadmapChange={handleRoadmapChange}
-                onRoadmapDelete={handleRoadmapDelete}
-              />
-            ))}
+        {/* Filter Indicator / Reset */}
+        {(search || statusFilter !== 'all' || categoryFilter || difficultyFilter) && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>
+              Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
+              <span className="text-white font-medium">{roadmaps.length}</span> paths
+            </span>
+            <button
+              onClick={() => { setSearch(''); setStatusFilter('all'); setCategoryFilter(''); setDifficultyFilter(''); }}
+              className="ml-2 flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+            >
+              <X className="h-3 w-3" />
+              Clear filters
+            </button>
           </div>
         )}
 
-        {/* ── Footer legend ────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-white/5 bg-[#161b22] px-4 py-2.5 font-mono text-[10px] text-gray-700">
-          <span className="text-gray-600">// status guide</span>
-          {[
-            { dot: 'bg-gray-400', label: 'Draft – work in progress' },
-            { dot: 'bg-emerald-400', label: 'Published – live on site' },
-            { dot: 'bg-amber-400', label: 'Archived – hidden from public' },
-          ].map(({ dot, label }) => (
-            <span key={label} className="flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-              {label}
-            </span>
-          ))}
-        </div>
-      </div>
+        {/* Empty State */}
+        {filtered.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-white/8 bg-white/2 py-4">
+            <EmptyState
+              icon={Terminal}
+              title={search || statusFilter !== 'all' || categoryFilter || difficultyFilter ? 'No paths found' : 'No roadmaps yet'}
+              description={
+                search || statusFilter !== 'all' || categoryFilter || difficultyFilter
+                  ? 'Try adjusting your search or filters.'
+                  : 'Create your first learning roadmap to guide members.'
+              }
+              action={
+                search || statusFilter !== 'all' || categoryFilter || difficultyFilter ? (
+                  <button
+                    onClick={() => { setSearch(''); setStatusFilter('all'); setCategoryFilter(''); setDifficultyFilter(''); }}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium underline underline-offset-2"
+                  >
+                    Clear all filters
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setFormModal({ mode: 'create' })}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-all"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Create Roadmap
+                  </button>
+                )
+              }
+            />
+          </div>
+        )}
 
-      {/* ── Form Modal ────────────────────────────────────────────────────── */}
+        {/* Grid View */}
+        {filtered.length > 0 && viewMode === 'grid' && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paginated.map((r) => (
+                <RoadmapCard
+                  key={r.id}
+                  roadmap={r}
+                  onEdit={(selectedRoadmap) => setFormModal({ mode: 'edit', roadmap: selectedRoadmap })}
+                />
+              ))}
+            </div>
+            <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} />
+          </>
+        )}
+
+        {/* List View */}
+        {filtered.length > 0 && viewMode === 'list' && (
+          <div className="rounded-2xl overflow-hidden border border-white/8 bg-white/2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-white/6">
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Path</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Featured</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Views</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Duration</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {paginated.map((r) => (
+                    <RoadmapTableRow
+                      key={r.id}
+                      roadmap={r}
+                      onEdit={(selectedRoadmap) => setFormModal({ mode: 'edit', roadmap: selectedRoadmap })}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-white/6 px-5 py-3 flex items-center justify-between gap-4">
+              <span className="text-xs text-gray-500">
+                {filtered.length} path{filtered.length !== 1 ? 's' : ''}
+              </span>
+              <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} compact />
+            </div>
+          </div>
+        )}
+      </PageShell>
+
       {formModal && (
         <RoadmapFormPanel
           roadmap={formModal.roadmap ?? null}
@@ -659,5 +331,88 @@ export default function RoadmapManagementClient({ initialRoadmaps, stats }) {
         />
       )}
     </>
+  );
+}
+
+function Pagination({ page, totalPages, total, onPage, compact = false }) {
+  if (totalPages <= 1) return null;
+
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, total);
+
+  // Build page numbers with ellipsis
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-xs text-gray-400 px-1">{page} / {totalPages}</span>
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+      <span className="text-xs text-gray-500">
+        Showing <span className="text-white font-medium">{start}–{end}</span> of{' '}
+        <span className="text-white font-medium">{total}</span> paths
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        {pages.map((p, i) =>
+          p === '…' ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-600 select-none">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPage(p)}
+              className={`min-w-7.5 h-7.5 rounded-lg text-xs font-medium transition-all ${
+                p === page
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'text-gray-500 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
   );
 }

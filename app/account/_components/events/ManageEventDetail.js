@@ -7,7 +7,7 @@ import {
   CheckCircle2, Settings, Image as ImageIcon, Edit3, Eye,
   Shield, Hash, Info, X, UploadCloud,
 } from 'lucide-react';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { GlassCard } from '@/app/account/admin/_components/_ui';
 import { EVENT_STATUS_CONFIG, CATEGORIES, VENUE_TYPES } from './eventConstants';
 import { driveImageUrl } from '@/app/_lib/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
@@ -39,16 +39,16 @@ function Label({ children, required, hint }) {
   );
 }
 
-const inputCls = 'w-full rounded-lg border border-white/10 bg-gray-900 px-3.5 py-2.5 text-[13px] text-gray-100 placeholder-gray-700 outline-none ring-0 transition-all focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 [color-scheme:dark]';
+const inputCls = 'w-full rounded-xl border border-white/6 bg-white/2 px-4 py-3 text-[13px] text-gray-100 placeholder-gray-700 outline-none ring-0 transition-all focus:border-indigo-500/50 focus:bg-white/4 focus:ring-4 focus:ring-indigo-500/10 [color-scheme:dark]';
 const textareaCls = `${inputCls} resize-none leading-relaxed`;
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
 
 function Toggle({ value, onChange, label, description }) {
   return (
-    <label className="group flex cursor-pointer items-center gap-4 rounded-xl border border-white/8 bg-gray-900/60 px-4 py-3.5 transition-colors hover:border-white/12 hover:bg-gray-900">
+    <label className="group flex cursor-pointer items-center gap-4 rounded-xl border border-white/6 bg-white/[0.01] px-4 py-3.5 transition-all duration-200 hover:border-white/12 hover:bg-white/[0.03]">
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">{label}</p>
+        <p className="text-[13px] font-bold text-gray-200 group-hover:text-white transition-colors">{label}</p>
         {description && <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500">{description}</p>}
       </div>
       <div className="relative shrink-0">
@@ -64,26 +64,26 @@ function Toggle({ value, onChange, label, description }) {
 
 function Section({ icon: Icon, title, description, accentColor = '#818cf8', children, dangerous = false }) {
   return (
-    <div className={`group overflow-hidden rounded-2xl border transition-all duration-200 ${
+    <div className={`group overflow-hidden rounded-2xl border transition-all duration-300 ${
       dangerous
-        ? 'border-red-500/20 bg-gradient-to-b from-red-950/20 to-transparent hover:border-red-500/30'
-        : 'border-white/[0.07] bg-gradient-to-b from-white/[0.03] to-transparent hover:border-white/[0.11]'
+        ? 'border-red-500/20 bg-gradient-to-b from-red-950/10 to-transparent hover:border-red-500/30'
+        : 'border-white/6 bg-gradient-to-b from-white/[0.02] to-transparent hover:border-white/12'
     }`}>
       {/* Section header */}
       <div className={`flex items-center gap-3.5 px-5 py-4 ${
         dangerous
-          ? 'border-b border-red-500/15 bg-red-500/[0.04]'
-          : 'border-b border-white/[0.05] bg-white/[0.015]'
+          ? 'border-b border-red-500/10 bg-red-500/[0.02]'
+          : 'border-b border-white/[0.04] bg-white/[0.01]'
       }`}>
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-          dangerous ? 'border-red-500/25 bg-red-500/10' : 'border-white/10 bg-white/[0.04]'
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-300 ${
+          dangerous ? 'border-red-500/20 bg-red-500/5' : 'border-white/8 bg-white/[0.02]'
         }`}
-          style={!dangerous ? { boxShadow: `0 0 0 1px ${accentColor}15, inset 0 1px 0 ${accentColor}10` } : {}}>
-          <Icon className={`h-[17px] w-[17px] ${dangerous ? 'text-red-400' : ''}`}
+          style={!dangerous ? { boxShadow: `0 0 0 1px ${accentColor}10, inset 0 1px 0 ${accentColor}08` } : {}}>
+          <Icon className={`h-[17px] w-[17px] transition-transform duration-300 group-hover:scale-105 ${dangerous ? 'text-red-400' : ''}`}
             style={!dangerous ? { color: accentColor } : {}} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className={`text-[14px] font-bold tracking-tight ${dangerous ? 'text-red-300' : 'text-gray-100'}`}>{title}</p>
+          <p className={`text-[12px] font-extrabold uppercase tracking-wider tracking-tight ${dangerous ? 'text-red-300' : 'text-gray-200'}`}>{title}</p>
           {description && <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500">{description}</p>}
         </div>
       </div>
@@ -94,11 +94,11 @@ function Section({ icon: Icon, title, description, accentColor = '#818cf8', chil
 
 // ─── Pill button (category / venue) ───────────────────────────────────────────
 
-function Pill({ active, onClick, children, activeClass = 'border-indigo-500/60 bg-indigo-500/15 text-indigo-300 shadow-[0_0_0_1px_rgba(99,102,241,0.3)]' }) {
+function Pill({ active, onClick, children, activeClass = 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.2)]' }) {
   return (
     <button type="button" onClick={onClick}
-      className={`rounded-full border px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-150 ${
-        active ? activeClass : 'border-white/8 bg-white/[0.03] text-gray-500 hover:border-white/15 hover:text-gray-300'
+      className={`rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all duration-150 ${
+        active ? activeClass : 'border-white/6 bg-white/2 text-gray-500 hover:border-white/15 hover:text-gray-300'
       }`}>
       {children}
     </button>
@@ -109,10 +109,10 @@ function Pill({ active, onClick, children, activeClass = 'border-indigo-500/60 b
 
 function SegmentedControl({ options, value, onChange }) {
   return (
-    <div className="inline-flex rounded-xl border border-white/8 bg-gray-900/80 p-1 gap-0.5">
+    <div className="inline-flex rounded-xl border border-white/6 bg-white/2 p-1 gap-0.5">
       {options.map((opt) => (
         <button key={opt.id} type="button" onClick={() => onChange(opt.id)}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-150 ${
+          className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-150 ${
             value === opt.id
               ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
               : 'text-gray-500 hover:text-gray-300'
@@ -133,15 +133,15 @@ function CardSelect({ options, value, onChange, cols = 2 }) {
     <div className={`grid gap-2.5 ${colClass}`}>
       {options.map((opt) => (
         <button key={opt.id} type="button" onClick={() => onChange(opt.id)}
-          className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition-all duration-150 ${
+          className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-150 ${
             value === opt.id
-              ? 'border-indigo-500/40 bg-indigo-500/[0.08] ring-1 ring-indigo-500/25 shadow-sm'
-              : 'border-white/8 bg-white/[0.02] hover:border-white/14 hover:bg-white/[0.04]'
+              ? 'border-indigo-500/40 bg-indigo-500/[0.04] ring-1 ring-indigo-500/10 shadow-sm'
+              : 'border-white/6 bg-white/[0.01] hover:border-white/14 hover:bg-white/[0.03]'
           }`}>
           <span className="mt-0.5 text-lg leading-none">{opt.icon}</span>
           <div className="min-w-0">
-            <p className={`text-[13px] font-bold leading-tight ${value === opt.id ? 'text-indigo-200' : 'text-gray-200'}`}>{opt.label}</p>
-            {opt.desc && <p className={`mt-1 text-[11px] leading-snug ${value === opt.id ? 'text-indigo-400/80' : 'text-gray-500'}`}>{opt.desc}</p>}
+            <p className={`text-[12px] font-extrabold uppercase tracking-wider leading-tight ${value === opt.id ? 'text-indigo-200' : 'text-gray-300'}`}>{opt.label}</p>
+            {opt.desc && <p className={`mt-1.5 text-[11px] leading-snug ${value === opt.id ? 'text-indigo-400/80' : 'text-gray-500'}`}>{opt.desc}</p>}
           </div>
         </button>
       ))}
@@ -380,7 +380,7 @@ function LivePreview({ title, description, coverImage, category, status, startDa
 
 // ─── Edit form ─────────────────────────────────────────────────────────────────
 
-function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveAction, deleteAction, uploadImageAction, deleteImageAction }) {
+function EditForm({ event, allCategories = [], roles = [], onSave, onCancel, onDelete, saveAction, deleteAction, uploadImageAction, deleteImageAction }) {
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -463,11 +463,21 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
     { id: 'team',       icon: '👥', label: 'Team',       desc: 'Group-based, squad registration' },
   ];
 
-  const ELIGIBILITY_OPTS = [
-    { id: 'all',       icon: '🌍', label: 'Everyone',        desc: 'Open to all' },
-    { id: 'member',    icon: '🎓', label: 'Members Only',    desc: 'Club members' },
-    { id: 'executive', icon: '⭐', label: 'Executives Only', desc: 'Exec committee' },
-  ];
+  const ELIGIBILITY_OPTS = roles.length > 0
+    ? [
+        { id: 'all', icon: '🌍', label: 'Everyone', desc: 'Open to all' },
+        ...roles.map((r) => ({
+          id: r.id,
+          icon: r.name === 'member' ? '🎓' : r.name === 'executive' ? '⭐' : '👥',
+          label: `${r.name.charAt(0).toUpperCase() + r.name.slice(1)}s Only`,
+          desc: `Open to ${r.name}s`,
+        }))
+      ]
+    : [
+        { id: 'all',       icon: '🌍', label: 'Everyone',        desc: 'Open to all' },
+        { id: 'member',    icon: '🎓', label: 'Members Only',    desc: 'Club members' },
+        { id: 'executive', icon: '⭐', label: 'Executives Only', desc: 'Exec committee' },
+      ];
 
   const tagList = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
@@ -514,7 +524,7 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 xl:col-span-8 pb-20">
 
         {/* ── Sticky top bar ── */}
-        <div className="sticky top-0 z-30 overflow-hidden rounded-2xl border border-white/10 bg-gray-950/90 shadow-xl shadow-black/20 backdrop-blur-xl">
+        <div className="sticky top-0 z-30 overflow-hidden rounded-2xl border border-white/10 bg-gray-950/80 shadow-xl shadow-black/40 backdrop-blur-xl">
           <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/10">
@@ -522,16 +532,16 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-bold leading-tight text-gray-100">{title || 'Untitled Event'}</p>
-                <p className="mt-0.5 text-[11px] text-gray-600">Editing · changes not saved</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-gray-500">Editing · Changes not saved</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <button type="button" onClick={onCancel}
-                className="rounded-lg border border-white/10 px-4 py-2 text-[12px] font-semibold text-gray-400 transition-all hover:border-white/20 hover:bg-white/5 hover:text-gray-200 active:scale-95">
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-[12px] font-bold text-gray-400 transition-all hover:border-white/20 hover:bg-white/5 hover:text-gray-200 active:scale-95">
                 Discard
               </button>
               <button type="submit" disabled={isPending}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-[12px] font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-95 disabled:opacity-50">
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-95 disabled:opacity-50">
                 {isPending
                   ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
                   : <><Save className="h-3.5 w-3.5" /> Save Changes</>}
@@ -540,7 +550,7 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
           </div>
           {/* Progress bar */}
           <div className="h-[2px] w-full bg-white/5">
-            <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-300"
+            <div className="h-full bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 transition-all duration-300"
               style={{ width: `${Math.round(([title, description, startDate, location, category, coverImage].filter(Boolean).length / 6) * 100)}%` }} />
           </div>
         </div>
@@ -635,7 +645,7 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
                   {customCategory}
                 </Pill>
               )}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="text"
                   value={customCategory}
@@ -644,11 +654,11 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
                     if (e.key === 'Enter') { e.preventDefault(); if (customCategory.trim()) setCategory(customCategory.trim()); }
                   }}
                   placeholder="Custom…"
-                  className="h-[30px] w-24 rounded-full border border-dashed border-white/20 bg-transparent px-3 text-[12px] text-gray-400 placeholder-gray-700 outline-none focus:border-indigo-500/40 focus:text-gray-200 transition-colors"
+                  className="h-[36px] w-28 rounded-full border border-dashed border-white/20 bg-white/2 px-4 text-[11px] font-semibold text-gray-300 placeholder-gray-600 outline-none focus:border-indigo-500/40 focus:bg-white/4 focus:text-gray-200 transition-colors"
                 />
                 {customCategory.trim() && (
                   <button type="button" onClick={() => setCategory(customCategory.trim())}
-                    className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-colors">
+                    className="h-[36px] rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 text-[11px] font-bold uppercase tracking-wider text-indigo-300 hover:bg-indigo-500/20 transition-colors">
                     + Add
                   </button>
                 )}
@@ -811,78 +821,88 @@ function EditForm({ event, allCategories = [], onSave, onCancel, onDelete, saveA
 
 function RegistrationStatsWidget({ event, onViewRegs }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-700/80">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <GlassCard className="overflow-hidden">
+      <div className="flex items-center justify-between border-b border-white/6 px-4 py-3 bg-white/[0.01]">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
           <Users className="h-3.5 w-3.5 text-indigo-400" /> Registrations
         </span>
         {onViewRegs && (
-          <button onClick={onViewRegs} className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">
+          <button onClick={onViewRegs} className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">
             View all →
           </button>
         )}
       </div>
       <div className="p-4">
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-3">
-            <p className="text-2xl font-bold text-white tabular-nums">{event.registrationCount ?? 0}</p>
-            <p className="text-[10px] text-slate-500">Registered</p>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-white/6 bg-white/2 px-3 py-3 transition-colors hover:bg-white/4">
+            <p className="text-2xl font-black text-white tabular-nums">{event.registrationCount ?? 0}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-0.5">Registered</p>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-3">
-            <p className="text-2xl font-bold text-white tabular-nums">{event.attendedCount ?? 0}</p>
-            <p className="text-[10px] text-slate-500">Attended</p>
+          <div className="rounded-xl border border-white/6 bg-white/2 px-3 py-3 transition-colors hover:bg-white/4">
+            <p className="text-2xl font-black text-white tabular-nums">{event.attendedCount ?? 0}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-0.5">Attended</p>
           </div>
         </div>
         {event.max_participants && (
           <div>
-            <div className="mb-1.5 flex justify-between text-[10px] text-slate-500">
+            <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
               <span>Capacity</span>
-              <span className={event.registrationCount >= event.max_participants ? 'font-semibold text-red-400' : 'text-slate-400'}>
+              <span className={event.registrationCount >= event.max_participants ? 'font-semibold text-rose-400' : 'text-gray-400'}>
                 {event.registrationCount ?? 0} / {event.max_participants}
                 {event.registrationCount >= event.max_participants && ' · Full'}
               </span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div className={`h-full rounded-full transition-all ${event.registrationCount >= event.max_participants ? 'bg-red-500' : 'bg-indigo-500'}`}
+            <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
+              <div className={`h-full rounded-full transition-all duration-500 ${event.registrationCount >= event.max_participants ? 'bg-gradient-to-r from-rose-500 to-red-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
                 style={{ width: `${Math.min(100, ((event.registrationCount ?? 0) / event.max_participants) * 100)}%` }} />
             </div>
           </div>
         )}
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
-function EventDetailsWidget({ event }) {
+function EventDetailsWidget({ event, roles = [] }) {
   const sc = EVENT_STATUS_CONFIG[event.status] || EVENT_STATUS_CONFIG.draft;
+
+  const eligibilityValue = (() => {
+    if (!event.eligibility || event.eligibility === 'all') return 'Everyone';
+    if (event.eligibility === 'member') return 'Members Only';
+    if (event.eligibility === 'executive') return 'Executives Only';
+    const role = roles.find((r) => r.id === event.eligibility);
+    if (role) return `${role.name.charAt(0).toUpperCase() + role.name.slice(1)}s Only`;
+    return event.eligibility;
+  })();
+
   const rows = [
-    { label: 'Status', value: <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${sc.badge}`}><span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />{sc.label}</span> },
+    { label: 'Status', value: <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${sc.badge}`}><span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />{sc.label}</span> },
     { label: 'Category', value: event.category || '—' },
     { label: 'Venue', value: event.venue_type ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1) : '—' },
     { label: 'Start', value: fmtDateTime(event.start_date) },
     ...(event.end_date ? [{ label: 'End', value: fmtDateTime(event.end_date) }] : []),
     { label: 'Location', value: event.location || '—' },
     { label: 'Participation', value: event.participation_type === 'team' ? `Team · ${event.team_size ?? '?'} members` : 'Individual' },
-    { label: 'Eligibility', value: event.eligibility || 'All' },
+    { label: 'Eligibility', value: eligibilityValue },
     ...(event.prerequisites ? [{ label: 'Prerequisites', value: event.prerequisites }] : []),
     { label: 'Reg. Required', value: event.registration_required ? 'Yes' : 'No' },
     ...(event.registration_deadline ? [{ label: 'Reg. Deadline', value: fmtDateTime(event.registration_deadline) }] : []),
-    { label: 'Featured', value: event.is_featured ? <span className="flex items-center gap-1 text-amber-300"><Star className="h-3 w-3" /> Yes</span> : 'No' },
+    { label: 'Featured', value: event.is_featured ? <span className="flex items-center gap-1 text-amber-300 font-bold"><Star className="h-3 w-3 fill-amber-300" /> Yes</span> : 'No' },
   ];
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 transition-colors hover:border-slate-700/80">
-      <div className="border-b border-slate-800 px-4 py-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Details</span>
+    <GlassCard className="overflow-hidden">
+      <div className="border-b border-white/6 px-4 py-3 bg-white/[0.01]">
+        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Event Details</span>
       </div>
-      <div className="divide-y divide-slate-800/60">
+      <div className="divide-y divide-white/5">
         {rows.map(({ label, value }) => (
-          <div key={label} className="flex items-start justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-slate-800/40">
-            <span className="shrink-0 text-xs text-slate-500">{label}</span>
-            <span className="text-right text-xs font-medium text-slate-200">{value}</span>
+          <div key={label} className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
+            <span className="shrink-0 text-xs font-medium text-gray-500">{label}</span>
+            <span className="text-right text-xs font-semibold text-gray-200">{value}</span>
           </div>
         ))}
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -895,6 +915,7 @@ export default function ManageEventDetail({
   onDeleted,
   onViewRegs,
   allCategories,
+  roles = [],
   saveAction,
   deleteAction,
   uploadImageAction,
@@ -913,28 +934,30 @@ export default function ManageEventDetail({
 
   if (editing) {
     return (
-      <div className="pb-16">
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          <button onClick={onBack}
-            className="flex items-center gap-2 rounded-lg border border-white/8 bg-gray-900 px-3.5 py-2 text-xs font-semibold text-gray-300 transition-all hover:bg-white/6 hover:text-white active:scale-95">
-            <ChevronLeft size={14} /> Back to Events
-          </button>
-          {onViewRegs && (
-            <button onClick={onViewRegs}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors">
-              <Users className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Registrations</span>
-              {(event.registrationCount ?? 0) > 0 && (
-                <span className="rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-bold text-blue-300 tabular-nums">
-                  {event.registrationCount}
-                </span>
-              )}
+      <div className="pb-16 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/6 bg-white/[0.02] p-4 backdrop-blur-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={onBack}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
+              <ChevronLeft size={14} /> Back to Events
             </button>
-          )}
-          <div className="ml-auto flex items-center gap-2">
+            {onViewRegs && (
+              <button onClick={onViewRegs}
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 hover:bg-white/8 transition-all active:scale-95">
+                <Users className="h-3.5 w-3.5 text-indigo-400" />
+                <span>Registrations</span>
+                {(event.registrationCount ?? 0) > 0 && (
+                  <span className="rounded-lg bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-300 tabular-nums">
+                    {event.registrationCount}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <button onClick={() => setEditing(false)}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-400 hover:bg-white/5 transition-colors">
-              <Eye className="h-3.5 w-3.5" /> View Mode
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 hover:bg-white/8 transition-all active:scale-95">
+              <Eye className="h-3.5 w-3.5 text-sky-400" /> View Mode
             </button>
           </div>
         </div>
@@ -942,6 +965,7 @@ export default function ManageEventDetail({
         <EditForm
           event={event}
           allCategories={allCategories}
+          roles={roles}
           saveAction={saveAction}
           deleteAction={deleteAction}
           uploadImageAction={uploadImageAction}
@@ -956,27 +980,27 @@ export default function ManageEventDetail({
 
   // ── View mode ──
   return (
-    <div className="flex flex-col gap-5 pb-16">
+    <div className="flex flex-col gap-6 pb-16 animate-in fade-in slide-in-from-bottom-3 duration-200">
 
       {/* Actions bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/6 bg-white/[0.02] p-4 backdrop-blur-xl">
         <button onClick={onBack}
-          className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-white active:scale-95">
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
           <ChevronLeft size={14} /> Back to Events
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {saved && (
-            <span className="flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+            <span className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5 animate-bounce" /> Saved
             </span>
           )}
           {onViewRegs && (
             <button onClick={onViewRegs}
-              className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-300 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-white">
-              <Users className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Registrations</span>
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
+              <Users className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Registrations</span>
               {(event.registrationCount ?? 0) > 0 && (
-                <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-bold text-indigo-300 tabular-nums">
+                <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 tabular-nums">
                   {event.registrationCount}
                 </span>
               )}
@@ -986,43 +1010,44 @@ export default function ManageEventDetail({
             href={`/events/${event.slug || event.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-300 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-white">
-            <Globe className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Public Page</span>
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
+            <Globe className="h-3.5 w-3.5 text-sky-400" />
+            <span>Public Page</span>
           </a>
           <button onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-600/20 px-4 py-2 text-xs font-semibold text-indigo-300 transition-all hover:border-indigo-500/60 hover:bg-indigo-600/30 hover:text-indigo-200">
+            className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-600/20 px-4 py-2.5 text-xs font-bold text-indigo-300 transition-all hover:border-indigo-500/50 hover:bg-indigo-600/30 hover:text-indigo-200 active:scale-95">
             <Edit3 className="h-3.5 w-3.5" /> Edit Event
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
 
         {/* LEFT: col-span-2 */}
-        <div className="flex flex-col gap-5 xl:col-span-2">
+        <div className="flex flex-col gap-6 xl:col-span-2">
 
           {/* Header card */}
-          <div className="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 p-6 transition-colors hover:border-slate-700/80 md:p-8">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/20 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-            <div className="relative flex items-start gap-5">
+          <div className="group relative overflow-hidden rounded-2xl border border-white/6 bg-gradient-to-b from-white/[0.04] to-transparent p-6 transition-all duration-300 hover:border-white/12 md:p-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/15 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <div className="relative flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
               {event.cover_image ? (
-                <div className="hidden h-[130px] w-[130px] shrink-0 overflow-hidden rounded-xl border border-slate-700 sm:block">
+                <div className="relative h-[130px] w-full sm:w-[130px] shrink-0 overflow-hidden rounded-xl border border-white/8 bg-white/3">
                   <img src={driveImageUrl(event.cover_image)} alt={event.title}
                     onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
-                    className="h-full w-full object-cover" />
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl" />
                 </div>
               ) : (
-                <div className="hidden h-[130px] w-[130px] shrink-0 flex-col items-center justify-center rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-900/40 to-violet-900/40 sm:flex">
-                  <span className="text-[9px] font-bold tracking-widest text-indigo-400 uppercase">
+                <div className="flex h-[130px] w-full sm:w-[130px] shrink-0 flex-col items-center justify-center rounded-xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+                  <span className="text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
                     {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' })}
                   </span>
-                  <span className="text-3xl font-bold text-white">{new Date(event.start_date).getDate()}</span>
+                  <span className="text-4xl font-extrabold text-white mt-1">{new Date(event.start_date).getDate()}</span>
                 </div>
               )}
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${sc.badge}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${sc.badge}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} /> {sc.label}
                   </span>
                   {event.category && (
@@ -1031,16 +1056,16 @@ export default function ManageEventDetail({
                     </span>
                   )}
                   {event.is_featured && (
-                    <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                      <Star className="h-2.5 w-2.5" /> Featured
+                    <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
+                      <Star className="h-2.5 w-2.5 fill-amber-300" /> Featured
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">{event.title}</h1>
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-slate-500" /> {fmtDate(event.start_date)}</span>
-                  <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-slate-500" /> {new Date(event.start_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                  {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-500" /> {event.location}</span>}
+                <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl bg-clip-text bg-gradient-to-r from-white via-white to-gray-400">{event.title}</h1>
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-400">
+                  <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-indigo-400" /> {fmtDate(event.start_date)}</span>
+                  <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-emerald-400" /> {new Date(event.start_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                  {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-sky-400" /> {event.location}</span>}
                 </div>
               </div>
             </div>
@@ -1048,46 +1073,46 @@ export default function ManageEventDetail({
 
           {/* About */}
           {event.description && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 transition-colors hover:border-slate-700/80">
-              <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <GlassCard className="p-6">
+              <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
                 <Info className="h-3.5 w-3.5 text-indigo-400" /> About
               </h3>
-              <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-300">{event.description}</p>
-            </div>
+              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-gray-300">{event.description}</p>
+            </GlassCard>
           )}
 
           {/* Full content */}
           {event.content && (
-            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 p-6 transition-colors hover:border-slate-700/80">
-              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-600/10 blur-3xl" />
-              <h3 className="relative mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <GlassCard className="relative overflow-hidden p-6">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-600/5 blur-3xl" />
+              <h3 className="relative mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
                 <FileText className="h-3.5 w-3.5 text-indigo-400" /> Full Details / Schedule
               </h3>
               <div className="relative">
                 <EventContentRenderer content={event.content} />
               </div>
-            </div>
+            </GlassCard>
           )}
 
           {/* Tags */}
           {event.tags?.length > 0 && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 transition-colors hover:border-slate-700/80">
-              <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <GlassCard className="p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
                 <Tag className="h-3.5 w-3.5 text-indigo-400" /> Tags
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {event.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-slate-700 bg-slate-800/60 px-2.5 py-0.5 text-xs text-slate-300">#{tag}</span>
+                  <span key={tag} className="rounded-full border border-white/6 bg-white/4 px-2.5 py-0.5 text-xs text-gray-300 transition-colors hover:border-white/12 hover:bg-white/8">#{tag}</span>
                 ))}
               </div>
-            </div>
+            </GlassCard>
           )}
         </div>
 
         {/* RIGHT: col-span-1 */}
-        <div className="flex flex-col gap-4 xl:col-span-1">
+        <div className="flex flex-col gap-6 xl:col-span-1">
           <RegistrationStatsWidget event={event} onViewRegs={onViewRegs} />
-          <EventDetailsWidget event={event} />
+          <EventDetailsWidget event={event} roles={roles} />
         </div>
       </div>
     </div>

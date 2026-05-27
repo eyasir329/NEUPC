@@ -20,6 +20,7 @@ import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils';
 import { getCategoryConfig, getCategoryLabel } from '@/app/_lib/blog-config';
 import { createLowlight, common } from 'lowlight';
 import { toHtml } from 'hast-util-to-html';
+import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 
 const lowlight = createLowlight(common);
 
@@ -409,9 +410,15 @@ export default function BlogDetailClient({
     incrementViewAction(fd).catch(() => {});
   }, [blog.id, meta.likes, meta.views]);
 
+  const isJsonContent = useMemo(() => {
+    const c = meta.content;
+    if (!c) return false;
+    return typeof c === 'string' && c.trim().startsWith('[');
+  }, [meta.content]);
+
   const enhancedContent = useMemo(
-    () => highlightCodeBlocks(injectHeadingIds(meta.content)),
-    [meta.content]
+    () => (isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content))),
+    [meta.content, isJsonContent]
   );
 
   const openCodeRunner = useCallback((payload) => {
@@ -520,20 +527,40 @@ export default function BlogDetailClient({
   }, [openCodeRunner]);
 
   useEffect(() => {
-    // Wait one frame so dangerouslySetInnerHTML has committed to the DOM.
-    const raf = requestAnimationFrame(() => {
-      if (!contentRef.current) return;
-      const headings = contentRef.current.querySelectorAll('h2[id], h3[id]');
-      const toc = Array.from(headings).map((h) => ({
-        id: h.id,
-        title: h.textContent.trim(),
-        level: h.tagName === 'H3' ? 3 : 2,
-      }));
-      setTableOfContents(toc);
-      setActiveSection(toc[0]?.id ?? '');
+    const container = contentRef.current;
+    if (!container) return;
+
+    const headings = container.querySelectorAll('h2, h3');
+    const seen = {};
+    headings.forEach((h) => {
+      if (!h.id) {
+        const text = h.textContent.trim();
+        let slug = text
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+        if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+        else seen[slug] = 1;
+        h.id = slug;
+      }
     });
-    return () => cancelAnimationFrame(raf);
-  }, [enhancedContent]);
+
+    const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
+    const toc = Array.from(headingsWithIds).map((h) => ({
+      id: h.id,
+      title: h.textContent.trim(),
+      level: h.tagName === 'H3' ? 3 : 2,
+    }));
+    if (toc.length) {
+      setTableOfContents(toc);
+      setActiveSection(toc[0].id);
+    } else {
+      setTableOfContents([]);
+      setActiveSection('');
+    }
+  }, [enhancedContent, isJsonContent, meta.content]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -1131,8 +1158,13 @@ export default function BlogDetailClient({
                   lineHeight: LINE_HEIGHTS[lineHeight],
                   textAlign,
                 }}
-                dangerouslySetInnerHTML={{ __html: enhancedContent }}
-              />
+              >
+                {isJsonContent ? (
+                  <LessonContentRenderer content={meta.content} viewerMode={true} />
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
+                )}
+              </div>
 
               {/* Article footer: reactions + tags + share */}
               <div className="holographic-card no-lift mt-8 rounded-2xl p-6">

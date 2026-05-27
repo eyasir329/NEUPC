@@ -304,7 +304,7 @@ function LivePreview({ title, description, coverImage, category, status, startDa
 
 // ─── Main CreateEventForm ──────────────────────────────────────────────────────
 
-export default function CreateEventForm({ onClose, onSuccess, createAction, uploadImageAction, allCategories = [] }) {
+export default function CreateEventForm({ onClose, onSuccess, createAction, uploadImageAction, allCategories = [], roles = [] }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
 
@@ -370,11 +370,21 @@ export default function CreateEventForm({ onClose, onSuccess, createAction, uplo
     { id: 'individual', icon: '👤', label: 'Individual', desc: 'Solo attendees register for themselves' },
     { id: 'team',       icon: '👥', label: 'Team',       desc: 'Group-based, squad registration' },
   ];
-  const ELIGIBILITY_OPTS = [
-    { id: 'all',       icon: '🌍', label: 'Everyone',        desc: 'Open to all' },
-    { id: 'member',    icon: '🎓', label: 'Members Only',    desc: 'Club members' },
-    { id: 'executive', icon: '⭐', label: 'Executives Only', desc: 'Exec committee' },
-  ];
+  const ELIGIBILITY_OPTS = roles.length > 0
+    ? [
+        { id: 'all', icon: '🌍', label: 'Everyone', desc: 'Open to all' },
+        ...roles.map((r) => ({
+          id: r.id,
+          icon: r.name === 'member' ? '🎓' : r.name === 'executive' ? '⭐' : '👥',
+          label: `${r.name.charAt(0).toUpperCase() + r.name.slice(1)}s Only`,
+          desc: `Open to ${r.name}s`,
+        }))
+      ]
+    : [
+        { id: 'all',       icon: '🌍', label: 'Everyone',        desc: 'Open to all' },
+        { id: 'member',    icon: '🎓', label: 'Members Only',    desc: 'Club members' },
+        { id: 'executive', icon: '⭐', label: 'Executives Only', desc: 'Exec committee' },
+      ];
   const tagList = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
   return (

@@ -7,13 +7,14 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   X,
   User,
   Mail,
   MessageSquare,
   Clock,
-  Shield,
   CheckCircle2,
   Archive,
   Trash2,
@@ -35,6 +36,7 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
   function handleCopy() {
     navigator.clipboard.writeText(value);
     setCopied(true);
+    toast.success(`${label} copied to clipboard!`);
     setTimeout(() => setCopied(false), 1500);
   }
 
@@ -42,15 +44,15 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
 
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/[0.04]">
         <Icon className="h-3.5 w-3.5 text-gray-400" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="mb-0.5 text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+        <p className="mb-0.5 text-[10px] font-bold tracking-wide text-gray-500 uppercase">
           {label}
         </p>
         <div className="flex items-center gap-2">
-          <p className="text-sm leading-relaxed break-all text-gray-200">
+          <p className="text-sm leading-relaxed break-all text-gray-200 font-medium">
             {value}
           </p>
           {copyable && (
@@ -63,7 +65,7 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
             </button>
           )}
           {copied && (
-            <span className="text-[10px] text-green-400">Copied!</span>
+            <span className="text-[10px] text-green-400 font-medium">Copied!</span>
           )}
         </div>
       </div>
@@ -79,14 +81,8 @@ export default function SubmissionDetailModal({
   const [isPending, startTransition] = useTransition();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [actionStatus, setActionStatus] = useState(null); // { type, message }
 
   const sc = getStatusConfig(submission.status);
-
-  function showStatus(type, message) {
-    setActionStatus({ type, message });
-    setTimeout(() => setActionStatus(null), 2500);
-  }
 
   async function handleStatusChange(newStatus) {
     if (newStatus === submission.status) return;
@@ -96,9 +92,9 @@ export default function SubmissionDetailModal({
       fd.set('status', newStatus);
       const result = await updateContactStatusAction(fd);
       if (result?.error) {
-        showStatus('error', result.error);
+        toast.error(result.error);
       } else {
-        showStatus('success', `Marked as ${newStatus}`);
+        toast.success(`Marked as ${newStatus}`);
         onUpdated?.({ ...submission, status: newStatus });
       }
     });
@@ -111,8 +107,9 @@ export default function SubmissionDetailModal({
     const result = await deleteContactSubmissionAction(fd);
     setDeletePending(false);
     if (result?.error) {
-      showStatus('error', result.error);
+      toast.error(result.error);
     } else {
+      toast.success('Submission deleted successfully');
       onClose();
     }
   }
@@ -141,13 +138,13 @@ export default function SubmissionDetailModal({
   const STATUS_ACTIONS = [
     {
       value: 'read',
-      label: 'Mark as Read',
+      label: 'Mark Read',
       icon: CheckCircle2,
       color: 'text-blue-400 hover:bg-blue-500/10 border-blue-500/20',
     },
     {
       value: 'replied',
-      label: 'Mark as Replied',
+      label: 'Mark Replied',
       icon: MessageSquare,
       color: 'text-green-400 hover:bg-green-500/10 border-green-500/20',
     },
@@ -159,75 +156,68 @@ export default function SubmissionDetailModal({
     },
     {
       value: 'new',
-      label: 'Mark as New',
+      label: 'Mark New',
       icon: Clock,
       color: 'text-purple-400 hover:bg-purple-500/10 border-purple-500/20',
     },
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-950 shadow-2xl shadow-black/60">
+      {/* Modal Container */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: 'spring', duration: 0.35 }}
+        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-2xl shadow-black/80 backdrop-blur-xl"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15">
-              <MessageSquare className="h-4.5 w-4.5 text-blue-400" />
+        <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-5">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
+              <MessageSquare className="h-5 w-5 text-amber-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-white">
+              <h2 className="truncate text-base font-bold text-white leading-snug">
                 {submission.subject || 'No Subject'}
               </h2>
-              <p className="text-xs text-gray-500">Submission Detail</p>
+              <p className="text-xs text-gray-400 font-medium">Submission Detail</p>
             </div>
           </div>
-          <div className="ml-4 flex shrink-0 items-center gap-2">
+          <div className="ml-4 flex shrink-0 items-center gap-3">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${sc.badgeClass}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${sc.badgeClass}`}
             >
-              <sc.icon className="h-3 w-3" />
+              <sc.icon className="h-3 w-3 animate-pulse" />
               {sc.label}
             </span>
             <button
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/8 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-all hover:bg-white/8 hover:text-white"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4.5 w-4.5" />
             </button>
           </div>
         </div>
 
-        {/* Status notification */}
-        {actionStatus && (
-          <div
-            className={`mx-6 mt-4 rounded-xl border px-4 py-2.5 text-sm ${
-              actionStatus.type === 'error'
-                ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                : 'border-green-500/30 bg-green-500/10 text-green-300'
-            }`}
-          >
-            {actionStatus.message}
-          </div>
-        )}
-
-        {/* Body */}
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
-          {/* Sender Info */}
-          <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <h3 className="mb-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+        {/* Body Content */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 scrollbar-thin">
+          {/* Sender Info Group */}
+          <div className="rounded-2xl border border-white/[0.06] bg-slate-950/20 p-5">
+            <h3 className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
               Sender Information
             </h3>
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-white/[0.04]">
               <InfoRow icon={User} label="Name" value={submission.name} />
               <InfoRow
                 icon={Mail}
@@ -237,36 +227,36 @@ export default function SubmissionDetailModal({
               />
               <InfoRow icon={Clock} label="Submitted" value={dateFormatted} />
             </div>
-            {/* Quick email button */}
+            {/* Quick email reply CTA */}
             <a
               href={`mailto:${submission.email}?subject=Re: ${encodeURIComponent(submission.subject || 'Your inquiry')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/15"
+              className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-300 transition-all hover:bg-amber-500/15"
             >
-              <Mail className="h-3.5 w-3.5" />
+              <Mail className="h-4 w-4" />
               Reply via Email
-              <ExternalLink className="ml-auto h-3 w-3 opacity-50" />
+              <ExternalLink className="ml-auto h-3 w-3 opacity-60" />
             </a>
           </div>
 
-          {/* Message */}
-          <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <h3 className="mb-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
-              Message
+          {/* Message Content Group */}
+          <div className="rounded-2xl border border-white/[0.06] bg-slate-950/20 p-5">
+            <h3 className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+              Message Content
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-200">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-200 font-medium">
               {submission.message}
             </p>
           </div>
 
-          {/* Technical Info */}
+          {/* Technical Metadata Group */}
           {(submission.ip_address || submission.user_agent) && (
-            <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-              <h3 className="mb-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+            <div className="rounded-2xl border border-white/[0.06] bg-slate-950/20 p-5">
+              <h3 className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                 Technical Details
               </h3>
-              <div className="divide-y divide-white/5">
+              <div className="divide-y divide-white/[0.04]">
                 {submission.ip_address && (
                   <InfoRow
                     icon={Globe}
@@ -286,17 +276,17 @@ export default function SubmissionDetailModal({
             </div>
           )}
 
-          {/* Reply info */}
+          {/* Replied Banner */}
           {submission.status === 'replied' && repliedAtFormatted && (
-            <div className="flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/8 px-4 py-3">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-400" />
-              <p className="text-xs text-green-300">
+            <div className="flex items-center gap-3 rounded-2xl border border-green-500/20 bg-green-500/5 px-4 py-3">
+              <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-400" />
+              <p className="text-xs text-green-300 font-medium leading-relaxed">
                 Replied on {repliedAtFormatted}
                 {submission.replied_by_name && (
                   <>
                     {' '}
                     by{' '}
-                    <span className="font-semibold">
+                    <span className="font-bold">
                       {submission.replied_by_name}
                     </span>
                   </>
@@ -306,9 +296,9 @@ export default function SubmissionDetailModal({
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="border-t border-white/8 px-6 py-4">
-          <p className="mb-3 text-xs font-medium text-gray-500">
+        {/* Footer Actions Panel */}
+        <div className="border-t border-white/[0.08] px-6 py-5 bg-slate-950/10">
+          <p className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
             Change Status
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -317,7 +307,7 @@ export default function SubmissionDetailModal({
                 key={value}
                 onClick={() => handleStatusChange(value)}
                 disabled={isPending || submission.status === value}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${color} ${
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${color} ${
                   submission.status === value
                     ? 'cursor-default opacity-40'
                     : 'hover:scale-[1.02] active:scale-95'
@@ -333,26 +323,26 @@ export default function SubmissionDetailModal({
             ))}
           </div>
 
-          {/* Delete */}
-          <div className="mt-4 flex items-center justify-between">
+          {/* Delete & Close Operations */}
+          <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
             {deleteConfirm ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Sure?</span>
+                <span className="text-xs text-gray-400 font-medium">Permanently delete?</span>
                 <button
                   onClick={handleDelete}
                   disabled={deletePending}
-                  className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-300 transition-all hover:bg-red-500/25 disabled:opacity-50"
                 >
                   {deletePending ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <Trash2 className="h-3 w-3" />
                   )}
-                  Yes, delete
+                  Confirm Delete
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(false)}
-                  className="px-2 py-1.5 text-xs text-gray-500 transition-colors hover:text-gray-300"
+                  className="px-2.5 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
@@ -360,21 +350,21 @@ export default function SubmissionDetailModal({
             ) : (
               <button
                 onClick={() => setDeleteConfirm(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/15"
+                className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/10 hover:text-red-300"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-3.5 w-3.5" />
                 Delete Submission
               </button>
             )}
             <button
               onClick={onClose}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/10"
+              className="rounded-xl border border-white/[0.08] bg-white/5 px-5 py-1.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white"
             >
               Close
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
