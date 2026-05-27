@@ -1,7 +1,5 @@
 /**
  * @file Admin Help Desk Page
- * Full-featured help desk management for admins.
- *
  * @module AdminDiscussionsPage
  * @access admin
  */
@@ -9,33 +7,35 @@
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
   getDiscussions,
-  getStaffDiscussionStats,
+  getUserDiscussionStats,
+  getUserBootcampEnrollments,
 } from '@/app/_lib/data-service';
-import { StaffDiscussionsClient } from '@/app/_components/discussions';
+import { DiscussionErrorBoundary } from '@/app/_components/discussions';
+import MemberHelpDeskClient from '@/app/account/member/discussions/_components/MemberHelpDeskClient';
 
 export const metadata = { title: 'Help Desk | Admin | NEUPC' };
 
 export default async function AdminDiscussionsPage() {
   const { session, user } = await requireRole('admin');
 
-  // Fetch initial data in parallel
-  const [discussionsResult, stats] = await Promise.all([
-    getDiscussions({ limit: 50 }).catch(() => ({
-      data: [],
-      total: 0,
-    })),
-    getStaffDiscussionStats().catch(() => ({})),
+  const [discussionsResult, stats, bootcamps] = await Promise.all([
+    getDiscussions({ userId: user.id, limit: 50 }).catch(() => ({ data: [], total: 0 })),
+    getUserDiscussionStats(user.id).catch(() => ({})),
+    getUserBootcampEnrollments(user.id).catch(() => []),
   ]);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <StaffDiscussionsClient
+    <DiscussionErrorBoundary
+      title="Help Desk Error"
+      message="We encountered an issue loading the Help Desk. Please refresh the page or try again later."
+    >
+      <MemberHelpDeskClient
         initialDiscussions={discussionsResult.data || []}
         initialStats={stats}
+        bootcamps={bootcamps}
         userId={user.id}
         userEmail={session.user.email}
-        userRole="admin"
       />
-    </div>
+    </DiscussionErrorBoundary>
   );
 }

@@ -158,7 +158,7 @@ function EditInfoForm({ user, onCancel, onSaved }) {
 function AvatarUploader({ user, name }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
-  const isImage = user.avatar_url?.startsWith('/api/image/');
+  const isImage = user.avatar_url && (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('/api/image/'));
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0];

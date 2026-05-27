@@ -762,8 +762,8 @@ export async function execCreateNoticeAction(formData) {
   });
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');
@@ -801,8 +801,8 @@ export async function execUpdateNoticeAction(formData) {
   if (error) return { error: error.message };
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');
@@ -817,8 +817,8 @@ export async function execDeleteNoticeAction(formData) {
   if (error) return { error: error.message };
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');

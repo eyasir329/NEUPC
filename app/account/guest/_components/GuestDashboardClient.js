@@ -106,7 +106,7 @@ const NOTICE_TONE = {
 
 // ─── Hero Component ────────────────────────────────────────────────────────────
 
-function GuestHero({ userName, stats, latestApplication }) {
+function GuestHero({ userName, avatarUrl, stats, latestApplication }) {
   // Determine membership state
   const hasApp = !!latestApplication;
   const isPending = latestApplication?.status === 'pending';
@@ -129,7 +129,7 @@ function GuestHero({ userName, stats, latestApplication }) {
         {/* User Info Section */}
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
-            <Avatar name={userName} size="xl" />
+            <Avatar name={userName} src={avatarUrl} size="xl" />
             <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-indigo-500/40 bg-indigo-500/20 text-[10px] font-black text-indigo-300 shadow-lg backdrop-blur-sm">G</span>
           </div>
           <div>
@@ -218,6 +218,8 @@ export default function GuestDashboardClient({
   const displayNotices = notices.length ? notices : FALLBACK_NOTICES;
 
   const userName = user?.full_name?.split(' ')[0] || 'Guest';
+  const isImage = user?.avatar_url && (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('/api/image/'));
+  const avatarUrl = isImage ? user.avatar_url : null;
 
   const upcomingEvents = displayEvents.filter((e) => !isPast(e.start_date)).slice(0, 3);
   const attended = displayRegistrations.filter((r) => r.attended || r.status === 'attended');
@@ -252,7 +254,7 @@ export default function GuestDashboardClient({
 
   return (
     <PageShell className="text-zinc-300 selection:bg-indigo-500/30 space-y-6">
-      <GuestHero userName={userName} stats={stats} latestApplication={latestApplication} />
+      <GuestHero userName={userName} avatarUrl={avatarUrl} stats={stats} latestApplication={latestApplication} />
 
       {/* Stats Cards with spring physics */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

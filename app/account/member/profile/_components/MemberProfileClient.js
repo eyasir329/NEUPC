@@ -571,7 +571,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
         <div className="px-6 pb-6">
           <div className="flex flex-wrap items-end gap-4" style={{ marginTop: '-44px' }}>
             <div className="rounded-full ring-[6px] ring-gray-900 shrink-0 shadow-xl">
-              <Avatar user={user} size="xl" src={user.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null} name={user.full_name} />
+              <Avatar user={user} size="xl" src={user.avatar_url && (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('/api/image/')) ? user.avatar_url : null} name={user.full_name} />
             </div>
             <div className="pb-1 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-1">

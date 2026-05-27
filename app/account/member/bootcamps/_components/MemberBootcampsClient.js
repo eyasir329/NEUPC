@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useTransition, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import {
@@ -1403,13 +1404,75 @@ const DIFF_COLOR = {
 };
 
 const SUB_STATUS_STYLE = {
-  pending:                'text-amber-400 bg-amber-500/10 ring-amber-500/20',
-  completed:              'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
-  accepted:               'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
-  late:                   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
-  'redo action required': 'text-orange-400 bg-orange-500/10 ring-orange-500/20',
-  'bonus deserved':       'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+  pending:                'text-amber-400 bg-amber-500/10 ring-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.05)]',
+  completed:              'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]',
+  accepted:               'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]',
+  late:                   'text-rose-400 bg-rose-500/10 ring-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.05)]',
+  'redo action required': 'text-orange-400 bg-orange-500/10 ring-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.05)]',
+  'bonus deserved':       'text-violet-400 bg-violet-500/10 ring-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.05)]',
 };
+
+function TaskStepper({ task, sub }) {
+  const isAssigned = true;
+  const isSubmitted = !!sub;
+  const isGraded = sub?.points_earned != null || !!sub?.feedback;
+  const isRedo = sub?.status === 'redo action required';
+  
+  const steps = [
+    { label: 'Assigned', active: isAssigned, desc: task.created_at ? new Date(task.created_at).toLocaleDateString() : 'Active' },
+    { label: isSubmitted ? 'Submitted' : 'Pending', active: isSubmitted, desc: sub?.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'Awaiting solution' },
+    { label: isRedo ? 'Redo Required' : isGraded ? 'Graded' : 'Assessment', active: isGraded || isSubmitted, desc: isRedo ? 'Action needed' : isGraded ? `${sub.points_earned} pts` : isSubmitted ? 'Under Review' : 'Awaiting grading' }
+  ];
+
+  return (
+    <div className="bg-zinc-950/20 border border-white/5 rounded-2xl p-4.5 mb-5 shadow-inner select-none">
+      <div className="flex items-center justify-between gap-4 max-w-lg mx-auto relative">
+        {steps.map((step, idx) => (
+          <div key={idx} className="flex-1 flex flex-col items-center text-center relative group z-10">
+            {/* Connector Line */}
+            {idx > 0 && (
+              <div className="absolute top-4.5 -left-1/2 right-1/2 h-0.5 -z-10">
+                <div className={cn(
+                  "h-full transition-all duration-700 ease-in-out",
+                  steps[idx].active ? "bg-gradient-to-r from-violet-500 to-indigo-500" : "bg-white/5"
+                )} />
+              </div>
+            )}
+            
+            {/* Step Node */}
+            <div className={cn(
+              "h-9 w-9 rounded-full border flex items-center justify-center transition-all duration-500 shadow-md",
+              step.active
+                ? (idx === 2 && isRedo)
+                  ? "bg-rose-500/10 border-rose-500 text-rose-450 shadow-[0_0_12px_rgba(244,63,94,0.2)] scale-105"
+                  : "bg-gradient-to-br from-violet-600 to-indigo-650 border-violet-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] scale-105"
+                : "bg-zinc-900 border-white/10 text-gray-600"
+            )}>
+              {idx === 0 ? (
+                <Calendar className="h-4.5 w-4.5" />
+              ) : idx === 1 ? (
+                <Upload className="h-4.5 w-4.5" />
+              ) : isRedo ? (
+                <AlertCircle className="h-4.5 w-4.5 animate-pulse" />
+              ) : isGraded ? (
+                <Trophy className="h-4.5 w-4.5 text-amber-300" />
+              ) : (
+                <HourglassIcon className="h-4.5 w-4.5" />
+              )}
+            </div>
+            
+            {/* Labels */}
+            <p className={cn(
+              "text-[10.5px] font-black uppercase mt-2.5 tracking-wider transition-colors",
+              step.active ? "text-white" : "text-gray-550"
+            )}>{step.label}</p>
+            <p className="text-[9.5px] text-gray-500 font-mono mt-0.5">{step.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function TaskCard({ task, onSubmitted }) {
   const [open, setOpen] = useState(false);
@@ -1463,232 +1526,248 @@ function TaskCard({ task, onSubmitted }) {
   };
 
   const diffAccent = {
-    easy:   { border: 'border-l-[3.5px] border-l-emerald-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.03)] border-emerald-500/10' },
-    medium: { border: 'border-l-[3.5px] border-l-amber-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.03)] border-amber-500/10' },
-    hard:   { border: 'border-l-[3.5px] border-l-rose-500/80', glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.03)] border-rose-500/10' },
+    easy:   { border: 'border-l-[3.5px] border-l-emerald-500/85', glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.04)] border-emerald-500/10' },
+    medium: { border: 'border-l-[3.5px] border-l-amber-500/85', glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.04)] border-amber-500/10' },
+    hard:   { border: 'border-l-[3.5px] border-l-rose-500/85', glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.04)] border-rose-500/10' },
   };
   const activeDiff = diffAccent[task.difficulty] || { border: 'border-l-[3.5px] border-l-gray-500/50', glow: '' };
 
   return (
     <div className={cn(
-      "rounded-xl border transition-all duration-300 overflow-hidden bg-zinc-900/50 backdrop-blur-md relative",
+      "rounded-2xl border transition-all duration-300 overflow-hidden bg-zinc-900/40 backdrop-blur-xl relative",
       open 
-        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)] bg-zinc-900/70" 
-        : cn("border-white/5 hover:border-white/20 hover:bg-zinc-900/70", activeDiff.glow),
+        ? "border-violet-500/30 shadow-[0_0_24px_rgba(139,92,246,0.06)] bg-zinc-900/60 animate-none" 
+        : cn("border-white/5 hover:border-white/20 hover:bg-zinc-900/60", activeDiff.glow),
       activeDiff.border
     )}>
       <button
-        className="flex w-full items-center gap-3.5 px-5 py-4.5 text-left select-none"
+        className="flex w-full items-center gap-3.5 px-5 py-4.5 text-left select-none group"
         onClick={() => setOpen(o => !o)}
       >
         <span className={cn(
-          "shrink-0 rounded px-2.5 py-0.5 text-[9.5px] font-bold tracking-wider uppercase font-mono ring-1",
+          "shrink-0 rounded px-2.5 py-0.5 text-[9px] font-extrabold tracking-widest uppercase font-mono ring-1",
           DIFF_COLOR[task.difficulty] ?? 'text-gray-450 bg-white/5 ring-white/10'
         )}>
           {task.difficulty}
         </span>
-        <span className="flex-1 truncate text-[13.5px] font-semibold text-white/95 group-hover:text-white transition-colors">{task.title}</span>
-        <span className="shrink-0 text-[9.5px] font-mono font-bold text-gray-500 bg-white/5 border border-white/5 rounded px-1.5 py-0.5">{task.bootcampTitle}</span>
+        <span className="flex-1 truncate text-[14px] font-bold text-white/95 group-hover:text-white transition-colors">{task.title}</span>
+        <span className="shrink-0 text-[9px] font-extrabold font-mono tracking-widest text-gray-500 bg-white/5 border border-white/5 rounded px-1.5 py-0.5 uppercase">{task.bootcampTitle?.split(':')[0]}</span>
         {task.points != null && (
-          <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-mono font-bold text-amber-400/90 bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded">
-            <Trophy className="h-3 w-3 text-amber-550" /> {task.points} pts
+          <span className="shrink-0 inline-flex items-center gap-1.5 text-[10.5px] font-mono font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-lg">
+            <Trophy className="h-3 w-3 text-amber-400" /> {task.points} pts
           </span>
         )}
         {task.deadline && (
           <span className={cn(
-            "shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium font-mono",
-            isPastDue && !sub ? 'text-rose-400' : 'text-gray-400'
+            "shrink-0 inline-flex items-center gap-1.5 text-[11px] font-bold font-mono",
+            isPastDue && !sub ? 'text-rose-455' : 'text-gray-500'
           )}>
-            <Clock className="h-3 w-3 opacity-60" />
+            <Clock className="h-3.5 w-3.5 opacity-60" />
             {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
         )}
         {sub ? (
           <span className={cn(
-            "shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 font-mono",
+            "shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ring-1 font-mono",
             SUB_STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'
           )}>
             {sub.status}
           </span>
         ) : (
-          <span className="shrink-0 rounded-full bg-white/2 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-550 ring-1 ring-white/[0.05]">
+          <span className="shrink-0 rounded-full bg-white/2 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-gray-550 ring-1 ring-white/[0.05] font-mono">
             not submitted
           </span>
         )}
         <ChevronDown className={cn(
-          "h-4 w-4 shrink-0 text-gray-500 transition-transform duration-300",
-          open ? 'rotate-180 text-violet-400' : ''
+          "h-4 w-4 shrink-0 text-gray-555 transition-transform duration-300 group-hover:text-white",
+          open ? 'rotate-180 text-violet-400 group-hover:text-violet-400' : ''
         )} />
       </button>
 
-      {open && (
-        <div className="border-t border-white/10 bg-white/2/10 px-6 pb-6 pt-5 space-y-5 text-left">
-          {task.description && (
-            <div className="text-gray-300 text-[13px] leading-relaxed bg-black/30 border border-white/5 p-4.5 rounded-xl shadow-inner relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500 opacity-60" />
-              <TaskDescriptionRenderer content={task.description} />
-            </div>
-          )}
-          {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Problem Attachments</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {task.problem_links.map((link, i) => (
-                  <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] hover:bg-violet-500/[0.08] hover:border-violet-500/40 px-4 py-3 text-xs text-violet-300 font-semibold transition-all duration-200 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-95 group">
-                    <FileText className="h-4.5 w-4.5 text-violet-400 shrink-0 group-hover:scale-105 transition-transform" />
-                    <span className="truncate">Download Problem {i + 1}</span>
-                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-violet-400/60 group-hover:translate-x-0.5 transition-transform" />
-                  </a>
-                ))}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="border-t border-white/5 bg-white/[0.01] px-6 pb-6 pt-5 space-y-6 text-left"
+          >
+            {/* Visual Lifecycle Stepper */}
+            <TaskStepper task={task} sub={sub} />
+
+            {task.description && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Task Details</p>
+                <div className="text-gray-300 text-[13px] leading-relaxed bg-black/40 border border-white/5 p-4.5 rounded-2xl shadow-inner relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-500 to-indigo-500 opacity-60" />
+                  <TaskDescriptionRenderer content={task.description} />
+                </div>
               </div>
-            </div>
-          )}
- 
-          {sub && (
-            <div className="rounded-xl border border-white/5 bg-black/20 p-5 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Your Submission</p>
+            )}
+            
+            {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Problem Attachments</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {task.problem_links.map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 rounded-xl border border-violet-500/10 bg-violet-500/[0.02] hover:bg-violet-500/[0.08] hover:border-violet-500/30 px-4 py-3 text-xs text-violet-300 font-bold transition-all duration-200 shadow-sm hover:-translate-y-0.5 active:scale-95 group">
+                      <div className="h-7 w-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-all">
+                        <FileText className="h-4.5 w-4.5 text-violet-400" />
+                      </div>
+                      <span className="truncate">Download Resource {i + 1}</span>
+                      <ArrowRight className="h-3.5 w-3.5 ml-auto text-violet-400/60 group-hover:translate-x-0.5 transition-transform" />
+                    </a>
+                  ))}
                 </div>
-                {sub.submitted_at && (
-                  <span className="text-[10.5px] text-gray-500 font-mono font-bold">
-                    Submitted {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
               </div>
-              {sub.notes && (
-                <div className="text-[13px] text-gray-300 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/5 shadow-inner">
-                  <TaskDescriptionRenderer content={sub.notes} />
-                </div>
-              )}
-              {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[9.5px] font-bold uppercase tracking-wider text-gray-500">Submitted Files</p>
-                  <AttachmentList files={sub.attachments} />
-                </div>
-              )}
- 
-              {/* Points earned — shown whenever the mentor has graded the submission */}
-              {sub.points_earned != null && (
-                <div className="flex items-center gap-3.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4.5 py-3.5 shadow-sm shadow-amber-500/5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20 shadow-[0_2px_8px_rgba(245,158,11,0.1)]">
-                    <Trophy className="h-4.5 w-4.5 text-amber-400 animate-bounce" style={{ animationDuration: '3s' }} />
+            )}
+   
+            {sub && (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-5 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[10.5px] font-extrabold uppercase tracking-widest text-gray-400">Your Submission</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Assessment score</p>
-                    <p className="text-xl font-extrabold text-amber-300 tabular-nums leading-tight mt-0.5">
-                      {sub.points_earned}
-                      {task.points != null && (
-                        <span className="text-[13px] font-bold text-amber-500/55 ml-1">/ {task.points} max pts</span>
-                      )}
-                    </p>
-                  </div>
-                  {task.points != null && sub.points_earned != null && (
-                    <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3 py-1.5 rounded-xl font-mono">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Grade pct</p>
-                      <p className="text-[13.5px] font-bold text-emerald-450 tabular-nums mt-0.5">
-                        {Math.round((sub.points_earned / task.points) * 100)}%
-                      </p>
-                    </div>
+                  {sub.submitted_at && (
+                    <span className="text-[10.5px] text-gray-500 font-mono font-bold">
+                      Submitted {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   )}
                 </div>
-              )}
- 
-              {sub.feedback && (
-                <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.02] p-4.5 shadow-md shadow-emerald-950/10 space-y-3">
-                  {/* Header with mentor info */}
-                  <div className="flex items-center justify-between gap-3 border-b border-emerald-500/10 pb-2.5">
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10.5px]">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-450 animate-pulse" />
-                      Mentor Assessment Notes
+                {sub.notes && (
+                  <div className="text-[13px] text-gray-300 leading-relaxed bg-black/35 p-4 rounded-xl border border-white/5 shadow-inner">
+                    <TaskDescriptionRenderer content={sub.notes} />
+                  </div>
+                )}
+                {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[9.5px] font-extrabold uppercase tracking-widest text-gray-500">Submitted Files</p>
+                    <AttachmentList files={sub.attachments} />
+                  </div>
+                )}
+   
+                {/* Points earned — shown whenever the mentor has graded the submission */}
+                {sub.points_earned != null && (
+                  <div className="flex items-center gap-3.5 rounded-xl border border-amber-500/10 bg-amber-500/[0.02] px-4.5 py-3.5 shadow-sm">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20 shadow-[0_2px_8px_rgba(245,158,11,0.05)]">
+                      <Trophy className="h-4.5 w-4.5 text-amber-400 animate-bounce" style={{ animationDuration: '3s' }} />
                     </div>
-                    {sub.reviewer && (
-                      <div className="flex items-center gap-2 shrink-0 bg-emerald-950/40 border border-emerald-500/10 rounded-full px-2.5 py-1">
-                        {sub.reviewer.avatar_url ? (
-                          <img
-                            src={sub.reviewer.avatar_url}
-                            alt={sub.reviewer.full_name || 'Mentor'}
-                            className="h-5 w-5 rounded-full object-cover ring-1 ring-emerald-500/30"
-                          />
-                        ) : (
-                          <div className="h-5 w-5 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center text-[9px] font-bold text-emerald-400">
-                            {(sub.reviewer.full_name || 'M')[0].toUpperCase()}
-                          </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-500/80">Assessment Score</p>
+                      <p className="text-lg font-black text-amber-350 font-mono leading-none mt-1">
+                        {sub.points_earned}
+                        {task.points != null && (
+                          <span className="text-[12px] font-bold text-amber-500/55 ml-1">/ {task.points} max pts</span>
                         )}
-                        <span className="text-[11px] font-bold text-gray-300 max-w-[120px] truncate">
-                          {sub.reviewer.full_name || 'Mentor'}
-                        </span>
+                      </p>
+                    </div>
+                    {task.points != null && sub.points_earned != null && (
+                      <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3 py-1.5 rounded-xl font-mono">
+                        <p className="text-[9px] font-extrabold uppercase tracking-widest text-gray-550">Grade Pct</p>
+                        <p className="text-[13px] font-black text-emerald-450 mt-0.5">
+                          {Math.round((sub.points_earned / task.points) * 100)}%
+                        </p>
                       </div>
                     )}
                   </div>
-                  <p className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{sub.feedback}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {canSubmit && (
-            <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/5 pt-4.5">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Solution / Notes</label>
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-zinc-950/80 backdrop-blur-md shadow-inner transition-all focus-within:border-violet-500/35 focus-within:shadow-[0_0_12px_rgba(139,92,246,0.05)]">
-                  <MultiBlockEditor value={content} onChange={setContent} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Supporting Attachments</label>
-                {attachments.length > 0 && (
-                  <div className="mb-2 bg-white/2 p-2.5 rounded-xl border border-white/5">
-                    <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+                )}
+   
+                {sub.feedback && (
+                  <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.01] p-4.5 shadow-md space-y-3 relative overflow-hidden">
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-505 opacity-40" />
+                    {/* Header with mentor info */}
+                    <div className="flex items-center justify-between gap-3 border-b border-emerald-500/5 pb-2.5">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-extrabold uppercase tracking-widest text-[10.5px]">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-455 animate-pulse" />
+                        Mentor Assessment Notes
+                      </div>
+                      {sub.reviewer && (
+                        <div className="flex items-center gap-2 shrink-0 bg-emerald-950/20 border border-emerald-500/10 rounded-full px-2.5 py-1">
+                          {sub.reviewer.avatar_url ? (
+                            <img
+                              src={sub.reviewer.avatar_url}
+                              alt={sub.reviewer.full_name || 'Mentor'}
+                              className="h-5 w-5 rounded-full object-cover ring-1 ring-emerald-500/30"
+                            />
+                          ) : (
+                            <div className="h-5 w-5 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/30 flex items-center justify-center text-[9px] font-bold text-emerald-400">
+                              {(sub.reviewer.full_name || 'M')[0].toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-[10.5px] font-bold text-gray-300 max-w-[120px] truncate">
+                            {sub.reviewer.full_name || 'Mentor'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[13px] text-gray-350 leading-relaxed whitespace-pre-wrap">{sub.feedback}</p>
                   </div>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  onChange={(e) => handleFiles(Array.from(e.target.files || []))}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/2 px-4 py-3.5 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/5 hover:border-violet-500/30 transition-all duration-300 disabled:opacity-40"
-                >
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
-                  ) : (
-                    <Upload className="h-4 w-4 text-violet-400 transition-transform group-hover:-translate-y-0.5" />
-                  )}
-                  {uploading ? 'Processing & uploading attachments…' : 'Click to add files (drag & drop support)'}
-                </button>
               </div>
-              {error && <p className="text-[11px] font-semibold text-rose-400">{error}</p>}
-              <div className="flex justify-end pt-2">
-                <button
-                  type="submit"
-                  disabled={loading || uploading}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-5.5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-violet-600/10 hover:shadow-violet-600/25 active:scale-[0.98] disabled:opacity-40 hover:-translate-y-0.5"
-                >
-                  {loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
+            )}
+
+            {canSubmit && (
+              <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/5 pt-4.5">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Your Solution / Explanatory Notes</label>
+                  <div className="rounded-xl overflow-hidden border border-white/10 bg-zinc-955/80 backdrop-blur-md shadow-inner focus-within:border-violet-500/35 transition-all">
+                    <MultiBlockEditor value={content} onChange={setContent} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Supporting Attachments</label>
+                  {attachments.length > 0 && (
+                    <div className="mb-2 bg-white/2 p-2.5 rounded-xl border border-white/5">
+                      <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+                    </div>
                   )}
-                  {loading ? 'Submitting solution…' : isRedo ? 'Resubmit Solution' : 'Submit Solution'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={(e) => handleFiles(Array.from(e.target.files || []))}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/2 px-4 py-4 text-[11.5px] font-bold text-gray-350 hover:text-white hover:bg-white/5 hover:border-violet-500/30 transition-all duration-300 disabled:opacity-40"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4.5 w-4.5 animate-spin text-violet-400" />
+                    ) : (
+                      <Upload className="h-4.5 w-4.5 text-violet-400 transition-transform group-hover:-translate-y-0.5" />
+                    )}
+                    {uploading ? 'Processing files…' : 'Add Solution Files & Supporting Documents'}
+                  </button>
+                </div>
+                {error && <p className="text-[11.5px] font-semibold text-rose-455">{error}</p>}
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading || uploading}
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-650 to-indigo-650 hover:from-violet-555 hover:to-indigo-555 px-5.5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-violet-600/10 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-40"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    {loading ? 'Submitting…' : isRedo ? 'Resubmit Solution' : 'Submit Solution'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
-
-function TasksTab({ enrolledBootcamps }) {
+}function TasksTab({ enrolledBootcamps }) {
   const [allTasks, setAllTasks] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [bootcampFilter, setBootcampFilter] = useState('all');
@@ -1747,43 +1826,43 @@ function TasksTab({ enrolledBootcamps }) {
   return (
     <div className="space-y-6">
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { 
             label: 'Total Tasks', 
             value: filteredTasksForStats.length, 
-            color: 'bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent', 
+            color: 'text-white', 
             icon: Layers,
-            iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-            bg: 'bg-zinc-950/40 border-white/5',
-            glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.06)] hover:border-indigo-500/30'
+            iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20 shadow-[0_0_8px_rgba(99,102,241,0.1)]',
+            bg: 'bg-zinc-950/25 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.04)] hover:border-indigo-500/25'
           },
           { 
             label: 'Not Submitted', 
             value: pendingCount, 
-            color: 'text-rose-400', 
+            color: 'text-rose-455', 
             icon: AlertCircle,
-            iconColor: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-            bg: 'bg-zinc-950/40 border-white/5',
-            glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.06)] hover:border-rose-500/30'
+            iconColor: 'text-rose-400 bg-rose-500/10 border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]',
+            bg: 'bg-zinc-950/25 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(244,63,94,0.04)] hover:border-rose-500/25'
           },
           { 
             label: 'Submitted', 
             value: submittedCount, 
-            color: 'text-emerald-400', 
+            color: 'text-emerald-455', 
             icon: CheckCircle2,
-            iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-            bg: 'bg-zinc-950/40 border-white/5',
-            glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.06)] hover:border-emerald-500/30'
+            iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]',
+            bg: 'bg-zinc-950/25 border-white/5',
+            glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.04)] hover:border-emerald-500/25'
           },
         ].map(({ label, value, color, icon: Icon, iconColor, bg, glow }) => (
-          <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-4.5 flex items-center justify-between backdrop-blur-md transition-all duration-300 hover:-translate-y-1", bg, glow)}>
+          <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-5 flex items-center justify-between backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 shadow-md", bg, glow)}>
             <div className="space-y-1 text-left">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</div>
-              <div className={cn("text-2xl sm:text-3xl font-extrabold tracking-tight font-mono leading-none", color)}>{value}</div>
+              <div className="text-[10px] font-extrabold uppercase tracking-widest text-gray-550">{label}</div>
+              <div className={cn("text-2xl sm:text-3xl font-black tracking-tight font-mono leading-none", color)}>{value}</div>
             </div>
-            <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border shrink-0 transition-transform duration-300", iconColor)}>
-              <Icon className="h-4.5 w-4.5" />
+            <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border shrink-0 transition-transform duration-350", iconColor)}>
+              <Icon className="h-5 w-5" />
             </div>
           </div>
         ))}
@@ -1807,58 +1886,80 @@ function TasksTab({ enrolledBootcamps }) {
         return <PointsStatsPanel chartData={chartData} totalEarned={totalEarned} totalMax={totalMax} label="Task Points" />;
       })()}
 
-      {/* Bootcamp filter pills */}
-      {enrolledBootcamps.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setBootcampFilter('all')}
-            className={cn(
-              'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
-              bootcampFilter === 'all'
-                ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-            )}
-          >
-            All Bootcamps
-          </button>
-          {enrolledBootcamps.map(({ bootcamp }) => (
+      {/* Glassy Filter Panel */}
+      <div className="bg-zinc-950/25 border border-white/5 p-4.5 rounded-2xl space-y-4.5 backdrop-blur-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-left">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Assigned Task Ledger</h3>
+            <p className="text-[11.5px] text-gray-500 mt-0.5">Solve, submit, and review grades for your tasks</p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-550">Status</span>
+            <div className="flex gap-1.5 bg-white/2 border border-white/5 rounded-xl p-1 w-fit">
+              {[
+                { v: 'all', l: 'All', c: filteredTasksForStats.length },
+                { v: 'pending', l: 'Pending', c: pendingCount },
+                { v: 'submitted', l: 'Submitted', c: submittedCount }
+              ].map((pill) => (
+                <button
+                  key={pill.v}
+                  onClick={() => setStatusFilter(pill.v)}
+                  className={cn(
+                    "rounded-lg px-3.5 py-1.5 text-[11px] font-bold transition-all duration-300 flex items-center gap-2 relative z-10",
+                    statusFilter === pill.v 
+                      ? 'bg-gradient-to-r from-violet-650 to-indigo-650 text-white shadow-md shadow-violet-650/20' 
+                      : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+                  )}
+                >
+                  {pill.l}
+                  <span className={cn(
+                    "rounded-full px-1.5 py-0.5 font-mono text-[9px] font-black",
+                    statusFilter === pill.v ? "bg-white/20 text-white" : "bg-white/5 text-gray-550"
+                  )}>{pill.c}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bootcamp filters */}
+        {enrolledBootcamps.length > 1 && (
+          <div className="flex flex-wrap gap-2 border-t border-white/5 pt-3">
             <button
-              key={bootcamp.id}
-              onClick={() => setBootcampFilter(bootcamp.id)}
+              onClick={() => setBootcampFilter('all')}
               className={cn(
-                'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
-                bootcampFilter === bootcamp.id
-                  ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                'rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border',
+                bootcampFilter === 'all'
+                  ? 'bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/5'
                   : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
               )}
             >
-              {bootcamp.title.split(':')[0].trim()}
+              All Bootcamps
             </button>
-          ))}
-        </div>
-      )}
-
-      {/* Status filter */}
-      <div className="flex gap-2 bg-white/2 border border-white/5 rounded-xl p-1.5 w-fit">
-        {[['all', 'All'], ['pending', 'Not Submitted'], ['submitted', 'Submitted']].map(([val, label]) => (
-          <button
-            key={val}
-            onClick={() => setStatusFilter(val)}
-            className={cn(
-              "rounded-lg px-4 py-1.5 text-[12px] font-bold transition-all duration-200",
-              statusFilter === val 
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10' 
-                : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
-            )}
-          >
-            {label}
-          </button>
-        ))}
+            {enrolledBootcamps.map(({ bootcamp }) => (
+              <button
+                key={bootcamp.id}
+                onClick={() => setBootcampFilter(bootcamp.id)}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border truncate max-w-[220px]',
+                  bootcampFilter === bootcamp.id
+                    ? 'bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/5'
+                    : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                )}
+              >
+                {bootcamp.title.split(':')[0].trim()}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Task list */}
       {filtered.length === 0 ? (
-        <p className="py-12 text-center text-[13.5px] text-gray-500">No tasks match this filter.</p>
+        <div className="py-14 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
+          <EmptyState icon={ClipboardList} title="No tasks found" description="Try selecting a different filter or adjusting your parameters." />
+        </div>
       ) : (
         <div className="space-y-3">
           {filtered.map(task => (
@@ -2111,7 +2212,6 @@ function CountdownBlock({ timeLeft, compact = false }) {
     </div>
   );
 }
-
 function SessionCard({ session: s, userId }) {
   const [open, setOpen] = useState(false);
   const dt = new Date(s.scheduled_at || s.session_date);
@@ -2130,44 +2230,51 @@ function SessionCard({ session: s, userId }) {
   const attended = myAttendance?.attended ?? s.attended;
 
   const targetBadgeStyle = {
-    'one-on-one': 'text-cyan-400 bg-cyan-500/10 ring-cyan-500/20',
-    'selected-group': 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
-    'all-bootcamp': 'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+    'one-on-one': 'text-cyan-405 bg-cyan-500/10 ring-cyan-500/20 shadow-[0_0_8px_rgba(34,211,238,0.05)]',
+    'selected-group': 'text-amber-405 bg-amber-500/10 ring-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.05)]',
+    'all-bootcamp': 'text-violet-405 bg-violet-500/10 ring-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.05)]',
   };
 
   return (
     <div className={cn(
-      "rounded-xl border transition-all duration-300 overflow-hidden bg-zinc-900/50 backdrop-blur-md text-left",
+      "rounded-2xl border transition-all duration-300 overflow-hidden bg-zinc-900/40 backdrop-blur-xl text-left relative",
       open 
-        ? "border-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.08)] bg-zinc-900/70" 
+        ? "border-violet-500/30 shadow-[0_0_24px_rgba(139,92,246,0.06)] bg-zinc-900/60" 
         : isUpcoming
-        ? "border-violet-500/25 bg-violet-500/[0.02] hover:border-violet-500/40 hover:shadow-[0_4px_24px_rgba(139,92,246,0.03)]"
-        : "border-white/5 hover:border-white/20 hover:bg-zinc-900/70"
+        ? "border-violet-500/20 bg-violet-500/[0.01] hover:border-violet-500/40 hover:shadow-[0_4px_24px_rgba(139,92,246,0.04)]"
+        : "border-white/5 hover:border-white/20 hover:bg-zinc-900/60"
     )}>
-      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-4 px-5 py-4.5 text-left select-none">
+      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center gap-4 px-5 py-4.5 text-left select-none group">
         <div className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors",
-          isUpcoming ? "bg-violet-500/10 border-violet-500/20 text-violet-400 animate-pulse" : "bg-white/2 border-white/5 text-emerald-400"
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors relative",
+          isUpcoming 
+            ? "bg-violet-500/10 border-violet-500/20 text-violet-400" 
+            : attended === true
+            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+            : attended === false
+            ? "bg-rose-500/10 border-rose-500/20 text-rose-455"
+            : "bg-white/2 border-white/5 text-gray-500"
         )}>
-          <Video className="h-4 w-4" />
+          {isUpcoming && <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-violet-455 animate-ping" />}
+          <Video className="h-4.5 w-4.5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13.5px] font-bold text-white/95 truncate">{s.topic || 'Session'}</p>
-          <p className="text-[11px] text-gray-450 mt-1 flex flex-wrap items-center gap-1.5 font-medium">
-            {s.bootcampTitle && <span className="text-violet-400 font-bold">{s.bootcampTitle}</span>}
+          <p className="text-[14px] font-bold text-white/95 truncate group-hover:text-white transition-colors">{s.topic || 'Mentorship Session'}</p>
+          <p className="text-[11px] text-gray-450 mt-1 flex flex-wrap items-center gap-1.5 font-medium leading-none">
+            {s.bootcampTitle && <span className="text-violet-400 font-extrabold uppercase tracking-wide text-[9px] font-mono">{s.bootcampTitle?.split(':')[0]}</span>}
             {s.bootcampTitle && <span className="text-gray-700 font-mono">·</span>}
-            <span className="font-mono">{dateStr}</span>
+            <span className="font-mono text-gray-400 font-bold">{dateStr}</span>
             {isUpcoming && <span className="text-gray-700 font-mono">·</span>}
-            {isUpcoming && <span className="font-mono text-violet-300 font-bold">{timeStr}</span>}
+            {isUpcoming && <span className="font-mono text-violet-300 font-black">{timeStr}</span>}
             <span className="text-gray-700 font-mono">·</span>
-            <span className="bg-white/5 border border-white/5 px-1.5 py-0.5 rounded text-[10px] text-gray-300 font-mono font-bold">{s.duration ?? '—'}min</span>
+            <span className="bg-white/5 border border-white/5 px-1.5 py-0.5 rounded text-[9.5px] text-gray-300 font-mono font-bold">{s.duration ?? '—'} mins</span>
             <span className="text-gray-700 font-mono">·</span>
-            <span className="text-gray-450">Mentored by <span className="text-white font-semibold">{mentorName}</span></span>
+            <span className="text-gray-450">Hosted by <span className="text-white font-semibold">{mentorName}</span></span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {s.target_type && (
-            <span className={cn("hidden sm:inline-block rounded px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider font-mono ring-1", 
+            <span className={cn("hidden sm:inline-block rounded px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest font-mono ring-1", 
               targetBadgeStyle[s.target_type] || 'text-gray-450 bg-white/5 ring-white/10'
             )}>
               {TARGET_LABEL[s.target_type] ?? s.target_type}
@@ -2175,101 +2282,113 @@ function SessionCard({ session: s, userId }) {
           )}
           {isUpcoming ? (
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400 ring-1 ring-violet-500/20">upcoming</span>
+              <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-violet-400 ring-1 ring-violet-500/20 font-mono">upcoming</span>
               {timeLeft && <CountdownBlock timeLeft={timeLeft} compact />}
             </div>
           ) : attended === true ? (
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-emerald-400 ring-1 ring-emerald-500/20 font-mono">attended</span>
           ) : attended === false ? (
-            <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400 ring-1 ring-rose-500/20">missed</span>
+            <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-rose-455 ring-1 ring-rose-500/20 font-mono">missed</span>
           ) : (
-            <span className="rounded-full bg-gray-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-450 ring-1 ring-gray-500/20">done</span>
+            <span className="rounded-full bg-gray-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-gray-450 ring-1 ring-gray-500/20 font-mono font-bold">done</span>
           )}
           <ChevronDown className={cn(
-            "h-4 w-4 text-gray-500 transition-transform duration-300",
-            open ? 'rotate-180 text-violet-400' : ''
+            "h-4 w-4 text-gray-555 transition-transform duration-300 group-hover:text-white",
+            open ? 'rotate-180 text-violet-400 group-hover:text-violet-400' : ''
           )} />
         </div>
       </button>
 
-      {open && (
-        <div className="border-t border-white/10 bg-white/2/10 px-6 pb-6 pt-5 space-y-5">
-          {/* Countdown timer for upcoming sessions */}
-          {isUpcoming && timeLeft && (
-            <CountdownBlock timeLeft={timeLeft} />
-          )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="border-t border-white/5 bg-white/[0.01] px-6 pb-6 pt-5 space-y-6"
+          >
+            {/* Countdown timer for upcoming sessions */}
+            {isUpcoming && timeLeft && (
+              <CountdownBlock timeLeft={timeLeft} />
+            )}
 
-          {/* Points obtained for completed sessions */}
-          {!isUpcoming && myAttendance && (
-            <div className="flex items-center gap-3.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] px-4.5 py-3.5 shadow-sm shadow-amber-500/5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
-                <Trophy className="h-4.5 w-4.5 text-amber-400" />
+            {/* Points obtained for completed sessions */}
+            {!isUpcoming && myAttendance && (
+              <div className="flex items-center gap-3.5 rounded-2xl border border-amber-500/10 bg-amber-500/[0.01] px-4.5 py-3.5 shadow-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20 shadow-[0_2px_8px_rgba(245,158,11,0.05)]">
+                  <Trophy className="h-4.5 w-4.5 text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-500/80">Attendance Session Points</p>
+                  <p className="text-lg font-black text-amber-350 font-mono leading-none mt-1">
+                    {myPoints != null ? myPoints : '—'}
+                    <span className="text-[11px] font-bold text-amber-500/60 ml-1">pts earned</span>
+                  </p>
+                </div>
+                <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3 py-1.5 rounded-xl font-mono">
+                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-gray-550">Attendance Status</p>
+                  {attended ? (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-black text-emerald-450 mt-0.5">
+                      <CheckCircle className="h-3.5 w-3.5" /> Attended
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-black text-rose-455 mt-0.5">
+                      <X className="h-3.5 w-3.5" /> Absent
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80">Attendance Session points</p>
-                <p className="text-xl font-extrabold text-amber-300 tabular-nums leading-none mt-0.5">
-                  {myPoints != null ? myPoints : '—'}
-                  <span className="text-[13px] font-bold text-amber-500/60 ml-1">pts earned</span>
-                </p>
-              </div>
-              <div className="shrink-0 text-right bg-white/2 border border-white/5 px-3.5 py-1.5 rounded-xl">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-550 mb-0.5">Attendance</p>
-                {attended ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 font-mono">
-                    <CheckCircle className="h-3.5 w-3.5" /> Attended
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 font-mono">
-                    <X className="h-3.5 w-3.5" /> Absent
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-          {s.description && (
-            <div className="text-gray-350 text-[13px] leading-relaxed bg-black/30 border border-white/5 p-4.5 rounded-xl relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500/40" />
-              <TaskDescriptionRenderer content={s.description} />
-            </div>
-          )}
-          
-          {s.notes && (
-            <div className="rounded-xl border border-white/5 bg-black/40 overflow-hidden shadow-inner">
-              <div className="flex items-center gap-1.5 bg-white/2 border-b border-white/5 px-4 py-2.5">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mentor Notes &amp; Guidelines</span>
-              </div>
-              <div className="p-4.5 text-left">
-                <p className="text-[12.5px] leading-relaxed text-gray-300 font-mono whitespace-pre-wrap">{s.notes}</p>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex flex-wrap gap-3 pt-1">
-            {s.location ? (
-              <span className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-2.5 text-[12px] font-bold text-amber-300 shadow-sm" title={s.location}>
-                <MapPin className="h-4 w-4" />
-                In-person · {s.location}
-              </span>
-            ) : s.meet_link && (
-              <a href={s.meet_link} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.98] group">
-                <Video className="h-4 w-4 transition-transform group-hover:scale-105" />
-                {isUpcoming ? 'Join Live Google Meet Room' : 'Open Google Meet Room'}
-                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
-              </a>
             )}
-            {s.recording_url && (
-              <a href={s.recording_url} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 px-5 py-2.5 text-[12px] font-bold text-violet-300 transition-all duration-300 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-[0.98] group">
-                <PlayCircle className="h-4 w-4 text-violet-400 transition-transform group-hover:scale-105" />
-                Watch Saved Session Recording
-                <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
-              </a>
+            
+            {s.description && (
+              <div className="space-y-2 text-left">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Description</p>
+                <div className="text-gray-300 text-[13px] leading-relaxed bg-black/40 border border-white/5 p-4.5 rounded-2xl relative overflow-hidden shadow-inner">
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-500 to-indigo-500 opacity-60" />
+                  <TaskDescriptionRenderer content={s.description} />
+                </div>
+              </div>
             )}
-          </div>
-        </div>
-      )}
+            
+            {s.notes && (
+              <div className="rounded-2xl border border-white/5 bg-black/20 overflow-hidden shadow-xl text-left">
+                <div className="flex items-center gap-1.5 bg-white/2 border-b border-white/5 px-4 py-2.5">
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Mentor Notes &amp; Guidelines</span>
+                </div>
+                <div className="p-4.5">
+                  <p className="text-[13px] leading-relaxed text-gray-350 font-mono whitespace-pre-wrap">{s.notes}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-3 pt-1">
+              {s.location ? (
+                <span className="inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-5 py-2.5 text-[12px] font-bold text-amber-300 shadow-sm" title={s.location}>
+                  <MapPin className="h-4 w-4 text-amber-400" />
+                  In-person · {s.location}
+                </span>
+              ) : s.meet_link && (
+                <a href={s.meet_link} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-5.5 py-2.5 text-[12px] font-bold text-white transition-all duration-300 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.98] group">
+                  <Video className="h-4 w-4 transition-transform group-hover:scale-105" />
+                  {isUpcoming ? 'Join Live Google Meet Room' : 'Open Google Meet Room'}
+                  <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              )}
+              {s.recording_url && (
+                <a href={s.recording_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 px-5.5 py-2.5 text-[12px] font-bold text-violet-300 transition-all duration-300 shadow-sm shadow-violet-500/5 hover:-translate-y-0.5 active:scale-[0.98] group">
+                  <PlayCircle className="h-4 w-4 text-violet-400 transition-transform group-hover:scale-105" />
+                  Watch Saved Session Recording
+                  <ChevronRight className="h-3.5 w-3.5 ml-1 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -2332,20 +2451,20 @@ function SessionsTab({ enrolledBootcamps, user }) {
   });
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-0.5 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Sessions</h1>
-          <p className="text-gray-400 mt-1 text-sm">All mentorship and broadcast sessions across your bootcamps</p>
+        <div className="text-left">
+          <h1 className="text-2xl font-black tracking-tight text-white uppercase">Mentorship Hub</h1>
+          <p className="text-gray-450 mt-1 text-[12.5px]">Join live broadcasts and review past interactive sessions</p>
         </div>
         <div className="relative w-full md:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-555 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search topic, mentor, bootcamp…"
-            className="h-10 w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+            placeholder="Search topics, mentors..."
+            className="h-10 w-full bg-zinc-950/40 border border-white/10 rounded-xl pl-10 pr-10 text-[13px] text-white placeholder:text-gray-650 focus:outline-none focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all font-mono"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white transition-colors">
@@ -2361,56 +2480,58 @@ function SessionsTab({ enrolledBootcamps, user }) {
           <span className="text-sm font-semibold">Loading mentorship schedules…</span>
         </div>
       ) : allSessions.length === 0 ? (
-        <EmptyState icon={Video} title="No sessions yet" description="Your mentor hasn't scheduled any sessions for your bootcamps." />
+        <div className="py-14 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
+          <EmptyState icon={Video} title="No sessions scheduled" description="Your mentors have not created any virtual classrooms yet." />
+        </div>
       ) : (
         <>
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { 
-                label: 'Total Sessions', 
+                label: 'Total Classrooms', 
                 value: filteredSessionsForStats.length, 
-                color: 'bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent', 
+                color: 'text-white', 
                 icon: Video,
-                iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-                bg: 'bg-zinc-950/40 border-white/5',
-                glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.06)] hover:border-indigo-500/30'
+                iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20 shadow-[0_0_8px_rgba(99,102,241,0.1)]',
+                bg: 'bg-zinc-950/25 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(99,102,241,0.04)] hover:border-indigo-500/25'
               },
               { 
                 label: 'Upcoming Scheduled', 
                 value: upcoming.length, 
-                color: 'text-violet-400 border-none', 
+                color: 'text-violet-300', 
                 icon: Clock,
-                iconColor: 'text-violet-400 bg-violet-500/10 border-violet-500/20',
-                bg: 'bg-zinc-950/40 border-white/5',
-                glow: 'hover:shadow-[0_4px_24px_rgba(139,92,246,0.06)] hover:border-violet-500/30'
+                iconColor: 'text-violet-400 bg-violet-500/10 border-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.1)]',
+                bg: 'bg-zinc-950/25 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(139,92,246,0.04)] hover:border-indigo-500/25'
               },
               { 
-                label: 'Attended Sessions', 
+                label: 'Attended Classrooms', 
                 value: `${attendedCount}/${pastCount}`, 
-                color: 'text-emerald-400', 
+                color: 'text-emerald-455', 
                 icon: CheckCircle,
-                iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-                bg: 'bg-zinc-950/40 border-white/5',
-                glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.06)] hover:border-emerald-500/30'
+                iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.1)]',
+                bg: 'bg-zinc-950/25 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(16,185,129,0.04)] hover:border-emerald-500/25'
               },
               { 
                 label: 'Attendance Rate', 
                 value: `${attendanceRate}%`, 
-                color: 'text-amber-400', 
+                color: 'text-amber-350', 
                 icon: Percent,
-                iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-                bg: 'bg-zinc-950/40 border-white/5',
-                glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.06)] hover:border-amber-500/30'
+                iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.1)]',
+                bg: 'bg-zinc-950/25 border-white/5',
+                glow: 'hover:shadow-[0_4px_24px_rgba(245,158,11,0.04)] hover:border-amber-500/25'
               },
             ].map(({ label, value, color, icon: Icon, iconColor, bg, glow }) => (
-              <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-4.5 flex items-center justify-between backdrop-blur-md transition-all duration-300 hover:-translate-y-1", bg, glow)}>
+              <div key={label} className={cn("relative overflow-hidden rounded-2xl border p-5 flex items-center justify-between backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 shadow-md", bg, glow)}>
                 <div className="space-y-1 text-left">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</div>
-                  <div className={cn("text-2xl sm:text-3xl font-extrabold tracking-tight font-mono leading-none", color)}>{value}</div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-gray-555">{label}</div>
+                  <div className={cn("text-2xl sm:text-3xl font-black tracking-tight font-mono leading-none", color)}>{value}</div>
                 </div>
-                <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border shrink-0 transition-transform duration-300", iconColor)}>
-                  <Icon className="h-4.5 w-4.5" />
+                <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border shrink-0 transition-transform duration-355", iconColor)}>
+                  <Icon className="h-5 w-5" />
                 </div>
               </div>
             ))}
@@ -2440,64 +2561,80 @@ function SessionsTab({ enrolledBootcamps, user }) {
             return <PointsStatsPanel chartData={chartData} totalEarned={totalEarned} totalMax={totalMax} label="Session Points" />;
           })()}
 
-          {/* Bootcamp filter pills */}
-          {enrolledBootcamps.length > 1 && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setBootcampFilter('all')}
-                className={cn(
-                  'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border',
-                  bootcampFilter === 'all'
-                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
-                    : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-                )}
-              >
-                All Bootcamps
-              </button>
-              {enrolledBootcamps.map(({ bootcamp }) => (
+          {/* Glassy Filter Panel */}
+          <div className="bg-zinc-950/25 border border-white/5 p-4.5 rounded-2xl space-y-4.5 backdrop-blur-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="text-left">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Scheduled Classrooms</h3>
+                <p className="text-[11.5px] text-gray-550 mt-0.5">Explore virtual workshops and guest presentations</p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-555">Schedules</span>
+                <div className="flex gap-1.5 bg-white/2 border border-white/5 rounded-xl p-1 w-fit">
+                  {[
+                    { v: 'all', l: 'All', c: filteredSessionsForStats.length },
+                    { v: 'upcoming', l: 'Upcoming', c: upcoming.length },
+                    { v: 'past', l: 'Past', c: pastSessions.length }
+                  ].map((pill) => (
+                    <button
+                      key={pill.v}
+                      onClick={() => setFilter(pill.v)}
+                      className={cn(
+                        "rounded-lg px-3.5 py-1.5 text-[11px] font-bold transition-all duration-300 flex items-center gap-2 relative z-10",
+                        filter === pill.v 
+                          ? 'bg-gradient-to-r from-violet-650 to-indigo-650 text-white shadow-md shadow-violet-650/20' 
+                          : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
+                      )}
+                    >
+                      {pill.l}
+                      <span className={cn(
+                        "rounded-full px-1.5 py-0.5 font-mono text-[9px] font-black",
+                        filter === pill.v ? "bg-white/20 text-white" : "bg-white/5 text-gray-555"
+                      )}>{pill.c}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bootcamp filters */}
+            {enrolledBootcamps.length > 1 && (
+              <div className="flex flex-wrap gap-2 border-t border-white/5 pt-3">
                 <button
-                  key={bootcamp.id}
-                  onClick={() => setBootcampFilter(bootcamp.id)}
+                  onClick={() => setBootcampFilter('all')}
                   className={cn(
-                    'rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 border truncate max-w-[200px]',
-                    bootcampFilter === bootcamp.id
-                      ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/10'
+                    'rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border',
+                    bootcampFilter === 'all'
+                      ? 'bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/5'
                       : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
                   )}
                 >
-                  {bootcamp.title.split(':')[0].trim()}
+                  All Bootcamps
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Status / time filter tabs */}
-          <div className="flex gap-2 bg-white/2 border border-white/5 rounded-xl p-1.5 w-fit">
-            {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
-              <button
-                key={v}
-                onClick={() => setFilter(v)}
-                className={cn(
-                  "rounded-lg px-4 py-1.5 text-[12px] font-bold transition-all duration-200 flex items-center gap-1.5",
-                  filter === v 
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/10' 
-                    : 'text-gray-400 hover:text-white bg-transparent border border-transparent'
-                )}
-              >
-                {label}
-                {v === 'upcoming' && upcoming.length > 0 && (
-                  <span className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold font-mono transition-all",
-                    filter === v ? "bg-white/20 text-white" : "bg-violet-500/10 text-violet-400"
-                  )}>{upcoming.length}</span>
-                )}
-              </button>
-            ))}
+                {enrolledBootcamps.map(({ bootcamp }) => (
+                  <button
+                    key={bootcamp.id}
+                    onClick={() => setBootcampFilter(bootcamp.id)}
+                    className={cn(
+                      'rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-300 border truncate max-w-[220px]',
+                      bootcampFilter === bootcamp.id
+                        ? 'bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm shadow-violet-500/5'
+                        : 'bg-white/2 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    )}
+                  >
+                    {bootcamp.title.split(':')[0].trim()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* List */}
           {visible.length === 0 ? (
-            <EmptyState icon={Search} title="No matches" description="Try adjusting the filter or search." />
+            <div className="py-14 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
+              <EmptyState icon={Search} title="No classrooms matched" description="Try selecting a different timeframe or adjusting filters." />
+            </div>
           ) : (
             <div className="space-y-3">
               {visible.map(s => <SessionCard key={s.id} session={s} userId={user?.id} />)}
@@ -2517,6 +2654,25 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
   const [timeframeFilter, setTimeframeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState(null);
+  const buttonRef = useRef(null);
+
+  const selectedBootcampLabel = useMemo(() => {
+    if (bootcampFilter === 'all') return 'Combined (All Bootcamps)';
+    const active = enrolledBootcamps.find(({ bootcamp }) => bootcamp.id === bootcampFilter);
+    if (active) return active.bootcamp.title.split(':')[0].trim();
+    const archived = archivedBootcamps.find(({ bootcamp }) => bootcamp.id === bootcampFilter);
+    if (archived) return `${archived.bootcamp.title.split(':')[0].trim()} (Archived)`;
+    return 'Combined (All Bootcamps)';
+  }, [bootcampFilter, enrolledBootcamps, archivedBootcamps]);
+
+  const selectedBootcampEmoji = useMemo(() => {
+    if (bootcampFilter === 'all') return '🏆';
+    const active = enrolledBootcamps.some(({ bootcamp }) => bootcamp.id === bootcampFilter);
+    if (active) return '📖';
+    return '📁';
+  }, [bootcampFilter, enrolledBootcamps]);
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true);
@@ -2542,6 +2698,13 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
   useEffect(() => {
     fetchLeaderboard();
   }, [fetchLeaderboard]);
+
+  // Keep rect in sync whenever dropdown opens
+  useEffect(() => {
+    if (dropdownOpen && buttonRef.current) {
+      setDropdownRect(buttonRef.current.getBoundingClientRect());
+    }
+  }, [dropdownOpen]);
 
   const filteredLeaderboard = useMemo(() => {
     if (!leaderboard) return [];
@@ -2569,8 +2732,27 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
     return leaderboard.find((entry) => entry.userId === user.id) || null;
   }, [leaderboard, user]);
 
+  const comparisonInfo = useMemo(() => {
+    if (!leaderboard || !myRankEntry) return null;
+    const myIndex = leaderboard.findIndex((entry) => entry.userId === myRankEntry.userId);
+    if (myIndex <= 0) {
+      return {
+        isFirst: myIndex === 0,
+        gapPoints: 0,
+        nextUser: null,
+      };
+    }
+    const nextUser = leaderboard[myIndex - 1];
+    const gapPoints = (nextUser.score || 0) - (myRankEntry.score || 0);
+    return {
+      isFirst: false,
+      gapPoints,
+      nextUser,
+    };
+  }, [leaderboard, myRankEntry]);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-8 text-left">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-1 space-y-8 text-left min-h-[550px] pb-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
         <div>
@@ -2607,57 +2789,162 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
       {/* Filters: Bootcamp Wise and Timeframe */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white/[0.02] border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-xl">
         {/* Bootcamp select filter */}
-        <div className="flex items-center gap-3 w-full sm:w-auto relative group">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-400 shrink-0">Cohort</span>
+
           <div className="relative flex-1 sm:flex-none">
-            <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400 pointer-events-none z-10 transition-transform group-hover:scale-110" />
-            <select
-              value={bootcampFilter}
-              onChange={(e) => setBootcampFilter(e.target.value)}
-              className="h-10 pl-10 pr-10 w-full sm:w-72 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/10 transition-all appearance-none cursor-pointer hover:border-white/20 select-none shadow-inner"
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={() => {
+                const rect = buttonRef.current?.getBoundingClientRect();
+                if (rect) setDropdownRect(rect);
+                setDropdownOpen((prev) => !prev);
+              }}
+              className="h-10 pl-4 pr-10 w-full sm:w-72 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-between cursor-pointer hover:border-white/20 select-none shadow-inner relative transition-all focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             >
-              <option value="all" className="bg-zinc-950 font-bold text-amber-400">🏆 Combined (All Bootcamps)</option>
-              <optgroup label="Active Bootcamps" className="bg-zinc-950 text-gray-500 font-extrabold">
-                {enrolledBootcamps.map(({ bootcamp }) => (
-                  <option key={bootcamp.id} value={bootcamp.id} className="bg-zinc-950 text-white font-semibold">
-                    📖 {bootcamp.title.split(':')[0].trim()}
-                  </option>
-                ))}
-              </optgroup>
-              {archivedBootcamps.length > 0 && (
-                <optgroup label="Archived Bootcamps" className="bg-zinc-950 text-gray-500 font-extrabold">
-                  {archivedBootcamps.map(({ bootcamp }) => (
-                    <option key={bootcamp.id} value={bootcamp.id} className="bg-zinc-950 text-gray-400 font-semibold">
-                      📁 {bootcamp.title.split(':')[0].trim()} (Archived)
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 transition-colors group-hover:text-white" />
+              <div className="flex items-center gap-2 truncate">
+                <span className="text-sm shrink-0">{selectedBootcampEmoji}</span>
+                <span className="truncate">{selectedBootcampLabel}</span>
+              </div>
+              <ChevronDown className={cn("absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-transform duration-300", dropdownOpen ? "rotate-180 text-white" : "text-gray-400")} />
+            </button>
+
+            {/* Portal dropdown — renders into document.body to escape all overflow/stacking contexts */}
+            {typeof window !== 'undefined' && createPortal(
+              <AnimatePresence>
+                {dropdownOpen && (
+                  <>
+                    {/* Dismiss backdrop */}
+                    <div
+                      className="fixed inset-0 z-[9998]"
+                      onClick={() => setDropdownOpen(false)}
+                    />
+                    {/* Menu */}
+                    <motion.div
+                      key="cohort-menu"
+                      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      style={{
+                        position: 'fixed',
+                        top: (dropdownRect?.bottom ?? 200) + 8,
+                        left: dropdownRect?.left ?? 176,
+                        width: Math.max(dropdownRect?.width ?? 288, 288),
+                      }}
+                      className="bg-zinc-950/98 border border-white/10 rounded-2xl p-2.5 shadow-2xl z-[9999] backdrop-blur-2xl max-h-72 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] select-none flex flex-col gap-1"
+                    >
+                      {/* Option: Combined */}
+                      <button
+                        type="button"
+                        onClick={() => { setBootcampFilter('all'); setDropdownOpen(false); }}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer hover:bg-white/5",
+                          bootcampFilter === 'all' ? "bg-violet-600/10 text-amber-400 border border-violet-500/20" : "text-gray-300 border border-transparent"
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-sm">🏆</span>
+                          <span>Combined (All Bootcamps)</span>
+                        </span>
+                        {bootcampFilter === 'all' && <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-md shadow-amber-400/50" />}
+                      </button>
+
+                      {/* Active cohorts */}
+                      {enrolledBootcamps.length > 0 && (
+                        <div className="mt-1.5">
+                          <div className="px-3 py-1 text-[8.5px] font-black text-gray-500 uppercase tracking-widest border-t border-white/5 pt-2">Active Cohorts</div>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {enrolledBootcamps.map(({ bootcamp }) => {
+                              const active = bootcampFilter === bootcamp.id;
+                              return (
+                                <button
+                                  key={bootcamp.id}
+                                  type="button"
+                                  onClick={() => { setBootcampFilter(bootcamp.id); setDropdownOpen(false); }}
+                                  className={cn(
+                                    "w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-between cursor-pointer hover:bg-white/5",
+                                    active ? "bg-violet-600/10 text-white font-bold border border-violet-500/20" : "text-gray-400 border border-transparent"
+                                  )}
+                                >
+                                  <span className="flex items-center gap-2 truncate">
+                                    <span className="text-sm shrink-0">📖</span>
+                                    <span className="truncate">{bootcamp.title.split(':')[0].trim()}</span>
+                                  </span>
+                                  {active && <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-md shadow-violet-400/50" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Archived cohorts */}
+                      {archivedBootcamps.length > 0 && (
+                        <div className="mt-1.5">
+                          <div className="px-3 py-1 text-[8.5px] font-black text-gray-500 uppercase tracking-widest border-t border-white/5 pt-2">Archived Cohorts</div>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {archivedBootcamps.map(({ bootcamp }) => {
+                              const active = bootcampFilter === bootcamp.id;
+                              return (
+                                <button
+                                  key={bootcamp.id}
+                                  type="button"
+                                  onClick={() => { setBootcampFilter(bootcamp.id); setDropdownOpen(false); }}
+                                  className={cn(
+                                    "w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-between cursor-pointer hover:bg-white/5",
+                                    active ? "bg-violet-600/10 text-gray-200 font-bold border border-violet-500/20" : "text-gray-500 border border-transparent"
+                                  )}
+                                >
+                                  <span className="flex items-center gap-2 truncate">
+                                    <span className="text-sm shrink-0">📁</span>
+                                    <span className="truncate">{bootcamp.title.split(':')[0].trim()}</span>
+                                  </span>
+                                  {active && <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-md" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>,
+              document.body
+            )}
           </div>
         </div>
 
         {/* Timeframe pills */}
-        <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 w-full sm:w-auto justify-center sm:justify-start gap-1 shadow-inner">
+        <div className="flex items-center bg-black/40 border border-white/5 rounded-2xl p-1 w-full sm:w-auto justify-center sm:justify-start gap-1 shadow-inner relative overflow-hidden">
           {[
             ['all', 'All Time'],
             ['monthly', 'Monthly'],
             ['weekly', 'Weekly'],
-          ].map(([v, label]) => (
-            <button
-              key={v}
-              onClick={() => setTimeframeFilter(v)}
-              className={cn(
-                'rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-300 flex-1 sm:flex-none text-center select-none active:scale-95',
-                timeframeFilter === v
-                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20 ring-1 ring-violet-500/30'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5 bg-transparent border border-transparent'
-              )}
-            >
-              {label}
-            </button>
-          ))}
+          ].map(([v, label]) => {
+            const active = timeframeFilter === v;
+            return (
+              <button
+                key={v}
+                onClick={() => setTimeframeFilter(v)}
+                className={cn(
+                  'relative rounded-xl px-5 py-2 text-xs font-bold select-none transition-colors duration-300 flex-1 sm:flex-none text-center outline-none cursor-pointer',
+                  active ? 'text-white' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                {active && (
+                  <motion.div
+                    layoutId="activeTimeframe"
+                    className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl -z-10 shadow-lg shadow-violet-600/30"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -2672,85 +2959,143 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
         <>
           {/* Podium for top 3 */}
           {!search && leaderboard.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto pt-4 pb-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto pt-6 pb-4 items-end">
               {podium.map((entry) => {
                 const isFirst = entry.rank === 1;
                 const isSecond = entry.rank === 2;
                 const isThird = entry.rank === 3;
                 
-                const cardBorder = isFirst
-                  ? 'border-amber-500/30 bg-amber-500/[0.02] shadow-[0_4px_30px_rgba(245,158,11,0.04)]'
+                const theme = isFirst 
+                  ? {
+                      borderColor: 'border-amber-500/30 hover:border-amber-400/50',
+                      glowColor: 'shadow-[0_0_50px_-10px_rgba(245,158,11,0.15)]',
+                      pedestalHeight: 'md:h-80',
+                      pedestalBg: 'bg-gradient-to-t from-amber-955/40 via-amber-900/10 to-zinc-900/30',
+                      pedestalBorder: 'border-t-2 border-t-amber-500/30',
+                      badgeBg: 'bg-amber-400 text-black shadow-amber-500/40 shadow-lg',
+                      avatarBorder: 'ring-amber-400/60 ring-offset-zinc-950 ring-4',
+                      accentText: 'text-amber-400',
+                      title: '🏆 Champion',
+                      delay: 0.1,
+                      scale: 'md:scale-105 md:-translate-y-4'
+                    }
                   : isSecond
-                  ? 'border-slate-400/20 bg-slate-400/[0.01]'
-                  : 'border-amber-700/20 bg-amber-700/[0.01]';
-                
-                const rankColor = isFirst
-                  ? 'text-amber-400'
-                  : isSecond
-                  ? 'text-slate-300'
-                  : 'text-amber-600';
+                  ? {
+                      borderColor: 'border-slate-400/20 hover:border-slate-300/40',
+                      glowColor: 'shadow-[0_0_40px_-10px_rgba(148,163,184,0.1)]',
+                      pedestalHeight: 'md:h-68',
+                      pedestalBg: 'bg-gradient-to-t from-slate-800/30 via-slate-900/10 to-zinc-900/30',
+                      pedestalBorder: 'border-t-2 border-t-slate-400/20',
+                      badgeBg: 'bg-slate-300 text-black shadow-slate-400/30 shadow-md',
+                      avatarBorder: 'ring-slate-300/50 ring-offset-zinc-950 ring-4',
+                      accentText: 'text-slate-300',
+                      title: '🥈 Runner Up',
+                      delay: 0.2,
+                      scale: 'md:-translate-y-1'
+                    }
+                  : {
+                      borderColor: 'border-amber-700/25 hover:border-amber-600/45',
+                      glowColor: 'shadow-[0_0_40px_-10px_rgba(180,83,9,0.08)]',
+                      pedestalHeight: 'md:h-60',
+                      pedestalBg: 'bg-gradient-to-t from-amber-950/20 via-amber-950/5 to-zinc-900/30',
+                      pedestalBorder: 'border-t-2 border-t-amber-700/25',
+                      badgeBg: 'bg-amber-700 text-white shadow-amber-700/30 shadow-md',
+                      avatarBorder: 'ring-amber-700/50 ring-offset-zinc-950 ring-4',
+                      accentText: 'text-amber-600',
+                      title: '🥉 Third Place',
+                      delay: 0.3,
+                      scale: 'md:translate-y-2'
+                    };
 
                 return (
                   <motion.div
                     key={entry.userId}
-                    whileHover={{ y: -6 }}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 15, delay: theme.delay }}
+                    whileHover={{ y: -8 }}
                     className={cn(
-                      'rounded-2xl border p-6 flex flex-col items-center text-center relative overflow-hidden backdrop-blur-md transition-all duration-300',
-                      cardBorder,
-                      isFirst ? 'md:-translate-y-4 md:scale-105 z-10' : ''
+                      'relative overflow-hidden rounded-3xl border bg-zinc-900/40 backdrop-blur-xl transition-all duration-300 flex flex-col items-center justify-between',
+                      theme.borderColor,
+                      theme.glowColor,
+                      theme.pedestalHeight,
+                      theme.scale,
+                      'p-5 pt-8'
                     )}
                   >
-                    {/* Crown overlay */}
+                    {/* Glowing background */}
+                    <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-current opacity-[0.03] blur-3xl pointer-events-none" style={{ color: isFirst ? '#f59e0b' : isSecond ? '#cbd5e1' : '#b45309' }} />
+                    
+                    {/* Crown or special icon floating on top */}
                     {isFirst && (
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center justify-center">
-                        <Crown className="h-5 w-5 text-amber-400 animate-bounce" />
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center justify-center z-20">
+                        <motion.div
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                        >
+                          <Crown className="h-6 w-6 text-amber-400 drop-shadow-[0_2px_8px_rgba(245,158,11,0.6)] animate-pulse" />
+                        </motion.div>
                       </div>
                     )}
 
-                    <div className="relative mt-2">
-                      <div className="h-18 w-18 rounded-full border-2 border-white/10 overflow-hidden bg-black/40 flex items-center justify-center">
+                    {/* Avatar structure */}
+                    <div className="relative mt-2 z-10">
+                      <div className={cn('h-18 w-18 rounded-full overflow-hidden bg-black/40 flex items-center justify-center transition-transform', theme.avatarBorder)}>
                         <SafeImg
                           src={entry.avatarUrl}
                           alt={entry.userName}
                           className="h-full w-full object-cover"
                           fallback={
-                            <div className="h-full w-full bg-violet-650/20 flex items-center justify-center text-lg font-bold text-violet-300 uppercase">
+                            <div className="h-full w-full bg-linear-to-br from-violet-650/30 to-fuchsia-650/30 flex items-center justify-center text-xl font-black text-white uppercase">
                               {entry.userName.slice(0, 2)}
                             </div>
                           }
                         />
                       </div>
                       <div className={cn(
-                        'absolute -bottom-2 -right-2 h-7 w-7 rounded-full flex items-center justify-center text-xs font-black shadow-lg ring-2 ring-zinc-950 font-mono',
-                        isFirst ? 'bg-amber-400 text-black' : isSecond ? 'bg-slate-300 text-black' : 'bg-amber-750 text-white'
+                        'absolute -bottom-2 -right-1 h-7 w-7 rounded-full flex items-center justify-center text-xs font-black shadow-lg ring-3 ring-zinc-950 font-mono',
+                        theme.badgeBg
                       )}>
                         {entry.rank}
                       </div>
                     </div>
 
-                    <div className="mt-4.5 space-y-1">
-                      <p className="text-[14px] font-extrabold text-white truncate max-w-[180px]">{entry.userName}</p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                        {isFirst ? '🏆 Champion' : isSecond ? '🥈 Runner Up' : '🥉 Third Place'}
+                    {/* Member Name and subtitle */}
+                    <div className="mt-4 space-y-0.5 z-10 text-center">
+                      <p className="text-[14px] font-black text-white truncate max-w-[180px] tracking-tight">{entry.userName}</p>
+                      <p className={cn('text-[9px] font-extrabold uppercase tracking-widest', theme.accentText)}>
+                        {theme.title}
                       </p>
                     </div>
 
-                    {/* Progress details */}
-                    <div className="w-full grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-white/5 text-left">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Progress</span>
-                        <p className="text-xs font-bold text-gray-305 font-mono mt-0.5">{entry.progressPercent}%</p>
+                    {/* Pedestal Section (staggered physical styling inside the card) */}
+                    <div className={cn('w-full rounded-2xl p-3.5 mt-4 border border-white/5 flex flex-col justify-between flex-1', theme.pedestalBg, theme.pedestalBorder)}>
+                      {/* Grid Stats */}
+                      <div className="grid grid-cols-2 gap-2 text-left">
+                        <div className="bg-white/[0.02] rounded-xl p-2 border border-white/[0.03]">
+                          <span className="text-[8px] font-bold uppercase tracking-wider text-gray-550 block">Progress</span>
+                          <span className="text-xs font-black text-white font-mono">{entry.progressPercent}%</span>
+                          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden mt-1.5">
+                            <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${entry.progressPercent}%` }} />
+                          </div>
+                        </div>
+                        <div className="bg-white/[0.02] rounded-xl p-2 border border-white/[0.03]">
+                          <span className="text-[8px] font-bold uppercase tracking-wider text-gray-555 block">Lessons</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <GraduationCap className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                            <span className="text-xs font-black text-white font-mono">{entry.lessonsCompleted}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-550">Lessons</span>
-                        <p className="text-xs font-bold text-gray-305 font-mono mt-0.5">{entry.lessonsCompleted}</p>
-                      </div>
-                    </div>
 
-                    {/* Score pill */}
-                    <div className="mt-5.5 px-5 py-2.5 rounded-2xl bg-white/2 border border-white/5 w-full flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Score</span>
-                      <span className="text-[16px] font-black text-amber-400 font-mono">{entry.score} <span className="text-[10px] font-bold text-gray-500">pts</span></span>
+                      {/* Points badge */}
+                      <div className="mt-3 bg-black/40 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Score</span>
+                        <span className={cn('text-base font-black font-mono flex items-baseline gap-0.5', theme.accentText)}>
+                          {entry.score}
+                          <span className="text-[9px] font-bold text-gray-500 font-sans">PTS</span>
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 );
@@ -2760,96 +3105,132 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
 
           {/* Current user's rank quick display */}
           {myRankEntry && (
-            <div className="max-w-4xl mx-auto rounded-2xl border border-violet-500/20 bg-violet-500/[0.02] p-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-violet-500/15 flex items-center justify-center border border-violet-500/20 text-violet-400">
-                  <Trophy className="h-4.5 w-4.5" />
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              className="max-w-4xl mx-auto rounded-3xl border border-violet-500/20 bg-gradient-to-r from-violet-500/[0.03] to-fuchsia-500/[0.03] p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-xl relative overflow-hidden group"
+            >
+              {/* Decorative side glows */}
+              <div className="absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-violet-500/10 to-transparent pointer-events-none blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-fuchsia-500/10 to-transparent pointer-events-none blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="flex items-center gap-4 text-left z-10 w-full sm:w-auto">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center border border-violet-500/30 text-violet-400 shadow-inner shrink-0">
+                  <Trophy className="h-6 w-6 text-amber-400 drop-shadow-[0_2px_8px_rgba(245,158,11,0.4)]" />
                 </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-gray-400">Your Current Rank</p>
-                  <p className="text-sm font-extrabold text-white mt-0.5">
-                    Rank <span className="text-violet-400 font-mono font-black text-base">#{myRankEntry.rank}</span> out of {leaderboard.length} members
+                <div className="min-w-0">
+                  <span className="text-[10px] font-extrabold text-violet-400 uppercase tracking-widest block">Your Standings</span>
+                  <p className="text-[15px] font-black text-white mt-1 flex items-baseline gap-1.5 flex-wrap">
+                    Rank <span className="text-violet-400 font-mono font-black text-xl">#{myRankEntry.rank}</span> 
+                    <span className="text-gray-500 text-xs font-bold font-sans">out of {leaderboard.length} members</span>
                   </p>
+                  
+                  {comparisonInfo && (
+                    <p className="text-xs text-gray-300 mt-2 font-medium flex items-center gap-1.5 flex-wrap">
+                      {comparisonInfo.isFirst ? (
+                        <>
+                          <Crown className="w-3.5 h-3.5 text-amber-400 inline shrink-0" />
+                          <span>You are leading the leaderboard! Keep up the brilliant work!</span>
+                        </>
+                      ) : comparisonInfo.nextUser ? (
+                        <>
+                          <Target className="w-3.5 h-3.5 text-emerald-400 inline shrink-0" />
+                          <span>
+                            You are only <strong className="text-emerald-400 font-mono font-bold">{comparisonInfo.gapPoints} pts</strong> behind <strong className="text-white font-bold">{comparisonInfo.nextUser.userName}</strong> (Rank #{comparisonInfo.nextUser.rank})!
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Your Total Points</span>
-                <span className="text-lg font-black text-amber-400 font-mono">{myRankEntry.score} <span className="text-[11px] font-semibold text-gray-500">pts</span></span>
+              
+              <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0 w-full sm:w-auto z-10 shrink-0">
+                <div className="text-left sm:text-right">
+                  <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block">Total Score</span>
+                  <span className="text-2xl font-black text-amber-400 font-mono drop-shadow-[0_2px_10px_rgba(245,158,11,0.2)]">
+                    {myRankEntry.score} <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider font-sans">pts</span>
+                  </span>
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Rankings Table */}
-          <div className="bg-zinc-950/20 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-md">
-            <div className="overflow-x-auto">
+          <div className="bg-zinc-955/20 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent pointer-events-none" />
+            <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <table className="w-full text-[13px] border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/2 text-gray-400 text-[10.5px] font-bold uppercase tracking-wider select-none">
-                    <th className="px-6 py-4.5 text-center w-18">Rank</th>
-                    <th className="px-6 py-4.5 min-w-56">Member</th>
-                    <th className="px-6 py-4.5 text-center">Lessons</th>
-                    <th className="px-6 py-4.5 text-center">Practice</th>
-                    <th className="px-6 py-4.5 text-center">Watch Time</th>
-                    <th className="px-6 py-4.5 text-center">Sessions</th>
-                    <th className="px-6 py-4.5 text-right pr-8">Points</th>
+                  <tr className="border-b border-white/5 bg-white/[0.02] text-gray-400 text-[10px] font-extrabold uppercase tracking-widest select-none">
+                    <th className="px-6 py-5 text-center w-20">Rank</th>
+                    <th className="px-6 py-5 min-w-64">Member</th>
+                    <th className="px-6 py-5 text-center">Lessons</th>
+                    <th className="px-6 py-5 text-center">Practice</th>
+                    <th className="px-6 py-5 text-center">Watch Time</th>
+                    <th className="px-6 py-5 text-center">Sessions</th>
+                    <th className="px-6 py-5 text-right pr-10">Points</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredLeaderboard.map((entry) => {
                     const isSelf = entry.userId === user?.id;
+                    const isFirst = entry.rank === 1;
+                    const isSecond = entry.rank === 2;
+                    const isThird = entry.rank === 3;
+                    
                     return (
                       <tr
                         key={entry.userId}
                         className={cn(
-                          'transition-colors duration-150',
+                          'transition-all duration-200 group',
                           isSelf
-                            ? 'bg-violet-500/[0.03] hover:bg-violet-500/[0.05] border-l-2 border-l-violet-500'
-                            : 'hover:bg-white/2'
+                            ? 'bg-violet-500/[0.03] hover:bg-violet-500/[0.05] border-l-4 border-l-violet-500'
+                            : 'hover:bg-white/[0.02]'
                         )}
                       >
                         {/* Rank Badge */}
                         <td className="px-6 py-4.5 text-center">
-                          {entry.rank === 1 ? (
-                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-amber-400 text-black font-black text-xs font-mono shadow-md">1</span>
-                          ) : entry.rank === 2 ? (
-                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-slate-300 text-black font-black text-xs font-mono shadow-md">2</span>
-                          ) : entry.rank === 3 ? (
-                            <span className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-full bg-amber-700 text-white font-black text-xs font-mono shadow-md">3</span>
+                          {isFirst ? (
+                            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-black font-black text-sm font-mono shadow-[0_2px_10px_rgba(245,158,11,0.4)] scale-105">1</div>
+                          ) : isSecond ? (
+                            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-400 text-black font-black text-sm font-mono shadow-[0_2px_10px_rgba(148,163,184,0.3)]">2</div>
+                          ) : isThird ? (
+                            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-600 to-amber-800 text-white font-black text-sm font-mono shadow-[0_2px_10px_rgba(180,83,9,0.25)]">3</div>
                           ) : (
-                            <span className="text-gray-450 font-bold font-mono">{entry.rank}</span>
+                            <span className="text-gray-400 font-extrabold font-mono text-sm group-hover:text-white transition-colors">{entry.rank}</span>
                           )}
                         </td>
 
                         {/* Profile Photo & Name */}
                         <td className="px-6 py-4.5">
-                          <div className="flex items-center gap-3.5">
-                            <div className="h-9 w-9 rounded-full border border-white/10 overflow-hidden bg-black/40 shrink-0">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-full border border-white/10 overflow-hidden bg-black/40 shrink-0 relative shadow-md ring-2 ring-transparent group-hover:ring-violet-500/20 transition-all">
                               <SafeImg
                                 src={entry.avatarUrl}
                                 alt={entry.userName}
                                 className="h-full w-full object-cover"
                                 fallback={
-                                  <div className="h-full w-full bg-violet-650/15 flex items-center justify-center text-xs font-bold text-violet-300 uppercase">
+                                  <div className="h-full w-full bg-linear-to-br from-violet-650/20 to-fuchsia-650/20 flex items-center justify-center text-xs font-black text-violet-300 uppercase">
                                     {entry.userName.slice(0, 2)}
                                   </div>
                                 }
                               />
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-white flex items-center gap-1.5 truncate">
-                                {entry.userName}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-extrabold text-white flex items-center gap-2 truncate">
+                                <span className="group-hover:text-violet-300 transition-colors">{entry.userName}</span>
                                 {isSelf && (
-                                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30">
+                                  <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 text-violet-300 ring-1 ring-violet-500/30">
                                     You
                                   </span>
                                 )}
                               </p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-gray-500 font-bold uppercase">Progress</span>
-                                <div className="h-1.5 w-20 rounded-full bg-white/5 overflow-hidden">
-                                  <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${entry.progressPercent}%` }} />
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[9px] text-gray-500 font-extrabold uppercase tracking-wider shrink-0">Progress</span>
+                                <div className="h-1.5 w-24 rounded-full bg-white/5 overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full" style={{ width: `${entry.progressPercent}%` }} />
                                 </div>
-                                <span className="text-[10px] text-gray-400 font-bold font-mono">{entry.progressPercent}%</span>
+                                <span className="text-[9px] text-gray-400 font-black font-mono">{entry.progressPercent}%</span>
                               </div>
                             </div>
                           </div>
@@ -2857,38 +3238,45 @@ function LeaderboardTab({ enrolledBootcamps, archivedBootcamps = [], user }) {
 
                         {/* Completed Lessons */}
                         <td className="px-6 py-4.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5 text-gray-350">
-                            <GraduationCap className="h-4 w-4 text-violet-400 shrink-0" />
-                            <span className="font-bold font-mono">{entry.lessonsCompleted}</span>
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-violet-500/5 border border-violet-500/10 text-violet-300 shadow-sm">
+                            <GraduationCap className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                            <span className="font-black font-mono text-xs">{entry.lessonsCompleted}</span>
                           </div>
                         </td>
 
                         {/* Solved Problems */}
                         <td className="px-6 py-4.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5 text-gray-355">
-                            <Target className="h-4 w-4 text-emerald-400 shrink-0" />
-                            <span className="font-bold font-mono">{entry.practiceSolved}</span>
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-300 shadow-sm">
+                            <Target className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                            <span className="font-black font-mono text-xs">{entry.practiceSolved}</span>
                           </div>
                         </td>
 
                         {/* Watch Time */}
-                        <td className="px-6 py-4.5 text-center font-bold text-gray-350 font-mono">
-                          {formatWatchSeconds(entry.watchTime) || '—'}
+                        <td className="px-6 py-4.5 text-center">
+                          {entry.watchTime > 0 ? (
+                            <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-300 shadow-sm font-black font-mono text-xs">
+                              <Clock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                              {formatWatchSeconds(entry.watchTime)}
+                            </div>
+                          ) : (
+                            <span className="text-gray-600 font-extrabold">—</span>
+                          )}
                         </td>
 
                         {/* Sessions */}
                         <td className="px-6 py-4.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5 text-gray-355">
-                            <Video className="h-4 w-4 text-cyan-400 shrink-0" />
-                            <span className="font-bold font-mono">{entry.sessionsAttended}</span>
+                          <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-cyan-300 shadow-sm">
+                            <Video className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                            <span className="font-black font-mono text-xs">{entry.sessionsAttended}</span>
                           </div>
                         </td>
 
                         {/* Points Badge */}
-                        <td className="px-6 py-4.5 text-right pr-8">
-                          <span className="inline-flex items-center gap-1 text-[13.5px] font-black text-amber-400 font-mono">
+                        <td className="px-6 py-4.5 text-right pr-10">
+                          <span className="inline-flex items-center gap-1 text-[15px] font-black text-amber-400 font-mono drop-shadow-[0_1px_6px_rgba(245,158,11,0.15)] group-hover:scale-105 transition-transform">
                             {entry.score}
-                            <span className="text-[9.5px] font-bold text-gray-500 uppercase tracking-wider font-sans">pts</span>
+                            <span className="text-[9.5px] font-extrabold text-gray-500 uppercase tracking-widest font-sans">pts</span>
                           </span>
                         </td>
                       </tr>

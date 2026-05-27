@@ -219,7 +219,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'notices',
             label: 'Inbox',
             icon: Bell,
-            href: '/account/executive/notices/create',
+            href: '/account/executive/inbox',
           },
           {
             id: 'discussions',
@@ -334,7 +334,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'notices',
             label: 'Inbox',
             icon: Bell,
-            href: '/account/admin/notices',
+            href: '/account/admin/inbox',
           },
           {
             id: 'discussions',
@@ -583,7 +583,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'notices',
             label: 'Inbox',
             icon: Bell,
-            href: '/account/advisor/notices',
+            href: '/account/advisor/inbox',
           },
           {
             id: 'discussions',
