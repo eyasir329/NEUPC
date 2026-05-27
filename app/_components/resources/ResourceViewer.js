@@ -13,6 +13,8 @@ import {
   ExternalLink as ExternalLinkIcon,
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
+import EventContentRenderer from '@/app/account/_components/events/EventContentRenderer';
+import { safeExternalHref } from '@/app/_lib/resources/embed-utils';
 
 // ─── Per-type visual config ──────────────────────────────────────────────────
 
@@ -128,6 +130,12 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
             </span>
           )}
 
+          {resource.status === 'draft' && (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/80 font-bold uppercase tracking-wider">
+              Pending Admin Review
+            </span>
+          )}
+
           {date && (
             <time dateTime={resource.published_at || resource.created_at} className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25">
               <Calendar className="h-3 w-3" />
@@ -142,6 +150,18 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
         <h1 className="text-[18px] font-bold leading-snug tracking-tight text-white sm:text-[22px]">
           {resource.title}
         </h1>
+      )}
+
+      {/* ── Description ── */}
+      {!hideHeader && resource.description && (
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
+          <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
+            Description
+          </p>
+          <p className="text-[13.5px] leading-relaxed text-white/55 whitespace-pre-line">
+            {resource.description}
+          </p>
+        </div>
       )}
 
       {/* ── Thumbnail (for non-visual types that have one) ── */}
@@ -162,15 +182,10 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
         <ResourceEmbed resource={resource} />
       </div>
 
-      {/* ── Description ── */}
-      {!hideHeader && resource.description && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
-          <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
-            Description
-          </p>
-          <p className="text-[13.5px] leading-relaxed text-white/55 whitespace-pre-line">
-            {resource.description}
-          </p>
+      {/* ── Rich Content Blocks ── */}
+      {!hideHeader && type !== 'rich_text' && resource.content && (
+        <div className="w-full mt-4">
+          <EventContentRenderer content={resource.content} />
         </div>
       )}
 
@@ -196,7 +211,7 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
             Attachment
           </p>
           <a
-            href={resource.file_url}
+            href={safeExternalHref(resource.file_url) || "#"}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-[13px] font-medium text-white/70 transition-all hover:border-white/15 hover:bg-white/10 hover:text-white"

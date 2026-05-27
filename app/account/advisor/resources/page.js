@@ -1,8 +1,8 @@
 /**
- * @file Admin resources library — surfaces learning materials, guides,
- *   and shared documents available to administrators.
- * @module AdminResourcesPage
- * @access admin
+ * @file Advisor resources library — surfaces learning materials, guides,
+ *   and shared documents available to club advisors.
+ * @module AdvisorResourcesPage
+ * @access advisor
  */
 
 import { requireRole } from '@/app/_lib/auth-guard';
@@ -21,9 +21,9 @@ import {
 import { resourceTypeGroupToValues } from '@/app/_lib/resources/constants';
 import ResourcesClient from '@/app/_components/resources/ResourcesClient';
 
-export const metadata = { title: 'Resources | Admin | NEUPC' };
+export const metadata = { title: 'Resources | Advisor | NEUPC' };
 
-export default async function AdminResourcesPage({ searchParams }) {
+export default async function AdvisorResourcesPage({ searchParams }) {
   const params = await searchParams;
   const page = Number(params?.page || 1) || 1;
   const pageSize = 12;
@@ -34,7 +34,7 @@ export default async function AdminResourcesPage({ searchParams }) {
     ? tab
     : (params?.categoryId || '');
 
-  const { user } = await requireRole('admin');
+  const { user } = await requireRole('advisor');
   const userId = user?.id || null;
 
   const types = resourceTypeGroupToValues(typeLabel);
@@ -81,8 +81,8 @@ export default async function AdminResourcesPage({ searchParams }) {
       completedTotal={completedTotal}
       submissionTotal={submissionTotal}
       canBookmark={Boolean(userId)}
-      submitVariant="admin"
-      basePath="/account/admin/resources"
+      submitVariant="advisor"
+      basePath="/account/advisor/resources"
       blogsHref="/blogs"
       roadmapsHref="/roadmaps"
       blogCount={blogCount}

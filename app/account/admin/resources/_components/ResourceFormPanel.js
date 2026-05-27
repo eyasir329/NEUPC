@@ -11,6 +11,8 @@ import {
   Eye,
   EyeOff,
   Keyboard,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import ResourceForm from '@/app/_components/resources/ResourceForm';
 import ResourceViewer from '@/app/_components/resources/ResourceViewer';
@@ -18,6 +20,10 @@ import {
   createResourceAction,
   updateResourceAction,
 } from '@/app/_lib/resource-actions';
+import {
+  submitMemberFullResourceAction,
+  updateMemberResourceAction,
+} from '@/app/_lib/member-resource-submit-action';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 
 function toFormData(form, id = null) {
@@ -88,6 +94,7 @@ export default function ResourceFormPanel({
   categories = [],
   onClose,
   onSaved,
+  submitAsMember = false,
 }) {
   const isEdit = mode === 'edit' && resource;
   const panelRef = useRef(null);
@@ -96,6 +103,7 @@ export default function ResourceFormPanel({
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [closing, setClosing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleClose = useCallback(() => {
     if (isPending) return;
@@ -115,6 +123,8 @@ export default function ResourceFormPanel({
       content:
         typeof resource.content === 'string'
           ? resource.content
+          : Array.isArray(resource.content)
+          ? JSON.stringify(resource.content)
           : resource.content?.html || '',
       embed_url: resource.embed_url || '',
       file_url: resource.file_url || '',
@@ -163,7 +173,9 @@ export default function ResourceFormPanel({
     startTransition(async () => {
       try {
         const fd = toFormData(form, isEdit ? resource.id : null);
-        const action = isEdit ? updateResourceAction : createResourceAction;
+        const action = isEdit
+          ? (submitAsMember ? updateMemberResourceAction : updateResourceAction)
+          : (submitAsMember ? submitMemberFullResourceAction : createResourceAction);
         const result = await action(fd);
 
         if (result?.error) {
@@ -210,17 +222,23 @@ export default function ResourceFormPanel({
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300 ${
-          closing ? 'opacity-0' : 'animate-in fade-in'
-        }`}
-        onClick={handleClose}
-      />
+      {!isFullscreen && (
+        <div
+          className={`absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300 ${
+            closing ? 'opacity-0' : 'animate-in fade-in'
+          }`}
+          onClick={handleClose}
+        />
+      )}
 
       {/* Full-screen modal */}
       <div
-        className={`relative m-2 flex flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0d14] shadow-2xl shadow-black/50 transition-all duration-300 sm:m-3 lg:m-4 ${
-          closing ? 'scale-95 opacity-0' : 'animate-in fade-in zoom-in-95'
+        className={`relative flex flex-col overflow-hidden bg-[#0a0d14] transition-all duration-300 ${
+          isFullscreen
+            ? 'flex-1 rounded-none border-0 border-none m-0 sm:m-0 lg:m-0'
+            : `m-2 flex-1 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/50 sm:m-3 lg:m-4 ${
+                closing ? 'scale-95 opacity-0' : 'animate-in fade-in zoom-in-95'
+              }`
         }`}
       >
         {/* ─── Sticky header ─────────────────────────────── */}
@@ -274,6 +292,26 @@ export default function ResourceFormPanel({
                   <Eye className="h-3.5 w-3.5" />
                 )}
                 <span className="hidden xl:inline">Preview</span>
+              </button>
+
+              {/* Fullscreen toggle */}
+              <button
+                type="button"
+                onClick={() => setIsFullscreen((f) => !f)}
+                className={`hidden items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all sm:flex ${
+                  isFullscreen
+                    ? 'border-violet-500/25 bg-violet-500/10 text-violet-400'
+                    : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-white/12 hover:text-white'
+                }`}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden xl:inline">
+                  {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                </span>
               </button>
 
               {/* Divider */}

@@ -99,7 +99,7 @@ async function uploadFile(file, folder = 'files') {
   return data?.publicUrl || null;
 }
 
-async function upsertTags(resourceId, rawTags = []) {
+export async function upsertTags(resourceId, rawTags = []) {
   const tags = parseTags(rawTags);
 
   await supabaseAdmin
@@ -201,10 +201,31 @@ async function buildPayload(formData) {
     updated_at: new Date().toISOString(),
   };
 
-  if (data.resource_type === 'rich_text') {
-    payload.content = {
-      html: sanitizeRichHtml(data.content || ''),
-    };
+  if (data.content) {
+    try {
+      const parsed = JSON.parse(data.content);
+      if (Array.isArray(parsed)) {
+        payload.content = parsed.map(block => {
+          if (block.type === 'richText' || block.type === 'html') {
+            return {
+              ...block,
+              content: sanitizeRichHtml(block.content || ''),
+            };
+          }
+          return block;
+        });
+      } else {
+        payload.content = {
+          html: sanitizeRichHtml(data.content || ''),
+        };
+      }
+    } catch {
+      if (typeof data.content === 'string' && data.content.trim()) {
+        payload.content = {
+          html: sanitizeRichHtml(data.content || ''),
+        };
+      }
+    }
   }
 
   if (
@@ -218,28 +239,34 @@ async function buildPayload(formData) {
       return { error: normalized.error || 'Invalid embed URL.' };
     }
     payload.embed_url = normalized.url;
-    payload.content = {
-      ...(payload.content || {}),
-      provider: normalized.provider,
-      embedUrl: normalized.embedUrl,
-      videoId: normalized.videoId || null,
-    };
+    if (!Array.isArray(payload.content)) {
+      payload.content = {
+        ...(payload.content || {}),
+        provider: normalized.provider,
+        embedUrl: normalized.embedUrl,
+        videoId: normalized.videoId || null,
+      };
+    }
   }
 
   if (uploadedMediaUrl) {
     payload.file_url = uploadedMediaUrl;
-    payload.content = {
-      ...(payload.content || {}),
-      uploadedMediaUrl,
-      uploadedMediaMimeType: mediaFile?.type || mediaMimeType || null,
-    };
+    if (!Array.isArray(payload.content)) {
+      payload.content = {
+        ...(payload.content || {}),
+        uploadedMediaUrl,
+        uploadedMediaMimeType: mediaFile?.type || mediaMimeType || null,
+      };
+    }
   }
 
   if (!uploadedMediaUrl && mediaMimeType) {
-    payload.content = {
-      ...(payload.content || {}),
-      uploadedMediaMimeType: mediaMimeType,
-    };
+    if (!Array.isArray(payload.content)) {
+      payload.content = {
+        ...(payload.content || {}),
+        uploadedMediaMimeType: mediaMimeType,
+      };
+    }
   }
 
   return { payload, tags: data.tags };

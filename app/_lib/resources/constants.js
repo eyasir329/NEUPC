@@ -9,6 +9,20 @@ export const RESOURCE_TYPES = [
   'file',
 ];
 
+// Groups UI filter labels → the DB resource_type values they include.
+// "All Types" returns null (no filter).
+export const RESOURCE_TYPE_GROUPS = {
+  Videos: ['video', 'youtube'],
+  Images: ['image'],
+  Links: ['external_link', 'facebook_post', 'linkedin_post'],
+  Files: ['file'],
+};
+
+export function resourceTypeGroupToValues(label) {
+  if (!label || label === 'All Types') return null;
+  return RESOURCE_TYPE_GROUPS[label] || null;
+}
+
 export const RESOURCE_VISIBILITY = ['public', 'members'];
 export const RESOURCE_STATUS = ['draft', 'scheduled', 'published', 'archived'];
 

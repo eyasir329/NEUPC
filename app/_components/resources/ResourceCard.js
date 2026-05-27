@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 import { safeExternalHref } from '@/app/_lib/resources/embed-utils';
+import { driveImageUrl, getInitials } from '@/app/_lib/utils';
 
 // ─── Type config ─────────────────────────────────────────────────────────────
 
@@ -297,6 +298,35 @@ export default function ResourceCard({
           <p className="line-clamp-2 text-[13px] leading-relaxed text-white/40 group-hover:text-white/50 transition-colors">
             {resource.description}
           </p>
+        )}
+
+        {/* Creator Info */}
+        {resource.creator && (
+          <div className="flex items-center gap-2 mt-1.5 mb-0.5">
+            <div className="relative h-5 w-5 rounded-full overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
+              {resource.creator.avatar_url ? (
+                <img
+                  src={driveImageUrl(resource.creator.avatar_url)}
+                  alt={resource.creator.full_name || 'Creator'}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white/70 bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30"
+                style={{ display: resource.creator.avatar_url ? 'none' : 'flex' }}
+              >
+                {getInitials(resource.creator.full_name || '?')}
+              </div>
+            </div>
+            <span className="text-[11px] font-medium text-white/50 group-hover:text-white/70 transition-colors truncate">
+              {resource.creator.full_name || 'Unknown'}
+            </span>
+          </div>
         )}
 
         {/* footer */}

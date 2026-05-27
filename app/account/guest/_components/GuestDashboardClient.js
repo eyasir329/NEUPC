@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   PageShell, PageHeader, GlassCard, SectionHeader,
-  StatCard, Pill, GradientBar, ActionButton, Avatar, EmptyState,
+  StatCard, Pill, GradientBar, ActionButton, EmptyState,
 } from './_ui';
 
 // ─── Fallback data (shown when DB returns empty) ───────────────────────────────
@@ -129,7 +129,14 @@ function GuestHero({ userName, avatarUrl, stats, latestApplication }) {
         {/* User Info Section */}
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
-            <Avatar name={userName} src={avatarUrl} size="xl" />
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl font-bold rounded-2xl shrink-0"
+            >
+              {userName.substring(0, 2).toUpperCase()}
+            </motion.div>
             <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-indigo-500/40 bg-indigo-500/20 text-[10px] font-black text-indigo-300 shadow-lg backdrop-blur-sm">G</span>
           </div>
           <div>

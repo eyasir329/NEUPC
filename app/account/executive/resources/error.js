@@ -1,8 +1,8 @@
 /**
- * @file Notices error boundary — catches runtime errors on the
- *   notices page and presents recovery options.
+ * @file Resources error boundary — catches runtime errors on the
+ *   resources page and presents recovery options.
  *
- * @module MentorNoticesError
+ * @module ExecutiveResourcesError
  */
 
 'use client';
@@ -14,8 +14,8 @@ export default function Error({ error, reset }) {
     <AccountError
       error={error}
       reset={reset}
-      title="Notices"
-      dashboardHref="/account/mentor"
+      title="Resources"
+      dashboardHref="/account/executive"
     />
   );
 }

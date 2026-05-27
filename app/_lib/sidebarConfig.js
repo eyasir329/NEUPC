@@ -273,6 +273,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/executive/bootcamps',
           },
           {
+            id: 'resources',
+            label: 'Resources',
+            icon: FolderOpen,
+            href: '/account/executive/resources',
+          },
+          {
             id: 'gallery',
             label: 'Gallery',
             icon: Image,
@@ -477,10 +483,10 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/mentor',
           },
           {
-            id: 'notices',
+            id: 'inbox',
             label: 'Inbox',
             icon: Bell,
-            href: '/account/mentor/notices',
+            href: '/account/mentor/inbox',
           },
           {
             id: 'discussions',
@@ -641,6 +647,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Bootcamps',
             icon: GraduationCap,
             href: '/account/advisor/bootcamps',
+          },
+          {
+            id: 'resources',
+            label: 'Resources',
+            icon: FolderOpen,
+            href: '/account/advisor/resources',
           },
           {
             id: 'achievements',

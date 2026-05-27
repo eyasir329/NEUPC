@@ -107,6 +107,43 @@ export async function toggleResourceBookmarkAction(resourceId) {
   return { success: true, bookmarked: true };
 }
 
+/** Toggle "completed" state for current user. */
+export async function toggleResourceCompletedAction(resourceId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+
+  const userId = authResult.user.id;
+  if (!resourceId) return { error: 'Missing resource ID.' };
+
+  const { data: existing, error: checkError } = await supabaseAdmin
+    .from('resource_completions')
+    .select('user_id')
+    .eq('resource_id', resourceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (checkError) return { error: checkError.message };
+
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from('resource_completions')
+      .delete()
+      .eq('resource_id', resourceId)
+      .eq('user_id', userId);
+    if (error) return { error: error.message };
+    revalidatePath('/account/member/resources');
+    return { success: true, completed: false };
+  }
+
+  const { error } = await supabaseAdmin
+    .from('resource_completions')
+    .insert({ resource_id: resourceId, user_id: userId });
+  if (error) return { error: error.message };
+
+  revalidatePath('/account/member/resources');
+  return { success: true, completed: true };
+}
+
 /** Record lightweight resource view analytics. */
 export async function trackResourceViewAction(resourceId, source = 'detail') {
   if (!resourceId) return { error: 'Missing resource ID.' };
@@ -121,5 +158,177 @@ export async function trackResourceViewAction(resourceId, source = 'detail') {
   });
 
   if (error) return { error: error.message };
+  return { success: true };
+}
+
+/** Toggle love/upvote state for current user. */
+export async function toggleResourceLoveAction(resourceId) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+
+  const userId = authResult.user.id;
+  if (!resourceId) return { error: 'Missing resource ID.' };
+
+  // Check if user already upvoted/loved this resource
+  const { data: existing, error: checkError } = await supabaseAdmin
+    .from('resource_upvotes')
+    .select('user_id')
+    .eq('resource_id', resourceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (checkError) return { error: checkError.message };
+
+  // Get current upvote count to increment/decrement safely
+  const { data: resource, error: fetchErr } = await supabaseAdmin
+    .from('resources')
+    .select('id, upvotes')
+    .eq('id', resourceId)
+    .single();
+
+  if (fetchErr || !resource) return { error: 'Resource not found.' };
+
+  if (existing) {
+    // Delete upvote and decrement count
+    const { error: deleteErr } = await supabaseAdmin
+      .from('resource_upvotes')
+      .delete()
+      .eq('resource_id', resourceId)
+      .eq('user_id', userId);
+
+    if (deleteErr) return { error: deleteErr.message };
+
+    const newCount = Math.max(0, (resource.upvotes ?? 0) - 1);
+    await supabaseAdmin
+      .from('resources')
+      .update({ upvotes: newCount })
+      .eq('id', resourceId);
+
+    revalidatePath('/account/member/resources');
+    revalidatePath('/account/mentor/resources');
+    return { success: true, loved: false, newCount };
+  } else {
+    // Insert upvote and increment count
+    const { error: insertErr } = await supabaseAdmin
+      .from('resource_upvotes')
+      .insert({ resource_id: resourceId, user_id: userId });
+
+    if (insertErr) return { error: insertErr.message };
+
+    const newCount = (resource.upvotes ?? 0) + 1;
+    await supabaseAdmin
+      .from('resources')
+      .update({ upvotes: newCount })
+      .eq('id', resourceId);
+
+    revalidatePath('/account/member/resources');
+    revalidatePath('/account/mentor/resources');
+    return { success: true, loved: true, newCount };
+  }
+}
+
+// =============================================================================
+// RESOURCE COMMENT ACTIONS
+// =============================================================================
+
+export async function getResourceCommentsAction(resourceId) {
+  if (!resourceId) return [];
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('resource_comments')
+      .select('*, users(id, full_name, avatar_url)')
+      .eq('resource_id', resourceId)
+      .eq('is_approved', true)
+      .order('created_at', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  } catch (err) {
+    console.error('Failed to get resource comments:', err);
+    return [];
+  }
+}
+
+export async function addResourceCommentAction(formData) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const user = authResult.user;
+
+  const resourceId = formData.get('resourceId');
+  const content = formData.get('content')?.trim();
+  const parentId = formData.get('parentId') || null;
+
+  if (!resourceId) return { error: 'Resource ID is required.' };
+  if (!content || content.length < 2) return { error: 'Comment is too short.' };
+  if (content.length > 2000)
+    return { error: 'Comment must be under 2000 characters.' };
+
+  const { data, error } = await supabaseAdmin
+    .from('resource_comments')
+    .insert([
+      {
+        resource_id: resourceId,
+        user_id: user.id,
+        parent_id: parentId,
+        content,
+        is_approved: true,
+      },
+    ])
+    .select('*, users(id, full_name, avatar_url)')
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/account/member/resources');
+  revalidatePath('/account/mentor/resources');
+  return { comment: data };
+}
+
+export async function editResourceCommentAction(formData) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const user = authResult.user;
+
+  const id = formData.get('id');
+  const content = formData.get('content')?.trim();
+
+  if (!id) return { error: 'Comment ID is required.' };
+  if (!content || content.length < 2) return { error: 'Comment is too short.' };
+  if (content.length > 2000)
+    return { error: 'Comment must be under 2000 characters.' };
+
+  const { data, error } = await supabaseAdmin
+    .from('resource_comments')
+    .update({ content, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select('*, users(id, full_name, avatar_url)')
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/account/member/resources');
+  revalidatePath('/account/mentor/resources');
+  return { comment: data };
+}
+
+export async function deleteResourceCommentAction(formData) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+  const user = authResult.user;
+
+  const id = formData.get('id');
+  if (!id) return { error: 'Comment ID is required.' };
+
+  const { error } = await supabaseAdmin
+    .from('resource_comments')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/account/member/resources');
+  revalidatePath('/account/mentor/resources');
   return { success: true };
 }

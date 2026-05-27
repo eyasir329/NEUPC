@@ -5,7 +5,8 @@ import {
   normalizeEmbed,
   safeExternalHref,
 } from '@/app/_lib/resources/embed-utils';
-import { FileDown, Download, ExternalLink, Loader2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { FileDown, Download, ExternalLink, Loader2, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2, AlertCircle, FileSearch, Hash } from 'lucide-react';
+import EventContentRenderer from '@/app/account/_components/events/EventContentRenderer';
 
 // ─── File helpers ─────────────────────────────────────────────────────────────
 
@@ -113,20 +114,122 @@ function getFileTypeKey(resource, fileUrl) {
   return '';
 }
 
-// ─── Social "View on …" fallback link ────────────────────────────────────────
+// ─── Social Post Embed Viewer (Unified Premium Component) ───────────────────
 
-function SocialFallbackLink({ href, provider, icon }) {
+const SOCIAL_BRAND_CONFIGS = {
+  facebook_post: {
+    provider: 'Facebook',
+    icon: FacebookIcon,
+    accentColor: 'text-[#1877F2]',
+    borderColor: 'border-[#1877F2]/20',
+    bgColor: 'bg-[#1877F2]/5',
+    buttonColor: 'bg-[#1877F2] hover:bg-[#1565C0] shadow-[#1877F2]/25',
+    glowColor: 'from-[#1877F2]/10 via-[#1877F2]/5 to-transparent',
+    tagColor: 'border-[#1877F2]/20 bg-[#1877F2]/10 text-blue-300',
+  },
+  linkedin_post: {
+    provider: 'LinkedIn',
+    icon: LinkedInIcon,
+    accentColor: 'text-[#0A66C2]',
+    borderColor: 'border-[#0A66C2]/20',
+    bgColor: 'bg-[#0A66C2]/5',
+    buttonColor: 'bg-[#0A66C2] hover:bg-[#08529C] shadow-[#0A66C2]/25',
+    glowColor: 'from-[#0A66C2]/10 via-[#0A66C2]/5 to-transparent',
+    tagColor: 'border-[#0A66C2]/20 bg-[#0A66C2]/10 text-sky-300',
+  },
+};
+
+function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, className = '' }) {
+  const [attemptEmbed, setAttemptEmbed] = useState(false);
+  const config = SOCIAL_BRAND_CONFIGS[type];
+  if (!config) return null;
+
+  const BrandIcon = config.icon;
+
+  if (attemptEmbed && iframeSrc) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <div className="flex justify-center">
+          <div className={`w-full max-w-130 overflow-hidden rounded-2xl border ${config.borderColor} bg-black/40 shadow-2xl`}>
+            <iframe
+              src={iframeSrc}
+              title={title || `${config.provider} post`}
+              className="w-full border-0"
+              style={{ minHeight }}
+              scrolling="no"
+              allowFullScreen
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              loading="lazy"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 max-w-130 mx-auto">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-gray-200 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open on {config.provider}
+          </a>
+          <button
+            onClick={() => setAttemptEmbed(false)}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Back to preview card
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2 text-sm text-gray-400 transition hover:border-white/15 hover:bg-white/5 hover:text-gray-200"
-    >
-      {icon}
-      <span>View on {provider}</span>
-      <ExternalLink className="h-3.5 w-3.5" />
-    </a>
+    <div className={`overflow-hidden rounded-2xl border ${config.borderColor} ${config.bgColor} backdrop-blur-md shadow-2xl ${className}`}>
+      <div className="relative flex flex-col items-center justify-center p-8 sm:p-12 text-center overflow-hidden">
+        {/* Background glow */}
+        <div className={`absolute -inset-10 -z-10 bg-gradient-to-br ${config.glowColor} blur-3xl opacity-50`} />
+        
+        {/* Icon */}
+        <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border ${config.borderColor} bg-white/5 ${config.accentColor} shadow-lg`}>
+          <BrandIcon className="h-8 w-8" />
+        </div>
+
+        {/* Brand Tag */}
+        <span className={`mb-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-sm ${config.tagColor}`}>
+          {config.provider} Post
+        </span>
+        <h3 className="mb-3 max-w-lg text-lg font-bold text-white sm:text-xl leading-snug tracking-tight">
+          {title || `View this post on ${config.provider}`}
+        </h3>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm justify-center mt-4">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg ${config.buttonColor}`}
+          >
+            <BrandIcon className="h-4 w-4 text-white fill-current" />
+            Open on {config.provider}
+          </a>
+          {iframeSrc && (
+            <button
+              onClick={() => setAttemptEmbed(true)}
+              className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              Try In-line Preview
+            </button>
+          )}
+        </div>
+
+        {/* Security hint */}
+        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed text-gray-500 font-medium">
+          To protect your privacy, Facebook and LinkedIn posts are best viewed directly on their respective platforms. Click <strong>Open on {config.provider}</strong> to view the full post.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -136,34 +239,16 @@ function FacebookPostEmbed({ embedUrl, title }) {
   const href = safeExternalHref(embedUrl);
   if (!href) return null;
 
-  // Facebook plugin iframe URL
   const pluginUrl = `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(href)}&show_text=true&width=500`;
 
   return (
-    <div className="space-y-0">
-      <div className="flex justify-center">
-        <div className="w-full max-w-130 overflow-hidden rounded-2xl border border-[#1877F2]/20 bg-[#1877F2]/5">
-          <iframe
-            src={pluginUrl}
-            title={title || 'Facebook post'}
-            className="w-full border-0"
-            style={{ minHeight: 350 }}
-            scrolling="no"
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            loading="lazy"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-center">
-        <SocialFallbackLink
-          href={href}
-          provider="Facebook"
-          icon={<FacebookIcon className="h-4 w-4" />}
-        />
-      </div>
-    </div>
+    <SocialPostEmbedViewer
+      href={href}
+      type="facebook_post"
+      title={title}
+      iframeSrc={pluginUrl}
+      minHeight={350}
+    />
   );
 }
 
@@ -176,13 +261,9 @@ function extractLinkedInPostId(url) {
     const decodedPath = decodeURIComponent(u.pathname);
     const combined = `${decodedPath}${u.search}`;
 
-    // Matches feed/update/embed URNs and encoded variants.
-    // LinkedIn embeds support activity/share/ugcPost identifiers.
     const urnMatch = combined.match(/(urn:li:(?:activity|share|ugcPost):\d+)/);
     if (urnMatch) return urnMatch[1];
 
-    // Matches the common slug format:
-    // /posts/username_slug-activity-1234567890123456789-xxxx
     const slugActivityMatch = decodedPath.match(/-activity-(\d{10,})/);
     if (slugActivityMatch) {
       return `urn:li:activity:${slugActivityMatch[1]}`;
@@ -199,88 +280,16 @@ function LinkedInPostEmbed({ embedUrl, title }) {
   if (!href) return null;
 
   const activityUrn = extractLinkedInPostId(embedUrl);
+  const iframeSrc = activityUrn ? `https://www.linkedin.com/embed/feed/update/${activityUrn}` : null;
 
-  // LinkedIn embed iframe works with valid update URNs
-  if (activityUrn) {
-    const iframeSrc = `https://www.linkedin.com/embed/feed/update/${activityUrn}`;
-    return (
-      <div className="space-y-0">
-        <div className="flex justify-center">
-          <div className="w-full max-w-130 overflow-hidden rounded-2xl border border-[#0A66C2]/20 bg-[#0A66C2]/5">
-            <iframe
-              src={iframeSrc}
-              title={title || 'LinkedIn post'}
-              className="w-full border-0"
-              style={{ minHeight: 400 }}
-              allowFullScreen
-              loading="lazy"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-center">
-          <SocialFallbackLink
-            href={href}
-            provider="LinkedIn"
-            icon={<LinkedInIcon className="h-4 w-4" />}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // LinkedIn does not provide a universal iframe for every public URL format.
-  // If we cannot derive an activity URN, fall back to the branded link card.
   return (
-    <div className="space-y-0">
-      <SocialPostCard
-        href={href}
-        provider="LinkedIn"
-        iconBg="bg-[#0A66C2]/15"
-        brandBg="bg-[#0A66C2]/5"
-        brandBorder="border-[#0A66C2]/20"
-        description={title || 'View the original LinkedIn post'}
-        icon={<LinkedInIcon className="h-7 w-7" />}
-      />
-    </div>
-  );
-}
-
-// ─── Social-brand full card (kept as fallback) ───────────────────────────────
-
-function SocialPostCard({
-  href,
-  provider,
-  brandBg,
-  brandBorder,
-  iconBg,
-  description,
-  icon,
-}) {
-  return (
-    <a
+    <SocialPostEmbedViewer
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`group block overflow-hidden rounded-2xl border ${brandBorder} ${brandBg} transition-all duration-300 hover:shadow-lg hover:shadow-black/20`}
-    >
-      <div className="flex items-center gap-4 p-6">
-        <div
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${iconBg}`}
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-white">
-            View on {provider}
-          </p>
-          <p className="mt-1 truncate text-sm text-gray-400">
-            {description || href}
-          </p>
-        </div>
-        <ExternalLink className="h-5 w-5 shrink-0 text-gray-500 transition-colors group-hover:text-white" />
-      </div>
-    </a>
+      type="linkedin_post"
+      title={title}
+      iframeSrc={iframeSrc}
+      minHeight={400}
+    />
   );
 }
 
@@ -496,6 +505,437 @@ function ImageFileViewer({ fileUrl, title, className = '' }) {
   );
 }
 
+// ─── PDF Viewer ───────────────────────────────────────────────────────────────
+
+const ZOOM_LEVELS = [50, 75, 100, 125, 150, 175, 200, 250, 300];
+const DEFAULT_ZOOM = 100;
+
+function buildPdfSrc(fileUrl, page, zoom) {
+  // Append fragment params so the browser's built-in PDF renderer respects them.
+  // Chrome / Edge honour #page=N&zoom=N; Firefox uses #page=N.
+  return `${fileUrl}#page=${page}&zoom=${zoom}`;
+}
+
+function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
+  const [totalPages, setTotalPages] = useState(null);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fitWidth, setFitWidth] = useState(false);
+  const isDriveEmbed = fileUrl?.includes('drive.google.com');
+  // If no separate downloadUrl, fall back to fileUrl
+  const effectiveDownloadUrl = downloadUrl || fileUrl;
+  // Derive the current iframe src
+  const effectiveZoom = fitWidth ? 'FitH' : zoom;
+  // Drive embeds don't support hashes
+  const iframeSrc = isDriveEmbed ? fileUrl : buildPdfSrc(fileUrl, currentPage, effectiveZoom);
+
+  // Sync page input with current page
+  useEffect(() => { setPageInput(String(currentPage)); }, [currentPage]);
+
+  // Fullscreen API
+  const [containerEl, setContainerEl] = useState(null);
+
+  const handleFullscreen = () => {
+    if (!document.fullscreenElement && containerEl) {
+      containerEl.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  const zoomIn = () => {
+    setFitWidth(false);
+    const idx = ZOOM_LEVELS.findLastIndex((z) => z <= zoom);
+    const next = ZOOM_LEVELS[Math.min(idx + 1, ZOOM_LEVELS.length - 1)];
+    setZoom(next);
+  };
+
+  const zoomOut = () => {
+    setFitWidth(false);
+    const idx = ZOOM_LEVELS.findIndex((z) => z >= zoom);
+    const prev = ZOOM_LEVELS[Math.max(idx - 1, 0)];
+    setZoom(prev);
+  };
+
+  const resetZoom = () => { setFitWidth(false); setZoom(DEFAULT_ZOOM); };
+  const toggleFitWidth = () => setFitWidth((f) => !f);
+
+  const goToPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
+  const goToNext = () => {
+    setCurrentPage((p) => (totalPages ? Math.min(totalPages, p + 1) : p + 1));
+  };
+
+  const handlePageInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const parsed = parseInt(pageInput, 10);
+      if (!isNaN(parsed) && parsed >= 1 && (!totalPages || parsed <= totalPages)) {
+        setCurrentPage(parsed);
+      } else {
+        setPageInput(String(currentPage));
+      }
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const parsed = parseInt(pageInput, 10);
+    if (!isNaN(parsed) && parsed >= 1 && (!totalPages || parsed <= totalPages)) {
+      setCurrentPage(parsed);
+    } else {
+      setPageInput(String(currentPage));
+    }
+  };
+
+  const canGoPrev = currentPage > 1;
+  const canGoNext = !totalPages || currentPage < totalPages;
+  const canZoomOut = !fitWidth && zoom <= ZOOM_LEVELS[0];
+  const canZoomIn = !fitWidth && zoom >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+
+  return (
+    <div
+      ref={setContainerEl}
+      className={`flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-black/40 ${isFullscreen ? 'fixed inset-0 z-[9999] rounded-none border-0' : ''} ${className}`}
+      style={isFullscreen ? { height: '100vh' } : {}}
+    >
+      {/* ── Top Toolbar ── */}
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-white/[0.06] bg-white/[0.025] px-3 py-2">
+
+        {/* File label */}
+        <div className="flex min-w-0 items-center gap-2 mr-2">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500/15">
+            <FileSearch className="h-3.5 w-3.5 text-red-400" />
+          </div>
+          <span className="truncate text-[12px] font-medium text-white/60 max-w-[140px] sm:max-w-[220px]">
+            {title || 'PDF Document'}
+          </span>
+          <span className="shrink-0 rounded-md border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
+            PDF
+          </span>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* ── Zoom and Page navigation controls (Only for non-Drive native PDFs) ── */}
+        {!isDriveEmbed && (
+          <>
+            {/* ── Zoom controls ── */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-white/8 bg-white/5 p-0.5">
+              <button
+                onClick={zoomOut}
+                disabled={canZoomOut}
+                title="Zoom out"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ZoomOut className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                onClick={toggleFitWidth}
+                title={fitWidth ? 'Exit fit-width' : 'Fit to width'}
+                className={`h-7 px-2 rounded-md text-[11px] font-semibold tabular-nums transition hover:bg-white/10 ${fitWidth ? 'text-indigo-400' : 'text-white/60 hover:text-white'}`}
+              >
+                {fitWidth ? 'Fit' : `${zoom}%`}
+              </button>
+
+              <button
+                onClick={zoomIn}
+                disabled={canZoomIn}
+                title="Zoom in"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ZoomIn className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="mx-0.5 h-4 w-px bg-white/10" />
+
+              <button
+                onClick={resetZoom}
+                disabled={!fitWidth && zoom === DEFAULT_ZOOM}
+                title="Reset zoom"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </button>
+            </div>
+
+            <div className="mx-1 h-5 w-px bg-white/[0.08]" />
+
+            {/* ── Page navigation ── */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-white/8 bg-white/5 p-0.5">
+              <button
+                onClick={goToPrev}
+                disabled={!canGoPrev}
+                title="Previous page"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-1 px-1">
+                <Hash className="h-3 w-3 text-white/30 shrink-0" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={handlePageInputKeyDown}
+                  onBlur={handlePageInputBlur}
+                  title="Current page"
+                  className="w-[3ch] bg-transparent text-center text-[12px] font-semibold text-white/80 outline-none focus:text-white"
+                />
+                {totalPages && (
+                  <span className="text-[11px] text-white/25 select-none">/ {totalPages}</span>
+                )}
+              </div>
+
+              <button
+                onClick={goToNext}
+                disabled={!canGoNext}
+                title="Next page"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mx-1 h-5 w-px bg-white/[0.08]" />
+          </>
+        )}
+
+        {/* ── Action buttons ── */}
+        <div className="flex items-center gap-1">
+          <a
+            href={effectiveDownloadUrl}
+            download
+            title="Download PDF"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/5 text-white/60 transition hover:bg-white/12 hover:text-white"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </a>
+
+          <a
+            href={effectiveDownloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open in new tab"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/5 text-white/60 transition hover:bg-white/12 hover:text-white"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+
+          <button
+            onClick={handleFullscreen}
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/5 text-white/60 transition hover:bg-white/12 hover:text-white"
+          >
+            {isFullscreen
+              ? <Minimize2 className="h-3.5 w-3.5" />
+              : <Maximize2 className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── PDF Frame ── */}
+      <div className="relative flex-1 bg-[#1a1a2e]" style={{ minHeight: isFullscreen ? 0 : 'max(700px, 82vh)' }}>
+        {/* Loading overlay */}
+        {!iframeLoaded && !iframeError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d1117]">
+            <Loader2 className="h-8 w-8 animate-spin text-red-400/60" />
+            <p className="text-[13px] text-white/30">Loading PDF…</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {iframeError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#0d1117] p-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/8">
+              <AlertCircle className="h-8 w-8 text-red-400/70" />
+            </div>
+            <div className="text-center">
+              <p className="text-[14px] font-semibold text-white/70">Unable to preview this PDF</p>
+              <p className="mt-1 text-[12px] text-white/30">The file may be restricted or require a login.</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <a
+                href={effectiveDownloadUrl}
+                download
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/8 hover:text-white"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download PDF
+              </a>
+              <a
+                href={effectiveDownloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/8 hover:text-white"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open in new tab
+              </a>
+            </div>
+          </div>
+        )}
+
+        <iframe
+          key={fileUrl}
+          src={iframeSrc}
+          title={title || 'PDF Document'}
+          className="h-full w-full border-0"
+          style={{ minHeight: isFullscreen ? 'calc(100vh - 49px)' : 'max(700px, 82vh)' }}
+          onLoad={() => { setIframeLoaded(true); setIframeError(false); }}
+          onError={() => { setIframeLoaded(true); setIframeError(true); }}
+          loading="lazy"
+          allowFullScreen
+        />
+      </div>
+
+      {/* ── Bottom bar (direct PDFs only – Drive has its own built-in controls) ── */}
+      {!isDriveEmbed && (
+        <div className="flex shrink-0 items-center justify-between border-t border-white/[0.05] bg-white/[0.015] px-4 py-2">
+          <div className="flex items-center gap-2 text-[11px] text-white/25">
+            <span>Use browser controls for advanced navigation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goToPrev}
+              disabled={!canGoPrev}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-white/40 transition hover:bg-white/5 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Prev
+            </button>
+            <span className="text-[11px] font-mono text-white/30">
+              Page {currentPage}{totalPages ? ` of ${totalPages}` : ''}
+            </span>
+            <button
+              onClick={goToNext}
+              disabled={!canGoNext}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-white/40 transition hover:bg-white/5 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── External Link Viewer ───────────────────────────────────────────────────
+
+function getDomainName(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    return u.hostname.replace('www.', '');
+  } catch {
+    return 'External Site';
+  }
+}
+
+function ExternalLinkViewer({ href, title, description, className = '' }) {
+  const [attemptEmbed, setAttemptEmbed] = useState(false);
+  const domain = getDomainName(href);
+
+  if (attemptEmbed) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-lg shadow-black/20 md:aspect-video">
+          <iframe
+            src={href}
+            title={title || 'External website'}
+            className="absolute inset-0 h-full w-full bg-white"
+            loading="lazy"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-gray-200 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in new tab
+          </a>
+          <button
+            onClick={() => setAttemptEmbed(false)}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Back to preview card
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`overflow-hidden rounded-2xl border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-md shadow-2xl ${className}`}>
+      <div className="relative flex flex-col items-center justify-center p-8 sm:p-12 text-center overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute -inset-10 -z-10 bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent blur-3xl opacity-50" />
+        
+        {/* Icon */}
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10">
+          <ExternalLink className="h-8 w-8 stroke-[1.75px]" />
+        </div>
+
+        {/* Domain and title */}
+        <span className="mb-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cyan-300 shadow-sm">
+          {domain}
+        </span>
+        <h3 className="mb-3 max-w-lg text-lg font-bold text-white sm:text-xl leading-snug tracking-tight">
+          {title || 'External Resource'}
+        </h3>
+        {description && (
+          <p className="mb-8 max-w-md text-xs leading-relaxed text-gray-400">
+            {description}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm justify-center">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 text-xs font-bold uppercase tracking-wider text-black transition-all hover:bg-cyan-400 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cyan-500/25"
+          >
+            <ExternalLink className="h-4 w-4 stroke-[2.2px]" />
+            Open Website
+          </a>
+          <button
+            onClick={() => setAttemptEmbed(true)}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+          >
+            Try In-line Preview
+          </button>
+        </div>
+
+        {/* Security hint */}
+        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed text-gray-500 font-medium">
+          To protect your security, some external websites cannot be viewed directly inside this dashboard. Click <strong>Open Website</strong> to safely open it in a new window.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function ResourceEmbed({ resource, className = '' }) {
@@ -560,16 +1000,10 @@ export default function ResourceEmbed({ resource, className = '' }) {
 
   // ── Rich Text ──────────────────────────────────────────
   if (type === 'rich_text') {
-    const html =
-      typeof resource?.content === 'string'
-        ? resource.content
-        : resource?.content?.html || '';
-
     return (
-      <article
-        className={`prose prose-invert prose-headings:text-white prose-p:text-gray-300 prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white prose-code:rounded prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-blue-300 prose-pre:border prose-pre:border-white/10 prose-pre:bg-black/40 prose-img:rounded-xl prose-img:border prose-img:border-white/10 max-w-none whitespace-pre-wrap ${className}`}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className={`w-full ${className}`}>
+        <EventContentRenderer content={resource?.content} />
+      </div>
     );
   }
 
@@ -619,33 +1053,21 @@ export default function ResourceEmbed({ resource, className = '' }) {
     if (!href) return null;
 
     return (
-      <div className={`space-y-3 ${className}`}>
-        <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-lg shadow-black/20 md:aspect-video">
-          <iframe
-            src={href}
-            title={resource?.title || 'External website'}
-            className="absolute inset-0 h-full w-full"
-            loading="lazy"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-gray-200 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open in new tab
-        </a>
-      </div>
+      <ExternalLinkViewer
+        href={href}
+        title={resource?.title}
+        description={resource?.description}
+        className={className}
+      />
     );
   }
 
   // ── File ───────────────────────────────────────────────
   if (type === 'file' && fileUrl) {
     const ext = getFileTypeKey(resource, fileUrl);
+
+    // Determine if the file is a PDF before any URL-type branching
+    const isPdfFile = ext === 'pdf';
 
     // 1. Check if it's a Google Drive URL
     let driveId = null;
@@ -659,7 +1081,22 @@ export default function ResourceEmbed({ resource, className = '' }) {
       }
     }
 
-    // If it is a Drive URL, Drive handles its own previews for almost everything
+    // Drive PDFs → use the full PDFViewer with the Drive /preview URL as the
+    // iframe src (so the browser renders the PDF) while keeping the original
+    // Drive URL available for the download / open-in-new-tab actions.
+    if (isPdfFile && driveId) {
+      const drivePreviewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+      return (
+        <PDFViewer
+          fileUrl={drivePreviewUrl}
+          downloadUrl={fileUrl}
+          title={resource?.title}
+          className={className}
+        />
+      );
+    }
+
+    // If it is a non-PDF Drive URL, Drive handles its own previews
     if (driveId) {
       const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
       return (
@@ -697,30 +1134,7 @@ export default function ResourceEmbed({ resource, className = '' }) {
 
     // 3. Handle PDF files
     if (ext === 'pdf') {
-      return (
-        <div className="space-y-3">
-          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
-            <iframe
-              src={fileUrl}
-              title={resource?.title || 'PDF Document'}
-              className="h-full w-full border-0 bg-white"
-              loading="lazy"
-              allowFullScreen
-            />
-          </div>
-          <div className="flex justify-end">
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-gray-300 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open in new tab
-            </a>
-          </div>
-        </div>
-      );
+      return <PDFViewer fileUrl={fileUrl} title={resource?.title} className={className} />;
     }
 
     // 4. Handle Images natively with Zoom

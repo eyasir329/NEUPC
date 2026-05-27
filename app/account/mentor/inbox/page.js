@@ -1,7 +1,7 @@
 /**
- * @file Mentor notices page — displays active notices filtered for the
+ * @file Mentor inbox page — displays active notices filtered for the
  *   mentor audience (notices targeting “all” or “mentor” users).
- * @module MentorNoticesPage
+ * @module MentorInboxPage
  * @access mentor
  */
 
@@ -9,9 +9,9 @@ import { requireRole } from '@/app/_lib/auth-guard';
 import { getActiveNotices } from '@/app/_lib/data-service';
 import MentorNoticesClient from './_components/MentorNoticesClient';
 
-export const metadata = { title: 'Notices | Mentor | NEUPC' };
+export const metadata = { title: 'Inbox | Mentor | NEUPC' };
 
-export default async function MentorNoticesPage() {
+export default async function MentorInboxPage() {
   const [{ user }, allNotices] = await Promise.all([
     requireRole('mentor'),
     getActiveNotices().catch(() => []),

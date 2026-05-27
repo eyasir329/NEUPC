@@ -6,7 +6,6 @@ import {
   Pin,
   Sparkles,
   PlusCircle,
-  Eye,
   Star,
   CheckCircle2,
 } from 'lucide-react';
@@ -33,12 +32,7 @@ export default function ResourcesPageHeader({
   total = 0,
   categoryCount = 0,
   pinnedCount = 0,
-  publicCount,
-  membersCount,
-  draftCount,
-  scheduledCount,
   publishedCount,
-  archivedCount,
   onCreateNew,
   children,
 }) {
@@ -71,7 +65,7 @@ export default function ResourcesPageHeader({
               {isGuest
                 ? 'Explore public guides, tutorials, and materials curated by the club to accelerate your learning journey.'
                 : isAdmin
-                  ? 'Manage and distribute educational resources to members and the public.'
+                  ? 'Manage and distribute educational resources to members.'
                   : 'Access exclusive learning materials, guides, and tools carefully curated to boost your problem-solving skills.'}
             </p>
 
@@ -94,7 +88,6 @@ export default function ResourcesPageHeader({
                   <StatBadge icon={BookOpen} label="Total" value={total} colorClass="text-blue-400" />
                   <StatBadge icon={CheckCircle2} label="Published" value={publishedCount ?? 0} colorClass="text-emerald-400" />
                   <StatBadge icon={Star} label="Pinned" value={pinnedCount} colorClass="text-amber-400" />
-                  <StatBadge icon={Eye} label="Public" value={publicCount ?? 0} colorClass="text-purple-400" />
                 </>
               )}
             </div>

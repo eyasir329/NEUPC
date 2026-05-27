@@ -138,8 +138,8 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
       <div className="flex flex-col gap-6">
         <PageHeader
           icon={Bell}
-          title="Notices"
-          subtitle="Announcements and updates for mentors."
+          title="Inbox"
+          subtitle="Notices and announcements for mentors."
           accent="amber"
           meta={pinnedCount > 0 ? (
             <span className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold tracking-wide uppercase text-amber-400">
