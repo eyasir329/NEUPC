@@ -10,7 +10,12 @@ import { redirect } from 'next/navigation';
 import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { logActivity, generateSlug } from '@/app/_lib/helpers';
+import {
+  logActivity,
+  generateSlug,
+  parseEventAgenda,
+  parseEventSpeakers,
+} from '@/app/_lib/helpers';
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/gdrive';
 import { generateImage } from '@/app/_lib/image-gen';
 import { generateText } from '@/app/_lib/text-gen';
@@ -159,6 +164,8 @@ export async function execCreateEventAction(formData) {
     participation_type: formData.get('participation_type') || 'individual',
     team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     created_by: user.id,
     approved_by: status !== 'draft' ? user.id : null,
     approved_at: status !== 'draft' ? new Date().toISOString() : null,
@@ -229,6 +236,8 @@ export async function execUpdateEventAction(formData) {
     participation_type: formData.get('participation_type') || 'individual',
     team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     updated_at: new Date().toISOString(),
   };
 

@@ -138,7 +138,7 @@ export default function ExecutiveNoticesClient({ notices: rawNotices = [] }) {
       <div className="flex flex-col gap-6">
         <PageHeader
           icon={Bell}
-          title="Notices"
+          title="Inbox"
           subtitle="Announcements and updates for the executive committee."
           accent="blue"
           meta={pinnedCount > 0 ? (

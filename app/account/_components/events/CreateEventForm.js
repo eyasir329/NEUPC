@@ -4,12 +4,13 @@ import { useState, useTransition, useRef, useCallback } from 'react';
 import {
   Save, Tag, Globe, FileText, Calendar, AlertTriangle, Loader2,
   Settings, Image as ImageIcon, Shield, Hash, Info, X, UploadCloud,
-  Users, MapPin, Star,
+  Users, MapPin, Star, CalendarClock, Mic2,
 } from 'lucide-react';
 import { EVENT_STATUS_CONFIG, CATEGORIES } from './eventConstants';
 import { driveImageUrl } from '@/app/_lib/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import EventContentRenderer from './EventContentRenderer';
+import { AgendaEditor, SpeakersEditor } from './EventSubEditors';
 
 // ─── Shared primitives (copied from ManageEventDetail) ─────────────────────────
 
@@ -329,6 +330,8 @@ export default function CreateEventForm({ onClose, onSuccess, createAction, uplo
   const [eligibility, setEligibility] = useState('all');
   const [participationType, setParticipationType] = useState('individual');
   const [teamSize, setTeamSize] = useState('');
+  const [agenda, setAgenda] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -354,6 +357,8 @@ export default function CreateEventForm({ onClose, onSuccess, createAction, uplo
     fd.set('eligibility', eligibility);
     fd.set('participation_type', participationType);
     if (participationType === 'team' && teamSize) fd.set('team_size', teamSize);
+    fd.set('agenda', JSON.stringify(agenda));
+    fd.set('speakers', JSON.stringify(speakers));
     startTransition(async () => {
       const res = await createAction(fd);
       if (res?.error) return setError(res.error);
@@ -508,6 +513,16 @@ export default function CreateEventForm({ onClose, onSuccess, createAction, uplo
                   <Label hint="Shown on event detail page">Full Content / Schedule</Label>
                   <MultiBlockEditor value={content} onChange={setContent} uploadImageAction={uploadImageAction} />
                 </div>
+              </Section>
+
+              {/* 1b. Agenda */}
+              <Section icon={CalendarClock} title="Agenda / Schedule" description="Chronology timeline shown under the “Event Agenda” tab" accentColor="#818cf8">
+                <AgendaEditor value={agenda} onChange={setAgenda} />
+              </Section>
+
+              {/* 1c. Speakers */}
+              <Section icon={Mic2} title="Panel Speakers" description="Presenters shown under the “Panel Speakers” tab" accentColor="#34d399">
+                <SpeakersEditor value={speakers} onChange={setSpeakers} />
               </Section>
 
               {/* 2. Media Assets */}

@@ -3,23 +3,37 @@
 import { useState, useTransition, useRef, useCallback } from 'react';
 import {
   ChevronLeft, Save, Trash2, Users, Tag, Globe,
-  FileText, Calendar, Clock, MapPin, Star, AlertTriangle, Loader2,
+  FileText, Calendar, MapPin, Star, AlertTriangle, Loader2,
   CheckCircle2, Settings, Image as ImageIcon, Edit3, Eye,
   Shield, Hash, Info, X, UploadCloud,
+  ArrowLeft, ExternalLink, Mic2, CalendarClock,
 } from 'lucide-react';
-import { GlassCard } from '@/app/account/admin/_components/_ui';
 import { EVENT_STATUS_CONFIG, CATEGORIES, VENUE_TYPES } from './eventConstants';
 import { driveImageUrl } from '@/app/_lib/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
-import EventContentRenderer from './EventContentRenderer';
+import { AgendaEditor, SpeakersEditor } from './EventSubEditors';
+import EventPublicContent from './EventPublicContent';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-const fmtDateTime = (d) =>
-  d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const toInput = (d) => (d ? new Date(d).toISOString().slice(0, 16) : '');
+
+const fmtDateLong = (d) =>
+  d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—';
+const fmtTime = (d) =>
+  d ? new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+
+function deriveStatus(event) {
+  if (event._bucket === 'ongoing' || event.status === 'ongoing')
+    return { label: '● Session Live', badge: 'bg-rose-500/10 text-rose-300 border-rose-500/25', matrix: 'text-rose-400', plain: 'Live' };
+  if (event.status === 'upcoming' || event._bucket === 'upcoming')
+    return { label: 'Upcoming', badge: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25', matrix: 'text-gray-200', plain: 'Upcoming' };
+  if (event.status === 'completed' || event._bucket === 'completed')
+    return { label: 'Completed', badge: 'bg-white/[0.06] text-gray-300 border-white/[0.1]', matrix: 'text-gray-200', plain: 'Completed' };
+  if (event.status === 'cancelled')
+    return { label: 'Cancelled', badge: 'bg-rose-500/10 text-rose-300 border-rose-500/25', matrix: 'text-rose-400', plain: 'Cancelled' };
+  return { label: 'Draft', badge: 'bg-white/[0.06] text-gray-400 border-white/[0.1]', matrix: 'text-gray-300', plain: 'Draft' };
+}
 
 // ─── Field primitives ──────────────────────────────────────────────────────────
 
@@ -409,6 +423,8 @@ function EditForm({ event, allCategories = [], roles = [], onSave, onCancel, onD
   const [eligibility, setEligibility] = useState(event.eligibility ?? 'all');
   const [participationType, setParticipationType] = useState(event.participation_type ?? 'individual');
   const [teamSize, setTeamSize] = useState(event.team_size ?? '');
+  const [agenda, setAgenda] = useState(Array.isArray(event.agenda) ? event.agenda : []);
+  const [speakers, setSpeakers] = useState(Array.isArray(event.speakers) ? event.speakers : []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -435,6 +451,8 @@ function EditForm({ event, allCategories = [], roles = [], onSave, onCancel, onD
     fd.set('eligibility', eligibility);
     fd.set('participation_type', participationType);
     if (participationType === 'team' && teamSize) fd.set('team_size', teamSize);
+    fd.set('agenda', JSON.stringify(agenda));
+    fd.set('speakers', JSON.stringify(speakers));
     startTransition(async () => {
       const res = await saveAction(fd);
       if (res?.error) return setError(res.error);
@@ -613,6 +631,16 @@ function EditForm({ event, allCategories = [], roles = [], onSave, onCancel, onD
               uploadImageAction={uploadImageAction}
             />
           </div>
+        </Section>
+
+        {/* ── 1b. Agenda ── */}
+        <Section icon={CalendarClock} title="Agenda / Schedule" description="Chronology timeline shown under the “Event Agenda” tab" accentColor="#818cf8">
+          <AgendaEditor value={agenda} onChange={setAgenda} />
+        </Section>
+
+        {/* ── 1c. Speakers ── */}
+        <Section icon={Mic2} title="Panel Speakers" description="Presenters shown under the “Panel Speakers” tab" accentColor="#34d399">
+          <SpeakersEditor value={speakers} onChange={setSpeakers} />
         </Section>
 
         {/* ── 2. Media Assets ── */}
@@ -820,51 +848,77 @@ function EditForm({ event, allCategories = [], roles = [], onSave, onCancel, onD
 // ─── View sidebar ──────────────────────────────────────────────────────────────
 
 function RegistrationStatsWidget({ event, onViewRegs }) {
+  const full =
+    event.max_participants && (event.registrationCount ?? 0) >= event.max_participants;
+  const checkedIn = event.attendedCount ?? 0;
   return (
-    <GlassCard className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/6 px-4 py-3 bg-white/[0.01]">
-        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-          <Users className="h-3.5 w-3.5 text-indigo-400" /> Registrations
-        </span>
-        {onViewRegs && (
-          <button onClick={onViewRegs} className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">
+    <div className="space-y-4 rounded-xl border border-white/[0.08] bg-gray-900 p-5 text-left">
+      <div className="flex items-center justify-between">
+        <h4 className="font-mono text-xs font-bold tracking-wider text-gray-500 uppercase">
+          Logistics Analytics
+        </h4>
+        {onViewRegs ? (
+          <button
+            onClick={onViewRegs}
+            className="font-mono text-[10px] font-bold text-indigo-400 uppercase transition-colors hover:text-indigo-300"
+          >
             View all →
           </button>
+        ) : (
+          <span className="font-mono text-[9px] font-semibold text-gray-500 uppercase">
+            Live Pulse
+          </span>
         )}
       </div>
-      <div className="p-4">
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-white/6 bg-white/2 px-3 py-3 transition-colors hover:bg-white/4">
-            <p className="text-2xl font-black text-white tabular-nums">{event.registrationCount ?? 0}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-0.5">Registered</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3.5">
+          <span className="font-mono text-[9px] font-bold tracking-wider text-gray-500 uppercase">
+            Registered
+          </span>
+          <p className="mt-1 text-2xl leading-none font-bold text-white">
+            {event.registrationCount ?? 0}
+          </p>
+          <span className="mt-1.5 block font-mono text-[8px] font-semibold text-emerald-400">
+            Active attendees
+          </span>
+        </div>
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3.5">
+          <span className="font-mono text-[9px] font-bold tracking-wider text-gray-500 uppercase">
+            Checked In
+          </span>
+          <p className="mt-1 text-2xl leading-none font-bold text-white">
+            {checkedIn}
+          </p>
+          <span className="mt-1.5 block font-mono text-[8px] font-semibold text-gray-500">
+            Live occupancy
+          </span>
+        </div>
+      </div>
+
+      {event.max_participants && (
+        <div>
+          <div className="mb-2 flex justify-between font-mono text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+            <span>Capacity</span>
+            <span className={full ? 'font-semibold text-rose-400' : 'text-gray-400'}>
+              {event.registrationCount ?? 0} / {event.max_participants}
+              {full && ' · Full'}
+            </span>
           </div>
-          <div className="rounded-xl border border-white/6 bg-white/2 px-3 py-3 transition-colors hover:bg-white/4">
-            <p className="text-2xl font-black text-white tabular-nums">{event.attendedCount ?? 0}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-0.5">Attended</p>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${full ? 'bg-gradient-to-r from-rose-500 to-red-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
+              style={{ width: `${Math.min(100, ((event.registrationCount ?? 0) / event.max_participants) * 100)}%` }}
+            />
           </div>
         </div>
-        {event.max_participants && (
-          <div>
-            <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              <span>Capacity</span>
-              <span className={event.registrationCount >= event.max_participants ? 'font-semibold text-rose-400' : 'text-gray-400'}>
-                {event.registrationCount ?? 0} / {event.max_participants}
-                {event.registrationCount >= event.max_participants && ' · Full'}
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
-              <div className={`h-full rounded-full transition-all duration-500 ${event.registrationCount >= event.max_participants ? 'bg-gradient-to-r from-rose-500 to-red-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
-                style={{ width: `${Math.min(100, ((event.registrationCount ?? 0) / event.max_participants) * 100)}%` }} />
-            </div>
-          </div>
-        )}
-      </div>
-    </GlassCard>
+      )}
+    </div>
   );
 }
 
 function EventDetailsWidget({ event, roles = [] }) {
-  const sc = EVENT_STATUS_CONFIG[event.status] || EVENT_STATUS_CONFIG.draft;
+  const sc = deriveStatus(event);
 
   const eligibilityValue = (() => {
     if (!event.eligibility || event.eligibility === 'all') return 'Everyone';
@@ -875,34 +929,46 @@ function EventDetailsWidget({ event, roles = [] }) {
     return event.eligibility;
   })();
 
+  const startDateLong = fmtDateLong(event.start_date);
+  const endDateLong = event.end_date ? fmtDateLong(event.end_date) : startDateLong;
+  const startTime = fmtTime(event.start_date);
+  const endTime = event.end_date ? fmtTime(event.end_date) : '';
+  const venueType = event.venue_type
+    ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1)
+    : '—';
+
   const rows = [
-    { label: 'Status', value: <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${sc.badge}`}><span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />{sc.label}</span> },
-    { label: 'Category', value: event.category || '—' },
-    { label: 'Venue', value: event.venue_type ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1) : '—' },
-    { label: 'Start', value: fmtDateTime(event.start_date) },
-    ...(event.end_date ? [{ label: 'End', value: fmtDateTime(event.end_date) }] : []),
-    { label: 'Location', value: event.location || '—' },
-    { label: 'Participation', value: event.participation_type === 'team' ? `Team · ${event.team_size ?? '?'} members` : 'Individual' },
-    { label: 'Eligibility', value: eligibilityValue },
-    ...(event.prerequisites ? [{ label: 'Prerequisites', value: event.prerequisites }] : []),
-    { label: 'Reg. Required', value: event.registration_required ? 'Yes' : 'No' },
-    ...(event.registration_deadline ? [{ label: 'Reg. Deadline', value: fmtDateTime(event.registration_deadline) }] : []),
-    { label: 'Featured', value: event.is_featured ? <span className="flex items-center gap-1 text-amber-300 font-bold"><Star className="h-3 w-3 fill-amber-300" /> Yes</span> : 'No' },
+    { label: 'Stream Status', value: sc.plain, className: `font-mono font-bold text-[11px] ${sc.matrix}` },
+    { label: 'Category Topic', value: event.category || '—', className: 'text-gray-200 font-semibold text-right max-w-[130px] truncate' },
+    { label: 'Venue Layout', value: venueType, className: 'text-white font-bold' },
+    { label: 'Participation', value: event.participation_type === 'team' ? `Team · ${event.team_size ?? '?'}` : 'Individual', className: 'text-gray-200 font-semibold' },
+    { label: 'Start Bracket', value: `${startDateLong}${startTime ? `, ${startTime}` : ''}`, className: 'text-gray-300 font-mono font-semibold text-right', stack: true },
+    { label: 'End Bracket', value: `${endDateLong}${endTime ? `, ${endTime}` : ''}`, className: 'text-gray-300 font-mono font-semibold text-right', stack: true },
+    { label: 'Location', value: event.location || '—', className: 'text-gray-200 font-semibold text-right max-w-[150px] truncate' },
+    { label: 'Eligibility Target', value: eligibilityValue, className: 'text-indigo-400 font-bold text-right max-w-[140px] truncate' },
+    ...(event.prerequisites ? [{ label: 'Prerequisites', value: event.prerequisites, className: 'text-gray-300 font-semibold text-right max-w-[150px] truncate' }] : []),
+    ...(event.registration_deadline ? [{ label: 'Reg. Deadline', value: fmtDateLong(event.registration_deadline), className: 'text-gray-300 font-mono font-semibold text-right', stack: true }] : []),
+    { label: 'Registration Ticket', value: event.registration_required ? 'MANDATORY' : 'OPTIONAL', className: 'text-indigo-400 font-mono font-bold' },
+    { label: 'Promoted Spotlight', value: event.is_featured ? 'Yes' : 'No', className: 'text-gray-200 font-bold' },
   ];
+
   return (
-    <GlassCard className="overflow-hidden">
-      <div className="border-b border-white/6 px-4 py-3 bg-white/[0.01]">
-        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Event Details</span>
-      </div>
-      <div className="divide-y divide-white/5">
-        {rows.map(({ label, value }) => (
-          <div key={label} className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
-            <span className="shrink-0 text-xs font-medium text-gray-500">{label}</span>
-            <span className="text-right text-xs font-semibold text-gray-200">{value}</span>
+    <div className="space-y-4 rounded-2xl border border-white/[0.08] bg-gray-900 p-5 text-left">
+      <h4 className="border-b border-white/[0.06] pb-2 font-mono text-xs font-bold tracking-wider text-gray-500 uppercase">
+        Logistics Matrix
+      </h4>
+      <div className="space-y-2.5 text-xs">
+        {rows.map((row, i) => (
+          <div
+            key={row.label}
+            className={`flex justify-between py-1 ${i > 0 ? 'border-t border-white/[0.06]' : ''} ${row.stack ? 'flex-col gap-1 sm:flex-row sm:items-center' : ''}`}
+          >
+            <span className="font-medium text-gray-500">{row.label}</span>
+            <span className={row.className}>{row.value}</span>
           </div>
         ))}
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -923,7 +989,6 @@ export default function ManageEventDetail({
 }) {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  const sc = EVENT_STATUS_CONFIG[event.status] || EVENT_STATUS_CONFIG.draft;
 
   const handleSaved = () => {
     setEditing(false);
@@ -980,137 +1045,53 @@ export default function ManageEventDetail({
 
   // ── View mode ──
   return (
-    <div className="flex flex-col gap-6 pb-16 animate-in fade-in slide-in-from-bottom-3 duration-200">
+    <div className="animate-in fade-in slide-in-from-bottom-3 flex flex-col gap-6 pb-16 text-left duration-200">
 
-      {/* Actions bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/6 bg-white/[0.02] p-4 backdrop-blur-xl">
+      {/* Detail Toolbar Row */}
+      <div className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-center">
         <button onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
-          <ChevronLeft size={14} /> Back to Events
+          className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-xs font-semibold text-gray-300 transition-all hover:bg-white/[0.06] hover:text-white active:scale-[0.98]">
+          <ArrowLeft className="h-4 w-4" /> Back to Events Grid
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {saved && (
             <span className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400">
               <CheckCircle2 className="h-3.5 w-3.5 animate-bounce" /> Saved
             </span>
           )}
+          <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 font-mono text-[10px] text-gray-400">
+            <Users className="h-4 w-4 text-indigo-400" />
+            <span>Registrations: </span>
+            <span className="font-bold text-indigo-300">{event.registrationCount ?? 0}</span>
+          </div>
           {onViewRegs && (
             <button onClick={onViewRegs}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
-              <Users className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Registrations</span>
-              {(event.registrationCount ?? 0) > 0 && (
-                <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 tabular-nums">
-                  {event.registrationCount}
-                </span>
-              )}
+              className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 font-mono text-[11px] font-semibold text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white">
+              <Users className="h-3.5 w-3.5" /> View Registrants
             </button>
           )}
           <a
             href={`/events/${event.slug || event.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-95">
-            <Globe className="h-3.5 w-3.5 text-sky-400" />
-            <span>Public Page</span>
+            className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 font-mono text-[11px] font-semibold text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white">
+            <ExternalLink className="h-3.5 w-3.5" /> Public Page
           </a>
           <button onClick={() => setEditing(true)}
-            className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-600/20 px-4 py-2.5 text-xs font-bold text-indigo-300 transition-all hover:border-indigo-500/50 hover:bg-indigo-600/30 hover:text-indigo-200 active:scale-95">
+            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-indigo-500 active:scale-95">
             <Edit3 className="h-3.5 w-3.5" /> Edit Event
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-
-        {/* LEFT: col-span-2 */}
-        <div className="flex flex-col gap-6 xl:col-span-2">
-
-          {/* Header card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-white/6 bg-gradient-to-b from-white/[0.04] to-transparent p-6 transition-all duration-300 hover:border-white/12 md:p-8">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/15 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-            <div className="relative flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
-              {event.cover_image ? (
-                <div className="relative h-[130px] w-full sm:w-[130px] shrink-0 overflow-hidden rounded-xl border border-white/8 bg-white/3">
-                  <img src={driveImageUrl(event.cover_image)} alt={event.title}
-                    onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-xl" />
-                </div>
-              ) : (
-                <div className="flex h-[130px] w-full sm:w-[130px] shrink-0 flex-col items-center justify-center rounded-xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
-                  <span className="text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
-                    {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' })}
-                  </span>
-                  <span className="text-4xl font-extrabold text-white mt-1">{new Date(event.start_date).getDate()}</span>
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${sc.badge}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} /> {sc.label}
-                  </span>
-                  {event.category && (
-                    <span className="rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-indigo-300 uppercase">
-                      {event.category}
-                    </span>
-                  )}
-                  {event.is_featured && (
-                    <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
-                      <Star className="h-2.5 w-2.5 fill-amber-300" /> Featured
-                    </span>
-                  )}
-                </div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl bg-clip-text bg-gradient-to-r from-white via-white to-gray-400">{event.title}</h1>
-                <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-400">
-                  <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-indigo-400" /> {fmtDate(event.start_date)}</span>
-                  <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-emerald-400" /> {new Date(event.start_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                  {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-sky-400" /> {event.location}</span>}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* About */}
-          {event.description && (
-            <GlassCard className="p-6">
-              <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                <Info className="h-3.5 w-3.5 text-indigo-400" /> About
-              </h3>
-              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-gray-300">{event.description}</p>
-            </GlassCard>
-          )}
-
-          {/* Full content */}
-          {event.content && (
-            <GlassCard className="relative overflow-hidden p-6">
-              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-600/5 blur-3xl" />
-              <h3 className="relative mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                <FileText className="h-3.5 w-3.5 text-indigo-400" /> Full Details / Schedule
-              </h3>
-              <div className="relative">
-                <EventContentRenderer content={event.content} />
-              </div>
-            </GlassCard>
-          )}
-
-          {/* Tags */}
-          {event.tags?.length > 0 && (
-            <GlassCard className="p-5">
-              <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                <Tag className="h-3.5 w-3.5 text-indigo-400" /> Tags
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {event.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/6 bg-white/4 px-2.5 py-0.5 text-xs text-gray-300 transition-colors hover:border-white/12 hover:bg-white/8">#{tag}</span>
-                ))}
-              </div>
-            </GlassCard>
-          )}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+        {/* Main content (public-style, no images) */}
+        <div className="lg:col-span-8">
+          <EventPublicContent event={event} />
         </div>
 
-        {/* RIGHT: col-span-1 */}
-        <div className="flex flex-col gap-6 xl:col-span-1">
+        {/* Right column */}
+        <div className="space-y-6 lg:col-span-4 lg:sticky lg:top-6">
           <RegistrationStatsWidget event={event} onViewRegs={onViewRegs} />
           <EventDetailsWidget event={event} roles={roles} />
         </div>
