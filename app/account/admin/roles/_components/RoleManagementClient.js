@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Shield,
   Users,
@@ -18,7 +18,6 @@ import {
   Search,
   CheckCircle2,
   XCircle,
-  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import RoleCard from './RoleCard';
@@ -26,31 +25,14 @@ import PermissionsModal from './PermissionsModal';
 import EditDescriptionModal from './EditDescriptionModal';
 import AssignRoleModal from './AssignRoleModal';
 import { getRoleConfig } from './roleConfig';
-
-// ─── small helpers ────────────────────────────────────────────
-
-function StatCard({ icon: Icon, label, value, sub, colorClass }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-4 py-3.5 backdrop-blur-sm">
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xl leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-xs text-gray-500">{label}</p>
-        {sub && (
-          <p className="mt-0.5 truncate text-[10px] text-gray-600">{sub}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── main component ────────────────────────────────────────────
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+  EmptyState,
+  GlassCard,
+  StaggerList,
+} from '../../_components/_ui';
 
 export default function RoleManagementClient({
   initialRoles,
@@ -110,11 +92,7 @@ export default function RoleManagementClient({
   }
 
   // Called by AssignRoleModal whenever a user's role changes.
-  // userId – the affected user
-  // roleId – the role that was added or removed
-  // action – 'assign' | 'remove'
   function handleUserAssigned(userId, roleId, action) {
-    // Resolve the role name for updating roleNames alongside roleIds
     const roleName = roles.find((r) => r.id === roleId)?.name;
 
     // 1. Update the live users array so re-opening a modal shows fresh data
@@ -168,128 +146,115 @@ export default function RoleManagementClient({
   );
 
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Roles</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/15 ring-1 ring-purple-500/25">
-                <Shield className="h-5 w-5 text-purple-400" />
-              </div>
-              Role Management
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Manage roles, permissions and access control
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+      <PageHeader
+        title="Role Management"
+        subtitle="Configure role hierarchy, assign user scopes, and manage granular system capabilities."
+        icon={Shield}
+        accent="violet"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/account/admin/users"
-              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-xs font-medium text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
+              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20 active:scale-95"
             >
               User Management
             </Link>
             <Link
               href="/account/admin/applications"
-              className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs font-medium text-yellow-300 transition-all hover:border-yellow-500/50 hover:bg-yellow-500/20"
+              className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-semibold text-yellow-300 transition-all hover:border-yellow-500/50 hover:bg-yellow-500/20 active:scale-95"
             >
               Applications
             </Link>
             <Link
               href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white active:scale-95"
             >
               ← Dashboard
             </Link>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* ── Stats ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* ── Stats Grid ────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Shield}
           label="Total Roles"
           value={roles.length}
-          colorClass="bg-purple-500/20 text-purple-400"
+          accent="violet"
+          delay={0.05}
         />
         <StatCard
           icon={Key}
           label="Total Permissions"
           value={totalPermissions}
-          colorClass="bg-blue-500/20 text-blue-400"
+          accent="blue"
+          delay={0.1}
         />
         <StatCard
           icon={Users}
           label="Users with Roles"
           value={totalUsers}
-          sub={mostUsedRole ? `Most common: ${mostUsedRole.name}` : undefined}
-          colorClass="bg-emerald-500/20 text-emerald-400"
+          sublabel={mostUsedRole ? `Most common: ${mostUsedRole.name}` : undefined}
+          accent="emerald"
+          delay={0.15}
         />
         <StatCard
           icon={Lock}
-          label="Highest Role"
+          label="Highest Precedence"
           value={
             highestRole?.name
               ? highestRole.name.charAt(0).toUpperCase() +
                 highestRole.name.slice(1)
               : '—'
           }
-          sub={`Priority ${highestRole?.priority ?? '—'}`}
-          colorClass="bg-red-500/20 text-red-400"
+          sublabel={`Priority Level ${highestRole?.priority ?? '—'}`}
+          accent="rose"
+          delay={0.2}
         />
       </div>
 
-      {/* ── Toolbar ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* search */}
-        <div className="relative max-w-xs flex-1">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+      {/* ── Search & Filter Controls ─────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Search */}
+        <div className="relative w-full sm:max-w-xs">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+            <Search className="h-4 w-4 text-gray-500" />
+          </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search roles…"
-            className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-4 pl-10 text-sm text-white placeholder-gray-600 transition-colors outline-none focus:border-white/20"
+            placeholder="Search roles by name or description..."
+            className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
           />
         </div>
 
-        {/* view toggle */}
-        <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+        {/* View Switcher */}
+        <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-1 self-end sm:self-auto">
           <button
             onClick={() => setView('grid')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               view === 'grid'
-                ? 'bg-white/10 text-white'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'bg-white/8 text-white shadow-sm'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            Grid
+            Grid View
           </button>
           <button
             onClick={() => setView('matrix')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               view === 'matrix'
-                ? 'bg-white/10 text-white'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'bg-white/8 text-white shadow-sm'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
             <Table2 className="h-3.5 w-3.5" />
-            Matrix
+            Permissions Matrix
           </button>
         </div>
       </div>
@@ -298,21 +263,25 @@ export default function RoleManagementClient({
       {view === 'grid' && (
         <>
           {filteredRoles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/8 bg-white/4 py-16 text-center text-gray-500">
-              <Shield className="mb-3 h-10 w-10 opacity-30" />
-              <p className="text-sm">No roles match your search.</p>
-            </div>
+            <EmptyState
+              icon={Shield}
+              title="No Roles Found"
+              description="No registered system roles match your active search terms."
+              accent="violet"
+            />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredRoles.map((role) => (
-                <RoleCard
-                  key={role.id}
-                  role={role}
-                  onManagePermissions={(r) => setPermissionsRole(r)}
-                  onEditDescription={(r) => setEditRole(r)}
-                  onAssignUsers={(r) => setAssignRole(r)}
-                />
-              ))}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <StaggerList>
+                {filteredRoles.map((role) => (
+                  <RoleCard
+                    key={role.id}
+                    role={role}
+                    onManagePermissions={(r) => setPermissionsRole(r)}
+                    onEditDescription={(r) => setEditRole(r)}
+                    onAssignUsers={(r) => setAssignRole(r)}
+                  />
+                ))}
+              </StaggerList>
             </div>
           )}
         </>
@@ -320,129 +289,139 @@ export default function RoleManagementClient({
 
       {/* ── Matrix View ───────────────────────────────────── */}
       {view === 'matrix' && (
-        <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/3">
-          <table className="w-full min-w-160 text-left text-xs">
-            <thead>
-              <tr className="border-b border-white/8">
-                <th className="sticky left-0 z-10 bg-[#0f1117] px-4 py-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                  Permission
-                </th>
-                {[...roles].reverse().map((role) => {
-                  const cfg = getRoleConfig(role.name);
-                  return (
-                    <th key={role.id} className="px-4 py-3 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span
-                          className={`inline-flex rounded-lg px-2 py-0.5 text-[10px] font-semibold capitalize ${cfg.badge}`}
-                        >
-                          {role.name}
-                        </span>
-                        <span className="text-[9px] text-gray-600">
-                          P{role.priority}
-                        </span>
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {permCategories.map((category) => (
-                <>
-                  {/* category row */}
-                  <tr
-                    key={`cat-${category}`}
-                    className="border-b border-white/5 bg-white/3"
-                  >
-                    <td
-                      colSpan={roles.length + 1}
-                      className="sticky left-0 bg-white/5 px-4 py-1.5 text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
-                    >
-                      {category}
-                    </td>
-                  </tr>
-                  {/* permission rows */}
-                  {allPermissions
-                    .filter((p) => p.category === category)
-                    .map((perm) => (
-                      <tr
-                        key={perm.id}
-                        className="border-b border-white/5 hover:bg-white/3"
+        <GlassCard padding="p-0" className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-160 text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/8 bg-white/2">
+                  <th className="sticky left-0 z-10 bg-gray-950 px-5 py-4 text-xs font-bold tracking-wider text-gray-400 uppercase">
+                    Permission Scope
+                  </th>
+                  {[...roles].reverse().map((role) => {
+                    const cfg = getRoleConfig(role.name);
+                    return (
+                      <th key={role.id} className="px-5 py-4 text-center border-l border-white/6">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase ${cfg.badge}`}
+                          >
+                            {role.name}
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">
+                            Priority {role.priority}
+                          </span>
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/6">
+                {permCategories.map((category) => (
+                  <React.Fragment key={`cat-${category}`}>
+                    {/* Category Header Row */}
+                    <tr className="bg-white/3">
+                      <td
+                        colSpan={roles.length + 1}
+                        className="sticky left-0 bg-gray-900/90 backdrop-blur-sm px-5 py-2.5 text-[9px] font-extrabold tracking-widest text-indigo-400/90 uppercase border-y border-white/8"
                       >
-                        <td className="sticky left-0 bg-[#0f1117] px-4 py-2.5 font-mono text-[11px] text-gray-300">
-                          {perm.name}
-                          {perm.description && (
-                            <p className="mt-0.5 font-sans text-[10px] text-gray-600">
-                              {perm.description}
+                        {category} Permissions
+                      </td>
+                    </tr>
+                    {/* Permission Scope Rows */}
+                    {allPermissions
+                      .filter((p) => p.category === category)
+                      .map((perm) => (
+                        <tr
+                          key={perm.id}
+                          className="hover:bg-white/2 transition-colors duration-150"
+                        >
+                          <td className="sticky left-0 bg-gray-950 px-5 py-3.5 min-w-[280px]">
+                            <p className="font-mono text-xs font-bold text-gray-200">
+                              {perm.name}
                             </p>
-                          )}
-                        </td>
-                        {[...roles].reverse().map((role) => {
-                          const has = role.permissions?.some(
-                            (p) => p.id === perm.id
-                          );
-                          return (
-                            <td
-                              key={role.id}
-                              className="px-4 py-2.5 text-center"
-                            >
-                              {has ? (
-                                <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-400" />
-                              ) : (
-                                <XCircle className="mx-auto h-4 w-4 text-gray-700" />
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                </>
-              ))}
-            </tbody>
-          </table>
+                            {perm.description && (
+                              <p className="mt-1 text-[11px] text-gray-400">
+                                {perm.description}
+                              </p>
+                            )}
+                          </td>
+                          {[...roles].reverse().map((role) => {
+                            const has = role.permissions?.some(
+                              (p) => p.id === perm.id
+                            );
+                            return (
+                              <td
+                                key={role.id}
+                                className="px-5 py-3.5 text-center border-l border-white/6"
+                              >
+                                {has ? (
+                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                                    <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+                                  </div>
+                                ) : (
+                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/2 border border-white/6">
+                                    <XCircle className="h-4.5 w-4.5 text-gray-700" />
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {allPermissions.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-              <Key className="mb-3 h-8 w-8 opacity-30" />
-              <p className="text-sm">
-                No permissions defined in the database yet.
-              </p>
+            <div className="p-12">
+              <EmptyState
+                icon={Key}
+                title="No Permissions Defined"
+                description="There are currently no permissions configured in the system."
+                accent="blue"
+              />
             </div>
           )}
-        </div>
+        </GlassCard>
       )}
 
       {/* ── Priority Legend ───────────────────────────────── */}
-      <div className="rounded-2xl border border-white/8 bg-white/3 px-5 py-4">
-        <p className="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-          Role Hierarchy
-        </p>
-        <div className="flex flex-wrap gap-2">
+      <GlassCard>
+        <div className="flex items-center gap-2 mb-3.5">
+          <Shield className="h-4 w-4 text-purple-400" />
+          <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase">
+            Role Hierarchy & Precedence
+          </h3>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
           {[...roles].reverse().map((role) => {
             const cfg = getRoleConfig(role.name);
             return (
               <div
                 key={role.id}
-                className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${cfg.bgGlass} ${cfg.border}`}
+                className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2 shadow-sm ${cfg.bgGlass} ${cfg.border}`}
               >
-                <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
+                <span className={`h-2.5 w-2.5 rounded-full animate-pulse ${cfg.dot}`} />
                 <span
-                  className={`text-xs font-semibold capitalize ${cfg.accent}`}
+                  className={`text-xs font-bold capitalize ${cfg.accent}`}
                 >
                   {role.name}
                 </span>
-                <span className="text-[10px] text-gray-600">
-                  P{role.priority}
+                <span className="text-[10px] text-gray-500 font-mono">
+                  Priority {role.priority}
                 </span>
               </div>
             );
           })}
-          <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-3 py-1.5">
-            <span className="text-[10px] text-gray-500">
-              Higher priority = more access
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/6 bg-white/2 px-3.5 py-2">
+            <span className="text-[10px] text-gray-500 font-medium">
+              Note: Higher priority levels grant override capabilities and inherit access from sub-priority roles.
             </span>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* ── Modals ────────────────────────────────────────── */}
       {permissionsRole && (
@@ -473,6 +452,6 @@ export default function RoleManagementClient({
           onUserAssigned={handleUserAssigned}
         />
       )}
-    </>
+    </PageShell>
   );
 }

@@ -15,12 +15,12 @@ import {
   ShieldOff,
   Ban,
   LockKeyhole,
-  ChevronRight,
   MessageSquare,
   Loader,
   Send,
   X,
   ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -34,13 +34,17 @@ import {
   sendCustomEmailAction,
 } from '@/app/_lib/user-actions';
 import { MODAL_CONFIG } from './constants';
-import StatCard from './StatCard';
 import ConfirmModal from './ConfirmModal';
 import Toast from './Toast';
 import UsersTable from './UsersTable';
 import FilterBar from './FilterBar';
 import ModalForm from './ModalForm';
 import UserFormPanel from './UserFormPanel';
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+} from '../../_components/_ui';
 
 // ─── main component ──────────────────────────────────────────
 
@@ -339,99 +343,94 @@ NEUPC Team`;
   const cfg = modal ? MODAL_CONFIG[modal.type] : null;
 
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-violet-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">User Management</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 ring-1 ring-blue-500/25">
-                <Users className="h-5 w-5 text-blue-400" />
-              </div>
-              User Management
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Manage platform users, roles, and account status
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+      <PageHeader
+        title="User Management"
+        subtitle="Manage platform user accounts, assign roles, check pending registration forms, and track user activities."
+        icon={Users}
+        accent="blue"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/account/admin/users/create"
+              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20 active:scale-95 flex items-center gap-1.5"
+            >
+              <UserPlus className="h-4.5 w-4.5" />
+              Add User
+            </Link>
             <Link
               href="/account/admin/roles"
-              className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-xs font-medium text-purple-300 transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
+              className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-xs font-semibold text-purple-300 transition-all hover:border-purple-500/50 hover:bg-purple-500/20 active:scale-95"
             >
               Role Management
             </Link>
             <Link
               href="/account/admin/applications"
-              className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs font-medium text-yellow-300 transition-all hover:border-yellow-500/50 hover:bg-yellow-500/20"
+              className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-semibold text-yellow-300 transition-all hover:border-yellow-500/50 hover:bg-yellow-500/20 active:scale-95"
             >
               Applications
             </Link>
             <Link
               href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white active:scale-95"
             >
               ← Dashboard
             </Link>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* ── stats ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      {/* ── Stats Grid ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <StatCard
           icon={Users}
           label="Total Users"
           value={stats.total || 0}
-          color="bg-blue-500/15 text-blue-400"
+          accent="blue"
+          delay={0.05}
         />
         <StatCard
           icon={CheckCircle2}
-          label="Active"
+          label="Active Accounts"
           value={stats.active || 0}
-          color="bg-emerald-500/15 text-emerald-400"
+          accent="emerald"
+          delay={0.1}
         />
         <StatCard
           icon={Clock}
-          label="Pending"
+          label="Pending Approvals"
           value={stats.pending || 0}
-          color="bg-amber-500/15 text-amber-400"
+          accent="amber"
+          delay={0.15}
         />
         <StatCard
           icon={ShieldOff}
           label="Suspended"
           value={stats.suspended || 0}
-          color="bg-orange-500/15 text-orange-400"
+          accent="orange"
+          delay={0.2}
         />
         <StatCard
           icon={Ban}
-          label="Banned"
+          label="Banned Users"
           value={stats.banned || 0}
-          color="bg-red-500/15 text-red-400"
+          accent="rose"
+          delay={0.25}
         />
         <StatCard
           icon={LockKeyhole}
           label="Locked"
           value={stats.locked || 0}
-          color="bg-purple-500/15 text-purple-400"
+          accent="violet"
+          delay={0.3}
         />
         <StatCard
           icon={Wifi}
           label="Online Now"
           value={users.filter((u) => u.isOnline).length}
-          color="bg-green-500/15 text-green-400"
+          accent="green"
+          delay={0.35}
         />
       </div>
 
@@ -671,6 +670,6 @@ NEUPC Team`;
           </div>
         </div>
       )}
-    </>
+    </PageShell>
   );
 }

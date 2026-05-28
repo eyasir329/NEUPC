@@ -1192,6 +1192,7 @@ export async function uploadUserImageAction(formData) {
 
   const file = formData.get('file');
   const userId = formData.get('userId');
+  const updateDb = formData.get('updateDb') === 'true';
 
   if (!file || !(file instanceof File) || file.size === 0) {
     return { error: 'No image provided.' };
@@ -1216,6 +1217,18 @@ export async function uploadUserImageAction(formData) {
   } catch (err) {
     console.error('Google Drive user avatar upload error:', err);
     return { error: 'Failed to upload image. Please try again.' };
+  }
+
+  if (updateDb) {
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ avatar_url: url, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (dbError) {
+      console.error('Failed to update avatar in database:', dbError);
+      return { error: 'Image uploaded, but failed to save to database.' };
+    }
   }
 
   await logActivity(adminId, 'user_avatar_uploaded', 'user', userId, {

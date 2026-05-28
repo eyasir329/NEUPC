@@ -28,6 +28,7 @@ import {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings,
   Layout,
@@ -57,13 +58,30 @@ import {
   Sparkles,
   RotateCcw,
   Check,
-  ChevronRight,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  Settings2,
+  Sliders,
+  Globe,
+  FileText,
+  Lock,
+  UserPlus,
+  Power,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
   saveSettingsAction,
   seedDefaultSettingsAction,
 } from '@/app/_lib/settings-actions';
+import {
+  PageShell,
+  PageHeader,
+  EmptyState,
+  GlassCard,
+} from '../../_components/_ui';
 
 // ─── Section / field definitions ─────────────────────────────────────────────
 
@@ -1414,7 +1432,6 @@ const SIDEBAR_GROUPS = [
   },
   { label: 'System', ids: ['notifications', 'security', 'maintenance'] },
 ];
-
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 /** Split flat fields array into labelled groups using divider entries */
@@ -1439,6 +1456,20 @@ function countFields(section) {
   return section.fields.filter((f) => f.type !== 'divider').length;
 }
 
+// ─── Dynamic Icon Renderer ───────────────────────────────────────────────────
+
+function DynamicIcon({ name, className = 'h-4 w-4' }) {
+  const icons = {
+    Settings, Layout, ToggleLeft, Users, GraduationCap, CalendarDays, BookOpen,
+    Bell, ShieldCheck, Wrench, Save, CheckCircle2, AlertCircle, Loader2, ChevronDown,
+    Instagram, Facebook, Twitter, Github, Linkedin, Youtube, Database, Type, Search,
+    X, Sparkles, RotateCcw, Check, Plus, Trash2, ArrowUp, ArrowDown, Eye, Settings2,
+    Sliders, Globe, FileText, Lock, UserPlus, Power
+  };
+  const IconComp = icons[name] || Sparkles;
+  return <IconComp className={className} />;
+}
+
 // ─── Toggle Switch ────────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange, disabled }) {
@@ -1449,18 +1480,572 @@ function Toggle({ checked, onChange, disabled }) {
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5.5 w-10.5 shrink-0 cursor-pointer items-center rounded-full transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:cursor-not-allowed disabled:opacity-40 ${
         checked
-          ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.25)]'
+          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 shadow-[0_0_12px_rgba(59,130,246,0.35)]'
           : 'bg-white/10 hover:bg-white/15'
       }`}
     >
       <span
-        className={`pointer-events-none inline-block h-4 w-4 rounded-full shadow-sm transition-all duration-200 ease-in-out ${
+        className={`pointer-events-none inline-block h-4.5 w-4.5 rounded-full shadow-md transition-all duration-300 ease-in-out ${
           checked ? 'translate-x-5.5 bg-white' : 'translate-x-0.75 bg-gray-400'
         }`}
       />
     </button>
+  );
+}
+
+// ─── Visual JSON List / Object Builder ────────────────────────────────────────
+
+const JSON_TEMPLATES = {
+  about_mission: () => '',
+  about_vision: () => '',
+  about_mentorship_areas: () => '',
+  contact_subjects: () => '',
+  faqs: () => ({ question: '', answer: '' }),
+  about_what_we_do: () => ({ icon: 'Code', title: '', description: '' }),
+  join_benefits: () => ({ icon: 'Check', title: '', description: '' }),
+  join_features: () => ({ icon: 'Eye', title: '', description: '' }),
+  about_stats: () => ({ value: '10+', label: 'New Stat', icon: 'Star' }),
+  about_core_values: () => ({ label: '', icon: 'Check' }),
+  about_skills: () => ({ label: '', icon: 'Check' }),
+  about_org_structure: () => ({ title: '', description: '', icon: 'Users', color: 'primary' }),
+  developers_core: () => ({ name: '', role: '', bio: '', stack: '', github: '', linkedin: '', portfolio: '', photo: '' }),
+  developers_contributors: () => ({ name: '', role: '', contribution: '', github: '' }),
+  developers_timeline: () => ({ year: new Date().getFullYear().toString(), title: '', description: '', status: 'completed' }),
+  tech_stack: () => ({ category: '', items: [] }),
+};
+
+function VisualJsonEditor({ field, value, onChange, disabled }) {
+  const [activeTab, setActiveTab] = useState('visual'); // 'visual' | 'raw'
+  const [jsonText, setJsonText] = useState('');
+  const [isValidJson, setIsValidJson] = useState(true);
+
+  // Sync state array value to raw JSON textarea string
+  useEffect(() => {
+    const serialized = typeof value === 'string'
+      ? value
+      : JSON.stringify(value ?? [], null, 2);
+    setJsonText(serialized);
+    try {
+      JSON.parse(serialized);
+      setIsValidJson(true);
+    } catch {
+      setIsValidJson(false);
+    }
+  }, [value]);
+
+  const items = useMemo(() => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    return Array.isArray(value) ? value : [];
+  }, [value]);
+
+  const isSimpleStringList = useMemo(() => {
+    return ['about_mission', 'about_vision', 'about_mentorship_areas', 'contact_subjects'].includes(field.key);
+  }, [field.key]);
+
+  const isSingleObject = useMemo(() => {
+    return field.key === 'github_stats';
+  }, [field.key]);
+
+  const handleRawChange = (text) => {
+    setJsonText(text);
+    try {
+      const parsed = JSON.parse(text);
+      setIsValidJson(true);
+      onChange(parsed);
+    } catch {
+      setIsValidJson(false);
+    }
+  };
+
+  const handleUpdateItem = (index, key, val) => {
+    const updated = [...items];
+    if (isSimpleStringList) {
+      updated[index] = val;
+    } else {
+      updated[index] = { ...updated[index], [key]: val };
+    }
+    onChange(updated);
+  };
+
+  const handleAddItem = () => {
+    const templateFn = JSON_TEMPLATES[field.key];
+    const newItem = templateFn ? templateFn() : {};
+    onChange([...items, newItem]);
+  };
+
+  const handleDeleteItem = (index) => {
+    const updated = items.filter((_, i) => i !== index);
+    onChange(updated);
+  };
+
+  const handleMoveItem = (index, direction) => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === items.length - 1) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const updated = [...items];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    onChange(updated);
+  };
+
+  // String lists Tag Builder
+  const [newTagText, setNewTagText] = useState('');
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      e.preventDefault();
+      if (newTagText.trim()) {
+        onChange([...items, newTagText.trim()]);
+        setNewTagText('');
+      }
+    }
+  };
+
+  return (
+    <div className="col-span-full rounded-2xl border border-white/6 bg-white/[0.01] p-4.5 backdrop-blur-md">
+      <div className="mb-4 flex items-center justify-between border-b border-white/6 pb-3">
+        <div>
+          <label className="text-xs font-semibold tracking-wide text-gray-200 uppercase flex items-center gap-1.5">
+            <Sliders className="h-3.5 w-3.5 text-blue-400" />
+            {field.label}
+          </label>
+          {field.desc && (
+            <p className="mt-0.5 text-[11px] text-gray-500">{field.desc}</p>
+          )}
+        </div>
+        
+        {/* Toggle between Visual and Raw modes */}
+        {!isSingleObject && (
+          <div className="flex rounded-lg border border-white/6 bg-white/3 p-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab('visual')}
+              className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-all ${
+                activeTab === 'visual'
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Visual Builder
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('raw')}
+              className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-all ${
+                activeTab === 'raw'
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Raw Code
+            </button>
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'visual' && !isSingleObject && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-3"
+          >
+            {/* Tag / simple string array list builder */}
+            {isSimpleStringList && (
+              <div className="space-y-3.5">
+                <div className="flex flex-wrap gap-2 rounded-xl border border-white/4 bg-black/10 p-3 min-h-16">
+                  {items.length === 0 ? (
+                    <span className="m-auto text-xs text-gray-600">No items configured. Add one below.</span>
+                  ) : (
+                    items.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="flex items-center gap-1.5 rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1 text-xs text-blue-300"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteItem(idx)}
+                          className="rounded-full p-0.5 hover:bg-blue-500/20 hover:text-white transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTagText}
+                    onChange={(e) => setNewTagText(e.target.value)}
+                    onKeyDown={handleAddTag}
+                    disabled={disabled}
+                    placeholder="Type list item and press Enter..."
+                    className="flex-1 rounded-lg border border-white/8 bg-white/3 px-3.5 py-2 text-xs text-gray-200 focus:border-blue-500/30 focus:bg-white/5 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTag}
+                    disabled={disabled}
+                    className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Object items builder */}
+            {!isSimpleStringList && (
+              <div className="space-y-3">
+                {items.map((item, idx) => {
+                  const itemTitle = item.title || item.label || item.name || item.question || `Item #${idx + 1}`;
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-white/6 bg-white/[0.02] p-4 transition-all duration-200 hover:border-white/12"
+                    >
+                      <div className="mb-3 flex items-center justify-between border-b border-white/4 pb-2">
+                        <span className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          {item.icon && <DynamicIcon name={item.icon} className="h-3.5 w-3.5 text-blue-400" />}
+                          {itemTitle}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveItem(idx, 'up')}
+                            disabled={idx === 0 || disabled}
+                            className="rounded-md p-1 text-gray-500 hover:bg-white/5 hover:text-gray-300 disabled:opacity-30"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveItem(idx, 'down')}
+                            disabled={idx === items.length - 1 || disabled}
+                            className="rounded-md p-1 text-gray-500 hover:bg-white/5 hover:text-gray-300 disabled:opacity-30"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteItem(idx)}
+                            disabled={disabled}
+                            className="rounded-md p-1 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fields input grid inside the item */}
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {Object.entries(item).map(([k, v]) => {
+                          const inputId = `json-item-${field.key}-${idx}-${k}`;
+                          const formattedLabel = k.replace(/_/g, ' ');
+                          
+                          if (k === 'color') {
+                            return (
+                              <div key={k} className="flex flex-col gap-1">
+                                <label htmlFor={inputId} className="text-[10px] font-semibold text-gray-500 uppercase">{formattedLabel}</label>
+                                <select
+                                  id={inputId}
+                                  value={v || 'primary'}
+                                  onChange={(e) => handleUpdateItem(idx, k, e.target.value)}
+                                  disabled={disabled}
+                                  className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-gray-200 [&>option]:bg-gray-900 focus:outline-none focus:border-blue-500/30"
+                                >
+                                  <option value="primary">Primary</option>
+                                  <option value="secondary">Secondary</option>
+                                </select>
+                              </div>
+                            );
+                          }
+                          
+                          if (k === 'status') {
+                            return (
+                              <div key={k} className="flex flex-col gap-1">
+                                <label htmlFor={inputId} className="text-[10px] font-semibold text-gray-500 uppercase">{formattedLabel}</label>
+                                <select
+                                  id={inputId}
+                                  value={v || 'completed'}
+                                  onChange={(e) => handleUpdateItem(idx, k, e.target.value)}
+                                  disabled={disabled}
+                                  className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-gray-200 [&>option]:bg-gray-900 focus:outline-none focus:border-blue-500/30"
+                                >
+                                  <option value="completed">Completed</option>
+                                  <option value="in-progress">In Progress</option>
+                                  <option value="planned">Planned</option>
+                                </select>
+                              </div>
+                            );
+                          }
+
+                          const isLarge = ['bio', 'description', 'answer', 'contribution'].includes(k);
+                          return (
+                            <div key={k} className={`flex flex-col gap-1 ${isLarge ? 'col-span-full' : ''}`}>
+                              <label htmlFor={inputId} className="text-[10px] font-semibold text-gray-500 uppercase">{formattedLabel}</label>
+                              {isLarge ? (
+                                <textarea
+                                  id={inputId}
+                                  value={v || ''}
+                                  onChange={(e) => handleUpdateItem(idx, k, e.target.value)}
+                                  disabled={disabled}
+                                  rows={2}
+                                  className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500/30"
+                                />
+                              ) : (
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    id={inputId}
+                                    value={v || ''}
+                                    onChange={(e) => handleUpdateItem(idx, k, e.target.value)}
+                                    disabled={disabled}
+                                    className={`w-full rounded-lg border border-white/8 bg-white/3 px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500/30 ${
+                                      k === 'icon' ? 'pl-8' : ''
+                                    }`}
+                                  />
+                                  {k === 'icon' && (
+                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                                      <DynamicIcon name={v} className="h-3.5 w-3.5 text-gray-500" />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {items.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-6 border border-dashed border-white/6 rounded-xl text-center">
+                    <span className="text-xs text-gray-600">No items available. Add the first item to get started.</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  disabled={disabled}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/8 bg-white/[0.01] py-3 text-xs font-semibold text-gray-400 hover:border-white/15 hover:bg-white/3 hover:text-white transition-all duration-150 active:scale-[0.99]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Item
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Flat Object Editor (Single Object schema - like github_stats) */}
+        {isSingleObject && (
+          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+            {Object.entries(value || {}).map(([k, v]) => {
+              const inputId = `flat-json-${field.key}-${k}`;
+              return (
+                <div key={k} className="flex flex-col gap-1">
+                  <label htmlFor={inputId} className="text-[10px] font-semibold text-gray-500 uppercase">{k}</label>
+                  <input
+                    type="number"
+                    id={inputId}
+                    value={v ?? 0}
+                    onChange={(e) => {
+                      const updated = { ...value, [k]: Number(e.target.value) };
+                      onChange(updated);
+                    }}
+                    disabled={disabled}
+                    className="w-full rounded-lg border border-white/8 bg-white/3 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500/30"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Raw Code Editor (JSON text block) */}
+        {activeTab === 'raw' && !isSingleObject && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="relative"
+          >
+            <textarea
+              value={jsonText}
+              onChange={(e) => handleRawChange(e.target.value)}
+              disabled={disabled}
+              rows={8}
+              placeholder="[]"
+              className={`w-full rounded-xl border border-white/8 bg-black/20 p-3.5 font-mono text-xs leading-relaxed text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-40 ${
+                !isValidJson ? 'border-rose-500/30 focus:border-rose-500/50' : 'focus:border-blue-500/30'
+              }`}
+            />
+            <div className="absolute right-3.5 bottom-3 flex items-center gap-1.5">
+              {!isValidJson ? (
+                <span className="flex items-center gap-1 rounded-md bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase text-rose-400 border border-rose-500/20">
+                  <AlertCircle className="h-3 w-3" />
+                  Invalid JSON
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase text-emerald-400 border border-emerald-500/20">
+                  <Check className="h-3 w-3" />
+                  Valid Format
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Glowing Quick Toggles Header Widget ─────────────────────────────────────
+
+function QuickTogglesWidget({ values, onChange, disabled }) {
+  const activeFeaturesCount = useMemo(() => {
+    let active = 0;
+    let total = 0;
+    Object.entries(values).forEach(([k, v]) => {
+      if (k.startsWith('features.')) {
+        total++;
+        if (v) active++;
+      }
+    });
+    return { active, total };
+  }, [values]);
+
+  return (
+    <GlassCard className="relative overflow-hidden p-6 shadow-2xl border-white/[0.08] bg-gray-900/60 backdrop-blur-xl">
+      {/* Decorative top glow bar */}
+      <div className="absolute top-0 left-0 right-0 h-0.75 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500 shadow-[0_1px_8px_rgba(59,130,246,0.5)]" />
+      
+      <div className="mb-4.5 flex items-center justify-between border-b border-white/6 pb-3">
+        <h3 className="text-sm font-semibold tracking-wide text-gray-200 flex items-center gap-2">
+          <Settings2 className="h-4 w-4 text-blue-400 animate-pulse" />
+          System Overview & Quick Controls
+        </h3>
+        <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-gray-400">
+          Instant Toggles
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Maintenance Toggle */}
+        <div className="group rounded-xl border border-white/6 bg-white/[0.01] p-4 transition-all duration-200 hover:border-white/12 hover:bg-white/[0.02]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${values['maintenance.enabled'] ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
+              <span className="text-xs font-semibold text-gray-300">Maintenance Mode</span>
+            </div>
+            <Toggle
+              checked={!!values['maintenance.enabled']}
+              onChange={(v) => onChange('maintenance.enabled', v)}
+              disabled={disabled}
+            />
+          </div>
+          <p className="text-[10px] leading-relaxed text-gray-500">
+            {values['maintenance.enabled']
+              ? `Active: Non-admin users see fallback screen.`
+              : 'Inactive: Platform open to the public.'}
+          </p>
+          {values['maintenance.enabled'] && (
+            <div className="mt-2 text-[9px] font-mono text-amber-400/90 truncate">
+              End: {values['maintenance.expected_end'] || 'Not scheduled'}
+            </div>
+          )}
+        </div>
+
+        {/* Applications Toggle */}
+        <div className="group rounded-xl border border-white/6 bg-white/[0.01] p-4 transition-all duration-200 hover:border-white/12 hover:bg-white/[0.02]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${values['applications.accept_applications'] ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}`} />
+              <span className="text-xs font-semibold text-gray-300">Accept Applications</span>
+            </div>
+            <Toggle
+              checked={!!values['applications.accept_applications']}
+              onChange={(v) => onChange('applications.accept_applications', v)}
+              disabled={disabled}
+            />
+          </div>
+          <p className="text-[10px] leading-relaxed text-gray-500">
+            {values['applications.accept_applications']
+              ? 'Open: Guest users can apply to be members.'
+              : 'Closed: Membership applications disabled.'}
+          </p>
+          {values['applications.accept_applications'] && (
+            <div className="mt-2 text-[9px] text-gray-400">
+              Max per year: <span className="text-white font-semibold tabular-nums">{values['applications.max_per_year'] || '100'}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Registration Toggle */}
+        <div className="group rounded-xl border border-white/6 bg-white/[0.01] p-4 transition-all duration-200 hover:border-white/12 hover:bg-white/[0.02]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${values['users.registration_enabled'] ? 'bg-blue-400 animate-pulse' : 'bg-rose-500'}`} />
+              <span className="text-xs font-semibold text-gray-300">User Registrations</span>
+            </div>
+            <Toggle
+              checked={!!values['users.registration_enabled']}
+              onChange={(v) => onChange('users.registration_enabled', v)}
+              disabled={disabled}
+            />
+          </div>
+          <p className="text-[10px] leading-relaxed text-gray-500">
+            {values['users.registration_enabled']
+              ? 'Allowed: New users can sign up.'
+              : 'Blocked: Nobody can register new accounts.'}
+          </p>
+          <div className="mt-2 text-[9px] text-gray-400 flex items-center gap-1">
+            Email Verification: 
+            <span className={`font-semibold ${values['users.require_email_verification'] ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {values['users.require_email_verification'] ? 'Required' : 'Bypassed'}
+            </span>
+          </div>
+        </div>
+
+        {/* Active Features stats */}
+        <div className="group rounded-xl border border-white/6 bg-white/[0.01] p-4 transition-all duration-200 hover:border-white/12 hover:bg-white/[0.02] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-300">Active Features</span>
+              <span className="text-xs font-bold text-emerald-400 tabular-nums">
+                {activeFeaturesCount.active}/{activeFeaturesCount.total}
+              </span>
+            </div>
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/5 border border-white/4">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.3)] transition-all duration-300"
+                style={{ width: `${(activeFeaturesCount.active / activeFeaturesCount.total) * 100}%` }}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] leading-relaxed text-gray-500 mt-2">
+            Control chat modules, certificates, notice boards, and roadmap tabs.
+          </p>
+        </div>
+      </div>
+    </GlassCard>
   );
 }
 
@@ -1471,14 +2056,14 @@ function SettingField({ field, value, onChange, disabled }) {
     return (
       <div className="col-span-full">
         <div
-          className={`group flex items-center justify-between gap-4 rounded-xl border px-4 py-3.5 transition-all duration-150 ${
+          className={`group flex items-center justify-between gap-4 rounded-xl border px-4.5 py-4 transition-all duration-300 backdrop-blur-md ${
             value
-              ? 'border-blue-500/20 bg-blue-500/4'
-              : 'border-white/6 bg-white/1.5 hover:border-white/10 hover:bg-white/3'
+              ? 'border-blue-500/25 bg-blue-500/[0.03] shadow-[inset_0_1px_8px_rgba(59,130,246,0.05)]'
+              : 'border-white/6 bg-white/1 hover:border-white/10 hover:bg-white/2'
           }`}
         >
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium text-gray-200">
+            <p className="text-[13px] font-bold text-gray-200">
               {field.label}
             </p>
             {field.desc && (
@@ -1493,11 +2078,22 @@ function SettingField({ field, value, onChange, disabled }) {
     );
   }
 
+  if (field.type === 'json') {
+    return (
+      <VisualJsonEditor
+        field={field}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    );
+  }
+
   const inputCls =
-    'w-full rounded-lg border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-gray-100 placeholder:text-gray-600 backdrop-blur-sm transition-all duration-150 focus:border-blue-500/30 focus:bg-white/5 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-40 disabled:cursor-not-allowed';
+    'w-full rounded-xl border border-white/8 bg-white/2 px-4 py-3 text-xs text-gray-100 placeholder:text-gray-600 backdrop-blur-md transition-all duration-200 focus:border-blue-500/30 focus:bg-white/4 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-40 disabled:cursor-not-allowed';
 
   const labelEl = (
-    <label className="text-xs font-medium tracking-wide text-gray-400">
+    <label className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
       {field.label}
     </label>
   );
@@ -1537,7 +2133,7 @@ function SettingField({ field, value, onChange, disabled }) {
             value={value ?? '#3b82f6'}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
-            className="h-10 w-14 cursor-pointer rounded-lg border border-white/8 bg-white/3 p-1 disabled:opacity-40"
+            className="h-10 w-14 cursor-pointer rounded-xl border border-white/8 bg-white/3 p-1 disabled:opacity-40"
           />
           <input
             type="text"
@@ -1569,61 +2165,6 @@ function SettingField({ field, value, onChange, disabled }) {
     );
   }
 
-  if (field.type === 'json') {
-    const strValue =
-      typeof value === 'string'
-        ? value
-        : value !== undefined && value !== null
-          ? JSON.stringify(value, null, 2)
-          : '[]';
-    let isValid = true;
-    try {
-      JSON.parse(strValue);
-    } catch {
-      isValid = false;
-    }
-    return (
-      <div className="col-span-full flex flex-col gap-1.5">
-        {labelEl}
-        {descEl}
-        <div className="relative">
-          <textarea
-            value={strValue}
-            onChange={(e) => {
-              const raw = e.target.value;
-              try {
-                onChange(JSON.parse(raw));
-              } catch {
-                onChange(raw);
-              }
-            }}
-            disabled={disabled}
-            rows={6}
-            placeholder={field.placeholder || '[]'}
-            className={`${inputCls} resize-y font-mono text-xs leading-relaxed ${
-              !isValid
-                ? 'border-red-500/30 focus:border-red-500/50 focus:ring-red-500/15'
-                : ''
-            }`}
-          />
-          <div className="absolute right-3 bottom-2 flex items-center gap-1.5">
-            {!isValid ? (
-              <span className="flex items-center gap-1 rounded-md bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-                <AlertCircle className="h-3 w-3" />
-                Invalid JSON
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                <Check className="h-3 w-3" />
-                Valid
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // text, email, url, number — with optional icon
   const FieldIcon = field.icon;
   return (
@@ -1632,7 +2173,7 @@ function SettingField({ field, value, onChange, disabled }) {
       {descEl}
       <div className="relative">
         {FieldIcon && (
-          <FieldIcon className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+          <FieldIcon className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
         )}
         <input
           type={field.type}
@@ -1646,7 +2187,7 @@ function SettingField({ field, value, onChange, disabled }) {
           placeholder={field.placeholder}
           min={field.min}
           max={field.max}
-          className={`${inputCls} ${FieldIcon ? 'pl-9' : ''}`}
+          className={`${inputCls} ${FieldIcon ? 'pl-10' : ''}`}
         />
       </div>
     </div>
@@ -1661,10 +2202,10 @@ function FieldGroup({
   values,
   onChange,
   disabled,
-  defaultOpen = true,
+  open,
+  onToggle,
+  scrollRef,
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-
   // Ungrouped fields (no divider label)
   if (!label) {
     return fields.map((field) => (
@@ -1686,28 +2227,28 @@ function FieldGroup({
   }).length;
 
   return (
-    <div className="col-span-full">
+    <div className="col-span-full scroll-mt-4" ref={scrollRef}>
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="group mb-3 flex w-full items-center gap-2 pt-1"
+        onClick={onToggle}
+        className="group mb-4.5 flex w-full items-center gap-2.5 pt-1.5"
       >
         <ChevronDown
-          className={`h-3.5 w-3.5 text-gray-500 transition-transform duration-200 ${
+          className={`h-4 w-4 text-gray-500 transition-transform duration-300 ${
             open ? '' : '-rotate-90'
           }`}
         />
-        <span className="text-[11px] font-semibold tracking-[0.08em] text-gray-400 uppercase transition-colors group-hover:text-gray-300">
+        <span className="text-[11px] font-bold tracking-[0.1em] text-gray-400 uppercase transition-colors group-hover:text-gray-200">
           {label}
         </span>
-        <div className="h-px flex-1 bg-linear-to-r from-white/8 to-transparent" />
-        <span className="text-[10px] text-gray-600 tabular-nums">
+        <div className="h-px flex-1 bg-gradient-to-r from-white/8 to-transparent" />
+        <span className="text-[10px] text-gray-500 tabular-nums bg-white/5 border border-white/4 px-2 py-0.5 rounded-md">
           {filledCount}/{fields.length}
         </span>
       </button>
 
       {open && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {fields.map((field) => (
             <SettingField
               key={field.key}
@@ -1723,50 +2264,121 @@ function FieldGroup({
   );
 }
 
-// ─── Section Panel ────────────────────────────────────────────────────────────
+// ─── Global Search Results View ──────────────────────────────────────────────
 
-function SectionPanel({ section, initialSettings }) {
-  const router = useRouter();
-  const saveRef = useRef(null);
-
-  /* Build initial state from server data */
-  const buildInitial = useCallback(() => {
-    const s = {};
-    section.fields.forEach((f) => {
-      if (f.type === 'divider') return;
-      if (initialSettings[f.key] !== undefined) {
-        s[f.key] = initialSettings[f.key];
-      } else if (f.type === 'toggle') {
-        s[f.key] = false;
-      } else if (f.type === 'number') {
-        s[f.key] = 0;
-      } else if (f.type === 'json') {
-        s[f.key] = [];
-      } else {
-        s[f.key] = '';
-      }
+function SearchResultsView({ query, values, onChange, disabled }) {
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    const matches = [];
+    
+    SECTIONS.forEach((section) => {
+      section.fields.forEach((field) => {
+        if (field.type === 'divider') return;
+        
+        const keyMatch = field.key?.toLowerCase().includes(q);
+        const labelMatch = field.label?.toLowerCase().includes(q);
+        const descMatch = field.desc?.toLowerCase().includes(q);
+        const placeholderMatch = field.placeholder?.toLowerCase().includes(q);
+        
+        if (keyMatch || labelMatch || descMatch || placeholderMatch) {
+          matches.push({
+            field,
+            section,
+          });
+        }
+      });
     });
-    return s;
-  }, [section, initialSettings]);
+    
+    return matches;
+  }, [query]);
 
-  const [values, setValues] = useState(buildInitial);
-  const [savedSnapshot, setSavedSnapshot] = useState(buildInitial);
-  const [msg, setMsg] = useState(null);
-  const [isPending, startSave] = useTransition();
-  const [search, setSearch] = useState('');
+  // Group matched fields by section id
+  const groupedResults = useMemo(() => {
+    const groups = {};
+    results.forEach((match) => {
+      const secId = match.section.id;
+      if (!groups[secId]) {
+        groups[secId] = {
+          section: match.section,
+          fields: [],
+        };
+      }
+      groups[secId].fields.push(match.field);
+    });
+    return Object.values(groups);
+  }, [results]);
 
-  /* Re-sync when server data changes */
-  useEffect(() => {
-    const v = buildInitial();
-    setValues(v);
-    setSavedSnapshot(v);
-  }, [initialSettings, buildInitial]);
+  if (results.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Search className="h-10 w-10 text-gray-700 mb-3 animate-bounce" />
+        <h3 className="text-sm font-semibold text-gray-300">No settings matched your search</h3>
+        <p className="mt-1 max-w-sm text-xs text-gray-500">
+          Try typing a different key, label, description, or fallback value.
+        </p>
+      </div>
+    );
+  }
 
-  /* Dirty check */
-  const isDirty = useMemo(
-    () => JSON.stringify(values) !== JSON.stringify(savedSnapshot),
-    [values, savedSnapshot]
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+          Search Results: {results.length} fields found
+        </span>
+      </div>
+
+      {groupedResults.map((group) => {
+        const SectionIcon = group.section.icon;
+        return (
+          <div
+            key={group.section.id}
+            className="rounded-2xl border border-white/6 bg-white/[0.01] p-5 shadow-xl"
+          >
+            <div className="mb-4 flex items-center gap-2 border-b border-white/4 pb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <SectionIcon className="h-4 w-4" />
+              </div>
+              <span className="text-xs font-bold text-gray-200">
+                {group.section.label}
+              </span>
+              <span className="text-[10px] text-gray-500">
+                ({group.fields.length} matching)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {group.fields.map((field) => (
+                <SettingField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key]}
+                  onChange={(val) => onChange(field.key, val)}
+                  disabled={disabled}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
+}
+
+// ─── Section Content Panel ───────────────────────────────────────────────────
+
+function SectionPanel({
+  section,
+  values,
+  onChange,
+  disabled,
+  openGroups,
+  setOpenGroups,
+  search,
+  setSearch,
+}) {
+  const groupRefs = useRef({});
 
   /* Parse field groups from dividers */
   const fieldGroups = useMemo(
@@ -1793,119 +2405,67 @@ function SectionPanel({ section, initialSettings }) {
   }, [fieldGroups, search]);
 
   const totalFields = section.fields.filter((f) => f.type !== 'divider').length;
+  const labeledGroups = fieldGroups.filter((g) => g.label);
+  const isLarge = labeledGroups.length > 4;
 
-  function handleChange(key, val) {
-    setValues((prev) => ({ ...prev, [key]: val }));
-  }
-
-  function flash(type, text) {
-    setMsg({ type, text });
-    setTimeout(() => setMsg(null), 4000);
-  }
-
-  /* Save handler */
-  async function handleSave() {
-    startSave(async () => {
-      for (const f of section.fields) {
-        if (f.type === 'json' && typeof values[f.key] === 'string') {
-          try {
-            JSON.parse(values[f.key]);
-          } catch {
-            flash('error', `Invalid JSON in "${f.label}". Fix and try again.`);
-            return;
-          }
-        }
-      }
-
-      const entries = section.fields
-        .filter((f) => f.type !== 'divider')
-        .map((f) => {
-          let val = values[f.key];
-          if (val === undefined || val === null) {
-            if (f.type === 'toggle') val = false;
-            else if (f.type === 'number') val = 0;
-            else if (f.type === 'json') val = [];
-            else val = '';
-          }
-          return {
-            key: f.key,
-            value:
-              typeof val === 'string' && f.type === 'json'
-                ? JSON.parse(val)
-                : val,
-            description: f.desc || null,
-            ...(f.category ? { category: f.category } : {}),
-          };
-        });
-
-      const fd = new FormData();
-      fd.set('category', section.id);
-      fd.set('entries', JSON.stringify(entries));
-      const result = await saveSettingsAction(fd);
-      if (result?.error) {
-        flash('error', result.error);
-      } else {
-        flash('success', 'Settings saved');
-        setSavedSnapshot({ ...values });
-        router.refresh();
-      }
+  function toggleGroup(label) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
     });
   }
 
-  /* Keep a ref to handleSave for keyboard shortcut */
-  saveRef.current = handleSave;
-
-  /* Ctrl/Cmd + S to save */
-  useEffect(() => {
-    function onKeyDown(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        saveRef.current?.();
-      }
-    }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  function jumpToGroup(label) {
+    setOpenGroups((prev) => new Set(prev).add(label));
+    requestAnimationFrame(() => {
+      groupRefs.current[label]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }
 
   const SectionIcon = section.icon;
 
   return (
     <div className="flex flex-col">
       {/* ── Section header ─────────────────────────────────────── */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500/15 to-blue-500/5 ring-1 ring-blue-500/20">
+      <div className="mb-5.5 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 ring-1 ring-blue-500/25">
             <SectionIcon className="h-5 w-5 text-blue-400" />
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-white">
               {section.label}
             </h2>
-            <p className="mt-0.5 text-[13px] text-gray-500">
+            <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
               {section.description}
             </p>
           </div>
         </div>
-        <span className="shrink-0 rounded-lg bg-white/5 px-2.5 py-1 text-[11px] font-medium text-gray-500 tabular-nums">
+        <span className="shrink-0 rounded-lg bg-white/5 border border-white/6 px-2.5 py-1 text-[10px] font-semibold text-gray-500 tabular-nums">
           {totalFields} fields
         </span>
       </div>
 
-      {/* ── Search (for sections with many fields) ─────────────── */}
+      {/* ── Local Section Search (when fields > 8) ────────────── */}
       {totalFields > 8 && (
         <div className="relative mb-5">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`Search ${totalFields} settings…`}
-            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-gray-200 transition-all placeholder:text-gray-600 focus:border-white/15 focus:bg-white/5 focus:ring-2 focus:ring-blue-500/15 focus:outline-none"
+            placeholder={`Search within ${section.label} (${totalFields} settings)...`}
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-10 pl-10 text-xs text-gray-200 transition-all placeholder:text-gray-600 focus:border-white/15 focus:bg-white/5 focus:ring-2 focus:ring-blue-500/15 focus:outline-none"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-0.5 text-gray-500 transition-colors hover:text-gray-300"
+              className="absolute top-1/2 right-3.5 -translate-y-1/2 rounded-md p-0.5 text-gray-500 hover:text-gray-300"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1913,21 +2473,49 @@ function SectionPanel({ section, initialSettings }) {
         </div>
       )}
 
-      {/* ── Toast ──────────────────────────────────────────────── */}
-      {msg && (
-        <div
-          className={`mb-5 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${
-            msg.type === 'error'
-              ? 'border-red-500/20 bg-red-500/6 text-red-300'
-              : 'border-emerald-500/20 bg-emerald-500/6 text-emerald-300'
-          }`}
-        >
-          {msg.type === 'error' ? (
-            <AlertCircle className="h-4 w-4 shrink-0" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          )}
-          <span className="flex-1">{msg.text}</span>
+      {/* ── Table of contents (large sections) ─────────────────── */}
+      {isLarge && !search.trim() && (
+        <div className="mb-5 rounded-xl border border-white/6 bg-white/[0.01] p-3.5">
+          <div className="mb-2.5 flex items-center justify-between">
+            <span className="text-[10px] font-bold tracking-[0.12em] text-gray-500 uppercase">
+              Jump to Category
+            </span>
+            <button
+              onClick={() =>
+                setOpenGroups((prev) =>
+                  prev.size === labeledGroups.length
+                    ? new Set()
+                    : new Set(labeledGroups.map((g) => g.label))
+                )
+              }
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              {openGroups.size === labeledGroups.length
+                ? 'Collapse all'
+                : 'Expand all'}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {labeledGroups.map((g) => {
+              const filled = g.fields.filter((f) => {
+                const v = values[f.key];
+                if (f.type === 'toggle') return !!v;
+                return !(v === undefined || v === null || v === '');
+              }).length;
+              return (
+                <button
+                  key={g.label}
+                  onClick={() => jumpToGroup(g.label)}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/6 bg-white/3 px-2.5 py-1.5 text-[10px] font-semibold text-gray-400 hover:border-white/12 hover:bg-white/6 hover:text-gray-200 transition-all duration-150 active:scale-[0.97]"
+                >
+                  {g.label}
+                  <span className="text-[9px] text-gray-600 tabular-nums">
+                    {filled}/{g.fields.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1939,85 +2527,209 @@ function SectionPanel({ section, initialSettings }) {
             label={group.label}
             fields={group.fields}
             values={values}
-            onChange={handleChange}
-            disabled={isPending}
-            defaultOpen={fieldGroups.length <= 4 || gi === 0}
+            onChange={onChange}
+            disabled={disabled}
+            open={!!search.trim() || openGroups.has(group.label)}
+            onToggle={() => toggleGroup(group.label)}
+            scrollRef={(el) => {
+              if (group.label) groupRefs.current[group.label] = el;
+            }}
           />
         ))}
 
         {filteredGroups.length === 0 && search && (
           <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <Search className="h-8 w-8 text-gray-700" />
-            <p className="text-sm text-gray-500">
-              No settings match &ldquo;{search}&rdquo;
+            <Search className="h-8 w-8 text-gray-700 animate-bounce" />
+            <p className="text-xs text-gray-500">
+              No settings match &ldquo;{search}&rdquo; in this section.
             </p>
           </div>
         )}
       </div>
-
-      {/* ── Sticky save bar (visible when dirty) ───────────────── */}
-      <div
-        className={`sticky bottom-0 z-10 -mx-5 mt-6 -mb-5 flex items-center justify-between gap-3 border-t border-white/8 bg-gray-950/80 px-5 py-4 backdrop-blur-xl transition-all duration-200 sm:-mx-6 sm:-mb-6 sm:px-6 ${
-          isDirty
-            ? 'translate-y-0 opacity-100'
-            : 'pointer-events-none translate-y-2 opacity-0'
-        }`}
-      >
-        <div className="flex items-center gap-2 text-[13px] text-gray-400">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
-          Unsaved changes
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setValues(buildInitial());
-            }}
-            disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:opacity-40"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Discard
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-400 active:scale-[0.98] disabled:opacity-60"
-          >
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-            {isPending ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Static footer (when clean) ─────────────────────────── */}
-      {!isDirty && (
-        <div className="mt-6 flex items-center justify-end border-t border-white/6 pt-5">
-          <button
-            disabled
-            className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/3 px-4 py-2 text-[13px] font-medium text-gray-600 opacity-60"
-          >
-            <Check className="h-3.5 w-3.5" />
-            All changes saved
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function SettingsClient({ initialSettings, adminId }) {
+export default function SettingsClient({ initialSettings }) {
   const [activeSection, setActiveSection] = useState('website');
   const [seeding, startSeed] = useTransition();
+  const [isPending, startSave] = useTransition();
   const [seedMsg, setSeedMsg] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
+  const router = useRouter();
 
+  // Accent mapping for category sidebar elements
+  const categoryAccents = {
+    website: { color: 'blue', border: 'border-blue-500/20 bg-blue-500/5 text-blue-400', glow: 'shadow-[0_0_8px_rgba(59,130,246,0.15)]' },
+    pages: { color: 'violet', border: 'border-violet-500/20 bg-violet-500/5 text-violet-400', glow: 'shadow-[0_0_8px_rgba(139,92,246,0.15)]' },
+    features: { color: 'emerald', border: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400', glow: 'shadow-[0_0_8px_rgba(16,185,129,0.15)]' },
+    users: { color: 'cyan', border: 'border-cyan-500/20 bg-cyan-500/5 text-cyan-400', glow: 'shadow-[0_0_8px_rgba(6,182,212,0.15)]' },
+    applications: { color: 'teal', border: 'border-teal-500/20 bg-teal-500/5 text-teal-400', glow: 'shadow-[0_0_8px_rgba(20,184,166,0.15)]' },
+    events: { color: 'orange', border: 'border-orange-500/20 bg-orange-500/5 text-orange-400', glow: 'shadow-[0_0_8px_rgba(249,115,22,0.15)]' },
+    blogs: { color: 'sky', border: 'border-sky-500/20 bg-sky-500/5 text-sky-400', glow: 'shadow-[0_0_8px_rgba(14,165,233,0.15)]' },
+    notifications: { color: 'indigo', border: 'border-indigo-500/20 bg-indigo-500/5 text-indigo-400', glow: 'shadow-[0_0_8px_rgba(99,102,241,0.15)]' },
+    security: { color: 'rose', border: 'border-rose-500/20 bg-rose-500/5 text-rose-400', glow: 'shadow-[0_0_8px_rgba(244,63,94,0.15)]' },
+    maintenance: { color: 'amber', border: 'border-amber-500/20 bg-amber-500/5 text-amber-400', glow: 'shadow-[0_0_8px_rgba(245,158,11,0.15)]' },
+  };
+
+  /* Build full unified state from server data */
+  const buildInitialState = useCallback(() => {
+    const s = { ...initialSettings };
+    SECTIONS.forEach((section) => {
+      section.fields.forEach((f) => {
+        if (f.type === 'divider') return;
+        if (s[f.key] === undefined) {
+          if (f.type === 'toggle') {
+            s[f.key] = false;
+          } else if (f.type === 'number') {
+            s[f.key] = 0;
+          } else if (f.type === 'json') {
+            s[f.key] = [];
+          } else {
+            s[f.key] = '';
+          }
+        }
+      });
+    });
+    return s;
+  }, [initialSettings]);
+
+  const [values, setValues] = useState(buildInitialState);
+  const [savedSnapshot, setSavedSnapshot] = useState(buildInitialState);
+
+  /* Keep full state in sync when server loads new defaults */
+  useEffect(() => {
+    const initial = buildInitialState();
+    setValues(initial);
+    setSavedSnapshot(initial);
+  }, [initialSettings, buildInitialState]);
+
+  /* Dirty check across entire state */
+  const isDirty = useMemo(
+    () => JSON.stringify(values) !== JSON.stringify(savedSnapshot),
+    [values, savedSnapshot]
+  );
+
+  /* Count open/collapsed groups for active section */
   const currentSection = SECTIONS.find((s) => s.id === activeSection);
   const hasSettings = Object.keys(initialSettings).length > 0;
+  
+  const labeledGroups = useMemo(() => {
+    if (!currentSection) return [];
+    return parseFieldGroups(currentSection.fields).filter((g) => g.label);
+  }, [currentSection]);
+
+  const isLarge = labeledGroups.length > 4;
+
+  const [openGroups, setOpenGroups] = useState(() => {
+    const set = new Set();
+    if (!isLarge) labeledGroups.forEach((g) => set.add(g.label));
+    return set;
+  });
+
+  // Re-sync collapse states when category section changes
+  useEffect(() => {
+    setOpenGroups(() => {
+      const set = new Set();
+      if (!isLarge) labeledGroups.forEach((g) => set.add(g.label));
+      return set;
+    });
+    setLocalSearch('');
+  }, [activeSection, isLarge, labeledGroups]);
+
+  function handleChange(key, val) {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function flash(type, text) {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 4000);
+  }
+
+  /* Global Save Handler */
+  async function handleSave() {
+    startSave(async () => {
+      // JSON Validation
+      for (const section of SECTIONS) {
+        for (const f of section.fields) {
+          if (f.type === 'json' && typeof values[f.key] === 'string') {
+            try {
+              JSON.parse(values[f.key]);
+            } catch {
+              flash('error', `Invalid JSON in "${f.label}". Fix and try again.`);
+              return;
+            }
+          }
+        }
+      }
+
+      // Collect only the DIRTY settings (optimizes DB writes)
+      const dirtyEntries = [];
+      SECTIONS.forEach((s) => {
+        s.fields.forEach((f) => {
+          if (f.type === 'divider') return;
+          const currentVal = values[f.key];
+          const snapVal = savedSnapshot[f.key];
+
+          if (JSON.stringify(currentVal) !== JSON.stringify(snapVal)) {
+            let val = currentVal;
+            if (val === undefined || val === null) {
+              if (f.type === 'toggle') val = false;
+              else if (f.type === 'number') val = 0;
+              else if (f.type === 'json') val = [];
+              else val = '';
+            }
+
+            dirtyEntries.push({
+              key: f.key,
+              value: typeof val === 'string' && f.type === 'json' ? JSON.parse(val) : val,
+              description: f.desc || null,
+              category: f.category || s.id,
+            });
+          }
+        });
+      });
+
+      if (dirtyEntries.length === 0) {
+        flash('success', 'All changes already saved');
+        return;
+      }
+
+      const fd = new FormData();
+      fd.set('category', activeSection);
+      fd.set('entries', JSON.stringify(dirtyEntries));
+      
+      const result = await saveSettingsAction(fd);
+      if (result?.error) {
+        flash('error', result.error);
+      } else {
+        flash('success', `Successfully saved ${dirtyEntries.length} settings!`);
+        setSavedSnapshot({ ...values });
+        router.refresh();
+      }
+    });
+  }
+
+  /* Keyboard shortcut support (Ctrl + S or CMD + S) */
+  const saveRef = useRef(handleSave);
+  useEffect(() => {
+    saveRef.current = handleSave;
+  });
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveRef.current?.();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   function handleSeedDefaults() {
     startSeed(async () => {
@@ -2027,53 +2739,34 @@ export default function SettingsClient({ initialSettings, adminId }) {
       } else {
         setSeedMsg({
           type: 'success',
-          text: `Saved ${result.count} default settings. Reloading…`,
+          text: `Seeded ${result.count} default settings successfully. Reloading platform...`,
         });
-        setTimeout(() => window.location.reload(), 1200);
+        setTimeout(() => window.location.reload(), 1500);
       }
-      setTimeout(() => setSeedMsg(null), 4000);
+      setTimeout(() => setSeedMsg(null), 4500);
     });
   }
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       {/* ── Page Header ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-slate-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-gray-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Settings</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-500/15 ring-1 ring-slate-500/25">
-                <Settings className="h-5 w-5 text-gray-300" />
-              </div>
-              Settings
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Manage platform configuration and content
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+      <PageHeader
+        title="Settings"
+        subtitle="Manage platform configurations, default roles, visual page contents, and feature locks."
+        icon={Settings}
+        accent="blue"
+        actions={
+          <div className="flex items-center gap-2">
             <Link
               href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
             >
               ← Dashboard
             </Link>
             <button
               onClick={handleSeedDefaults}
               disabled={seeding}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white active:scale-[0.98] disabled:opacity-50"
             >
               {seeding ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -2081,22 +2774,22 @@ export default function SettingsClient({ initialSettings, adminId }) {
                 <Database className="h-4 w-4 text-gray-500" />
               )}
               {seeding
-                ? 'Saving…'
+                ? 'Seeding...'
                 : hasSettings
                   ? 'Reset All to Defaults'
                   : 'Seed Defaults'}
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* ── Seed message ─────────────────────────────────────────── */}
+      {/* ── Seed notification message ────────────────────────────── */}
       {seedMsg && (
         <div
           className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${
             seedMsg.type === 'error'
-              ? 'border-red-500/20 bg-red-500/6 text-red-300'
-              : 'border-emerald-500/20 bg-emerald-500/6 text-emerald-300'
+              ? 'border-rose-500/20 bg-rose-500/5 text-rose-300'
+              : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-300'
           }`}
         >
           {seedMsg.type === 'error' ? (
@@ -2108,131 +2801,255 @@ export default function SettingsClient({ initialSettings, adminId }) {
         </div>
       )}
 
-      {/* ── Empty state CTA ──────────────────────────────────────── */}
+      {/* ── Empty state configuration defaults ───────────────────── */}
       {!hasSettings && (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/10 bg-white/1.5 py-16">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 ring-1 ring-blue-500/20">
-            <Sparkles className="h-7 w-7 text-blue-400" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-white">
-              No settings configured
-            </h3>
-            <p className="mt-1 max-w-sm text-sm text-gray-500">
-              Get started by seeding the default settings. You can customize
-              everything after.
-            </p>
-          </div>
-          <button
-            onClick={handleSeedDefaults}
-            disabled={seeding}
-            className="mt-2 flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-400 active:scale-[0.98] disabled:opacity-60"
-          >
-            {seeding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            {seeding ? 'Seeding…' : 'Seed Default Settings'}
-          </button>
-        </div>
+        <EmptyState
+          icon={Sparkles}
+          title="No settings configured"
+          description="Get started by seeding the default settings. You can customize everything after."
+          action={
+            <button
+              onClick={handleSeedDefaults}
+              disabled={seeding}
+              className="flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-400 active:scale-[0.98] disabled:opacity-60"
+            >
+              {seeding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              {seeding ? 'Seeding...' : 'Seed Default Settings'}
+            </button>
+          }
+        />
       )}
 
-      {/* ── Main layout ──────────────────────────────────────────── */}
-      <div className="flex flex-col gap-6 lg:flex-row">
-        {/* ── Sidebar ────────────────────────────────────────────── */}
-        <aside className="shrink-0 lg:w-60">
-          {/* Mobile: horizontal scroll */}
-          <div className="scrollbar-none flex gap-1 overflow-x-auto py-1 lg:hidden">
-            {SECTIONS.map((s) => {
-              const Icon = s.icon;
-              const active = activeSection === s.id;
-              return (
+      {/* ── Master Status Toggles Widget ─────────────────────────── */}
+      {hasSettings && (
+        <QuickTogglesWidget
+          values={values}
+          onChange={handleChange}
+          disabled={isPending}
+        />
+      )}
+
+      {/* ── Main Layout Workspace ────────────────────────────────── */}
+      {hasSettings && (
+        <div className="flex flex-col gap-6 lg:flex-row">
+          
+          {/* ── Left Sidebar Navigation ────────────────────────────── */}
+          <aside className="shrink-0 lg:w-64">
+            
+            {/* Unified Global Settings Search bar */}
+            <div className="relative mb-5 hidden lg:block">
+              <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder="Global settings search..."
+                className="w-full rounded-xl border border-white/6 bg-white/2 py-3.5 pr-10 pl-10 text-xs text-gray-200 transition-all placeholder:text-gray-600 focus:border-white/12 focus:bg-white/4 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+              />
+              {globalSearch && (
                 <button
-                  key={s.id}
-                  onClick={() => setActiveSection(s.id)}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-                    active
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                  }`}
+                  onClick={() => setGlobalSearch('')}
+                  className="absolute top-1/2 right-3.5 -translate-y-1/2 rounded-md p-0.5 text-gray-500 hover:text-gray-300"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  {s.label}
+                  <X className="h-4 w-4" />
                 </button>
-              );
-            })}
-          </div>
+              )}
+            </div>
 
-          {/* Desktop: grouped vertical nav */}
-          <nav className="hidden space-y-5 lg:block">
-            {SIDEBAR_GROUPS.map((group) => {
-              const groupSections = group.ids
-                .map((id) => SECTIONS.find((s) => s.id === id))
-                .filter(Boolean);
-              if (groupSections.length === 0) return null;
+            {/* Mobile View Navigation (horizontal scrolling tabs) */}
+            <div className="scrollbar-none flex gap-1.5 overflow-x-auto py-1 lg:hidden">
+              {SECTIONS.map((s) => {
+                const Icon = s.icon;
+                const active = activeSection === s.id && !globalSearch;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActiveSection(s.id);
+                      setGlobalSearch('');
+                    }}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                      active
+                        ? 'bg-white/10 text-white border border-white/10'
+                        : 'text-gray-500 border border-transparent hover:bg-white/4 hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
 
-              return (
-                <div key={group.label}>
-                  <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-widest text-gray-600 uppercase">
-                    {group.label}
-                  </p>
-                  <div className="space-y-0.5">
-                    {groupSections.map((s) => {
-                      const Icon = s.icon;
-                      const active = activeSection === s.id;
-                      const fc = countFields(s);
-                      return (
-                        <button
-                          key={s.id}
-                          onClick={() => setActiveSection(s.id)}
-                          className={`group relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 ${
-                            active
-                              ? 'bg-white/8 text-white'
-                              : 'text-gray-500 hover:bg-white/4 hover:text-gray-300'
-                          }`}
-                        >
-                          {active && (
-                            <div className="absolute top-2 bottom-2 left-0 w-0.75 rounded-full bg-blue-500" />
-                          )}
-                          <Icon
-                            className={`h-4 w-4 shrink-0 transition-colors ${
+            {/* Desktop: Grouped sidebar list */}
+            <nav className="hidden space-y-6 lg:block">
+              {SIDEBAR_GROUPS.map((group) => {
+                const groupSections = group.ids
+                  .map((id) => SECTIONS.find((s) => s.id === id))
+                  .filter(Boolean);
+                if (groupSections.length === 0) return null;
+
+                return (
+                  <div key={group.label} className="space-y-2">
+                    <p className="px-3 text-[10px] font-bold tracking-[0.15em] text-gray-600 uppercase">
+                      {group.label}
+                    </p>
+                    <div className="space-y-1">
+                      {groupSections.map((s) => {
+                        const Icon = s.icon;
+                        const active = activeSection === s.id && !globalSearch;
+                        const fc = countFields(s);
+                        const accent = categoryAccents[s.id] || { color: 'blue', border: 'border-white/10 bg-white/5', glow: '' };
+                        
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => {
+                              setActiveSection(s.id);
+                              setGlobalSearch('');
+                            }}
+                            className={`group relative flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-xs font-semibold transition-all duration-200 ${
                               active
-                                ? 'text-blue-400'
-                                : 'text-gray-600 group-hover:text-gray-400'
-                            }`}
-                          />
-                          <span className="flex-1 text-left">{s.label}</span>
-                          <span
-                            className={`text-[10px] tabular-nums transition-colors ${
-                              active
-                                ? 'text-gray-400'
-                                : 'text-gray-700 group-hover:text-gray-500'
+                                ? `bg-white/[0.06] text-white border border-white/[0.08] ${accent.glow}`
+                                : 'text-gray-500 border border-transparent hover:bg-white/[0.02] hover:text-gray-300'
                             }`}
                           >
-                            {fc}
-                          </span>
-                        </button>
-                      );
-                    })}
+                            {/* Color accented left indicator light */}
+                            <div className={`absolute top-3.5 bottom-3.5 left-0 w-1 rounded-full transition-transform ${
+                              active ? `bg-${accent.color}-500 scale-100` : 'scale-0'
+                            }`} />
+                            
+                            <Icon
+                              className={`h-4.5 w-4.5 shrink-0 transition-colors ${
+                                active
+                                  ? `text-${accent.color}-400`
+                                  : 'text-gray-600 group-hover:text-gray-400'
+                              }`}
+                            />
+                            
+                            <span className="flex-1 text-left">{s.label}</span>
+                            <span
+                              className={`text-[10px] font-semibold tabular-nums border px-1.5 py-0.25 rounded-md transition-colors ${
+                                active
+                                  ? 'border-white/8 bg-white/5 text-gray-400'
+                                  : 'border-transparent text-gray-700 group-hover:text-gray-500'
+                              }`}
+                            >
+                              {fc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </nav>
-        </aside>
+                );
+              })}
+            </nav>
+          </aside>
 
-        {/* ── Content ────────────────────────────────────────────── */}
-        <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/6 bg-white/2 p-5 sm:p-6">
-          {currentSection && (
-            <SectionPanel
-              key={currentSection.id}
-              section={currentSection}
-              initialSettings={initialSettings}
-            />
-          )}
+          {/* ── Content View Workspace Panel ───────────────────────── */}
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/6 bg-white/[0.01] p-5 shadow-2xl backdrop-blur-xl sm:p-6.5">
+            {msg && (
+              <div
+                className={`mb-5 flex items-center gap-2.5 rounded-xl border px-4.5 py-3 text-sm ${
+                  msg.type === 'error'
+                    ? 'border-rose-500/20 bg-rose-500/5 text-rose-300'
+                    : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-300'
+                }`}
+              >
+                {msg.type === 'error' ? (
+                  <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="h-4.5 w-4.5 shrink-0 animate-bounce" />
+                )}
+                <span className="flex-1">{msg.text}</span>
+              </div>
+            )}
+
+            {/* Render search results if there is a query */}
+            {globalSearch.trim() ? (
+              <SearchResultsView
+                query={globalSearch}
+                values={values}
+                onChange={handleChange}
+                disabled={isPending}
+              />
+            ) : (
+              currentSection && (
+                <SectionPanel
+                  key={currentSection.id}
+                  section={currentSection}
+                  values={values}
+                  onChange={handleChange}
+                  disabled={isPending}
+                  openGroups={openGroups}
+                  setOpenGroups={setOpenGroups}
+                  search={localSearch}
+                  setSearch={setLocalSearch}
+                />
+              )
+            )}
+
+            {/* ── Sticky Unsaved Changes Save Bar ────────────────── */}
+            <div
+              className={`sticky bottom-0 z-20 -mx-5 mt-7 -mb-5 flex items-center justify-between gap-4 border-t border-white/8 bg-gray-950/75 px-5 py-4.5 backdrop-blur-2xl transition-all duration-300 sm:-mx-6.5 sm:-mb-6.5 sm:px-6.5 ${
+                isDirty
+                  ? 'translate-y-0 opacity-100 shadow-[0_-8px_24px_rgba(0,0,0,0.5)]'
+                  : 'pointer-events-none translate-y-3 opacity-0'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 text-xs font-semibold text-gray-400">
+                <div className="h-2 w-2 animate-ping rounded-full bg-amber-400" />
+                You have unsaved changes across settings.
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setValues(buildInitialState());
+                  }}
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-gray-300 disabled:opacity-40 transition-all"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Discard
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isPending}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {isPending ? 'Saving...' : 'Save Changes'}
+                  <span className="hidden sm:inline rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-medium text-blue-200 tracking-wide ml-1 border border-white/5 shadow-inner">
+                    ⌘S
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* ── Static confirmation footer (when clean) ────────── */}
+            {!isDirty && (
+              <div className="mt-6 flex items-center justify-end border-t border-white/5 pt-5">
+                <button
+                  disabled
+                  className="flex items-center gap-2 rounded-xl border border-white/6 bg-white/2 px-4 py-2.5 text-xs font-semibold text-gray-600 opacity-60 transition-all"
+                >
+                  <Check className="h-4 w-4" />
+                  All configurations are up to date
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </PageShell>
   );
 }

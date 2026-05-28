@@ -29,7 +29,11 @@ import {
   RefreshCw,
   Database,
 } from 'lucide-react';
-import Link from 'next/link';
+import {
+  PageShell,
+  PageHeader,
+  ActionButton,
+} from '../../_components/_ui';
 import {
   exportUsersAction,
   exportJoinRequestsAction,
@@ -422,7 +426,7 @@ function ModulePanel({ mod, onExportDone }) {
       <p className="text-sm text-gray-500">{mod.description}</p>
 
       {/* Date range */}
-      <div className="space-y-3 rounded-2xl border border-white/8 bg-white/3 p-4">
+      <div className="space-y-3 rounded-2xl border border-white/[0.08] bg-gray-900 p-4">
         <h3 className="flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
           <Clock className="h-3.5 w-3.5" />
           Date Range
@@ -477,7 +481,7 @@ function ModulePanel({ mod, onExportDone }) {
 
       {/* Extra filters */}
       {mod.filters.length > 0 && (
-        <div className="space-y-3 rounded-2xl border border-white/8 bg-white/3 p-4">
+        <div className="space-y-3 rounded-2xl border border-white/[0.08] bg-gray-900 p-4">
           <h3 className="flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
             <Filter className="h-3.5 w-3.5" />
             Filters
@@ -542,7 +546,7 @@ function ModulePanel({ mod, onExportDone }) {
 
       {/* row limit if no extra filters */}
       {mod.filters.length === 0 && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-4">
           <label className="mb-1.5 block text-[11px] font-medium text-gray-500">
             Max Rows
           </label>
@@ -629,43 +633,18 @@ export default function ExportClient({ adminId, adminName }) {
   const Icon = mod?.icon || Database;
 
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ──────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-cyan-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Export Center</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 ring-1 ring-blue-500/25">
-                <Download className="h-5 w-5 text-blue-400" />
-              </div>
-              Export Center
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Download platform data as CSV or JSON
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <Link
-              href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
+      <PageHeader
+        title="Export Center"
+        subtitle="Download platform data as CSV or JSON."
+        icon={Download}
+        accent="blue"
+        actions={
+          <>
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/[0.06] hover:text-white"
             >
               <Clock className="h-3.5 w-3.5" />
               Export History
@@ -675,13 +654,14 @@ export default function ExportClient({ adminId, adminName }) {
                 </span>
               )}
             </button>
-          </div>
-        </div>
-      </div>
+            <ActionButton href="/account/admin">← Dashboard</ActionButton>
+          </>
+        }
+      />
 
       {/* ── Export History (collapsible) ─────────────────────────────────── */}
       {showHistory && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
             <Clock className="h-4 w-4 text-gray-400" />
             Session Export History
@@ -741,7 +721,7 @@ export default function ExportClient({ adminId, adminName }) {
       {/* ── Main Layout ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
         {/* Sidebar — module list */}
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-2">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-2">
           <div className="mb-2 px-2 pt-1 text-[10px] font-semibold tracking-widest text-gray-600 uppercase">
             Data Sources
           </div>
@@ -776,7 +756,7 @@ export default function ExportClient({ adminId, adminName }) {
 
         {/* Right panel */}
         {mod && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
             {/* Panel header */}
             <div className="mb-5 flex items-center gap-3 border-b border-white/6 pb-5">
               <div
@@ -798,7 +778,7 @@ export default function ExportClient({ adminId, adminName }) {
       </div>
 
       {/* ── Quick export chips ─────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+      <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
           <Download className="h-4 w-4 text-gray-400" />
           Quick Exports — All Time, All Records (CSV)
@@ -816,7 +796,7 @@ export default function ExportClient({ adminId, adminName }) {
           })}
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }
 

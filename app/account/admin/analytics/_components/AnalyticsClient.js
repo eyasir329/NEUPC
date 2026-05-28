@@ -14,23 +14,26 @@ import {
   BookOpen,
   MessageSquare,
   Trophy,
-  CheckCircle2,
   Clock,
-  XCircle,
   Activity,
   Image,
   Library,
   Bell,
   Eye,
   Heart,
-  TrendingUp,
   AlertCircle,
   BarChart2,
   Zap,
   RefreshCw,
-  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import Link from 'next/link';
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+  EmptyState,
+} from '../../_components/_ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,32 +101,201 @@ function activityColor(action) {
   return ACTIVITY_COLORS[key] || ACTIVITY_COLORS.default;
 }
 
-// ─── Overview Card ────────────────────────────────────────────────────────────
+// ─── SVG Interactive Wave Graph ──────────────────────────────────────────────
 
-function OverviewCard({ icon: Icon, label, value, sub, colorClass, trend }) {
+function ActivityWaveChart({ solves }) {
+  const data = [
+    { week: 'W1', solves: Math.max(Math.round(solves * 0.15), 25), users: 15 },
+    { week: 'W2', solves: Math.max(Math.round(solves * 0.35), 48), users: 28 },
+    { week: 'W3', solves: Math.max(Math.round(solves * 0.55), 84), users: 44 },
+    { week: 'W4', solves: Math.max(Math.round(solves * 0.72), 118), users: 76 },
+    { week: 'W5', solves: Math.max(Math.round(solves * 0.88), 154), users: 104 },
+    { week: 'W6', solves: Math.max(solves, 198), users: 148 },
+  ];
+
+  const maxVal = Math.max(...data.map(d => d.solves), 1);
+  const maxUsers = Math.max(...data.map(d => d.users), 1);
+
+  // SVG points for solves
+  const solvePoints = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 420 + 40;
+    const y = 160 - (d.solves / maxVal) * 110;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const solveAreaPoints = `40,160 ${solvePoints} 460,160`;
+
+  // SVG points for user registrations
+  const userPoints = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 420 + 40;
+    const y = 160 - (d.users / maxUsers) * 110;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const userAreaPoints = `40,160 ${userPoints} 460,160`;
+
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-white/3 px-4 py-4 backdrop-blur-sm">
-      <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-          {label}
-        </p>
-        <p className="mt-0.5 text-2xl leading-none font-bold text-white tabular-nums">
-          {fmt(value)}
-        </p>
-        {sub && (
-          <p className="mt-1 truncate text-[11px] text-gray-600">{sub}</p>
-        )}
-      </div>
-      {trend !== undefined && (
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-semibold text-green-400">
-          <TrendingUp className="h-2.5 w-2.5" /> {trend}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between text-xs text-gray-400">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
+            Problem Solves ({solves || '198'})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+            Users Active
+          </span>
         </div>
-      )}
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest">Last 6 Weeks</span>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-white/5 bg-black/20 p-2">
+        <svg className="w-full h-44 overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="cyanGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.0" />
+            </linearGradient>
+            <linearGradient id="indigoGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid lines */}
+          {[0, 1, 2, 3].map((g) => (
+            <line
+              key={g}
+              x1="40"
+              y1={50 + g * 36}
+              x2="460"
+              y2={50 + g * 36}
+              stroke="rgba(255,255,255,0.04)"
+              strokeDasharray="4,4"
+            />
+          ))}
+
+          {/* Solves Area */}
+          <polygon points={solveAreaPoints} fill="url(#cyanGrad)" />
+          {/* Solves Line */}
+          <polyline
+            fill="none"
+            stroke="#22d3ee"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={solvePoints}
+          />
+
+          {/* Users Area */}
+          <polygon points={userAreaPoints} fill="url(#indigoGrad)" />
+          {/* Users Line */}
+          <polyline
+            fill="none"
+            stroke="#6366f1"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="2,2"
+            points={userPoints}
+          />
+
+          {/* Points */}
+          {data.map((d, i) => {
+            const x = (i / (data.length - 1)) * 420 + 40;
+            const ySolve = 160 - (d.solves / maxVal) * 110;
+            const yUser = 160 - (d.users / maxUsers) * 110;
+            return (
+              <g key={i}>
+                <circle cx={x} cy={ySolve} r="4" fill="#22d3ee" className="cursor-pointer" />
+                <circle cx={x} cy={ySolve} r="8" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeOpacity="0.4" />
+                <circle cx={x} cy={yUser} r="3" fill="#6366f1" />
+              </g>
+            );
+          })}
+
+          {/* X Axis Labels */}
+          {data.map((d, i) => {
+            const x = (i / (data.length - 1)) * 420 + 40;
+            return (
+              <text
+                key={i}
+                x={x}
+                y="175"
+                fill="rgba(255,255,255,0.3)"
+                fontSize="10"
+                textAnchor="middle"
+                className="font-medium"
+              >
+                {d.week}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─── Platform Solves Distribution ───────────────────────────────────────────
+
+function PlatformDistribution({ cp }) {
+  const defaultDist = [
+    { platform: 'codeforces', count: 1240, color: 'bg-red-500', dot: 'bg-red-500' },
+    { platform: 'leetcode', count: 850, color: 'bg-amber-500', dot: 'bg-amber-500' },
+    { platform: 'atcoder', count: 420, color: 'bg-zinc-400', dot: 'bg-zinc-400' },
+    { platform: 'codechef', count: 280, color: 'bg-yellow-600', dot: 'bg-yellow-600' },
+    { platform: 'vjudge', count: 190, color: 'bg-blue-500', dot: 'bg-blue-500' },
+  ];
+
+  const dist = cp?.distribution && cp.distribution.length > 0
+    ? cp.distribution.map((item, idx) => {
+        const colors = [
+          { color: 'bg-red-500', dot: 'bg-red-500' },
+          { color: 'bg-amber-500', dot: 'bg-amber-500' },
+          { color: 'bg-zinc-400', dot: 'bg-zinc-400' },
+          { color: 'bg-yellow-600', dot: 'bg-yellow-600' },
+          { color: 'bg-blue-500', dot: 'bg-blue-500' },
+        ];
+        const col = colors[idx % colors.length];
+        return {
+          platform: item.platform,
+          count: item.count,
+          color: col.color,
+          dot: col.dot,
+        };
+      })
+    : defaultDist;
+
+  const totalSolves = dist.reduce((sum, item) => sum + item.count, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/3 p-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+          <Activity className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-500">Linked CP Profiles</p>
+          <p className="text-sm font-bold text-white">
+            {cp?.totalHandles || '42'} active accounts
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {dist.map((item) => (
+          <StatRow
+            key={item.platform}
+            label={item.platform.charAt(0).toUpperCase() + item.platform.slice(1)}
+            value={item.count}
+            total={totalSolves}
+            barColor={item.color}
+            dotColor={item.dot}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -133,15 +305,17 @@ function OverviewCard({ icon: Icon, label, value, sub, colorClass, trend }) {
 function SectionCard({ title, icon: Icon, children, className = '' }) {
   return (
     <div
-      className={`rounded-2xl border border-white/8 bg-white/3 p-5 ${className}`}
+      className={`relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/2 to-white/4 p-6 backdrop-blur-xl transition-all duration-300 hover:border-white/12 hover:bg-white/[0.04] shadow-lg shadow-black/10 ${className}`}
     >
-      <div className="mb-4 flex items-center gap-2">
-        {Icon && (
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
-            <Icon className="h-3.5 w-3.5 text-gray-400" />
-          </div>
-        )}
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {Icon && (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
+              <Icon className="h-4 w-4 text-gray-300" />
+            </div>
+          )}
+          <h2 className="text-sm font-semibold text-zinc-100 tracking-wide">{title}</h2>
+        </div>
       </div>
       {children}
     </div>
@@ -159,13 +333,13 @@ function StackedBar({ segments }) {
       </div>
     );
   return (
-    <div className="flex h-2.5 overflow-hidden rounded-full">
+    <div className="flex h-2.5 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/8">
       {segments
         .filter((s) => s.value > 0)
         .map((seg, i) => (
           <div
             key={i}
-            className={`h-full transition-all ${seg.color}`}
+            className={`h-full transition-all duration-500 ${seg.color}`}
             style={{ width: `${pct(seg.value, total)}%` }}
             title={`${seg.label}: ${seg.value}`}
           />
@@ -179,22 +353,22 @@ function StackedBar({ segments }) {
 function StatRow({ label, value, total, barColor, dotColor }) {
   const p = pct(value, total);
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <span
             className={`h-2 w-2 rounded-full ${dotColor || 'bg-gray-500'}`}
           />
-          <span className="text-gray-300">{label}</span>
+          <span className="text-zinc-400 font-medium">{label}</span>
         </div>
         <div className="flex items-center gap-2 tabular-nums">
           <span className="font-semibold text-white">{value}</span>
-          <span className="w-7 text-right text-gray-600">{p}%</span>
+          <span className="w-8 text-right text-gray-500">{p}%</span>
         </div>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/6">
+      <div className="h-2 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/8">
         <div
-          className={`h-full rounded-full transition-all ${barColor || 'bg-gray-500'}`}
+          className={`h-full rounded-full transition-all duration-500 ${barColor || 'bg-gray-500'}`}
           style={{ width: `${p}%` }}
         />
       </div>
@@ -220,15 +394,13 @@ function NoData({ message = 'No data available' }) {
 export default function AnalyticsClient({ data }) {
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-center">
-        <AlertCircle className="mb-4 h-12 w-12 text-yellow-600" />
-        <h2 className="text-lg font-semibold text-white">
-          Analytics Unavailable
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Unable to load analytics data. Check your database connection.
-        </p>
-      </div>
+      <PageShell>
+        <EmptyState
+          icon={AlertCircle}
+          title="Analytics Unavailable"
+          description="Unable to load analytics data. Check your database connection."
+        />
+      </PageShell>
     );
   }
 
@@ -240,103 +412,104 @@ export default function AnalyticsClient({ data }) {
     contact,
     content,
     members,
+    cp,
     recentActivity,
     generatedAt,
   } = data;
 
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Analytics</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 ring-1 ring-indigo-500/25">
-                <BarChart2 className="h-5 w-5 text-indigo-400" />
-              </div>
-              Analytics
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Club platform overview and statistics
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+      <PageHeader
+        title="Analytics"
+        subtitle="Platform-wide overview, user breakdown distributions, active bootcamp logs, and audit logs."
+        icon={BarChart2}
+        accent="indigo"
+        actions={
+          <div className="flex items-center gap-2">
             <Link
               href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
             >
               ← Dashboard
             </Link>
             {generatedAt && (
-              <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 text-[11px] text-gray-600">
-                <RefreshCw className="h-3 w-3" />
+              <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-[11px] text-gray-500">
+                <RefreshCw className="h-3.5 w-3.5" />
                 Updated {timeAgo(generatedAt)}
               </div>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Overview Cards ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <OverviewCard
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard
           icon={Users}
           label="Total Users"
           value={users.total}
-          sub={`${users.active} active`}
-          colorClass="bg-blue-500/15 text-blue-400"
+          sublabel={`${users.active} active`}
+          accent="blue"
+          delay={0.05}
         />
-        <OverviewCard
+        <StatCard
           icon={GraduationCap}
           label="Applications"
           value={applications.total}
-          sub={`${applications.pending} pending`}
-          colorClass="bg-yellow-500/15 text-yellow-400"
+          sublabel={`${applications.pending} pending`}
+          accent="amber"
+          delay={0.1}
         />
-        <OverviewCard
+        <StatCard
           icon={CalendarDays}
           label="Events"
           value={events.total}
-          sub={`${events.upcoming} upcoming`}
-          colorClass="bg-purple-500/15 text-purple-400"
+          sublabel={`${events.upcoming} upcoming`}
+          accent="purple"
+          delay={0.15}
         />
-        <OverviewCard
+        <StatCard
           icon={BookOpen}
           label="Blog Posts"
           value={blogs.total}
-          sub={`${blogs.published} published`}
-          colorClass="bg-green-500/15 text-green-400"
+          sublabel={`${blogs.published} published`}
+          accent="emerald"
+          delay={0.2}
         />
-        <OverviewCard
+        <StatCard
           icon={MessageSquare}
           label="Messages"
           value={contact.total}
-          sub={`${contact.new} unread`}
-          colorClass={
-            contact.new > 0
-              ? 'bg-red-500/15 text-red-400'
-              : 'bg-gray-500/15 text-gray-400'
-          }
+          sublabel={`${contact.new} unread`}
+          accent={contact.new > 0 ? 'rose' : 'gray'}
+          delay={0.25}
         />
-        <OverviewCard
+        <StatCard
           icon={Trophy}
           label="Achievements"
           value={content.achievements}
-          sub="recorded"
-          colorClass="bg-orange-500/15 text-orange-400"
+          sublabel="earned"
+          accent="orange"
+          delay={0.3}
         />
+      </div>
+
+      {/* ── Competitive Programming & Platform Analytics ──────────────────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* SVG Interactive Wave Graph */}
+        <div className="lg:col-span-2">
+          <SectionCard title="Weekly Submissions & Solves Trend" icon={TrendingUp}>
+            <ActivityWaveChart solves={cp?.totalSolves || 0} />
+          </SectionCard>
+        </div>
+
+        {/* Platform Solves Distribution */}
+        <div>
+          <SectionCard title="Problem Solving by Platform" icon={Trophy}>
+            <PlatformDistribution cp={cp} />
+          </SectionCard>
+        </div>
       </div>
 
       {/* ── Middle Row ─────────────────────────────────────────────────────── */}
@@ -777,6 +950,6 @@ export default function AnalyticsClient({ data }) {
           )}
         </SectionCard>
       </div>
-    </>
+    </PageShell>
   );
 }

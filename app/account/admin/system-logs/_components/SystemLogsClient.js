@@ -36,7 +36,14 @@ import {
   Layers,
   TrendingUp,
 } from 'lucide-react';
-import Link from 'next/link';
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+  TabBar,
+  EmptyState,
+  ActionButton,
+} from '../../_components/_ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -156,68 +163,14 @@ const MODULE_BAR_COLORS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, sub, colorClass, alert }) {
-  return (
-    <div
-      className={`flex items-start gap-3 rounded-2xl border px-4 py-4 backdrop-blur-sm transition-colors ${
-        alert ? 'border-red-500/25 bg-red-500/5' : 'border-white/8 bg-white/3'
-      }`}
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-          {label}
-        </p>
-        <p className="mt-0.5 text-2xl leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        {sub && (
-          <p className="mt-1 truncate text-[11px] text-gray-600">{sub}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TabBtn({ active, onClick, children, count, alert }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-            alert
-              ? 'bg-red-500/20 text-red-400'
-              : active
-                ? 'bg-white/15 text-white'
-                : 'bg-white/6 text-gray-600'
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
 function Empty({ message = 'No logs found' }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <ClipboardList className="mb-3 h-10 w-10 text-gray-700" />
-      <p className="text-sm font-medium text-gray-500">{message}</p>
-      <p className="mt-1 text-xs text-gray-700">Try adjusting your filters</p>
-    </div>
+    <EmptyState
+      icon={ClipboardList}
+      title={message}
+      description="Try adjusting your filters"
+      accent="gray"
+    />
   );
 }
 
@@ -550,98 +503,36 @@ export default function SystemLogsClient({ data }) {
   const maxModuleCount = topModules.length > 0 ? topModules[0][1] : 1;
   const totalTopActions = topActions.reduce((s, [, v]) => s + v, 0);
 
+  const tabs = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'all', label: 'All Logs', count: allLogs.length },
+    { value: 'user_activity', label: 'User Activity', icon: Users, count: categoryBreakdown.user_activity },
+    { value: 'content', label: 'Content', icon: FileText, count: categoryBreakdown.content },
+    { value: 'security', label: 'Security', icon: Shield, count: categoryBreakdown.security },
+    { value: 'system', label: 'System', icon: Settings, count: categoryBreakdown.system },
+  ];
+
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ──────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-slate-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">System Logs</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-500/15 ring-1 ring-slate-500/25">
-                <ClipboardList className="h-5 w-5 text-slate-400" />
-              </div>
-              System Logs
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Full platform activity audit trail
-              <span className="ml-1.5 inline-flex items-center gap-1 text-gray-600">
-                <BarChart3 className="h-3 w-3" />
-                {overview.totalLoaded.toLocaleString()} entries loaded
-              </span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Link
-              href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 text-[11px] text-gray-600">
+      <PageHeader
+        title="System Logs"
+        subtitle={`Full platform activity audit trail · ${overview.totalLoaded.toLocaleString()} entries loaded.`}
+        icon={ClipboardList}
+        accent="cyan"
+        actions={
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-[11px] text-gray-500">
               <RefreshCw className="h-3 w-3" />
               {timeAgo(generatedAt)}
-            </div>
-          </div>
-        </div>
-      </div>
+            </span>
+            <ActionButton href="/account/admin">← Dashboard</ActionButton>
+          </>
+        }
+      />
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
-      <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
-        <TabBtn
-          active={activeTab === 'overview'}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'all'}
-          onClick={() => setActiveTab('all')}
-          count={allLogs.length}
-        >
-          All Logs
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'user_activity'}
-          onClick={() => setActiveTab('user_activity')}
-          count={categoryBreakdown.user_activity}
-        >
-          User Activity
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'content'}
-          onClick={() => setActiveTab('content')}
-          count={categoryBreakdown.content}
-        >
-          Content
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'security'}
-          onClick={() => setActiveTab('security')}
-          count={categoryBreakdown.security}
-          alert={categoryBreakdown.security > 0}
-        >
-          Security
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'system'}
-          onClick={() => setActiveTab('system')}
-          count={categoryBreakdown.system}
-        >
-          System
-        </TabBtn>
-      </div>
+      <TabBar tabs={tabs} value={activeTab} onChange={setActiveTab} />
 
       {/* ═════════════════════════════════════════════════════════════════════
            TAB: OVERVIEW
@@ -654,30 +545,33 @@ export default function SystemLogsClient({ data }) {
               icon={TrendingUp}
               label="Logs Today"
               value={overview.todayCount}
-              sub="since midnight"
-              colorClass="bg-blue-500/15 text-blue-400"
+              sublabel="since midnight"
+              accent="blue"
+              delay={0.05}
             />
             <StatCard
               icon={AlertTriangle}
               label="Warnings"
               value={overview.warningsCount}
-              sub="in last 500 entries"
-              colorClass="bg-yellow-500/15 text-yellow-400"
+              sublabel="in last 500 entries"
+              accent="amber"
+              delay={0.1}
             />
             <StatCard
               icon={XCircle}
               label="Errors"
               value={overview.errorsCount}
-              sub="in last 500 entries"
-              colorClass="bg-red-500/15 text-red-400"
-              alert={overview.errorsCount > 0}
+              sublabel="in last 500 entries"
+              accent="rose"
+              delay={0.15}
             />
             <StatCard
               icon={Activity}
               label="Failed Actions"
               value={overview.failedCount}
-              sub="across all types"
-              colorClass="bg-orange-500/15 text-orange-400"
+              sublabel="across all types"
+              accent="orange"
+              delay={0.2}
             />
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -685,39 +579,38 @@ export default function SystemLogsClient({ data }) {
               icon={Users}
               label="Unique Users"
               value={overview.uniqueUsers}
-              sub="in last 500 entries"
-              colorClass="bg-cyan-500/15 text-cyan-400"
+              sublabel="in last 500 entries"
+              accent="cyan"
+              delay={0.25}
             />
             <StatCard
               icon={Globe}
               label="Unique IPs"
               value={overview.uniqueIPs}
-              sub="in last 500 entries"
-              colorClass="bg-green-500/15 text-green-400"
+              sublabel="in last 500 entries"
+              accent="emerald"
+              delay={0.3}
             />
             <StatCard
               icon={Shield}
               label="Security Events"
               value={categoryBreakdown.security}
-              sub="flagged logs"
-              colorClass={
-                categoryBreakdown.security > 5
-                  ? 'bg-red-500/15 text-red-400'
-                  : 'bg-purple-500/15 text-purple-400'
-              }
-              alert={categoryBreakdown.security > 5}
+              sublabel="flagged logs"
+              accent={categoryBreakdown.security > 5 ? 'rose' : 'violet'}
+              delay={0.35}
             />
             <StatCard
               icon={ClipboardList}
               label="Total Loaded"
               value={overview.totalLoaded}
-              sub="max 500 from DB"
-              colorClass="bg-gray-500/15 text-gray-400"
+              sublabel="max 500 from DB"
+              accent="gray"
+              delay={0.4}
             />
           </div>
 
           {/* Daily Activity Chart */}
-          <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
             <div className="mb-5 flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                 <BarChart3 className="h-3.5 w-3.5 text-gray-400" />
@@ -762,7 +655,7 @@ export default function SystemLogsClient({ data }) {
           {/* Module & Action Breakdown */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Top modules */}
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                   <Layers className="h-3.5 w-3.5 text-gray-400" />
@@ -811,7 +704,7 @@ export default function SystemLogsClient({ data }) {
             </div>
 
             {/* Top actions */}
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                   <Activity className="h-3.5 w-3.5 text-gray-400" />
@@ -860,7 +753,7 @@ export default function SystemLogsClient({ data }) {
           </div>
 
           {/* Category distribution */}
-          <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
             <div className="mb-4 flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                 <Filter className="h-3.5 w-3.5 text-gray-400" />
@@ -902,7 +795,7 @@ export default function SystemLogsClient({ data }) {
            TAB: ALL LOGS
       ═════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'all' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-gray-400" />
@@ -919,7 +812,7 @@ export default function SystemLogsClient({ data }) {
            TAB: USER ACTIVITY
       ═════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'user_activity' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-5 flex items-center gap-2">
             <Users className="h-4 w-4 text-cyan-400" />
             <h2 className="text-sm font-semibold text-white">
@@ -937,7 +830,7 @@ export default function SystemLogsClient({ data }) {
            TAB: CONTENT
       ═════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'content' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-5 flex items-center gap-2">
             <FileText className="h-4 w-4 text-green-400" />
             <h2 className="text-sm font-semibold text-white">Content Logs</h2>
@@ -981,7 +874,7 @@ export default function SystemLogsClient({ data }) {
            TAB: SYSTEM
       ═════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'system' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-5 flex items-center gap-2">
             <Settings className="h-4 w-4 text-purple-400" />
             <h2 className="text-sm font-semibold text-white">System Logs</h2>
@@ -992,6 +885,6 @@ export default function SystemLogsClient({ data }) {
           <LogList logs={logsByCategory.system} />
         </div>
       )}
-    </>
+    </PageShell>
   );
 }

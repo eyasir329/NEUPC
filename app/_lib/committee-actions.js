@@ -177,6 +177,41 @@ export async function createCommitteeMemberAction(formData) {
     bio: formData.get('bio')?.toString().trim() || null,
   });
 
+  // Upsert profile data
+  const academicSession = formData.get('academic_session')?.toString().trim();
+  const department = formData.get('department')?.toString().trim();
+  const github = formData.get('github')?.toString().trim();
+  const linkedin = formData.get('linkedin')?.toString().trim();
+
+  const profileUpdates = { updated_at: new Date().toISOString() };
+  let hasProfileUpdates = false;
+
+  if (academicSession !== undefined) {
+    profileUpdates.academic_session = academicSession || null;
+    hasProfileUpdates = true;
+  }
+  if (department !== undefined) {
+    profileUpdates.department = department || null;
+    hasProfileUpdates = true;
+  }
+  if (github !== undefined) {
+    profileUpdates.github = github || null;
+    hasProfileUpdates = true;
+  }
+  if (linkedin !== undefined) {
+    profileUpdates.linkedin = linkedin || null;
+    hasProfileUpdates = true;
+  }
+
+  if (hasProfileUpdates) {
+    await supabaseAdmin
+      .from('member_profiles')
+      .upsert(
+        { user_id: userId, ...profileUpdates },
+        { onConflict: 'user_id' }
+      );
+  }
+
   await logActivity(
     adminId,
     'create_committee_member',
@@ -189,6 +224,7 @@ export async function createCommitteeMemberAction(formData) {
   );
 
   revalidateCommitteeViews();
+  return { success: true };
 }
 
 export async function updateCommitteeMemberAction(formData) {
@@ -211,6 +247,50 @@ export async function updateCommitteeMemberAction(formData) {
     bio: formData.get('bio')?.toString().trim() || null,
   });
 
+  // Get the user ID associated with the committee member
+  const { data: memberData } = await supabaseAdmin
+    .from('committee_members')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+
+  if (memberData?.user_id) {
+    const userId = memberData.user_id;
+    const academicSession = formData.get('academic_session')?.toString().trim();
+    const department = formData.get('department')?.toString().trim();
+    const github = formData.get('github')?.toString().trim();
+    const linkedin = formData.get('linkedin')?.toString().trim();
+
+    const profileUpdates = { updated_at: new Date().toISOString() };
+    let hasProfileUpdates = false;
+
+    if (academicSession !== undefined) {
+      profileUpdates.academic_session = academicSession || null;
+      hasProfileUpdates = true;
+    }
+    if (department !== undefined) {
+      profileUpdates.department = department || null;
+      hasProfileUpdates = true;
+    }
+    if (github !== undefined) {
+      profileUpdates.github = github || null;
+      hasProfileUpdates = true;
+    }
+    if (linkedin !== undefined) {
+      profileUpdates.linkedin = linkedin || null;
+      hasProfileUpdates = true;
+    }
+
+    if (hasProfileUpdates) {
+      await supabaseAdmin
+        .from('member_profiles')
+        .upsert(
+          { user_id: userId, ...profileUpdates },
+          { onConflict: 'user_id' }
+        );
+    }
+  }
+
   await logActivity(
     adminId,
     'update_committee_member',
@@ -222,6 +302,7 @@ export async function updateCommitteeMemberAction(formData) {
   );
 
   revalidateCommitteeViews();
+  return { success: true };
 }
 
 export async function deleteCommitteeMemberAction(formData) {

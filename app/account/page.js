@@ -70,7 +70,11 @@ export default async function AccountPage() {
         <div className="relative z-10 mx-auto max-w-5xl">
           {/* Hero: avatar above gradient title (centered, matches PageHero) */}
           <div className="mb-16">
-            <UserAvatar session={session.user} />
+            <UserAvatar
+              session={session.user}
+              userId={user?.id}
+              isAdmin={userRoles.includes('admin')}
+            />
             <AccountHeader
               session={session.user}
               accountStatus={user?.account_status}

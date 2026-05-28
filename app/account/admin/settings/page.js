@@ -24,9 +24,5 @@ export default async function AdminSettingsPage() {
     settingsMap[row.key] = row.value;
   }
 
-  return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <SettingsClient initialSettings={settingsMap} adminId={user.id} />
-    </div>
-  );
+  return <SettingsClient initialSettings={settingsMap} adminId={user.id} />;
 }

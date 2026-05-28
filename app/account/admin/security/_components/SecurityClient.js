@@ -35,9 +35,15 @@ import {
   UserCog,
   Wifi,
   AlertCircle,
-  ChevronRight,
 } from 'lucide-react';
-import Link from 'next/link';
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+  TabBar,
+  EmptyState,
+  ActionButton,
+} from '../../_components/_ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -190,65 +196,6 @@ const THREAT_CONFIG = {
     icon: Lock,
   },
 };
-
-// ─── Overview Stat Card ───────────────────────────────────────────────────────
-
-function StatCard({ icon: Icon, label, value, sub, colorClass, alert }) {
-  return (
-    <div
-      className={`flex items-start gap-3 rounded-2xl border px-4 py-4 backdrop-blur-sm ${
-        alert ? 'border-red-500/25 bg-red-500/5' : 'border-white/8 bg-white/3'
-      }`}
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium tracking-wider text-gray-500 uppercase">
-          {label}
-        </p>
-        <p className="mt-0.5 text-2xl leading-none font-bold text-white tabular-nums">
-          {value}
-        </p>
-        {sub && (
-          <p className="mt-1 truncate text-[11px] text-gray-600">{sub}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Tab Button ───────────────────────────────────────────────────────────────
-
-function TabBtn({ active, onClick, children, count, alert }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-        active
-          ? 'bg-white/12 text-white shadow-sm'
-          : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
-      }`}
-    >
-      {children}
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-            alert
-              ? 'bg-red-500/20 text-red-400'
-              : active
-                ? 'bg-white/15 text-white'
-                : 'bg-white/6 text-gray-600'
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
 
 // ─── Log Row ─────────────────────────────────────────────────────────────────
 
@@ -431,13 +378,8 @@ function RoleChangeRow({ log }) {
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function Empty({ message }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-14 text-center">
-      <ShieldCheck className="mb-3 h-10 w-10 text-gray-700" />
-      <p className="text-sm text-gray-500">{message}</p>
-    </div>
-  );
+function Empty({ message, icon = ShieldCheck, accent = 'gray' }) {
+  return <EmptyState icon={icon} title={message} accent={accent} />;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -525,46 +467,30 @@ export default function SecurityClient({ data }) {
     'bg-orange-500',
   ];
 
+  const tabs = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'sessions', label: 'Active Sessions', count: overview.activeSessions },
+    { value: 'audit', label: 'Audit Log', count: auditLogs.length },
+    { value: 'roles', label: 'Role Changes', count: roleChangeLogs.length },
+    { value: 'threats', label: 'Threats', icon: ShieldAlert, count: threats.length },
+    { value: 'logins', label: 'Login Events', count: loginLogs.length },
+  ];
+
   return (
-    <>
+    <PageShell>
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-green-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Security</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/25">
-                <ShieldCheck className="h-5 w-5 text-green-400" />
-              </div>
-              Security
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Monitor platform security and audit trail
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <Link
-              href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
-            <div
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold ${
+      <PageHeader
+        title="Security"
+        subtitle="Monitor platform security and audit trail."
+        icon={ShieldCheck}
+        accent="emerald"
+        actions={
+          <>
+            <span
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
                 systemStatus === 'secure'
-                  ? 'border-green-500/25 bg-green-500/10 text-green-300'
-                  : 'border-yellow-500/25 bg-yellow-500/10 text-yellow-300'
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
               }`}
             >
               {systemStatus === 'secure' ? (
@@ -573,56 +499,14 @@ export default function SecurityClient({ data }) {
                 <ShieldAlert className="h-4 w-4" />
               )}
               {systemStatus === 'secure' ? 'System Secure' : 'Needs Attention'}
-            </div>
-          </div>
-        </div>
-      </div>
+            </span>
+            <ActionButton href="/account/admin">← Dashboard</ActionButton>
+          </>
+        }
+      />
 
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <div className="scrollbar-none flex gap-1 overflow-x-auto rounded-xl border border-white/8 bg-white/3 p-1.5">
-        <TabBtn
-          active={activeTab === 'overview'}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'sessions'}
-          onClick={() => setActiveTab('sessions')}
-          count={overview.activeSessions}
-        >
-          Active Sessions
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'audit'}
-          onClick={() => setActiveTab('audit')}
-          count={auditLogs.length}
-        >
-          Audit Log
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'roles'}
-          onClick={() => setActiveTab('roles')}
-          count={roleChangeLogs.length}
-        >
-          Role Changes
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'threats'}
-          onClick={() => setActiveTab('threats')}
-          count={threats.length}
-          alert={hasThreats}
-        >
-          Threats
-        </TabBtn>
-        <TabBtn
-          active={activeTab === 'logins'}
-          onClick={() => setActiveTab('logins')}
-          count={loginLogs.length}
-        >
-          Login Events
-        </TabBtn>
-      </div>
+      <TabBar tabs={tabs} value={activeTab} onChange={setActiveTab} />
 
       {/* ═══════════════════════════════════════════════════════════════════════
            TAB: OVERVIEW
@@ -635,55 +519,56 @@ export default function SecurityClient({ data }) {
               icon={Wifi}
               label="Active Sessions"
               value={overview.activeSessions}
-              sub="users online now"
-              colorClass="bg-green-500/15 text-green-400"
+              sublabel="users online now"
+              accent="emerald"
+              delay={0.05}
             />
             <StatCard
               icon={AlertTriangle}
               label="Failed Logins 24h"
               value={overview.failedLogins24h}
-              sub="in last 24 hours"
-              colorClass={
-                overview.failedLogins24h > 5
-                  ? 'bg-red-500/15 text-red-400'
-                  : 'bg-yellow-500/15 text-yellow-400'
-              }
-              alert={overview.failedLogins24h > 5}
+              sublabel="in last 24 hours"
+              accent={overview.failedLogins24h > 5 ? 'rose' : 'amber'}
+              delay={0.1}
             />
             <StatCard
               icon={UserX}
               label="Suspended"
               value={overview.suspendedCount}
-              sub="accounts suspended"
-              colorClass="bg-orange-500/15 text-orange-400"
+              sublabel="accounts suspended"
+              accent="orange"
+              delay={0.15}
             />
             <StatCard
               icon={Ban}
               label="Banned"
               value={overview.bannedCount}
-              sub="accounts banned"
-              colorClass="bg-red-500/15 text-red-400"
+              sublabel="accounts banned"
+              accent="rose"
+              delay={0.2}
             />
             <StatCard
               icon={Lock}
               label="Locked"
               value={overview.lockedCount}
-              sub="accounts locked"
-              colorClass="bg-yellow-500/15 text-yellow-400"
+              sublabel="accounts locked"
+              accent="amber"
+              delay={0.25}
             />
             <StatCard
               icon={UserCog}
               label="Role Changes"
               value={overview.recentRoleChanges}
-              sub="recent activity"
-              colorClass="bg-purple-500/15 text-purple-400"
+              sublabel="recent activity"
+              accent="violet"
+              delay={0.3}
             />
           </div>
 
           {/* Activity breakdown */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Action distribution */}
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                   <Activity className="h-3.5 w-3.5 text-gray-400" />
@@ -737,7 +622,7 @@ export default function SecurityClient({ data }) {
             </div>
 
             {/* Recent role assignments */}
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/6">
                   <KeyRound className="h-3.5 w-3.5 text-gray-400" />
@@ -812,7 +697,7 @@ export default function SecurityClient({ data }) {
            TAB: ACTIVE SESSIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'sessions' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-4 flex items-center gap-2">
             <Wifi className="h-4 w-4 text-green-400" />
             <h2 className="text-sm font-semibold text-white">
@@ -902,7 +787,7 @@ export default function SecurityClient({ data }) {
       ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'roles' && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
             <div className="mb-4 flex items-center gap-2">
               <UserCog className="h-4 w-4 text-purple-400" />
               <h2 className="text-sm font-semibold text-white">
@@ -920,7 +805,7 @@ export default function SecurityClient({ data }) {
             )}
           </div>
           {recentRoleAssignments.length > 0 && (
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-purple-400" />
                 <h2 className="text-sm font-semibold text-white">
@@ -986,7 +871,7 @@ export default function SecurityClient({ data }) {
                 return (
                   <div
                     key={type}
-                    className="rounded-2xl border border-white/8 bg-white/3 p-5"
+                    className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5"
                   >
                     <div className="mb-3 flex items-center gap-2">
                       <Icon className={`h-4 w-4 ${cfg.color}`} />
@@ -1011,7 +896,7 @@ export default function SecurityClient({ data }) {
            TAB: LOGIN EVENTS
       ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'logins' && (
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-gray-900 p-5">
           <div className="mb-4 flex items-center gap-2">
             <LogIn className="h-4 w-4 text-blue-400" />
             <h2 className="text-sm font-semibold text-white">
@@ -1032,6 +917,6 @@ export default function SecurityClient({ data }) {
           )}
         </div>
       )}
-    </>
+    </PageShell>
   );
 }

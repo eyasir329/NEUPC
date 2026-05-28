@@ -9,11 +9,11 @@
 
 import { useState, useEffect } from 'react';
 import { Edit, ChevronLeft, ChevronRight, Users } from 'lucide-react';
-import Avatar from './Avatar';
 import RoleBadge from './RoleBadge';
 import StatusBadge from './StatusBadge';
 import ApprovalBadge from './ApprovalBadge';
 import ActionMenu from './ActionMenu';
+import { Avatar, EmptyState } from '../../_components/_ui';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -102,7 +102,6 @@ export default function UsersTable({
     { label: '', cls: 'min-w-[110px]' },
   ];
 
-  console.log('Rendering UsersTable with', { filtered, users, paginated });
 
   return (
     <div className="space-y-2">
@@ -138,7 +137,7 @@ export default function UsersTable({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
-                          <Avatar user={user} />
+                          <Avatar name={user.name} size="sm" src={user.avatar} />
                           {user.isOnline && (
                             <span
                               className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-gray-900"
@@ -233,7 +232,7 @@ export default function UsersTable({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="relative shrink-0">
-                      <Avatar user={user} />
+                      <Avatar name={user.name} size="sm" src={user.avatar} />
                       {user.isOnline && (
                         <span
                           className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-gray-900"
@@ -375,16 +374,4 @@ export default function UsersTable({
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-      <div className="rounded-2xl bg-white/5 p-4">
-        <Users className="h-8 w-8 text-gray-600" />
-      </div>
-      <p className="text-sm font-medium text-gray-400">No users found</p>
-      <p className="text-xs text-gray-600">
-        Try adjusting your search or filters
-      </p>
-    </div>
-  );
-}
+
