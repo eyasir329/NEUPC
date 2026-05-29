@@ -5,7 +5,7 @@
  */
 
 import { ChevronDown, Upload, Trash2, Loader2 } from 'lucide-react';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import { ROLES } from './constants';
 
 export default function ModalForm({

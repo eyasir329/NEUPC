@@ -10,7 +10,12 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, RotateCcw, LayoutDashboard, HelpCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  RotateCcw,
+  LayoutDashboard,
+  HelpCircle,
+} from 'lucide-react';
 
 const SURFACE = 'border border-white/[0.06] bg-[#121317]';
 const NESTED_SURFACE = 'border border-white/[0.06] bg-white/[0.02]';
@@ -80,7 +85,7 @@ export default function AccountError({
             Persistent issue?
             <Link
               href="/contact"
-              className="text-white/75 underline underline-offset-2 decoration-white/20 transition hover:text-white hover:decoration-white/50"
+              className="text-white/75 underline decoration-white/20 underline-offset-2 transition hover:text-white hover:decoration-white/50"
             >
               Contact support
             </Link>

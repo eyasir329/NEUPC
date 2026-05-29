@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { uploadEventGalleryFilesAction } from '@/app/_lib/gallery-actions';
+import { uploadEventGalleryFilesAction } from '@/app/_lib/actions/gallery-actions';
 
 const MAX_FILES = 30;
 const MAX_SIZE_MB = 10;

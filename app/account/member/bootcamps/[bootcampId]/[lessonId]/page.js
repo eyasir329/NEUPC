@@ -1,9 +1,14 @@
+/**
+ * @file Lesson id route page
+ * @module LessonIdPage
+ */
+
 import { notFound, redirect } from 'next/navigation';
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getBootcampCurriculumLight,
   checkEnrollment,
-} from '@/app/_lib/bootcamp-actions';
+} from '@/app/_lib/actions/bootcamp-actions';
 
 export async function generateMetadata({ params }) {
   const { bootcampId, lessonId } = await params;
@@ -39,7 +44,10 @@ export default async function LessonPage({ params }) {
   for (const c of bootcamp.courses || []) {
     for (const m of c.modules || []) {
       const found = m.lessons?.find((l) => l.id === lessonId);
-      if (found) { stub = found; break; }
+      if (found) {
+        stub = found;
+        break;
+      }
     }
     if (stub) break;
   }
@@ -48,8 +56,11 @@ export default async function LessonPage({ params }) {
   // For non-preview lessons, verify enrollment (layout already checked but
   // this catches direct URL hits before the layout runs in parallel).
   if (!stub.is_free_preview) {
-    const enrollment = await checkEnrollment(bootcamp.id).catch(() => ({ enrolled: false }));
-    if (!enrollment.enrolled) redirect(`/account/member/bootcamps/${bootcampId}`);
+    const enrollment = await checkEnrollment(bootcamp.id).catch(() => ({
+      enrolled: false,
+    }));
+    if (!enrollment.enrolled)
+      redirect(`/account/member/bootcamps/${bootcampId}`);
   }
 
   // Layout handles rendering — this page is intentionally empty.

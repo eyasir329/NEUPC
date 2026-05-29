@@ -24,20 +24,20 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
 import {
   ProblemSolvingAggregator,
   CodeforcesService,
   AtCoderService,
-} from '@/app/_lib/problem-solving-services';
+} from '@/app/_lib/services/problem-solving-services';
 import {
   V2_TABLES,
   getPlatformId,
   getUserHandlesV2,
-} from '@/app/_lib/problem-solving-v2-helpers.js';
-import { syncPlatformWithBatches } from '@/app/_lib/problem-solving-batch-aware-sync.js';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
+import { syncPlatformWithBatches } from '@/app/_lib/services/problem-solving-batch-aware-sync';
 
 // Rate limit: 5 minutes for sync
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000;

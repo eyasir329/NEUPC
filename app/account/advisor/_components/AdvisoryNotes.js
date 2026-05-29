@@ -15,7 +15,7 @@ import {
   SectionHeader,
   ActionButton,
   Pill,
-} from '../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 const SEED_NOTES = [
   {
@@ -110,11 +110,7 @@ export default function AdvisoryNotes() {
                 >
                   Cancel
                 </ActionButton>
-                <ActionButton
-                  tone="primary"
-                  icon={Send}
-                  onClick={handleSave}
-                >
+                <ActionButton tone="primary" icon={Send} onClick={handleSave}>
                   Save note
                 </ActionButton>
               </div>

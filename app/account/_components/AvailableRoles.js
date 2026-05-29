@@ -8,7 +8,7 @@
 'use client';
 
 import RoleCard from './RoleCard';
-import { colorClasses } from '@/app/_lib/roleDashboardConfig';
+import { colorClasses } from '@/app/_lib/config/roleDashboardConfig';
 
 export default function AvailableRoles({ availableRoles, accountStatus }) {
   if (accountStatus !== 'active') {

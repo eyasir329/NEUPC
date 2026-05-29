@@ -5,8 +5,8 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getMemberProfileByUserId } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getMemberProfileByUserId } from '@/app/_lib/services/data-service';
 import MentorProfileClient from './_components/MentorProfileClient';
 
 export const metadata = { title: 'Profile | Mentor | NEUPC' };

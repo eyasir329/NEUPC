@@ -7,7 +7,7 @@
  * @module account/_lib/pages/createResourcesPage
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getBookmarkCount,
   getBookmarkedResourceIds,

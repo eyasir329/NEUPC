@@ -1,3 +1,8 @@
+/**
+ * @file Verify email client component
+ * @module VerifyEmailClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -44,7 +49,12 @@ function PrimaryButton({ children, ...props }) {
       className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] disabled:opacity-60"
     >
       {children}
-      <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+      <span
+        aria-hidden
+        className="transition-transform group-hover:translate-x-1"
+      >
+        →
+      </span>
     </button>
   );
 }
@@ -56,7 +66,12 @@ function PrimaryLink({ href, children }) {
       className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
     >
       {children}
-      <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+      <span
+        aria-hidden
+        className="transition-transform group-hover:translate-x-1"
+      >
+        →
+      </span>
     </Link>
   );
 }
@@ -72,7 +87,12 @@ function SecondaryLink({ href, children }) {
   );
 }
 
-export default function VerifyEmailClient({ token, initialValid, user, verifyAction }) {
+export default function VerifyEmailClient({
+  token,
+  initialValid,
+  user,
+  verifyAction,
+}) {
   const [status, setStatus] = useState(initialValid ? 'idle' : 'invalid');
   const [message, setMessage] = useState('');
 
@@ -93,7 +113,8 @@ export default function VerifyEmailClient({ token, initialValid, user, verifyAct
 
   let body;
   if (status === 'invalid') {
-    body = 'This link may have already been used to verify an account, or the token is incorrect.';
+    body =
+      'This link may have already been used to verify an account, or the token is incorrect.';
   } else if (status === 'success') {
     body = message || 'Your account is now fully verified.';
   } else if (status === 'error') {
@@ -105,16 +126,16 @@ export default function VerifyEmailClient({ token, initialValid, user, verifyAct
   }
 
   return (
-    <div className="void-glow-violet relative w-full overflow-hidden rounded-2xl border border-white/5 bg-[rgba(12,14,22,0.75)] p-8 backdrop-blur-2xl sm:p-10 text-center">
+    <div className="void-glow-violet relative w-full overflow-hidden rounded-2xl border border-white/5 bg-[rgba(12,14,22,0.75)] p-8 text-center backdrop-blur-2xl sm:p-10">
       {/* Corner accents */}
-      <span className="absolute top-0 left-0 h-6 w-px bg-neon-violet/70" />
-      <span className="absolute top-0 left-0 h-px w-6 bg-neon-violet/70" />
-      <span className="absolute right-0 bottom-0 h-6 w-px bg-neon-lime/50" />
-      <span className="absolute right-0 bottom-0 h-px w-6 bg-neon-lime/50" />
+      <span className="bg-neon-violet/70 absolute top-0 left-0 h-6 w-px" />
+      <span className="bg-neon-violet/70 absolute top-0 left-0 h-px w-6" />
+      <span className="bg-neon-lime/50 absolute right-0 bottom-0 h-6 w-px" />
+      <span className="bg-neon-lime/50 absolute right-0 bottom-0 h-px w-6" />
 
       {/* Eyebrow */}
       <div className="mb-6 flex items-center justify-center gap-3">
-        <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-neon-lime" />
+        <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
         <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase sm:text-[11px]">
           Account · Email Verification
         </span>
@@ -124,7 +145,7 @@ export default function VerifyEmailClient({ token, initialValid, user, verifyAct
       <Icon className={`mx-auto mb-5 h-12 w-12 ${meta.iconClass}`} />
 
       {/* Title */}
-      <h1 className="kinetic-headline font-heading text-3xl font-black uppercase text-white sm:text-4xl">
+      <h1 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl">
         {meta.title}
       </h1>
 
@@ -138,8 +159,12 @@ export default function VerifyEmailClient({ token, initialValid, user, verifyAct
         {status === 'idle' && (
           <PrimaryButton onClick={handleVerify}>Verify My Email</PrimaryButton>
         )}
-        {status === 'success' && <PrimaryLink href="/login">Go to Login</PrimaryLink>}
-        {status === 'invalid' && <PrimaryLink href="/login">Go to Login</PrimaryLink>}
+        {status === 'success' && (
+          <PrimaryLink href="/login">Go to Login</PrimaryLink>
+        )}
+        {status === 'invalid' && (
+          <PrimaryLink href="/login">Go to Login</PrimaryLink>
+        )}
         {status === 'error' && <SecondaryLink href="/">Go Home</SecondaryLink>}
       </div>
     </div>

@@ -9,7 +9,7 @@
 
 import { useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 // ─── Inline spinner for loading state ─────────────────────────────────────────
 function ButtonSpinner({ size = 'md' }) {

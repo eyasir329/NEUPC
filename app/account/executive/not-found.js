@@ -7,7 +7,7 @@
 
 'use client';
 
-import AccountNotFoundState from '../_components/AccountNotFoundState';
+import AccountNotFoundState from '@/app/account/_components/AccountNotFoundState';
 
 export default function NotFound() {
   return (

@@ -7,8 +7,8 @@
  * @access admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getAllSettings } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getAllSettings } from '@/app/_lib/services/data-service';
 import SettingsClient from './_components/SettingsClient';
 
 export const metadata = { title: 'Settings | Admin | NEUPC' };

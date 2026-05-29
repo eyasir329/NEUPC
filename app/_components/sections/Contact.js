@@ -7,11 +7,27 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Mail, Phone, MapPin, Github, Facebook, Linkedin, Youtube, Twitter, Send } from 'lucide-react';
-import { cn } from '@/app/_lib/utils';
-import { useScrollReveal } from '@/app/_lib/hooks';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Github,
+  Facebook,
+  Linkedin,
+  Youtube,
+  Twitter,
+  Send,
+} from 'lucide-react';
+import { cn } from '@/app/_lib/utils/utils';
+import { useScrollReveal } from '@/app/_lib/utils/hooks';
 
-const SOCIAL_ICONS = { github: Github, facebook: Facebook, linkedin: Linkedin, youtube: Youtube, twitter: Twitter };
+const SOCIAL_ICONS = {
+  github: Github,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  youtube: Youtube,
+  twitter: Twitter,
+};
 
 function Contact({ contact = {}, social = {}, settings = {} }) {
   const [ref, visible] = useScrollReveal({ threshold: 0.08 });
@@ -24,20 +40,37 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
   };
 
   const contactItems = [
-    contact.email && { icon: Mail, label: 'Email', value: contact.email, href: `mailto:${contact.email}` },
-    contact.phone && { icon: Phone, label: 'Phone', value: contact.phone, href: `tel:${contact.phone}` },
-    contact.address && { icon: MapPin, label: 'Location', value: contact.address, href: null },
+    contact.email && {
+      icon: Mail,
+      label: 'Email',
+      value: contact.email,
+      href: `mailto:${contact.email}`,
+    },
+    contact.phone && {
+      icon: Phone,
+      label: 'Phone',
+      value: contact.phone,
+      href: `tel:${contact.phone}`,
+    },
+    contact.address && {
+      icon: MapPin,
+      label: 'Location',
+      value: contact.address,
+      href: null,
+    },
   ].filter(Boolean);
 
   const socialLinks = Object.entries(SOCIAL_ICONS)
-    .map(([key, Icon]) => social[key] ? { key, Icon, href: social[key] } : null)
+    .map(([key, Icon]) =>
+      social[key] ? { key, Icon, href: social[key] } : null
+    )
     .filter(Boolean);
 
   return (
     <section className="relative overflow-hidden px-8 py-32">
       <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute right-0 bottom-0 h-[500px] w-[500px] rounded-full bg-neon-violet/5 blur-[140px]" />
-        <div className="absolute left-0 top-0 h-[400px] w-[400px] rounded-full bg-neon-lime/5 blur-[140px]" />
+        <div className="bg-neon-violet/5 absolute right-0 bottom-0 h-[500px] w-[500px] rounded-full blur-[140px]" />
+        <div className="bg-neon-lime/5 absolute top-0 left-0 h-[400px] w-[400px] rounded-full blur-[140px]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl" ref={ref}>
@@ -49,15 +82,15 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
           )}
         >
           <div className="flex items-center gap-4">
-            <span className="h-[1px] w-10 bg-neon-violet" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-[0.5em] text-neon-violet">
+            <span className="bg-neon-violet h-[1px] w-10" />
+            <span className="text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
               Contact / 006
             </span>
           </div>
-          <h2 className="kinetic-headline font-heading text-5xl font-black uppercase text-white md:text-6xl">
+          <h2 className="kinetic-headline font-heading text-5xl font-black text-white uppercase md:text-6xl">
             Get in <span className="neon-text">Touch.</span>
           </h2>
-          <p className="max-w-xl font-sans text-base font-light leading-relaxed text-zinc-400">
+          <p className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-400">
             {settings?.contact_description ||
               'Have a question, proposal, or just want to say hello? We are always open to new connections.'}
           </p>
@@ -82,18 +115,20 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="mb-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
+                      <p className="mb-0.5 font-mono text-[10px] font-bold tracking-[0.3em] text-zinc-600 uppercase">
                         {label}
                       </p>
                       {href ? (
                         <a
                           href={href}
-                          className="font-sans text-sm text-zinc-300 transition-colors hover:text-neon-lime"
+                          className="hover:text-neon-lime font-sans text-sm text-zinc-300 transition-colors"
                         >
                           {value}
                         </a>
                       ) : (
-                        <p className="font-sans text-sm text-zinc-300">{value}</p>
+                        <p className="font-sans text-sm text-zinc-300">
+                          {value}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -104,7 +139,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
             {/* Office hours */}
             {contact.officeHours && (
               <div className="glass-panel rounded-2xl p-6">
-                <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
+                <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                   Office Hours
                 </p>
                 <p className="font-sans text-sm leading-relaxed text-zinc-400">
@@ -116,7 +151,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
             {/* Social links */}
             {socialLinks.length > 0 && (
               <div>
-                <p className="mb-4 font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
+                <p className="mb-4 font-mono text-[10px] font-bold tracking-[0.3em] text-zinc-600 uppercase">
                   Find us on
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -126,7 +161,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime"
+                      className="hover:border-neon-lime hover:text-neon-lime flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition-all"
                     >
                       <Icon className="h-4 w-4" />
                     </Link>
@@ -143,7 +178,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
               <div className="flex gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-400/60" />
                 <div className="h-3 w-3 rounded-full bg-yellow-400/60" />
-                <div className="h-3 w-3 rounded-full bg-neon-lime/60" />
+                <div className="bg-neon-lime/60 h-3 w-3 rounded-full" />
               </div>
               <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-600">
                 message@neupc
@@ -153,34 +188,34 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
             <form onSubmit={handleSubmit} className="space-y-7">
               <div className="grid grid-cols-1 gap-7 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
+                  <label className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                     Full Name
                   </label>
                   <input
                     type="text"
                     placeholder="Your name"
                     required
-                    className="w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
+                    className="focus:border-neon-lime w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white transition-all outline-none placeholder:text-zinc-700 focus:ring-0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
+                  <label className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                     Email
                   </label>
                   <input
                     type="email"
                     placeholder="you@example.com"
                     required
-                    className="w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
+                    className="focus:border-neon-lime w-full border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white transition-all outline-none placeholder:text-zinc-700 focus:ring-0"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
+                <label className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                   Subject
                 </label>
-                <select className="w-full cursor-pointer border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none focus:border-neon-lime focus:ring-0">
+                <select className="focus:border-neon-lime w-full cursor-pointer border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none focus:ring-0">
                   {(contact.subjects?.length > 0
                     ? contact.subjects
                     : ['Membership', 'Partnership', 'Event', 'General']
@@ -193,14 +228,14 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
               </div>
 
               <div className="space-y-2">
-                <label className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-lime">
+                <label className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                   Message
                 </label>
                 <textarea
                   placeholder="Tell us what's on your mind..."
                   rows={4}
                   required
-                  className="w-full resize-none border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white outline-none transition-all placeholder:text-zinc-700 focus:border-neon-lime focus:ring-0"
+                  className="focus:border-neon-lime w-full resize-none border-0 border-b border-white/10 bg-transparent py-3 font-sans text-sm text-white transition-all outline-none placeholder:text-zinc-700 focus:ring-0"
                 />
               </div>
 
@@ -208,7 +243,7 @@ function Contact({ contact = {}, social = {}, settings = {} }) {
                 type="submit"
                 disabled={submitted}
                 className={cn(
-                  'group flex w-full items-center justify-center gap-3 rounded-full bg-neon-lime py-4 font-heading text-[11px] font-black uppercase tracking-[0.3em] text-black transition-all hover:shadow-[0_0_40px_-5px_rgba(182,243,107,0.5)] hover:brightness-110',
+                  'group bg-neon-lime font-heading flex w-full items-center justify-center gap-3 rounded-full py-4 text-[11px] font-black tracking-[0.3em] text-black uppercase transition-all hover:shadow-[0_0_40px_-5px_rgba(182,243,107,0.5)] hover:brightness-110',
                   submitted && 'opacity-70'
                 )}
               >

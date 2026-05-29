@@ -20,7 +20,7 @@ export default function ConnectedSection({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       {/* Title & Count */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-blue-500/20">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-blue-500/20">
           <Link2 className="h-5 w-5 text-blue-400" />
         </div>
         <div>
@@ -57,7 +57,7 @@ export default function ConnectedSection({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onAddPlatform}
-            className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 text-sm font-medium text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-blue-400 hover:shadow-blue-500/30"
+            className="flex h-9 items-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 px-4 text-sm font-medium text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-blue-400 hover:shadow-blue-500/30"
           >
             {isAddExpanded ? (
               <>

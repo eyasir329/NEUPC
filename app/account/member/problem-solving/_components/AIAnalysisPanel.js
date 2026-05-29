@@ -220,7 +220,7 @@ export default function AIAnalysisPanel({
     [];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/50">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-linear-to-br from-gray-900/80 to-gray-800/50">
       {/* Header */}
       <div
         className="flex cursor-pointer items-center justify-between border-b border-white/10 bg-white/[0.02] px-4 py-3"
@@ -291,7 +291,7 @@ export default function AIAnalysisPanel({
           {/* Error */}
           {error && (
             <div className="flex items-start gap-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" />
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
               <div>
                 <p className="text-sm font-medium text-red-400">
                   Analysis Failed
@@ -325,7 +325,7 @@ export default function AIAnalysisPanel({
               {!isAccepted && whyFailed && (
                 <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
                   <div className="flex items-start gap-3">
-                    <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" />
+                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
                     <div>
                       <h4 className="mb-2 text-sm font-semibold text-red-400">
                         Why This Solution Failed ({verdict})
@@ -352,7 +352,7 @@ export default function AIAnalysisPanel({
               {userApproach && (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex items-start gap-3">
-                    <Code2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-400" />
+                    <Code2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" />
                     <div className="flex-1">
                       <h4 className="mb-1 text-sm font-semibold text-white">
                         Your Approach:{' '}
@@ -472,7 +472,7 @@ export default function AIAnalysisPanel({
                         key={i}
                         className="flex items-start gap-2 text-sm text-gray-300"
                       >
-                        <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
+                        <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                         {tip}
                       </li>
                     ))}

@@ -6,12 +6,12 @@
  * @module account/_lib/pages/createContactSubmissionsPage
  */
 
-import { getAllContactSubmissions } from '@/app/_lib/data-service';
+import { getAllContactSubmissions } from '@/app/_lib/services/data-service';
 import {
   getContactInfo,
   getSocialLinks,
   getFaqsData,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import ContactSubmissionsClient from '@/app/account/_components/contact-submissions/ContactSubmissionsClient';
 
 /**

@@ -29,9 +29,9 @@ import {
   getStatusConfig,
   getPriorityConfig,
   DISCUSSION_STATUSES,
-} from '@/app/_lib/discussion-config';
-import { formatRelativeTime } from '@/app/_lib/utils';
-import { fetchFeatureRequestsAction } from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/config/discussion-config';
+import { formatRelativeTime } from '@/app/_lib/utils/utils';
+import { fetchFeatureRequestsAction } from '@/app/_lib/actions/discussion-actions';
 import {
   useVotableItems,
   getVoteScore,

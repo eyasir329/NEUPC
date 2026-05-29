@@ -506,10 +506,30 @@ export default function SystemLogsClient({ data }) {
   const tabs = [
     { value: 'overview', label: 'Overview' },
     { value: 'all', label: 'All Logs', count: allLogs.length },
-    { value: 'user_activity', label: 'User Activity', icon: Users, count: categoryBreakdown.user_activity },
-    { value: 'content', label: 'Content', icon: FileText, count: categoryBreakdown.content },
-    { value: 'security', label: 'Security', icon: Shield, count: categoryBreakdown.security },
-    { value: 'system', label: 'System', icon: Settings, count: categoryBreakdown.system },
+    {
+      value: 'user_activity',
+      label: 'User Activity',
+      icon: Users,
+      count: categoryBreakdown.user_activity,
+    },
+    {
+      value: 'content',
+      label: 'Content',
+      icon: FileText,
+      count: categoryBreakdown.content,
+    },
+    {
+      value: 'security',
+      label: 'Security',
+      icon: Shield,
+      count: categoryBreakdown.security,
+    },
+    {
+      value: 'system',
+      label: 'System',
+      icon: Settings,
+      count: categoryBreakdown.system,
+    },
   ];
 
   return (

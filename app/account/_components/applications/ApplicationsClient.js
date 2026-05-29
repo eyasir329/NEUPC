@@ -51,11 +51,11 @@ import {
   bulkApproveApplicationsAction,
   bulkRejectApplicationsAction,
   bulkDeleteApplicationsAction,
-} from '@/app/_lib/application-actions';
+} from '@/app/_lib/actions/application-actions';
 import {
   approveMemberAction,
   rejectGuestAction,
-} from '@/app/_lib/user-actions';
+} from '@/app/_lib/actions/user-actions';
 
 // Shared UI components
 import {
@@ -84,7 +84,15 @@ const ACCENT_CARD_ACTIVE = {
 };
 
 // ─── Interactive Stat Card ──────────────────────────────────────────────────
-function InteractiveStatCard({ icon: Icon, label, value, accent = 'blue', active, onClick, delay = 0 }) {
+function InteractiveStatCard({
+  icon: Icon,
+  label,
+  value,
+  accent = 'blue',
+  active,
+  onClick,
+  delay = 0,
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -95,10 +103,10 @@ function InteractiveStatCard({ icon: Icon, label, value, accent = 'blue', active
       <button
         type="button"
         onClick={onClick}
-        className={`flex h-full w-full flex-col text-left rounded-2xl border p-4 transition-all ${
+        className={`flex h-full w-full flex-col rounded-2xl border p-4 text-left transition-all ${
           active
-            ? ACCENT_CARD_ACTIVE[accent] ?? ACCENT_CARD_ACTIVE.blue
-            : 'border-white/[0.08] bg-gray-900 hover:bg-white/[0.02] hover:border-white/[0.12]'
+            ? (ACCENT_CARD_ACTIVE[accent] ?? ACCENT_CARD_ACTIVE.blue)
+            : 'border-white/[0.08] bg-gray-900 hover:border-white/[0.12] hover:bg-white/[0.02]'
         }`}
       >
         <div className="flex min-h-9 items-start justify-between gap-3">
@@ -106,7 +114,9 @@ function InteractiveStatCard({ icon: Icon, label, value, accent = 'blue', active
         </div>
         <div className="mt-3">
           <div className="text-xs text-gray-400">{label}</div>
-          <div className="mt-0.5 text-2xl font-bold text-white tabular-nums">{value}</div>
+          <div className="mt-0.5 text-2xl font-bold text-white tabular-nums">
+            {value}
+          </div>
         </div>
       </button>
     </motion.div>
@@ -138,7 +148,13 @@ function FlashMsg({ msg, type }) {
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
-function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChange }) {
+function Pagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+}) {
   if (totalPages <= 1) return null;
 
   const from = (currentPage - 1) * pageSize + 1;
@@ -161,12 +177,16 @@ function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChang
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/[0.06] sm:flex-row sm:justify-between">
+    <div className="flex flex-col items-center gap-3 border-t border-white/[0.06] pt-6 sm:flex-row sm:justify-between">
       <span className="text-xs text-gray-500">
         Showing{' '}
-        <span className="font-semibold text-gray-300 tabular-nums">{from}–{to}</span>
-        {' '}of{' '}
-        <span className="font-semibold text-gray-300 tabular-nums">{totalItems}</span>
+        <span className="font-semibold text-gray-300 tabular-nums">
+          {from}–{to}
+        </span>{' '}
+        of{' '}
+        <span className="font-semibold text-gray-300 tabular-nums">
+          {totalItems}
+        </span>
       </span>
       <div className="flex items-center gap-1">
         <button
@@ -179,7 +199,10 @@ function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChang
         </button>
         {getPages().map((page, i) =>
           page === '...' ? (
-            <span key={`ellipsis-${i}`} className="px-1.5 text-xs text-gray-600 select-none">
+            <span
+              key={`ellipsis-${i}`}
+              className="px-1.5 text-xs text-gray-600 select-none"
+            >
               …
             </span>
           ) : (
@@ -189,7 +212,7 @@ function Pagination({ currentPage, totalPages, totalItems, pageSize, onPageChang
               onClick={() => onPageChange(page)}
               className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
                 currentPage === page
-                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                  ? 'border border-violet-500/30 bg-violet-500/20 text-violet-400'
                   : 'border border-white/6 bg-white/2 text-gray-400 hover:bg-white/5 hover:text-gray-300'
               }`}
             >
@@ -260,7 +283,7 @@ function BulkActionBar({
           <button
             type="button"
             onClick={() => setShowRejectInput(false)}
-            className="px-1 text-xs text-gray-500 transition-colors hover:text-gray-300 font-medium"
+            className="px-1 text-xs font-medium text-gray-500 transition-colors hover:text-gray-300"
           >
             Cancel
           </button>
@@ -302,7 +325,7 @@ function BulkActionBar({
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(false)}
-                className="px-1 text-xs text-gray-500 hover:text-gray-300 font-medium"
+                className="px-1 text-xs font-medium text-gray-500 hover:text-gray-300"
               >
                 Cancel
               </button>
@@ -426,7 +449,7 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <div className="flex items-center gap-2.5">
             <Avatar name={displayName} src={req.avatar} size="sm" />
-            <span className="text-sm font-semibold text-white group-hover:text-violet-400 transition-colors">
+            <span className="text-sm font-semibold text-white transition-colors group-hover:text-violet-400">
               {displayName}
             </span>
           </div>
@@ -438,17 +461,21 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {req.student_id && (
-            <Pill tone="gray" icon={Hash} className="py-0.5 px-2">
+            <Pill tone="gray" icon={Hash} className="px-2 py-0.5">
               {req.student_id}
             </Pill>
           )}
           {req.batch && (
-            <Pill tone="gray" icon={CalendarDays} className="py-0.5 px-2">
+            <Pill tone="gray" icon={CalendarDays} className="px-2 py-0.5">
               {req.batch}
             </Pill>
           )}
           {req.department && (
-            <Pill tone="gray" icon={BookOpen} className="py-0.5 px-2 max-w-48 truncate">
+            <Pill
+              tone="gray"
+              icon={BookOpen}
+              className="max-w-48 truncate px-2 py-0.5"
+            >
               {req.department}
             </Pill>
           )}
@@ -457,19 +484,21 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
         {(req.codeforces_handle || req.github) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {req.codeforces_handle && (
-              <Pill tone="blue" icon={Code} className="py-0.5 px-2">
+              <Pill tone="blue" icon={Code} className="px-2 py-0.5">
                 {req.codeforces_handle}
               </Pill>
             )}
             {req.github && (
-              <Pill tone="violet" icon={Github} className="py-0.5 px-2">
+              <Pill tone="violet" icon={Github} className="px-2 py-0.5">
                 {req.github.replace(/https?:\/\/(www\.)?github\.com\//, '')}
               </Pill>
             )}
           </div>
         )}
 
-        <p className="mt-2.5 text-[10px] font-medium text-gray-500">{dateStr}</p>
+        <p className="mt-2.5 text-[10px] font-medium text-gray-500">
+          {dateStr}
+        </p>
       </div>
 
       {/* Right — status badge + actions */}
@@ -486,7 +515,7 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
               placeholder="Reason (optional)"
               className="w-44 rounded-lg border border-red-500/20 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none"
             />
-            <div className="flex gap-1 justify-end">
+            <div className="flex justify-end gap-1">
               <button
                 type="button"
                 onClick={quickReject}
@@ -503,7 +532,7 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
               <button
                 type="button"
                 onClick={() => setShowRejectInput(false)}
-                className="px-1.5 text-[11px] text-gray-500 hover:text-gray-300 font-medium"
+                className="px-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-300"
               >
                 Cancel
               </button>
@@ -519,12 +548,12 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                   setStatusOpen((v) => !v);
                 }}
                 disabled={isPending}
-                className="hover:scale-[1.03] active:scale-95 transition-all disabled:opacity-50"
+                className="transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50"
               >
                 <Pill
                   tone={getPillTone(req.status)}
                   icon={isPending ? Loader2 : sc.icon}
-                  className="py-1 px-3 text-xs font-semibold cursor-pointer border hover:border-white/10"
+                  className="cursor-pointer border px-3 py-1 text-xs font-semibold hover:border-white/10"
                 >
                   <span className="flex items-center gap-1">
                     {sc.label}
@@ -605,14 +634,14 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
                     type="button"
                     onClick={handleDelete}
                     disabled={isPending}
-                    className="rounded border border-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 hover:bg-red-500/10 font-semibold"
+                    className="rounded border border-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400 hover:bg-red-500/10"
                   >
                     Del
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeleteConfirm(false)}
-                    className="px-0.5 text-[10px] text-gray-500 hover:text-gray-300 font-medium"
+                    className="px-0.5 text-[10px] font-medium text-gray-500 hover:text-gray-300"
                   >
                     No
                   </button>
@@ -710,19 +739,21 @@ function GuestRow({ user, onApprove, onReject, onFlash }) {
         <div className="flex items-start gap-3">
           <Avatar name={user.name} src={user.avatar} size="md" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white group-hover:text-violet-400 transition-colors">
+            <p className="truncate text-sm font-semibold text-white transition-colors group-hover:text-violet-400">
               {user.name}
             </p>
-            <p className="truncate text-xs text-gray-500 mt-0.5">{user.email}</p>
+            <p className="mt-0.5 truncate text-xs text-gray-500">
+              {user.email}
+            </p>
             <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1">
               {joinedStr && (
-                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-medium">
+                <span className="flex items-center gap-1 text-[10px] font-medium text-gray-500">
                   <CalendarDays className="h-3 w-3" />
                   Joined {joinedStr}
                 </span>
               )}
               {lastLoginStr && (
-                <span className="text-[10px] text-gray-500 font-medium">
+                <span className="text-[10px] font-medium text-gray-500">
                   Last seen {lastLoginStr}
                 </span>
               )}
@@ -774,7 +805,7 @@ function GuestRow({ user, onApprove, onReject, onFlash }) {
               <button
                 type="button"
                 onClick={() => setShowRejectInput(false)}
-                className="px-3 text-xs text-gray-500 hover:text-gray-300 transition-colors font-medium"
+                className="px-3 text-xs font-medium text-gray-500 transition-colors hover:text-gray-300"
               >
                 Cancel
               </button>
@@ -1026,10 +1057,30 @@ export default function ApplicationsClient({
   ];
 
   const membershipTabs = [
-    { value: 'all', label: 'All Applications', count: memberStats.total, icon: GraduationCap },
-    { value: 'pending', label: 'Pending', count: memberStats.pending, icon: Clock },
-    { value: 'approved', label: 'Approved', count: memberStats.approved, icon: CheckCircle2 },
-    { value: 'rejected', label: 'Rejected', count: memberStats.rejected, icon: XCircle },
+    {
+      value: 'all',
+      label: 'All Applications',
+      count: memberStats.total,
+      icon: GraduationCap,
+    },
+    {
+      value: 'pending',
+      label: 'Pending',
+      count: memberStats.pending,
+      icon: Clock,
+    },
+    {
+      value: 'approved',
+      label: 'Approved',
+      count: memberStats.approved,
+      icon: CheckCircle2,
+    },
+    {
+      value: 'rejected',
+      label: 'Rejected',
+      count: memberStats.rejected,
+      icon: XCircle,
+    },
   ];
 
   return (
@@ -1042,13 +1093,25 @@ export default function ApplicationsClient({
         accent="yellow"
         actions={
           <div className="flex items-center gap-2">
-            <ActionButton href={`/account/${role}/users`} tone="primary" icon={Users}>
+            <ActionButton
+              href={`/account/${role}/users`}
+              tone="primary"
+              icon={Users}
+            >
               User Management
             </ActionButton>
-            <ActionButton href={`/account/${role}/roles`} tone="violet" icon={ShieldCheck}>
+            <ActionButton
+              href={`/account/${role}/roles`}
+              tone="violet"
+              icon={ShieldCheck}
+            >
               Role Management
             </ActionButton>
-            <ActionButton href={`/account/${role}`} tone="ghost" icon={ArrowLeft}>
+            <ActionButton
+              href={`/account/${role}`}
+              tone="ghost"
+              icon={ArrowLeft}
+            >
               Dashboard
             </ActionButton>
           </div>
@@ -1148,7 +1211,7 @@ export default function ApplicationsClient({
 
             {/* Search applicant */}
             <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search name, email, student ID, department..."
@@ -1157,7 +1220,7 @@ export default function ApplicationsClient({
                   setSearch(e.target.value);
                   setMemberPage(1);
                 }}
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
               />
               {search && (
                 <button
@@ -1166,7 +1229,7 @@ export default function ApplicationsClient({
                     setSearch('');
                     setMemberPage(1);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1202,7 +1265,7 @@ export default function ApplicationsClient({
                   )}
                   {allSelected ? 'Deselect all' : 'Select all'}
                 </button>
-                <span className="text-xs text-gray-500 font-medium tabular-nums">
+                <span className="text-xs font-medium text-gray-500 tabular-nums">
                   {filteredRequests.length > MEMBER_PAGE_SIZE
                     ? `${(safeMemberPage - 1) * MEMBER_PAGE_SIZE + 1}–${Math.min(safeMemberPage * MEMBER_PAGE_SIZE, filteredRequests.length)} of ${filteredRequests.length}`
                     : `${filteredRequests.length} result${filteredRequests.length !== 1 ? 's' : ''}`}
@@ -1215,8 +1278,16 @@ export default function ApplicationsClient({
           {filteredRequests.length === 0 ? (
             <EmptyState
               icon={GraduationCap}
-              title={search ? 'No applications match search' : 'No applications found'}
-              description={search ? 'Try adjusting your search criteria.' : 'Submitted membership applications will appear here.'}
+              title={
+                search
+                  ? 'No applications match search'
+                  : 'No applications found'
+              }
+              description={
+                search
+                  ? 'Try adjusting your search criteria.'
+                  : 'Submitted membership applications will appear here.'
+              }
               accent="yellow"
             />
           ) : (
@@ -1229,7 +1300,9 @@ export default function ApplicationsClient({
                     selected={selectedIds.includes(req.id)}
                     onToggleSelect={toggleSelect}
                     onOpen={setDetailReq}
-                    onRefresh={(newStatus) => handleRowRefresh(req.id, newStatus)}
+                    onRefresh={(newStatus) =>
+                      handleRowRefresh(req.id, newStatus)
+                    }
                   />
                 ))}
               </StaggerList>
@@ -1293,8 +1366,10 @@ export default function ApplicationsClient({
                   Guest Access Applications
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                  These are new users who registered via OAuth / Google sign-up and are awaiting {role} authorization to access the guest panel.
-                  Approving a user grants them restricted, guest-level platform exploration rights without core member privileges.
+                  These are new users who registered via OAuth / Google sign-up
+                  and are awaiting {role} authorization to access the guest
+                  panel. Approving a user grants them restricted, guest-level
+                  platform exploration rights without core member privileges.
                 </p>
               </div>
             </div>
@@ -1303,7 +1378,7 @@ export default function ApplicationsClient({
           {/* Filters & Search */}
           {guestApps.length > 0 && (
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search name or email..."
@@ -1312,7 +1387,7 @@ export default function ApplicationsClient({
                   setGuestSearch(e.target.value);
                   setGuestPage(1);
                 }}
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
               />
               {guestSearch && (
                 <button
@@ -1321,7 +1396,7 @@ export default function ApplicationsClient({
                     setGuestSearch('');
                     setGuestPage(1);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1330,12 +1405,15 @@ export default function ApplicationsClient({
           )}
 
           {/* Awaiting Review Section */}
-          {paginatedGuests.filter((u) => u.accountStatus === 'pending').length > 0 && (
+          {paginatedGuests.filter((u) => u.accountStatus === 'pending').length >
+            0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1">
                 <Clock className="h-4.5 w-4.5 text-yellow-400" />
-                <h3 className="text-sm font-bold text-white">Awaiting Review</h3>
-                <Pill tone="amber" className="py-0.5 px-2 text-[10px]">
+                <h3 className="text-sm font-bold text-white">
+                  Awaiting Review
+                </h3>
+                <Pill tone="amber" className="px-2 py-0.5 text-[10px]">
                   {guestStats.pending}
                 </Pill>
               </div>
@@ -1358,12 +1436,15 @@ export default function ApplicationsClient({
           )}
 
           {/* Appeals Section */}
-          {paginatedGuests.filter((u) => u.accountStatus === 'rejected').length > 0 && (
+          {paginatedGuests.filter((u) => u.accountStatus === 'rejected')
+            .length > 0 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1 border-t border-white/[0.06] pt-6">
+              <div className="flex items-center gap-2 border-t border-white/[0.06] px-1 pt-6">
                 <RotateCcw className="h-4.5 w-4.5 text-orange-400" />
-                <h3 className="text-sm font-bold text-white">Rejection Appeals</h3>
-                <Pill tone="orange" className="py-0.5 px-2 text-[10px]">
+                <h3 className="text-sm font-bold text-white">
+                  Rejection Appeals
+                </h3>
+                <Pill tone="orange" className="px-2 py-0.5 text-[10px]">
                   {guestStats.appeals}
                 </Pill>
               </div>

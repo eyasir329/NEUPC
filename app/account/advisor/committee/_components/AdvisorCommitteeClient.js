@@ -1,3 +1,8 @@
+/**
+ * @file Advisor committee client component
+ * @module AdvisorCommitteeClient
+ */
+
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
@@ -19,7 +24,7 @@ import {
   createCommitteeMemberAction,
   updateCommitteeMemberAction,
   deleteCommitteeMemberAction,
-} from '@/app/_lib/committee-actions';
+} from '@/app/_lib/actions/committee-actions';
 import PositionsTable from './PositionsTable';
 import MembersTable from './MembersTable';
 import PositionModal from './PositionModal';
@@ -31,7 +36,7 @@ import {
   StatCard,
   TabBar,
   EmptyState,
-} from '../../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 export default function AdvisorCommitteeClient({
   initialMembers,
@@ -84,7 +89,10 @@ export default function AdvisorCommitteeClient({
     );
   }, [members, search]);
 
-  const pastMembers = useMemo(() => members.filter((m) => !m.is_current), [members]);
+  const pastMembers = useMemo(
+    () => members.filter((m) => !m.is_current),
+    [members]
+  );
 
   const pastSessions = useMemo(() => {
     const sessions = pastMembers.map((m) => {
@@ -175,7 +183,8 @@ export default function AdvisorCommitteeClient({
                       ...m.users,
                       member_profiles: {
                         ...m.users?.member_profiles,
-                        academic_session: formData.get('academic_session') || '',
+                        academic_session:
+                          formData.get('academic_session') || '',
                         department: formData.get('department') || '',
                         github: formData.get('github') || '',
                         linkedin: formData.get('linkedin') || '',
@@ -202,7 +211,9 @@ export default function AdvisorCommitteeClient({
       try {
         const result = await createCommitteeMemberAction(formData);
         if (result?.success) {
-          const userObj = initialUsers?.find((u) => u.id === formData.get('user_id'));
+          const userObj = initialUsers?.find(
+            (u) => u.id === formData.get('user_id')
+          );
           const newMember = {
             id: formData.get('id'),
             user_id: formData.get('user_id'),
@@ -255,30 +266,43 @@ export default function AdvisorCommitteeClient({
     activeTab === 'positions'
       ? filteredPositions
       : activeTab === 'current-members'
-      ? filteredMembers.filter((m) => m.is_current)
-      : filteredMembers.filter((m) => {
-          if (m.is_current) return false;
-          if (selectedSession === 'All') return true;
-          const year = m.term_start ? new Date(m.term_start).getFullYear() : NaN;
-          const session = isNaN(year) ? 'Unknown' : `${year}-${String(year + 1).slice(-2)}`;
-          return session === selectedSession;
-        });
+        ? filteredMembers.filter((m) => m.is_current)
+        : filteredMembers.filter((m) => {
+            if (m.is_current) return false;
+            if (selectedSession === 'All') return true;
+            const year = m.term_start
+              ? new Date(m.term_start).getFullYear()
+              : NaN;
+            const session = isNaN(year)
+              ? 'Unknown'
+              : `${year}-${String(year + 1).slice(-2)}`;
+            return session === selectedSession;
+          });
 
   const totalItems =
     activeTab === 'positions'
       ? positions.length
       : activeTab === 'current-members'
-      ? members.filter((m) => m.is_current).length
-      : members.filter((m) => {
-          if (m.is_current) return false;
-          if (selectedSession === 'All') return true;
-          const year = m.term_start ? new Date(m.term_start).getFullYear() : NaN;
-          const session = isNaN(year) ? 'Unknown' : `${year}-${String(year + 1).slice(-2)}`;
-          return session === selectedSession;
-        }).length;
+        ? members.filter((m) => m.is_current).length
+        : members.filter((m) => {
+            if (m.is_current) return false;
+            if (selectedSession === 'All') return true;
+            const year = m.term_start
+              ? new Date(m.term_start).getFullYear()
+              : NaN;
+            const session = isNaN(year)
+              ? 'Unknown'
+              : `${year}-${String(year + 1).slice(-2)}`;
+            return session === selectedSession;
+          }).length;
 
   const tabs = [
-    { value: 'positions', label: 'Positions', icon: Briefcase, count: positions.length },
+    {
+      value: 'positions',
+      label: 'Positions',
+      icon: Briefcase,
+      count: positions.length,
+    },
     {
       value: 'current-members',
       label: 'Current Committee',
@@ -326,7 +350,7 @@ export default function AdvisorCommitteeClient({
         />
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in">
+        <div className="animate-fade-in grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
             icon={Users}
             label="Total Members"
@@ -368,12 +392,20 @@ export default function AdvisorCommitteeClient({
         </div>
 
         {/* Tabs */}
-        <TabBar tabs={tabs} value={activeTab} onChange={(v) => { setActiveTab(v); setSearch(''); setSelectedSession('All'); }} />
+        <TabBar
+          tabs={tabs}
+          value={activeTab}
+          onChange={(v) => {
+            setActiveTab(v);
+            setSearch('');
+            setSelectedSession('All');
+          }}
+        />
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+          <div className="relative max-w-md flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -382,12 +414,12 @@ export default function AdvisorCommitteeClient({
                   ? 'Search positions by title or category…'
                   : 'Search members by name, email, or position…'
               }
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+              className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -396,12 +428,14 @@ export default function AdvisorCommitteeClient({
 
           {/* Session filter for past members */}
           {activeTab === 'past-members' && pastSessions.length > 0 && (
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Session:</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                Session:
+              </span>
               <select
                 value={selectedSession}
                 onChange={(e) => setSelectedSession(e.target.value)}
-                className="bg-white/3 border border-white/8 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                className="cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-xs text-white transition-all outline-none focus:border-violet-500/50"
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="All">All Sessions</option>
@@ -416,14 +450,23 @@ export default function AdvisorCommitteeClient({
         </div>
 
         {/* Results summary */}
-        {(search || (activeTab === 'past-members' && selectedSession !== 'All')) && (
+        {(search ||
+          (activeTab === 'past-members' && selectedSession !== 'All')) && (
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span>
-              Showing <span className="text-white font-medium">{currentItems.length}</span> of{' '}
-              <span className="text-white font-medium">{totalItems}</span> {activeTab === 'positions' ? 'positions' : 'members'}
+              Showing{' '}
+              <span className="font-medium text-white">
+                {currentItems.length}
+              </span>{' '}
+              of <span className="font-medium text-white">{totalItems}</span>{' '}
+              {activeTab === 'positions' ? 'positions' : 'members'}
               {activeTab === 'past-members' && selectedSession !== 'All' && (
                 <>
-                  {' '}in session <span className="text-white font-medium">{selectedSession}</span>
+                  {' '}
+                  in session{' '}
+                  <span className="font-medium text-white">
+                    {selectedSession}
+                  </span>
                 </>
               )}
             </span>
@@ -432,7 +475,7 @@ export default function AdvisorCommitteeClient({
                 setSearch('');
                 setSelectedSession('All');
               }}
-              className="ml-2 flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors font-medium"
+              className="ml-2 flex items-center gap-1 font-medium text-violet-400 transition-colors hover:text-violet-300"
             >
               <X className="h-3.5 w-3.5" /> Clear filters
             </button>
@@ -456,14 +499,16 @@ export default function AdvisorCommitteeClient({
                   search ? (
                     <button
                       onClick={() => setSearch('')}
-                      className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium underline underline-offset-2"
+                      className="text-xs font-medium text-violet-400 underline underline-offset-2 transition-colors hover:text-violet-300"
                     >
                       Clear search
                     </button>
                   ) : (
                     <button
-                      onClick={() => setPositionModal({ type: 'create', isOpen: true })}
-                      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all"
+                      onClick={() =>
+                        setPositionModal({ type: 'create', isOpen: true })
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500"
                     >
                       <Plus className="h-3.5 w-3.5" /> Add Position
                     </button>
@@ -485,7 +530,11 @@ export default function AdvisorCommitteeClient({
             <div className="rounded-2xl border border-dashed border-white/8 bg-white/2 py-4">
               <EmptyState
                 icon={Users}
-                title={search ? 'No active members found' : 'No active members assigned'}
+                title={
+                  search
+                    ? 'No active members found'
+                    : 'No active members assigned'
+                }
                 description={
                   search
                     ? 'Try adjusting your search query.'
@@ -496,14 +545,16 @@ export default function AdvisorCommitteeClient({
                   search ? (
                     <button
                       onClick={() => setSearch('')}
-                      className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium underline underline-offset-2"
+                      className="text-xs font-medium text-violet-400 underline underline-offset-2 transition-colors hover:text-violet-300"
                     >
                       Clear search
                     </button>
                   ) : (
                     <button
-                      onClick={() => setMemberModal({ type: 'create', isOpen: true })}
-                      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all"
+                      onClick={() =>
+                        setMemberModal({ type: 'create', isOpen: true })
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500"
                     >
                       <Plus className="h-3.5 w-3.5" /> Assign Member
                     </button>
@@ -521,59 +572,74 @@ export default function AdvisorCommitteeClient({
               onDelete={handleDeleteMember}
             />
           )
+        ) : currentItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/8 bg-white/2 py-4">
+            <EmptyState
+              icon={Users}
+              title={
+                search || selectedSession !== 'All'
+                  ? 'No past members found'
+                  : 'No past members assigned'
+              }
+              description={
+                search || selectedSession !== 'All'
+                  ? 'Try adjusting your search filters.'
+                  : 'Assign a user to a past term position.'
+              }
+              accent="violet"
+              action={
+                search || selectedSession !== 'All' ? (
+                  <button
+                    onClick={() => {
+                      setSearch('');
+                      setSelectedSession('All');
+                    }}
+                    className="text-xs font-medium text-violet-400 underline underline-offset-2 transition-colors hover:text-violet-300"
+                  >
+                    Clear filters
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      setMemberModal({ type: 'create', isOpen: true })
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Assign Member
+                  </button>
+                )
+              }
+            />
+          </div>
         ) : (
-          currentItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/8 bg-white/2 py-4">
-              <EmptyState
-                icon={Users}
-                title={search || selectedSession !== 'All' ? 'No past members found' : 'No past members assigned'}
-                description={
-                  search || selectedSession !== 'All'
-                    ? 'Try adjusting your search filters.'
-                    : 'Assign a user to a past term position.'
-                }
-                accent="violet"
-                action={
-                  search || selectedSession !== 'All' ? (
-                    <button
-                      onClick={() => {
-                        setSearch('');
-                        setSelectedSession('All');
-                      }}
-                      className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium underline underline-offset-2"
-                    >
-                      Clear filters
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setMemberModal({ type: 'create', isOpen: true })}
-                      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Assign Member
-                    </button>
-                  )
-                }
-              />
-            </div>
-          ) : (
-            <MembersTable
-              members={currentItems}
-              positions={positions}
-              onEdit={(member) =>
-                setMemberModal({ type: 'edit', member, isOpen: true })
-              }
-              onDelete={handleDeleteMember}
-            />
-          )
+          <MembersTable
+            members={currentItems}
+            positions={positions}
+            onEdit={(member) =>
+              setMemberModal({ type: 'edit', member, isOpen: true })
+            }
+            onDelete={handleDeleteMember}
+          />
         )}
 
         {/* Footer legend */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-white/8 bg-white/2 px-5 py-3 text-xs text-gray-500 select-none">
-          <span className="text-gray-400 font-semibold">{"// Role Categories"}</span>
+          <span className="font-semibold text-gray-400">
+            {'// Role Categories'}
+          </span>
           {[
-            { dot: 'bg-purple-400 border-purple-500/20', label: 'Executive – Leadership & operations' },
-            { dot: 'bg-cyan-400 border-cyan-500/20', label: 'Mentor – Training & guidance' },
-            { dot: 'bg-amber-400 border-amber-500/20', label: 'Advisor – Strategic club support' },
+            {
+              dot: 'bg-purple-400 border-purple-500/20',
+              label: 'Executive – Leadership & operations',
+            },
+            {
+              dot: 'bg-cyan-400 border-cyan-500/20',
+              label: 'Mentor – Training & guidance',
+            },
+            {
+              dot: 'bg-amber-400 border-amber-500/20',
+              label: 'Advisor – Strategic club support',
+            },
           ].map(({ dot, label }) => (
             <span key={label} className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${dot}`} />

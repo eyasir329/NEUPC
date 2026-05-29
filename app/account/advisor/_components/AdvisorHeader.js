@@ -21,7 +21,7 @@ export default function AdvisorHeader({
 }) {
   return (
     <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-8 backdrop-blur-xl md:flex-row md:items-center">
-      <div className="pointer-events-none absolute top-0 right-0 h-64 w-64 -translate-y-1/2 translate-x-1/2 rounded-bl-full border-b border-l border-white/10 bg-white/5" />
+      <div className="pointer-events-none absolute top-0 right-0 h-64 w-64 translate-x-1/2 -translate-y-1/2 rounded-bl-full border-b border-l border-white/10 bg-white/5" />
 
       <div className="relative z-10 flex items-center gap-5">
         <motion.div
@@ -36,7 +36,9 @@ export default function AdvisorHeader({
           <p className="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
             Welcome back
           </p>
-          <h1 className="mb-2 text-3xl font-light text-zinc-100">{firstName}</h1>
+          <h1 className="mb-2 text-3xl font-light text-zinc-100">
+            {firstName}
+          </h1>
 
           <div className="flex flex-wrap items-center gap-2">
             <motion.span

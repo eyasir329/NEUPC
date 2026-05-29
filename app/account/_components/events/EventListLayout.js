@@ -1,3 +1,8 @@
+/**
+ * @file Event list layout component
+ * @module EventListLayout
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -46,7 +51,9 @@ export default function EventListLayout({
   const [filterVenue, setFilterVenue] = useState('');
   const [search, setSearch] = useState('');
 
-  const selectedEvent = selectedEventId ? events.find((e) => e.id === selectedEventId) : null;
+  const selectedEvent = selectedEventId
+    ? events.find((e) => e.id === selectedEventId)
+    : null;
 
   const dynamicCategories = useMemo(
     () => [...new Set(events.map((e) => e.category).filter(Boolean))].sort(),
@@ -59,14 +66,20 @@ export default function EventListLayout({
       if (!filterFn(e, activeTab)) return false;
       if (filterCategory && (e.category || '') !== filterCategory) return false;
       if (filterVenue && (e.venue_type || '') !== filterVenue) return false;
-      if (q && !e.title.toLowerCase().includes(q) && !(e.description || '').toLowerCase().includes(q)) return false;
+      if (
+        q &&
+        !e.title.toLowerCase().includes(q) &&
+        !(e.description || '').toLowerCase().includes(q)
+      )
+        return false;
       return true;
     });
   }, [events, activeTab, filterCategory, filterVenue, search, filterFn]);
 
   const hasFilter = filterCategory || filterVenue || search;
 
-  const detailProps = selectedEvent && getDetailProps ? getDetailProps(selectedEvent) : null;
+  const detailProps =
+    selectedEvent && getDetailProps ? getDetailProps(selectedEvent) : null;
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
@@ -103,7 +116,10 @@ export default function EventListLayout({
             <TabBar
               tabs={tabs}
               value={activeTab}
-              onChange={(id) => { setActiveTab(id); setSelectedEventId(null); }}
+              onChange={(id) => {
+                setActiveTab(id);
+                setSelectedEventId(null);
+              }}
             />
 
             {aboveList}
@@ -116,13 +132,16 @@ export default function EventListLayout({
                 <div className="flex flex-col gap-2 border-b border-white/6 pb-3">
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Search */}
-                    <div className="relative flex-1 min-w-[160px]">
-                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
+                    <div className="relative min-w-[160px] flex-1">
+                      <Search
+                        size={12}
+                        className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-600"
+                      />
                       <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search events…"
-                        className="w-full rounded-lg border border-white/8 bg-white/4 py-1.5 pl-7 pr-3 text-[11px] text-gray-300 placeholder-gray-600 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                        className="w-full rounded-lg border border-white/8 bg-white/4 py-1.5 pr-3 pl-7 text-[11px] text-gray-300 placeholder-gray-600 focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/40 focus:outline-none"
                       />
                     </div>
                     {/* Category */}
@@ -130,32 +149,44 @@ export default function EventListLayout({
                       <select
                         value={filterCategory}
                         onChange={(e) => setFilterCategory(e.target.value)}
-                        className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
+                        className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:ring-1 focus:ring-violet-500/40 focus:outline-none ${
                           filterCategory
                             ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
                             : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
                         }`}
                       >
                         <option value="">All Categories</option>
-                        {dynamicCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        {dynamicCategories.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
                       </select>
                     )}
                     {/* Venue */}
                     <select
                       value={filterVenue}
                       onChange={(e) => setFilterVenue(e.target.value)}
-                      className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-violet-500/40 ${
+                      className={`cursor-pointer appearance-none rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors focus:ring-1 focus:ring-violet-500/40 focus:outline-none ${
                         filterVenue
                           ? 'border-violet-500/40 bg-violet-500/10 text-violet-300'
                           : 'border-white/8 bg-white/4 text-gray-400 hover:border-white/14 hover:text-gray-300'
                       }`}
                     >
                       <option value="">All Venues</option>
-                      {VENUE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+                      {VENUE_TYPES.map((v) => (
+                        <option key={v} value={v}>
+                          {v.charAt(0).toUpperCase() + v.slice(1)}
+                        </option>
+                      ))}
                     </select>
                     {hasFilter && (
                       <button
-                        onClick={() => { setFilterCategory(''); setFilterVenue(''); setSearch(''); }}
+                        onClick={() => {
+                          setFilterCategory('');
+                          setFilterVenue('');
+                          setSearch('');
+                        }}
                         className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/15"
                       >
                         <X size={10} /> Clear
@@ -197,9 +228,12 @@ export default function EventListLayout({
                       className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/8 bg-white/2 p-12 text-center"
                     >
                       <CalendarX size={48} className="mb-4 text-gray-700" />
-                      <h3 className="mb-1 text-lg font-medium text-gray-300">No {activeTab} events</h3>
+                      <h3 className="mb-1 text-lg font-medium text-gray-300">
+                        No {activeTab} events
+                      </h3>
                       <p className="max-w-sm text-sm text-gray-500">
-                        There are currently no events in this category. Check back later!
+                        There are currently no events in this category. Check
+                        back later!
                       </p>
                     </motion.div>
                   )}
@@ -210,19 +244,28 @@ export default function EventListLayout({
               <div className="sticky top-14 hidden flex-col gap-6 lg:flex">
                 {/* Stats overview */}
                 <div className="rounded-xl border border-white/6 bg-gray-900 p-5 transition-all hover:border-white/10">
-                  <h3 className="mb-4 text-sm font-semibold text-gray-200">Overview</h3>
+                  <h3 className="mb-4 text-sm font-semibold text-gray-200">
+                    Overview
+                  </h3>
                   <div className="flex flex-col gap-4 text-sm">
                     {stats.map((stat) => (
-                      <div key={stat.id} className="group flex items-center justify-between">
+                      <div
+                        key={stat.id}
+                        className="group flex items-center justify-between"
+                      >
                         <div className="flex items-center gap-2.5">
-                          <div className={`flex h-6 w-6 items-center justify-center rounded-md ${stat.bg}`}>
+                          <div
+                            className={`flex h-6 w-6 items-center justify-center rounded-md ${stat.bg}`}
+                          >
                             <stat.icon size={12} className={stat.color} />
                           </div>
                           <span className="font-medium text-gray-400 transition-colors group-hover:text-gray-300">
                             {stat.title}
                           </span>
                         </div>
-                        <span className="font-semibold text-white tabular-nums">{stat.count}</span>
+                        <span className="font-semibold text-white tabular-nums">
+                          {stat.count}
+                        </span>
                       </div>
                     ))}
                   </div>

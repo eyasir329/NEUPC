@@ -9,9 +9,9 @@ import {
   getAboutData,
   getAllPublicSettings,
   getPublicJourney,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import AchievementsClient from './AchievementsClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import {
   CollectionPageJsonLd,
   BreadcrumbJsonLd,

@@ -60,7 +60,7 @@ function About({ data = {}, settings = {} }) {
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       {/* Divider top */}
-      <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-neon-violet/20 to-transparent" />
+      <div className="via-neon-violet/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent to-transparent" />
 
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">

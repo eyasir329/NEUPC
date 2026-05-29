@@ -1,3 +1,8 @@
+/**
+ * @file Lesson content renderer component
+ * @module LessonContentRenderer
+ */
+
 'use client';
 
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
@@ -5,7 +10,7 @@ import { marked } from 'marked';
 import { createLowlight, common } from 'lowlight';
 import VideoPlayer from './VideoPlayer';
 import { BookOpen, Play, ListVideo } from 'lucide-react';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 const lowlight = createLowlight(common);
 
@@ -22,8 +27,10 @@ function parseContentBlocks(content) {
 
 function escapeHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function hastToString(node) {
@@ -31,17 +38,21 @@ function hastToString(node) {
   if (node.type === 'text') return escapeHtml(node.value);
   if (node.type === 'element') {
     const cls = node.properties?.className;
-    const ca = cls ? ` class="${Array.isArray(cls) ? cls.join(' ') : cls}"` : '';
+    const ca = cls
+      ? ` class="${Array.isArray(cls) ? cls.join(' ') : cls}"`
+      : '';
     return `<${node.tagName}${ca}>${(node.children || []).map(hastToString).join('')}</${node.tagName}>`;
   }
-  if (node.type === 'root') return (node.children || []).map(hastToString).join('');
+  if (node.type === 'root')
+    return (node.children || []).map(hastToString).join('');
   return '';
 }
 
 function highlightCode(code, lang) {
   try {
     const l = (lang || '').trim().toLowerCase();
-    if (l && lowlight.registered(l)) return hastToString(lowlight.highlight(l, code));
+    if (l && lowlight.registered(l))
+      return hastToString(lowlight.highlight(l, code));
   } catch {}
   return escapeHtml(code);
 }
@@ -61,7 +72,14 @@ function buildRenderer() {
 
   r.heading = function ({ tokens, depth }) {
     const text = this.parser.parseInline(tokens);
-    const sz = { 1: '1.375rem', 2: '1.125rem', 3: '1rem', 4: '0.9rem', 5: '0.85rem', 6: '0.8rem' };
+    const sz = {
+      1: '1.375rem',
+      2: '1.125rem',
+      3: '1rem',
+      4: '0.9rem',
+      5: '0.85rem',
+      6: '0.8rem',
+    };
     return `<h${depth} class="md-h md-h${depth}" style="font-size:${sz[depth] || '1rem'}">${text}</h${depth}>\n`;
   };
 
@@ -92,7 +110,9 @@ function buildRenderer() {
       return `<li class="md-li md-task"><input type="checkbox" ${item.checked ? 'checked' : ''} disabled> ${body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1')}</li>\n`;
     }
     // Strip wrapping <p> tags for tight lists (single-paragraph items)
-    const inner = item.loose ? body : body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
+    const inner = item.loose
+      ? body
+      : body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
     return `<li class="md-li">${inner}</li>\n`;
   };
 
@@ -164,7 +184,11 @@ const MD_RENDERER = buildRenderer();
 function processMarkdown(markdown) {
   if (!markdown) return '';
   try {
-    return marked.parse(markdown, { gfm: true, breaks: true, renderer: MD_RENDERER });
+    return marked.parse(markdown, {
+      gfm: true,
+      breaks: true,
+      renderer: MD_RENDERER,
+    });
   } catch (e) {
     return `<p>Failed to parse markdown.</p>`;
   }
@@ -224,25 +248,37 @@ const MD_STYLES = `
 
 // ─── Multi-video playlist ─────────────────────────────────────────────────────
 
-function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialPosition = 0 }) {
+function MultiVideoPlaylist({
+  videos,
+  lessonId,
+  onProgress,
+  onComplete,
+  initialPosition = 0,
+}) {
   const storageKey = `neupc-vid-idx-${lessonId}`;
   const [activeIdx, setActiveIdx] = useState(() => {
     try {
       const saved = parseInt(localStorage.getItem(storageKey), 10);
-      return Number.isFinite(saved) && saved >= 0 && saved < videos.length ? saved : 0;
-    } catch { return 0; }
+      return Number.isFinite(saved) && saved >= 0 && saved < videos.length
+        ? saved
+        : 0;
+    } catch {
+      return 0;
+    }
   });
   const activeVid = videos[activeIdx];
 
   const handleSetActive = (idx) => {
     setActiveIdx(idx);
-    try { localStorage.setItem(storageKey, String(idx)); } catch {}
+    try {
+      localStorage.setItem(storageKey, String(idx));
+    } catch {}
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl flex flex-col lg:flex-row">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl lg:flex-row">
       {/* Featured player area */}
-      <div className="flex-1 min-w-0 bg-black flex flex-col relative">
+      <div className="relative flex min-w-0 flex-1 flex-col bg-black">
         <VideoPlayer
           key={activeIdx}
           lesson={{
@@ -256,31 +292,30 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
           onComplete={onComplete}
         />
         {/* Title bar for active video overlaying the top */}
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 pb-12 pointer-events-none z-10 flex justify-between items-start">
-           <h3 className="text-white font-bold text-lg tracking-wide drop-shadow-lg">
-             {activeVid.label || `Video ${activeIdx + 1}`}
-           </h3>
+        <div className="pointer-events-none absolute top-0 right-0 left-0 z-10 flex items-start justify-between bg-linear-to-b from-black/80 to-transparent p-4 pb-12">
+          <h3 className="text-lg font-bold tracking-wide text-white drop-shadow-lg">
+            {activeVid.label || `Video ${activeIdx + 1}`}
+          </h3>
         </div>
       </div>
 
       {/* Playlist sidebar */}
-      <div className="lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-white/10 bg-zinc-950 flex flex-col max-h-[420px] lg:max-h-[500px]">
-        
+      <div className="flex max-h-[420px] shrink-0 flex-col border-t border-white/10 bg-zinc-950 lg:max-h-[500px] lg:w-80 lg:border-t-0 lg:border-l">
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-zinc-900 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-zinc-900 px-5 py-4">
           <div className="flex items-center gap-2">
             <ListVideo className="h-4 w-4 text-[#8083ff]" />
-            <span className="text-sm font-bold text-[#d4e4fa] tracking-wide">
+            <span className="text-sm font-bold tracking-wide text-[#d4e4fa]">
               Course Playlist
             </span>
           </div>
-          <span className="text-[11px] font-bold text-violet-200 bg-violet-500/10 px-2 py-0.5 rounded-md tabular-nums border border-violet-500/20">
+          <span className="rounded-md border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[11px] font-bold text-violet-200 tabular-nums">
             {activeIdx + 1} / {videos.length}
           </span>
         </div>
 
         {/* Sidebar Items */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+        <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
           {videos.map((vid, idx) => {
             const isActive = idx === activeIdx;
             const hasVideo = vid.video_id || vid.video_url;
@@ -289,38 +324,42 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
                 key={vid.id ?? idx}
                 onClick={() => hasVideo && handleSetActive(idx)}
                 disabled={!hasVideo}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all relative overflow-hidden group ${
+                className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl p-3 text-left transition-all ${
                   isActive
-                    ? 'bg-violet-500/15 border border-violet-500/30 shadow-md shadow-violet-500/5'
-                    : 'border border-transparent hover:bg-zinc-900 hover:border-white/10'
-                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                    ? 'border border-violet-500/30 bg-violet-500/15 shadow-md shadow-violet-500/5'
+                    : 'border border-transparent hover:border-white/10 hover:bg-zinc-900'
+                } disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 {/* Active Indicator Line */}
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
+                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
                 )}
 
                 {/* Number / play icon */}
                 <div
-                  className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all duration-300 ${
                     isActive
-                      ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20 scale-105'
+                      ? 'scale-105 bg-violet-500 text-white shadow-lg shadow-violet-500/20'
                       : 'bg-zinc-700 text-zinc-400 group-hover:bg-zinc-600 group-hover:text-zinc-100'
                   }`}
                 >
                   {isActive ? (
-                    <Play className="h-4 w-4 fill-current ml-0.5" />
+                    <Play className="ml-0.5 h-4 w-4 fill-current" />
                   ) : (
                     <span>{idx + 1}</span>
                   )}
                 </div>
 
                 {/* Label */}
-                <div className="flex-1 min-w-0 pr-2">
-                  <p className={`text-sm font-semibold leading-snug truncate transition-colors ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-100'}`}>
+                <div className="min-w-0 flex-1 pr-2">
+                  <p
+                    className={`truncate text-sm leading-snug font-semibold transition-colors ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-100'}`}
+                  >
                     {vid.label || `Video ${idx + 1}`}
                   </p>
-                  <p className={`text-[10px] font-medium mt-0.5 uppercase tracking-wider transition-colors ${isActive ? 'text-violet-200' : 'text-[#464554] group-hover:text-zinc-400'}`}>
+                  <p
+                    className={`mt-0.5 text-[10px] font-medium tracking-wider uppercase transition-colors ${isActive ? 'text-violet-200' : 'text-[#464554] group-hover:text-zinc-400'}`}
+                  >
                     {isActive ? 'Now Playing' : 'Up Next'}
                   </p>
                 </div>
@@ -335,7 +374,16 @@ function MultiVideoPlaylist({ videos, lessonId, onProgress, onComplete, initialP
 
 // ─── Main renderer ────────────────────────────────────────────────────────────
 
-export default function LessonContentRenderer({ content, lessonId, onProgress, onComplete, initialPosition = 0, viewerMode = false, practiceProblemsComponent = null, examComponent = null }) {
+export default function LessonContentRenderer({
+  content,
+  lessonId,
+  onProgress,
+  onComplete,
+  initialPosition = 0,
+  viewerMode = false,
+  practiceProblemsComponent = null,
+  examComponent = null,
+}) {
   const blocks = useMemo(() => parseContentBlocks(content), [content]);
   const containerRef = useRef(null);
 
@@ -354,18 +402,20 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
       btn._wired = true;
       btn.addEventListener('click', () => {
         // Find code tag in various structures: Markdown, HTML prompt, RichText prompt
-        let code = btn.closest('[data-has-copy="true"]')?.querySelector('code') 
-                   || btn.closest('.md-code-block')?.querySelector('code')
-                   || btn.closest('div')?.nextElementSibling?.querySelector('code');
-                   
+        let code =
+          btn.closest('[data-has-copy="true"]')?.querySelector('code') ||
+          btn.closest('.md-code-block')?.querySelector('code') ||
+          btn.closest('div')?.nextElementSibling?.querySelector('code');
+
         if (!code) return;
         navigator.clipboard.writeText(code.textContent).then(() => {
           const originalText = btn.textContent;
           btn.textContent = '✓ Copied!';
           btn.classList.add('copied');
-          setTimeout(() => { 
-            btn.textContent = originalText === '✓ Copied!' ? 'Copy' : originalText; 
-            btn.classList.remove('copied'); 
+          setTimeout(() => {
+            btn.textContent =
+              originalText === '✓ Copied!' ? 'Copy' : originalText;
+            btn.classList.remove('copied');
           }, 2000);
         });
       });
@@ -387,7 +437,9 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           return (
             <div
               key={block.id}
-              className={viewerMode ? 'tiptap-viewer-content' : 'tiptap-editor-content'}
+              className={
+                viewerMode ? 'tiptap-viewer-content' : 'tiptap-editor-content'
+              }
               dangerouslySetInnerHTML={{ __html: block.content }}
             />
           );
@@ -422,27 +474,29 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
           if (!images || !Array.isArray(images) || images.length === 0) {
             if (block.content) {
               // Legacy/single URL mode
-              images = [{ id: 'legacy', url: block.content, alt: block.data?.alt }];
+              images = [
+                { id: 'legacy', url: block.content, alt: block.data?.alt },
+              ];
             } else {
               // Truly empty block
               return null;
             }
           }
 
-          const validImages = images.filter(img => img.url);
+          const validImages = images.filter((img) => img.url);
           if (validImages.length === 0) return null;
 
-          let gridClass = "grid gap-4 sm:gap-6 ";
+          let gridClass = 'grid gap-4 sm:gap-6 ';
           if (validImages.length === 1) {
-            gridClass += "grid-cols-1 max-w-5xl mx-auto";
+            gridClass += 'grid-cols-1 max-w-5xl mx-auto';
           } else if (validImages.length === 2) {
-            gridClass += "grid-cols-1 sm:grid-cols-2";
+            gridClass += 'grid-cols-1 sm:grid-cols-2';
           } else if (validImages.length === 3) {
-            gridClass += "grid-cols-1 sm:grid-cols-2";
+            gridClass += 'grid-cols-1 sm:grid-cols-2';
           } else if (validImages.length === 4) {
-            gridClass += "grid-cols-1 sm:grid-cols-2";
+            gridClass += 'grid-cols-1 sm:grid-cols-2';
           } else {
-            gridClass += "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
+            gridClass += 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3';
           }
 
           return (
@@ -452,21 +506,21 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                 return (
                   <div
                     key={img.id}
-                    className={`rounded-2xl border border-white/10 overflow-hidden bg-zinc-950 flex justify-center items-center shadow-xl group/img relative ${
-                      isFeatured ? "sm:col-span-2" : ""
+                    className={`group/img relative flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-xl ${
+                      isFeatured ? 'sm:col-span-2' : ''
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={driveImageUrl(img.url)}
                       alt={img.alt || 'Lesson image'}
-                      className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 ease-out group-hover/img:scale-[1.02]"
+                      className="h-auto max-h-[600px] w-full object-contain transition-transform duration-700 ease-out group-hover/img:scale-[1.02]"
                       loading="lazy"
                     />
-                    
+
                     {img.alt && (
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 pointer-events-none pt-12 pb-4 px-6 flex items-end">
-                        <p className="text-white/90 text-sm font-medium drop-shadow-md translate-y-2 group-hover/img:translate-y-0 transition-transform duration-300">
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end bg-linear-to-t from-black/90 via-black/40 to-transparent px-6 pt-12 pb-4 opacity-0 transition-opacity duration-300 group-hover/img:opacity-100">
+                        <p className="translate-y-2 text-sm font-medium text-white/90 drop-shadow-md transition-transform duration-300 group-hover/img:translate-y-0">
                           {img.alt}
                         </p>
                       </div>
@@ -484,11 +538,13 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
 
           if (!videos || !Array.isArray(videos)) {
             if (data.video_id) {
-              videos = [{
-                id: 'legacy',
-                video_source: data.video_source || 'drive',
-                video_id: data.video_id,
-              }];
+              videos = [
+                {
+                  id: 'legacy',
+                  video_source: data.video_source || 'drive',
+                  video_id: data.video_id,
+                },
+              ];
             } else {
               videos = [];
             }
@@ -503,7 +559,7 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
             return (
               <div
                 key={block.id}
-                className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black"
+                className="overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl"
               >
                 <VideoPlayer
                   lesson={{
@@ -517,8 +573,10 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
                   onComplete={onComplete}
                 />
                 {vid.label && (
-                  <div className="px-4 py-3 border-t border-white/10 bg-zinc-900">
-                    <p className="text-sm font-medium text-white/75 truncate">{vid.label}</p>
+                  <div className="border-t border-white/10 bg-zinc-900 px-4 py-3">
+                    <p className="truncate text-sm font-medium text-white/75">
+                      {vid.label}
+                    </p>
                   </div>
                 )}
               </div>
@@ -548,29 +606,45 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
             );
           }
           return (
-            <div key={block.id} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-6">
-              <h4 className="text-sm font-bold text-violet-200 mb-4 flex items-center gap-2">
-                <BookOpen className="h-4 w-4" /> Practice Problems Preview ({problems.length})
+            <div
+              key={block.id}
+              className="w-full rounded-2xl border border-white/5 bg-zinc-950/40 p-6"
+            >
+              <h4 className="mb-4 flex items-center gap-2 text-sm font-bold text-violet-200">
+                <BookOpen className="h-4 w-4" /> Practice Problems Preview (
+                {problems.length})
               </h4>
               {problems.length === 0 ? (
-                <p className="text-xs text-[#908fa0] italic">No problems added to this block.</p>
+                <p className="text-xs text-[#908fa0] italic">
+                  No problems added to this block.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {problems.map((p, idx) => (
-                    <div key={p.id || idx} className="flex items-center justify-between p-3 bg-white/2 border border-white/5 rounded-xl">
+                    <div
+                      key={p.id || idx}
+                      className="flex items-center justify-between rounded-xl border border-white/5 bg-white/2 p-3"
+                    >
                       <div className="flex items-center gap-2.5">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
                           {idx + 1}
                         </span>
-                        <span className="text-xs font-semibold text-white/90">{p.name || 'Untitled Problem'}</span>
+                        <span className="text-xs font-semibold text-white/90">
+                          {p.name || 'Untitled Problem'}
+                        </span>
                         {p.source && (
-                          <span className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 font-bold border border-zinc-700">
+                          <span className="rounded border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
                             {p.source}
                           </span>
                         )}
                       </div>
                       {p.url && (
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold text-violet-400 transition-colors hover:text-violet-300"
+                        >
                           View Problem
                         </a>
                       )}
@@ -592,32 +666,53 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
             );
           }
           return (
-            <div key={block.id} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-6">
+            <div
+              key={block.id}
+              className="w-full rounded-2xl border border-white/5 bg-zinc-950/40 p-6"
+            >
               <style dangerouslySetInnerHTML={{ __html: MD_STYLES }} />
-              <h4 className="text-sm font-bold text-violet-200 mb-4 flex items-center gap-2">
-                <BookOpen className="h-4 w-4" /> Exam Module ({questions.length} Questions)
+              <h4 className="mb-4 flex items-center gap-2 text-sm font-bold text-violet-200">
+                <BookOpen className="h-4 w-4" /> Exam Module ({questions.length}{' '}
+                Questions)
               </h4>
               {questions.length === 0 ? (
-                <p className="text-xs text-[#908fa0] italic">No questions added to this block.</p>
+                <p className="text-xs text-[#908fa0] italic">
+                  No questions added to this block.
+                </p>
               ) : (
                 <div className="space-y-4">
                   {questions.map((q, idx) => (
-                    <div key={q.id || idx} className="p-4 bg-white/2 border border-white/5 rounded-xl space-y-3">
+                    <div
+                      key={q.id || idx}
+                      className="space-y-3 rounded-xl border border-white/5 bg-white/2 p-4"
+                    >
                       <div className="flex items-start gap-2">
-                        <span className="text-xs font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 shrink-0 mt-0.5">
+                        <span className="mt-0.5 shrink-0 rounded border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-xs font-bold text-violet-400">
                           Q {idx + 1}
                         </span>
-                        <div className="text-xs font-semibold text-white flex-1 min-w-0 md-viewer">
-                          <div dangerouslySetInnerHTML={{ __html: processMarkdown(q.question || 'Untitled Question') }} />
+                        <div className="md-viewer min-w-0 flex-1 text-xs font-semibold text-white">
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: processMarkdown(
+                                q.question || 'Untitled Question'
+                              ),
+                            }}
+                          />
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {(q.options || ['', '', '', '']).map((opt, oIdx) => (
-                          <div key={oIdx} className="flex items-center gap-2 p-2 bg-black/20 border border-white/5 rounded-lg">
-                            <div className="h-3.5 w-3.5 rounded-full border border-zinc-700 flex items-center justify-center text-[8px] font-bold text-zinc-500">
+                          <div
+                            key={oIdx}
+                            className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/20 p-2"
+                          >
+                            <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-zinc-700 text-[8px] font-bold text-zinc-500">
                               {String.fromCharCode(65 + oIdx)}
                             </div>
-                            <span className="text-xs text-zinc-400">{opt || `Option ${String.fromCharCode(65 + oIdx)}`}</span>
+                            <span className="text-xs text-zinc-400">
+                              {opt ||
+                                `Option ${String.fromCharCode(65 + oIdx)}`}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -635,13 +730,13 @@ export default function LessonContentRenderer({ content, lessonId, onProgress, o
               key={block.id}
               className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-6 sm:p-8"
             >
-              <h4 className="text-lg font-bold text-violet-200 mb-6 flex items-center gap-3">
+              <h4 className="mb-6 flex items-center gap-3 text-lg font-bold text-violet-200">
                 <BookOpen className="h-5 w-5" /> Lesson Plan
               </h4>
-              <LessonContentRenderer 
-                content={block.content} 
-                lessonId={lessonId} 
-                onProgress={onProgress} 
+              <LessonContentRenderer
+                content={block.content}
+                lessonId={lessonId}
+                onProgress={onProgress}
                 onComplete={onComplete}
                 practiceProblemsComponent={practiceProblemsComponent}
                 examComponent={examComponent}

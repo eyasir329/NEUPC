@@ -1,3 +1,8 @@
+/**
+ * @file Admin resources client component
+ * @module AdminResourcesClient
+ */
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -39,7 +44,7 @@ import ResourceFormPanel from './ResourceFormPanel';
 import {
   deleteResourceAction,
   createResourceCategoryAction,
-} from '@/app/_lib/resource-actions';
+} from '@/app/_lib/actions/resource-actions';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -409,13 +414,7 @@ export default function AdminResourcesClient({ initialResources, categories }) {
       }
     });
     return list;
-  }, [
-    resources,
-    activeStatus,
-    search,
-    categoryFilter,
-    sortBy,
-  ]);
+  }, [resources, activeStatus, search, categoryFilter, sortBy]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -493,8 +492,7 @@ export default function AdminResourcesClient({ initialResources, categories }) {
     },
   ];
 
-  const hasActiveFilters =
-    search || categoryFilter || activeStatus !== 'all';
+  const hasActiveFilters = search || categoryFilter || activeStatus !== 'all';
 
   const activeFilterCount = [
     search,
@@ -614,8 +612,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                 ))}
               </select>
             </div>
-
-
 
             <div className="flex items-center gap-1.5">
               <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-gray-600" />
@@ -752,7 +748,9 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                             {resource.creator && (
                               <div className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-500">
                                 <span>by</span>
-                                <span className="font-medium text-gray-400">{resource.creator.full_name}</span>
+                                <span className="font-medium text-gray-400">
+                                  {resource.creator.full_name}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -785,8 +783,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                           {sc.label}
                         </span>
                       </td>
-
-
 
                       {/* Date */}
                       <td className="hidden px-5 py-4 text-xs text-gray-500 lg:table-cell">

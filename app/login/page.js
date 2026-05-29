@@ -1,10 +1,15 @@
-import { auth } from '@/app/_lib/auth';
+/**
+ * @file Login route page
+ * @module LoginPage
+ */
+
+import { auth } from '@/app/_lib/auth/auth';
 import { redirect } from 'next/navigation';
 import SignInButton from '@/app/_components/ui/SignInButton';
 import Link from 'next/link';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import JoinButton from '@/app/_components/ui/JoinButton';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 
 export const metadata = buildMetadata({
   title: 'Login',
@@ -28,15 +33,14 @@ async function LoginPage() {
         <div className="grid-overlay absolute inset-0 opacity-25" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(124,92,255,0.07),transparent)]" />
         <div className="bg-neon-violet/10 absolute -top-40 -left-32 h-125 w-125 rounded-full blur-[140px]" />
-        <div className="bg-neon-lime/8 absolute -bottom-40 -right-32 h-100 w-100 rounded-full blur-[120px]" />
+        <div className="bg-neon-lime/8 absolute -right-32 -bottom-40 h-100 w-100 rounded-full blur-[120px]" />
       </div>
 
       {/* ── Card ───────────────────────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-sm">
-
         {/* Eyebrow — same pattern as Hero */}
         <div className="mb-8 flex items-center gap-3">
-          <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-neon-lime" />
+          <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
           <span className="font-mono text-[9px] font-medium tracking-[0.3em] text-zinc-500 uppercase">
             Dept of CSE · Netrokona University
           </span>
@@ -45,14 +49,14 @@ async function LoginPage() {
         {/* Terminal panel */}
         <div className="void-glow-violet relative overflow-hidden rounded-sm border border-white/5 bg-[rgba(12,14,22,0.75)] p-8 backdrop-blur-2xl sm:p-10">
           {/* Corner accents */}
-          <span className="absolute top-0 left-0 h-6 w-px bg-neon-violet/70" />
-          <span className="absolute top-0 left-0 h-px w-6 bg-neon-violet/70" />
-          <span className="absolute right-0 bottom-0 h-6 w-px bg-neon-lime/50" />
-          <span className="absolute right-0 bottom-0 h-px w-6 bg-neon-lime/50" />
+          <span className="bg-neon-violet/70 absolute top-0 left-0 h-6 w-px" />
+          <span className="bg-neon-violet/70 absolute top-0 left-0 h-px w-6" />
+          <span className="bg-neon-lime/50 absolute right-0 bottom-0 h-6 w-px" />
+          <span className="bg-neon-lime/50 absolute right-0 bottom-0 h-px w-6" />
 
           {/* Headline — kinetic style from Hero */}
           <div className="mb-8">
-            <h1 className="kinetic-headline font-heading text-4xl font-black uppercase text-white sm:text-5xl">
+            <h1 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl">
               SIGN
               <br />
               <span className="text-stroke-lime text-transparent">IN.</span>
@@ -75,8 +79,8 @@ async function LoginPage() {
           </div>
 
           {/* Security note */}
-          <div className="flex items-start gap-3 rounded-sm border border-neon-lime/10 bg-neon-lime/3 p-3.5">
-            <span className="material-symbols-outlined mt-0.5 shrink-0 text-[16px] text-neon-lime/60">
+          <div className="border-neon-lime/10 bg-neon-lime/3 flex items-start gap-3 rounded-sm border p-3.5">
+            <span className="material-symbols-outlined text-neon-lime/60 mt-0.5 shrink-0 text-[16px]">
               lock
             </span>
             <p className="font-mono text-[9px] leading-relaxed tracking-wide text-zinc-600 uppercase">
@@ -89,14 +93,14 @@ async function LoginPage() {
             By signing in you agree to our{' '}
             <Link
               href="/terms"
-              className="text-neon-violet/70 underline underline-offset-2 decoration-neon-violet/20 transition-colors hover:text-neon-violet"
+              className="text-neon-violet/70 decoration-neon-violet/20 hover:text-neon-violet underline underline-offset-2 transition-colors"
             >
               Terms
             </Link>{' '}
             &amp;{' '}
             <Link
               href="/privacy"
-              className="text-neon-violet/70 underline underline-offset-2 decoration-neon-violet/20 transition-colors hover:text-neon-violet"
+              className="text-neon-violet/70 decoration-neon-violet/20 hover:text-neon-violet underline underline-offset-2 transition-colors"
             >
               Privacy
             </Link>
@@ -109,8 +113,8 @@ async function LoginPage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon-lime opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-neon-lime" />
+                <span className="bg-neon-lime absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                <span className="bg-neon-lime relative inline-flex h-1.5 w-1.5 rounded-full" />
               </span>
               <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-700 uppercase">
                 Uplink_Stable
@@ -128,7 +132,7 @@ async function LoginPage() {
             <JoinButton
               href="/join"
               label="Join the Club →"
-              className="font-bold text-neon-violet/80 transition-colors hover:text-neon-lime"
+              className="text-neon-violet/80 hover:text-neon-lime font-bold transition-colors"
             />
           </p>
 
@@ -143,7 +147,12 @@ async function LoginPage() {
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
             Return_To_Nexus
           </Link>

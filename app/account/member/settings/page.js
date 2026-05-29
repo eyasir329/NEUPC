@@ -5,7 +5,7 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import MemberSettingsClient from './_components/MemberSettingsClient';
 
 export const metadata = { title: 'Settings | Member | NEUPC' };

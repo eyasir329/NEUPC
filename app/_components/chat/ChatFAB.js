@@ -15,8 +15,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, X } from 'lucide-react';
-import { cn } from '@/app/_lib/utils';
-import { getUnreadCountAction } from '@/app/_lib/chat-actions';
+import { cn } from '@/app/_lib/utils/utils';
+import { getUnreadCountAction } from '@/app/_lib/actions/chat-actions';
 import ChatPanel from './ChatPanel';
 
 const POLL_MS = 10_000;

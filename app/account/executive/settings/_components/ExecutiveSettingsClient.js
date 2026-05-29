@@ -1,3 +1,8 @@
+/**
+ * @file Executive settings client component
+ * @module ExecutiveSettingsClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +13,7 @@ import {
   GlassCard,
   SectionHeader,
   Pill,
-} from '../../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 import toast from 'react-hot-toast';
 
 function Toggle({ checked, onChange }) {
@@ -17,7 +22,9 @@ function Toggle({ checked, onChange }) {
       type="button"
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all duration-300 ${
-        checked ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]' : 'bg-white/10'
+        checked
+          ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
+          : 'bg-white/10'
       }`}
     >
       <span
@@ -67,14 +74,19 @@ export default function ExecutiveSettingsClient({ user }) {
           subtitle="Administrative identity fields synchronized with the active committee registry."
           accent="indigo"
         />
-        <div className="space-y-3 mt-4">
+        <div className="mt-4 space-y-3">
           {[
-            { label: 'Full Name', value: user?.full_name || 'Executive Officer' },
+            {
+              label: 'Full Name',
+              value: user?.full_name || 'Executive Officer',
+            },
             { label: 'Official Email', value: user?.email, note: 'read-only' },
             {
               label: 'Account Integrity',
               value: user?.account_status,
-              badge: active ? { text: 'Active', tone: 'emerald' } : { text: 'Inactive', tone: 'rose' },
+              badge: active
+                ? { text: 'Active', tone: 'emerald' }
+                : { text: 'Inactive', tone: 'rose' },
             },
           ].map(({ label, value, note, badge }) => (
             <div
@@ -82,22 +94,22 @@ export default function ExecutiveSettingsClient({ user }) {
               className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 px-4 py-3.5"
             >
               <div>
-                <p className="text-xs font-bold text-gray-500 font-mono tracking-wider uppercase select-none">
+                <p className="font-mono text-xs font-bold tracking-wider text-gray-500 uppercase select-none">
                   {label}
                 </p>
-                <p className="text-sm font-semibold text-white mt-1">{value}</p>
+                <p className="mt-1 text-sm font-semibold text-white">{value}</p>
               </div>
               {note && (
-                <span className="text-[10px] font-bold text-gray-600 font-mono tracking-wide uppercase select-none">
+                <span className="font-mono text-[10px] font-bold tracking-wide text-gray-600 uppercase select-none">
                   {note}
                 </span>
               )}
               {badge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black tracking-widest uppercase ${
                     badge.tone === 'emerald'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                      : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
                   }`}
                 >
                   {badge.text}
@@ -116,7 +128,7 @@ export default function ExecutiveSettingsClient({ user }) {
           subtitle="Subscribe to specific events and real-time triggers across club sections."
           accent="indigo"
         />
-        <form onSubmit={handleSaveNotifications} className="space-y-4 mt-4">
+        <form onSubmit={handleSaveNotifications} className="mt-4 space-y-4">
           {[
             {
               key: 'event_registrations',
@@ -141,15 +153,17 @@ export default function ExecutiveSettingsClient({ user }) {
           ].map(({ key, label, desc }) => (
             <div
               key={key}
-              className="flex items-center justify-between gap-4 rounded-xl border border-white/6 bg-white/2 px-4 py-3.5 hover:bg-white/4 hover:border-white/10 transition-all"
+              className="flex items-center justify-between gap-4 rounded-xl border border-white/6 bg-white/2 px-4 py-3.5 transition-all hover:border-white/10 hover:bg-white/4"
             >
               <div>
                 <p className="text-sm font-bold text-white">{label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{desc}</p>
               </div>
               <Toggle
                 checked={notifSettings[key]}
-                onChange={(val) => setNotifSettings({ ...notifSettings, [key]: val })}
+                onChange={(val) =>
+                  setNotifSettings({ ...notifSettings, [key]: val })
+                }
               />
             </div>
           ))}
@@ -157,10 +171,12 @@ export default function ExecutiveSettingsClient({ user }) {
             <button
               type="submit"
               disabled={savingNotif}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-indigo-700 active:scale-95 disabled:opacity-50 transition-all select-none cursor-pointer"
+              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white transition-all select-none hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              {savingNotif ? 'Saving modifications...' : 'Save Settings Preferences'}
+              {savingNotif
+                ? 'Saving modifications...'
+                : 'Save Settings Preferences'}
             </button>
           </div>
         </form>

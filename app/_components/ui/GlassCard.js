@@ -5,7 +5,7 @@
  * @module GlassCard
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 /**
  * GlassCard — Glass-morphism card with optional accent colour line.

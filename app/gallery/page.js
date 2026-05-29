@@ -10,9 +10,9 @@ import {
   getPublicParticipations,
   getPublicEvents,
   getPublicCommittee,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import GalleryClient from './GalleryClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import {
   ImageGalleryJsonLd,
   BreadcrumbJsonLd,

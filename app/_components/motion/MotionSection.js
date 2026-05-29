@@ -10,7 +10,7 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { fadeUp, fadeIn, viewportConfig } from './motion';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 /**
  * MotionSection — Animates a section when it scrolls into view.
@@ -34,7 +34,7 @@ export default function MotionSection({
   const prefersReduced = useReducedMotion();
 
   // When reduced motion is preferred, use opacity-only fade
-  const variants = prefersReduced ? fadeIn : (variant || fadeUp);
+  const variants = prefersReduced ? fadeIn : variant || fadeUp;
 
   const Component = motion.create(as);
 

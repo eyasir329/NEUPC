@@ -1,3 +1,8 @@
+/**
+ * @file Advisor budget client component
+ * @module AdvisorBudgetClient
+ */
+
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
@@ -17,7 +22,7 @@ import {
   Loader,
   BookOpen,
 } from 'lucide-react';
-import { approveBudgetEntryAction } from '@/app/_lib/advisor-actions';
+import { approveBudgetEntryAction } from '@/app/_lib/actions/advisor-actions';
 import {
   PageShell,
   PageHeader,
@@ -27,7 +32,7 @@ import {
   EmptyState,
   TabBar,
   Avatar,
-} from '../../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 import toast from 'react-hot-toast';
 
 const TYPE_TABS = [
@@ -86,7 +91,9 @@ export default function AdvisorBudgetClient({
           (statusFilter === 'approved' && e.approved_at);
         return matchSearch && matchType && matchStatus;
       })
-      .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+      .sort(
+        (a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)
+      );
   }, [budgetEntries, query, typeFilter, statusFilter]);
 
   const balance = Number(summary.balance ?? 0);
@@ -102,7 +109,7 @@ export default function AdvisorBudgetClient({
       />
 
       {/* Financial Metrics Cards */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3 animate-fade-in select-none">
+      <div className="animate-fade-in grid grid-cols-1 gap-3 select-none sm:grid-cols-3">
         <StatCard
           icon={TrendingUp}
           label="Total Income"
@@ -124,7 +131,9 @@ export default function AdvisorBudgetClient({
           label="Net Balance"
           value={`৳${balance.toLocaleString()}`}
           accent={balance >= 0 ? 'blue' : 'amber'}
-          sublabel={balance >= 0 ? 'Surplus / Healthy' : 'Deficit / Needs Review'}
+          sublabel={
+            balance >= 0 ? 'Surplus / Healthy' : 'Deficit / Needs Review'
+          }
           delay={0.1}
         />
       </div>
@@ -137,30 +146,38 @@ export default function AdvisorBudgetClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by transaction description or associated event title…"
-            className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              className="absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        <div className="mt-4 flex flex-col md:flex-row gap-4">
+        <div className="mt-4 flex flex-col gap-4 md:flex-row">
           <div className="min-w-0 flex-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 select-none">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-gray-400 uppercase select-none">
               Transaction Class
             </label>
-            <TabBar tabs={TYPE_TABS} value={typeFilter} onChange={setTypeFilter} />
+            <TabBar
+              tabs={TYPE_TABS}
+              value={typeFilter}
+              onChange={setTypeFilter}
+            />
           </div>
           <div className="min-w-0 flex-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 select-none">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-gray-400 uppercase select-none">
               Approval Status
             </label>
-            <TabBar tabs={STATUS_TABS} value={statusFilter} onChange={setStatusFilter} />
+            <TabBar
+              tabs={STATUS_TABS}
+              value={statusFilter}
+              onChange={setStatusFilter}
+            />
           </div>
         </div>
       </GlassCard>
@@ -182,17 +199,17 @@ export default function AdvisorBudgetClient({
       ) : (
         <div className="space-y-4">
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-white/8 bg-white/2 shadow-2xl backdrop-blur-md">
-            <table className="w-full text-left border-collapse">
+          <div className="hidden overflow-hidden rounded-2xl border border-white/8 bg-white/2 shadow-2xl backdrop-blur-md md:block">
+            <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-white/8 bg-white/3 select-none text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  <th className="py-4 px-5">Class</th>
-                  <th className="py-4 px-5">Amount</th>
-                  <th className="py-4 px-5">Description</th>
-                  <th className="py-4 px-5">Attached Event</th>
-                  <th className="py-4 px-5">Transaction Date</th>
-                  <th className="py-4 px-5">Creator</th>
-                  <th className="py-4 px-5 text-right">Status</th>
+                <tr className="border-b border-white/8 bg-white/3 text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
+                  <th className="px-5 py-4">Class</th>
+                  <th className="px-5 py-4">Amount</th>
+                  <th className="px-5 py-4">Description</th>
+                  <th className="px-5 py-4">Attached Event</th>
+                  <th className="px-5 py-4">Transaction Date</th>
+                  <th className="px-5 py-4">Creator</th>
+                  <th className="px-5 py-4 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/4">
@@ -206,12 +223,12 @@ export default function AdvisorBudgetClient({
                       onClick={() => setSelected(e)}
                       className="group cursor-pointer text-sm text-gray-300 transition-colors hover:bg-white/4"
                     >
-                      <td className="py-3.5 px-5">
+                      <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
                             income
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                              : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
                           }`}
                         >
                           {income ? (
@@ -222,33 +239,45 @@ export default function AdvisorBudgetClient({
                           {e.entry_type}
                         </span>
                       </td>
-                      <td className="py-3.5 px-5 font-bold">
-                        <span className={income ? 'text-emerald-400' : 'text-rose-400'}>
-                          {income ? '+' : '-'}৳{Number(e.amount).toLocaleString()}
+                      <td className="px-5 py-3.5 font-bold">
+                        <span
+                          className={
+                            income ? 'text-emerald-400' : 'text-rose-400'
+                          }
+                        >
+                          {income ? '+' : '-'}৳
+                          {Number(e.amount).toLocaleString()}
                         </span>
                       </td>
-                      <td className="py-3.5 px-5 font-medium text-gray-200 truncate max-w-[200px]">
+                      <td className="max-w-[200px] truncate px-5 py-3.5 font-medium text-gray-200">
                         {e.description}
                       </td>
-                      <td className="py-3.5 px-5 text-gray-400 max-w-[150px] truncate">
+                      <td className="max-w-[150px] truncate px-5 py-3.5 text-gray-400">
                         {e.events?.title || '—'}
                       </td>
-                      <td className="py-3.5 px-5 text-gray-400 font-mono text-xs">
+                      <td className="px-5 py-3.5 font-mono text-xs text-gray-400">
                         {new Date(e.transaction_date).toLocaleDateString()}
                       </td>
-                      <td className="py-3.5 px-5">
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
-                          <Avatar name={creatorName} size="sm" src={e.users?.avatar_url} />
-                          <span className="text-xs text-gray-300 truncate max-w-[100px]">
+                          <Avatar
+                            name={creatorName}
+                            size="sm"
+                            src={e.users?.avatar_url}
+                          />
+                          <span className="max-w-[100px] truncate text-xs text-gray-300">
                             {creatorName}
                           </span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-5 text-right" onClick={(ev) => ev.stopPropagation()}>
+                      <td
+                        className="px-5 py-3.5 text-right"
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end gap-3">
                           {isPendingRow ? (
                             <>
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400 font-sans">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 font-sans text-[9px] font-bold tracking-wider text-amber-400 uppercase">
                                 <Clock className="h-2.5 w-2.5" /> Pending
                               </span>
                               <button
@@ -259,7 +288,7 @@ export default function AdvisorBudgetClient({
                               </button>
                             </>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 font-sans">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-sans text-[9px] font-bold tracking-wider text-emerald-400 uppercase">
                               <CheckCircle className="h-2.5 w-2.5" /> Approved
                             </span>
                           )}
@@ -282,15 +311,15 @@ export default function AdvisorBudgetClient({
                 <div
                   key={e.id}
                   onClick={() => setSelected(e)}
-                  className="rounded-2xl border border-white/8 bg-white/2 p-4 transition-all hover:border-emerald-500/30 hover:bg-white/4 flex flex-col justify-between gap-4 cursor-pointer"
+                  className="flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border border-white/8 bg-white/2 p-4 transition-all hover:border-emerald-500/30 hover:bg-white/4"
                 >
                   <div>
                     <div className="flex items-center justify-between">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
                           income
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                            : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
                         }`}
                       >
                         {income ? (
@@ -300,34 +329,54 @@ export default function AdvisorBudgetClient({
                         )}
                         {e.entry_type}
                       </span>
-                      <span className={`text-sm font-black ${income ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span
+                        className={`text-sm font-black ${income ? 'text-emerald-400' : 'text-rose-400'}`}
+                      >
                         {income ? '+' : '-'}৳{Number(e.amount).toLocaleString()}
                       </span>
                     </div>
 
-                    <p className="mt-3 text-xs font-semibold text-gray-200 line-clamp-1">
+                    <p className="mt-3 line-clamp-1 text-xs font-semibold text-gray-200">
                       {e.description}
                     </p>
 
-                    <div className="mt-2 flex flex-col gap-1 text-[10px] text-gray-500 font-mono">
-                      {e.events?.title && <span className="truncate">Event: {e.events.title}</span>}
-                      <span>Date: {new Date(e.transaction_date).toLocaleDateString()}</span>
-                      <span className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-400 font-sans">
-                        <Avatar name={creatorName} size="xs" src={e.users?.avatar_url} />
+                    <div className="mt-2 flex flex-col gap-1 font-mono text-[10px] text-gray-500">
+                      {e.events?.title && (
+                        <span className="truncate">
+                          Event: {e.events.title}
+                        </span>
+                      )}
+                      <span>
+                        Date:{' '}
+                        {new Date(e.transaction_date).toLocaleDateString()}
+                      </span>
+                      <span className="mt-1 flex items-center gap-1.5 font-sans text-[11px] text-gray-400">
+                        <Avatar
+                          name={creatorName}
+                          size="xs"
+                          src={e.users?.avatar_url}
+                        />
                         Logged by: {creatorName}
                       </span>
                     </div>
                   </div>
 
-                  <div className="border-t border-white/6 pt-3 flex items-center justify-between" onClick={(ev) => ev.stopPropagation()}>
+                  <div
+                    className="flex items-center justify-between border-t border-white/6 pt-3"
+                    onClick={(ev) => ev.stopPropagation()}
+                  >
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-wider uppercase ${
                         isPendingCard
                           ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
                           : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                       }`}
                     >
-                      {isPendingCard ? <Clock className="h-2.5 w-2.5" /> : <CheckCircle className="h-2.5 w-2.5" />}
+                      {isPendingCard ? (
+                        <Clock className="h-2.5 w-2.5" />
+                      ) : (
+                        <CheckCircle className="h-2.5 w-2.5" />
+                      )}
                       {isPendingCard ? 'Pending' : 'Approved'}
                     </span>
 
@@ -367,13 +416,15 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
   const creatorName = entry.users?.full_name || 'System';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg animate-in fade-in zoom-in-95 duration-200">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-md overflow-hidden rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg duration-200">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/8 bg-white/3 px-6 py-4">
           <div>
-            <h2 className="text-base font-bold text-white">Transaction Review</h2>
-            <p className="mt-1 text-[11px] text-emerald-400 font-mono uppercase tracking-wider">
+            <h2 className="text-base font-bold text-white">
+              Transaction Review
+            </h2>
+            <p className="mt-1 font-mono text-[11px] tracking-wider text-emerald-400 uppercase">
               {`// transaction ref: CF-${entry.id.substring(0, 8)}`}
             </p>
           </div>
@@ -386,12 +437,12 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
         </div>
 
         {/* Financial ledger Receipt style drawer */}
-        <div className="p-6 space-y-5">
-          <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-emerald-500/10 to-transparent p-5 relative overflow-hidden font-mono text-xs">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -z-10" />
+        <div className="space-y-5 p-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-emerald-500/10 to-transparent p-5 font-mono text-xs">
+            <div className="absolute top-0 right-0 -z-10 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
 
-            <div className="text-center pb-4 border-b border-dashed border-white/10">
-              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">
+            <div className="border-b border-dashed border-white/10 pb-4 text-center">
+              <span className="mb-1 block text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
                 Financial Transaction Ledger
               </span>
               <span className="text-2xl font-black text-white">
@@ -399,10 +450,10 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
               </span>
               <div className="mt-2.5">
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-wider uppercase ${
                     isIncome
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                      : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
                   }`}
                 >
                   {entry.entry_type}
@@ -411,38 +462,56 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
             </div>
 
             <div className="mt-5 space-y-3">
-              <div className="flex justify-between items-start gap-3">
-                <span className="text-gray-500 flex items-center gap-1 shrink-0"><FileText className="h-3.5 w-3.5 text-gray-600" /> Reference</span>
-                <span className="text-white font-semibold text-right break-all">CF-{entry.id}</span>
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex shrink-0 items-center gap-1 text-gray-500">
+                  <FileText className="h-3.5 w-3.5 text-gray-600" /> Reference
+                </span>
+                <span className="text-right font-semibold break-all text-white">
+                  CF-{entry.id}
+                </span>
               </div>
-              <div className="flex justify-between items-start gap-3">
-                <span className="text-gray-500 flex items-center gap-1 shrink-0"><User className="h-3.5 w-3.5 text-gray-600" /> Logged By</span>
-                <span className="text-white font-semibold text-right">{creatorName}</span>
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex shrink-0 items-center gap-1 text-gray-500">
+                  <User className="h-3.5 w-3.5 text-gray-600" /> Logged By
+                </span>
+                <span className="text-right font-semibold text-white">
+                  {creatorName}
+                </span>
               </div>
-              <div className="flex justify-between items-start gap-3">
-                <span className="text-gray-500 flex items-center gap-1 shrink-0"><BookOpen className="h-3.5 w-3.5 text-gray-600" /> Event</span>
-                <span className="text-white font-semibold text-right max-w-[150px] truncate">{entry.events?.title || 'None / Maintenance'}</span>
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex shrink-0 items-center gap-1 text-gray-500">
+                  <BookOpen className="h-3.5 w-3.5 text-gray-600" /> Event
+                </span>
+                <span className="max-w-[150px] truncate text-right font-semibold text-white">
+                  {entry.events?.title || 'None / Maintenance'}
+                </span>
               </div>
-              <div className="flex justify-between items-start gap-3">
-                <span className="text-gray-500 flex items-center gap-1 shrink-0"><Calendar className="h-3.5 w-3.5 text-gray-600" /> Record Date</span>
-                <span className="text-white font-semibold text-right">{new Date(entry.transaction_date).toLocaleDateString()}</span>
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex shrink-0 items-center gap-1 text-gray-500">
+                  <Calendar className="h-3.5 w-3.5 text-gray-600" /> Record Date
+                </span>
+                <span className="text-right font-semibold text-white">
+                  {new Date(entry.transaction_date).toLocaleDateString()}
+                </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-dashed border-white/10">
-              <span className="text-[10px] font-bold text-gray-500 block mb-1">MEMO / DESCRIPTION:</span>
-              <p className="text-gray-200 leading-relaxed font-sans text-xs bg-white/2 border border-white/6 rounded-lg p-2.5 break-words">
+            <div className="mt-4 border-t border-dashed border-white/10 pt-4">
+              <span className="mb-1 block text-[10px] font-bold text-gray-500">
+                MEMO / DESCRIPTION:
+              </span>
+              <p className="rounded-lg border border-white/6 bg-white/2 p-2.5 font-sans text-xs leading-relaxed wrap-break-word text-gray-200">
                 {entry.description || 'No description provided.'}
               </p>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3 border-t border-white/8 pt-5 mt-2">
+          <div className="mt-2 flex gap-3 border-t border-white/8 pt-5">
             <button
               onClick={onClose}
               type="button"
-              className="flex-1 rounded-xl bg-white/5 border border-white/8 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+              className="flex-1 rounded-xl border border-white/8 bg-white/5 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
             >
               Cancel
             </button>
@@ -451,7 +520,7 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
                 onClick={() => onApprove(entry.id)}
                 type="button"
                 disabled={submitting}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
               >
                 {submitting && <Loader className="h-3.5 w-3.5 animate-spin" />}
                 Approve Entry
@@ -460,7 +529,7 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
               <button
                 type="button"
                 disabled
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500/20 border border-emerald-500/10 py-2.5 text-xs font-bold text-emerald-400 select-none cursor-default"
+                className="inline-flex flex-1 cursor-default items-center justify-center gap-2 rounded-xl border border-emerald-500/10 bg-emerald-500/20 py-2.5 text-xs font-bold text-emerald-400 select-none"
               >
                 <CheckCircle className="h-3.5 w-3.5" /> Approved
               </button>

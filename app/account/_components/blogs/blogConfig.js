@@ -11,7 +11,7 @@ export {
   CATEGORY_KEYS as CATEGORIES,
   getCategoryConfig,
   getCategoryLabel,
-} from '@/app/_lib/blog-config';
+} from '@/app/_lib/config/blog-config';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 

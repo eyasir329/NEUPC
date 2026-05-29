@@ -107,7 +107,9 @@ export default function ActionMenu({ user, onAction }) {
   if (actions.length === 0) return null;
 
   // Split into three groups: utility, safe, destructive
-  const utilityActions = actions.filter((a) => a.key === 'messages' || a.key === 'email');
+  const utilityActions = actions.filter(
+    (a) => a.key === 'messages' || a.key === 'email'
+  );
   const safeActions = actions.filter((a) => a.key === 'activate');
   const destructiveActions = actions.filter(
     (a) => a.key !== 'activate' && a.key !== 'messages' && a.key !== 'email'

@@ -1,10 +1,17 @@
+/**
+ * @file Queries
+ * @module queries
+ */
+
 import 'server-only';
 
-import { supabase, supabaseAdmin } from '@/app/_lib/supabase';
+import { supabase, supabaseAdmin } from '@/app/_lib/integrations/supabase';
 
 function isUuid(val) {
   if (!val || typeof val !== 'string') return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    val
+  );
 }
 
 function mapResourceRow(row) {
@@ -12,8 +19,12 @@ function mapResourceRow(row) {
     .map((m) => m.resource_tags)
     .filter(Boolean);
 
-  const uniqueUsers = new Set((row.resource_views || []).map((v) => v.user_id).filter(Boolean));
-  const uniqueAnons = new Set((row.resource_views || []).map((v) => v.anon_id).filter(Boolean));
+  const uniqueUsers = new Set(
+    (row.resource_views || []).map((v) => v.user_id).filter(Boolean)
+  );
+  const uniqueAnons = new Set(
+    (row.resource_views || []).map((v) => v.anon_id).filter(Boolean)
+  );
   const uniqueViewsCount = uniqueUsers.size + uniqueAnons.size;
 
   return {
@@ -86,10 +97,7 @@ export async function getAdminResources({
 
   let query = supabaseAdmin
     .from('resources')
-    .select(
-      baseSelect(),
-      { count: 'exact' }
-    )
+    .select(baseSelect(), { count: 'exact' })
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1);
@@ -163,7 +171,8 @@ export async function getPublishedResources({
   } else if (type) {
     query = query.eq('resource_type', type);
   }
-  if (categoryId && isUuid(categoryId)) query = query.eq('category_id', categoryId);
+  if (categoryId && isUuid(categoryId))
+    query = query.eq('category_id', categoryId);
 
   if (onlyBookmarkedFor && isUuid(onlyBookmarkedFor)) {
     const { data: bm } = await supabaseAdmin
@@ -234,9 +243,7 @@ export async function getResourceById(id, { includeMembers = false } = {}) {
 export async function getAdminResourceById(id) {
   const { data, error } = await supabaseAdmin
     .from('resources')
-    .select(
-      baseSelect()
-    )
+    .select(baseSelect())
     .eq('id', id)
     .single();
 

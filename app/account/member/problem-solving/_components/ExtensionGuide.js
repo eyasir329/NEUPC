@@ -356,7 +356,7 @@ export default function ExtensionGuide() {
         className="flex w-full items-center justify-between gap-4 p-5 transition-colors hover:bg-white/[0.02]"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-violet-500/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-500 shadow-lg shadow-violet-500/20">
             <Puzzle className="h-5 w-5 text-white" />
           </div>
           <div className="text-left">
@@ -475,7 +475,7 @@ export default function ExtensionGuide() {
                   return (
                     <div
                       key={step.id}
-                      className={`rounded-xl border ${colors.border} bg-gradient-to-r ${colors.gradient} p-4`}
+                      className={`rounded-xl border ${colors.border} bg-linear-to-r ${colors.gradient} p-4`}
                     >
                       {/* Step Header */}
                       <div className="mb-3 flex items-start gap-3">

@@ -27,7 +27,7 @@ import {
 import {
   updateContactStatusAction,
   deleteContactSubmissionAction,
-} from '@/app/_lib/contact-actions';
+} from '@/app/_lib/actions/contact-actions';
 import { getStatusConfig } from './contactConfig';
 
 function InfoRow({ icon: Icon, label, value, copyable }) {
@@ -44,7 +44,7 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
 
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/[0.04]">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.04] bg-white/5">
         <Icon className="h-3.5 w-3.5 text-gray-400" />
       </div>
       <div className="min-w-0 flex-1">
@@ -52,7 +52,7 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
           {label}
         </p>
         <div className="flex items-center gap-2">
-          <p className="text-sm leading-relaxed break-all text-gray-200 font-medium">
+          <p className="text-sm leading-relaxed font-medium break-all text-gray-200">
             {value}
           </p>
           {copyable && (
@@ -65,7 +65,9 @@ function InfoRow({ icon: Icon, label, value, copyable }) {
             </button>
           )}
           {copied && (
-            <span className="text-[10px] text-green-400 font-medium">Copied!</span>
+            <span className="text-[10px] font-medium text-green-400">
+              Copied!
+            </span>
           )}
         </div>
       </div>
@@ -184,14 +186,16 @@ export default function SubmissionDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-5">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10">
               <MessageSquare className="h-5 w-5 text-amber-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold text-white leading-snug">
+              <h2 className="truncate text-base leading-snug font-bold text-white">
                 {submission.subject || 'No Subject'}
               </h2>
-              <p className="text-xs text-gray-400 font-medium">Submission Detail</p>
+              <p className="text-xs font-medium text-gray-400">
+                Submission Detail
+              </p>
             </div>
           </div>
           <div className="ml-4 flex shrink-0 items-center gap-3">
@@ -211,7 +215,7 @@ export default function SubmissionDetailModal({
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 scrollbar-thin">
+        <div className="scrollbar-thin flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {/* Sender Info Group */}
           <div className="rounded-2xl border border-white/[0.06] bg-slate-950/20 p-5">
             <h3 className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
@@ -245,7 +249,7 @@ export default function SubmissionDetailModal({
             <h3 className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
               Message Content
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-200 font-medium">
+            <p className="text-sm leading-relaxed font-medium whitespace-pre-wrap text-gray-200">
               {submission.message}
             </p>
           </div>
@@ -280,7 +284,7 @@ export default function SubmissionDetailModal({
           {submission.status === 'replied' && repliedAtFormatted && (
             <div className="flex items-center gap-3 rounded-2xl border border-green-500/20 bg-green-500/5 px-4 py-3">
               <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-400" />
-              <p className="text-xs text-green-300 font-medium leading-relaxed">
+              <p className="text-xs leading-relaxed font-medium text-green-300">
                 Replied on {repliedAtFormatted}
                 {submission.replied_by_name && (
                   <>
@@ -297,7 +301,7 @@ export default function SubmissionDetailModal({
         </div>
 
         {/* Footer Actions Panel */}
-        <div className="border-t border-white/[0.08] px-6 py-5 bg-slate-950/10">
+        <div className="border-t border-white/[0.08] bg-slate-950/10 px-6 py-5">
           <p className="mb-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
             Change Status
           </p>
@@ -327,7 +331,9 @@ export default function SubmissionDetailModal({
           <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
             {deleteConfirm ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium">Permanently delete?</span>
+                <span className="text-xs font-medium text-gray-400">
+                  Permanently delete?
+                </span>
                 <button
                   onClick={handleDelete}
                   disabled={deletePending}
@@ -342,7 +348,7 @@ export default function SubmissionDetailModal({
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(false)}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-semibold text-gray-400 transition-colors hover:text-gray-200"
                 >
                   Cancel
                 </button>

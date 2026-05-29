@@ -30,7 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   getTagStatisticsAction,
   updateMissingTagsAction,
-} from '@/app/_lib/problem-solving-actions';
+} from '@/app/_lib/actions/problem-solving-actions';
 
 // Difficulty configuration
 const DIFFICULTY_CONFIG = {

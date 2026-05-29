@@ -1,9 +1,14 @@
+/**
+ * @file Blogs component
+ * @module Blogs
+ */
+
 'use client';
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { cn } from '@/app/_lib/utils';
-import { getCategoryConfig } from '@/app/_lib/blog-config';
+import { cn } from '@/app/_lib/utils/utils';
+import { getCategoryConfig } from '@/app/_lib/config/blog-config';
 
 const CARD_ACCENTS = [
   {

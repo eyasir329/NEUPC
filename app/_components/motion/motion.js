@@ -89,7 +89,11 @@ export function staggerContainer(stagger = 0.08, delay = 0) {
 
 export const pageTransition = {
   initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: 'easeOut' },
+  },
   exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: 'easeIn' } },
 };
 

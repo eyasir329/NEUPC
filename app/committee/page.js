@@ -11,9 +11,9 @@
  * @module CommitteePage
  */
 
-import { getPublicCommittee } from '@/app/_lib/public-actions';
+import { getPublicCommittee } from '@/app/_lib/actions/public-actions';
 import CommitteeClient from './CommitteeClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
 export const metadata = buildMetadata({

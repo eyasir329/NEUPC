@@ -1,3 +1,8 @@
+/**
+ * @file Achievements client component
+ * @module AchievementsClient
+ */
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -5,17 +10,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { cn } from '../_lib/utils';
-import InlinePagination from '../_components/ui/InlinePagination';
-import FeaturedCarousel from '../_components/ui/FeaturedCarousel';
+import { cn } from '@/app/_lib/utils/utils';
+import InlinePagination from '@/app/_components/ui/InlinePagination';
+import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
@@ -24,7 +29,9 @@ function SectionEyebrow({ tag, title, accent, description, onMount = false }) {
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
+      {...(onMount
+        ? { animate: 'visible' }
+        : { whileInView: 'visible', viewport })}
       className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
       <div className="flex items-center justify-center gap-3">
@@ -61,12 +68,16 @@ function EmptyState({ icon, title, description, onClear }) {
       className="flex flex-col items-center gap-3 rounded-2xl py-16 text-center sm:py-24"
     >
       <div className="text-3xl">{icon}</div>
-      <p className="font-heading text-base font-bold text-white sm:text-lg">{title}</p>
-      <p className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{description}</p>
+      <p className="font-heading text-base font-bold text-white sm:text-lg">
+        {title}
+      </p>
+      <p className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 uppercase">
+        {description}
+      </p>
       {onClear && (
         <button
           onClick={onClear}
-          className="mt-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase transition-colors hover:border-neon-lime/30 hover:text-neon-lime"
+          className="hover:border-neon-lime/30 hover:text-neon-lime mt-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase transition-colors"
         >
           Clear filters
         </button>
@@ -82,10 +93,12 @@ function EmptyState({ icon, title, description, onClear }) {
 function StatTile({ value, label, mobileLabel, accent = false }) {
   return (
     <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span className={cn(
-        'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-        accent ? 'text-neon-lime' : 'text-white'
-      )}>
+      <span
+        className={cn(
+          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
+          accent ? 'text-neon-lime' : 'text-white'
+        )}
+      >
         {value}
       </span>
       <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
@@ -219,7 +232,6 @@ const PARTICIPATION_CATEGORY_EMOJI = {
 // ---------------------------------------------------------------------------
 // (Hero is rendered inline in the main component below)
 
-
 // ---------------------------------------------------------------------------
 // Featured Achievements Carousel
 // ---------------------------------------------------------------------------
@@ -238,7 +250,7 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
   const image = achievement.featured_photo?.url;
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-neon-lime/10 bg-[#08090f]">
+    <div className="group border-neon-lime/10 relative overflow-hidden rounded-2xl border bg-[#08090f]">
       <div className="relative aspect-[3/2] w-full sm:aspect-[16/10] lg:aspect-[21/9]">
         {/* Backdrop fill */}
         {image && (
@@ -266,12 +278,12 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
         />
 
         {/* Bottom scrim */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#05060b] via-[#05060b]/85 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-[#05060b] via-[#05060b]/85 to-transparent" />
 
         {/* Top-left meta */}
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 sm:top-5 sm:left-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/30 bg-black/50 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase backdrop-blur-md sm:text-[10px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-neon-lime" />
+          <span className="border-neon-lime/30 text-neon-lime inline-flex items-center gap-1.5 rounded-full border bg-black/50 px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase backdrop-blur-md sm:text-[10px]">
+            <span className="bg-neon-lime h-1.5 w-1.5 rounded-full" />
             Featured Victory
           </span>
           {achievement.year && (
@@ -308,15 +320,25 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
             </div>
 
             {/* Title */}
-            <h3 className="kinetic-headline font-heading text-2xl font-black leading-[1.05] text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-5xl">
+            <h3 className="kinetic-headline font-heading text-2xl leading-[1.05] font-black text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-5xl">
               {achievement.title}
             </h3>
 
             {/* Contest name */}
             {achievement.contest_name && (
               <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] text-zinc-300 uppercase sm:text-[11px]">
-                <svg className="h-3 w-3 shrink-0 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                <svg
+                  className="text-neon-lime h-3 w-3 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
                 </svg>
                 {achievement.contest_url ? (
                   <a
@@ -336,7 +358,9 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
             {/* Description — desktop only */}
             {achievement.description && (
               <p className="hidden max-w-xl text-sm leading-relaxed text-zinc-300 sm:block sm:text-base">
-                {achievement.description.length > 160 ? `${achievement.description.slice(0, 160).trim()}…` : achievement.description}
+                {achievement.description.length > 160
+                  ? `${achievement.description.slice(0, 160).trim()}…`
+                  : achievement.description}
               </p>
             )}
 
@@ -345,15 +369,17 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
               <button
                 type="button"
                 onClick={() => onSelect?.(achievement)}
-                className="group/cta inline-flex min-h-[44px] items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] sm:px-7 sm:text-[11px]"
+                className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none sm:px-7 sm:text-[11px]"
               >
                 Read Story
-                <span className="transition-transform group-hover/cta:translate-x-1">→</span>
+                <span className="transition-transform group-hover/cta:translate-x-1">
+                  →
+                </span>
               </button>
               {(achievement.team_name || participants.length > 0) && (
                 <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-400 sm:text-[11px]">
                   <span aria-hidden>{achievement.is_team ? '👥' : '👤'}</span>
-                  <span className="truncate max-w-[18rem]">
+                  <span className="max-w-[18rem] truncate">
                     {achievement.team_name ||
                       participants
                         .slice(0, 3)
@@ -1116,7 +1142,7 @@ function AchievementCard({ achievement, onClick }) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
         {achievement.year && (
           <div className="absolute top-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
             {achievement.year}
@@ -1224,7 +1250,7 @@ function ParticipationRecordCard({ record, onClick }) {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute top-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
           {record.year}
         </div>
@@ -1502,16 +1528,14 @@ export default function AchievementsClient({
 
   return (
     <main className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
-
       {/* ══════════════════════ HERO ══════════════════════ */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-
         {/* Ambient background */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
+          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
+          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
         </div>
 
         <motion.div
@@ -1521,7 +1545,6 @@ export default function AchievementsClient({
           className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
             {/* Eyebrow */}
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -1533,7 +1556,7 @@ export default function AchievementsClient({
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               Hall of
               <br />
@@ -1552,7 +1575,7 @@ export default function AchievementsClient({
             {/* Status pill */}
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+              className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               {propAchievements.length > 0
@@ -1561,30 +1584,50 @@ export default function AchievementsClient({
             </motion.div>
 
             {/* Stats row */}
-            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
+            <motion.div
+              variants={fadeUp}
+              className="border-t border-white/8 pt-6 sm:pt-8"
+            >
               <div className="grid grid-cols-4 divide-x divide-white/8">
                 <div className="pr-3 sm:pr-6 lg:pr-8">
-                  <StatTile value={`${propAchievements.length}+`} label="Achievements" mobileLabel="Total" />
+                  <StatTile
+                    value={`${propAchievements.length}+`}
+                    label="Achievements"
+                    mobileLabel="Total"
+                  />
                 </div>
                 <div className="px-3 sm:px-6 lg:px-8">
-                  <StatTile value={`${medalistCount}+`} label="Medalists" accent />
+                  <StatTile
+                    value={`${medalistCount}+`}
+                    label="Medalists"
+                    accent
+                  />
                 </div>
                 <div className="px-3 sm:px-6 lg:px-8">
-                  <StatTile value={`${propParticipations.length}+`} label="Participations" mobileLabel="Events" />
+                  <StatTile
+                    value={`${propParticipations.length}+`}
+                    label="Participations"
+                    mobileLabel="Events"
+                  />
                 </div>
                 <div className="pl-3 sm:pl-6 lg:pl-8">
-                  <StatTile value={yearsActive > 0 ? `${yearsActive}+` : '5+'} label="Years Active" mobileLabel="Years" />
+                  <StatTile
+                    value={yearsActive > 0 ? `${yearsActive}+` : '5+'}
+                    label="Years Active"
+                    mobileLabel="Years"
+                  />
                 </div>
               </div>
             </motion.div>
-
           </div>
         </motion.div>
 
         {/* Scroll cue – desktop only */}
         <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">Scroll</span>
-          <div className="h-7 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
+          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
+            Scroll
+          </span>
+          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
         </div>
       </section>
 
@@ -1607,7 +1650,10 @@ export default function AchievementsClient({
       )}
 
       {/* ══════════════════════ VICTORY LOG (Achievements) ══════════════════════ */}
-      <section id="achievements" className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+      <section
+        id="achievements"
+        className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      >
         <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
           <SectionEyebrow
             tag="Operations Log / 002"
@@ -1624,7 +1670,7 @@ export default function AchievementsClient({
             className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Category tabs */}
-            <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+            <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
               {categories.map((category) => {
                 const isActive = activeFilter === category.name;
                 return (
@@ -1638,7 +1684,7 @@ export default function AchievementsClient({
                       'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                       isActive
                         ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                        : 'border border-white/10 text-zinc-500 hover:border-neon-lime/30 hover:text-neon-lime'
+                        : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                     )}
                   >
                     <span>{category.icon}</span>
@@ -1697,16 +1743,28 @@ export default function AchievementsClient({
                 {hasActiveAchievementFilters && (
                   <button
                     onClick={resetAchievementFilters}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider text-neon-lime uppercase transition-colors hover:bg-neon-lime/15"
+                    className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                   >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                     Clear
                   </button>
                 )}
                 <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                  <span className="text-neon-lime font-bold">{filteredAchievements.length}</span>{' '}
+                  <span className="text-neon-lime font-bold">
+                    {filteredAchievements.length}
+                  </span>{' '}
                   result{filteredAchievements.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -1719,7 +1777,11 @@ export default function AchievementsClient({
               icon="🔍"
               title="No Achievements Found"
               description="Try different filters or clear your selection"
-              onClear={hasActiveAchievementFilters ? resetAchievementFilters : undefined}
+              onClear={
+                hasActiveAchievementFilters
+                  ? resetAchievementFilters
+                  : undefined
+              }
             />
           ) : (
             <>
@@ -1778,10 +1840,13 @@ export default function AchievementsClient({
               className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
             >
               {/* Category tabs */}
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
                 {participationCategories.map((cat) => {
                   const isActive = participCatFilter === cat;
-                  const emoji = cat !== 'All' ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯') : '✦';
+                  const emoji =
+                    cat !== 'All'
+                      ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯')
+                      : '✦';
                   return (
                     <button
                       key={cat}
@@ -1793,7 +1858,7 @@ export default function AchievementsClient({
                         'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                         isActive
                           ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                          : 'border border-white/10 text-zinc-500 hover:border-neon-lime/30 hover:text-neon-lime'
+                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                       )}
                     >
                       <span>{emoji}</span>
@@ -1828,16 +1893,28 @@ export default function AchievementsClient({
                     {hasActiveParticipationFilters && (
                       <button
                         onClick={resetParticipationFilters}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider text-neon-lime uppercase transition-colors hover:bg-neon-lime/15"
+                        className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                       >
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                         Clear
                       </button>
                     )}
                     <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                      <span className="text-neon-lime font-bold">{filteredParticipations.length}</span>{' '}
+                      <span className="text-neon-lime font-bold">
+                        {filteredParticipations.length}
+                      </span>{' '}
                       record{filteredParticipations.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -1851,7 +1928,11 @@ export default function AchievementsClient({
                 icon="🔍"
                 title="No Records Found"
                 description="Try different filters or clear your selection"
-                onClear={hasActiveParticipationFilters ? resetParticipationFilters : undefined}
+                onClear={
+                  hasActiveParticipationFilters
+                    ? resetParticipationFilters
+                    : undefined
+                }
               />
             ) : (
               <>
@@ -1928,7 +2009,7 @@ export default function AchievementsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-gradient-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14"
+            className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14"
           >
             <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3">
               <div className="md:col-span-2">
@@ -1944,13 +2025,21 @@ export default function AchievementsClient({
                 </p>
               </div>
               <div className="flex flex-row flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-3">
-                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                <motion.div
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                >
                   <Link
                     href="/account"
                     className="group bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
                   >
                     Apply now
-                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                    <span
+                      aria-hidden
+                      className="transition-transform group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
                   </Link>
                 </motion.div>
                 <motion.div whileHover={{ x: 2 }}>

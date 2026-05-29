@@ -16,9 +16,15 @@ const UserRoleContext = createContext({ role: null, isLoggedIn: false });
  * @param {string|null} role – User role from session (null if not logged in or no role)
  * @param {boolean} isLoggedIn - Whether the user is currently authenticated
  */
-export function UserRoleProvider({ role = null, isLoggedIn = false, children }) {
+export function UserRoleProvider({
+  role = null,
+  isLoggedIn = false,
+  children,
+}) {
   return (
-    <UserRoleContext.Provider value={{ role, isLoggedIn }}>{children}</UserRoleContext.Provider>
+    <UserRoleContext.Provider value={{ role, isLoggedIn }}>
+      {children}
+    </UserRoleContext.Provider>
   );
 }
 

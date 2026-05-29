@@ -12,9 +12,9 @@ import {
   getAchievementGalleryAction,
   uploadAchievementGalleryImageAction,
   deleteAchievementGalleryImageAction,
-} from '@/app/_lib/achievement-actions';
+} from '@/app/_lib/actions/achievement-actions';
 import { getCategoryConfig } from './achievementConfig';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 export default function GalleryModal({ achievement, onClose }) {
   const [files, setFiles] = useState([]);

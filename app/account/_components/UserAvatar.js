@@ -12,13 +12,13 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { uploadUserImageAction } from '@/app/_lib/user-actions';
-import { cn } from '@/app/_lib/utils';
+import { uploadUserImageAction } from '@/app/_lib/actions/user-actions';
+import { cn } from '@/app/_lib/utils/utils';
 import {
   getInitials,
   getFallbackAvatarUrl,
   driveImageUrl,
-} from '@/app/_lib/utils';
+} from '@/app/_lib/utils/utils';
 
 /** @param {{ session: Object, userId: string, isAdmin: boolean }} props */
 export default function UserAvatar({ session, userId, isAdmin }) {
@@ -105,7 +105,7 @@ export default function UserAvatar({ session, userId, isAdmin }) {
         onClick={handleAvatarClick}
         className={cn(
           `relative ${frameClass}`,
-          isAdmin ? 'cursor-pointer group' : ''
+          isAdmin ? 'group cursor-pointer' : ''
         )}
       >
         {/* Hidden File Input */}
@@ -121,17 +121,21 @@ export default function UserAvatar({ session, userId, isAdmin }) {
 
         {/* Hover Camera Overlay */}
         {isAdmin && !isUploading && (
-          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10 duration-200">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <Camera className="h-5 w-5 text-indigo-400" />
-            <span className="text-[10px] font-semibold tracking-wide">Change Photo</span>
+            <span className="text-[10px] font-semibold tracking-wide">
+              Change Photo
+            </span>
           </div>
         )}
 
         {/* Uploading Spinner Overlay */}
         {isUploading && (
-          <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-1 text-white rounded-full z-10">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-full bg-black/75 text-white">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
-            <span className="text-[9px] text-gray-400 font-medium tracking-wide">Uploading...</span>
+            <span className="text-[9px] font-medium tracking-wide text-gray-400">
+              Uploading...
+            </span>
           </div>
         )}
 
@@ -171,7 +175,7 @@ export default function UserAvatar({ session, userId, isAdmin }) {
       </div>
 
       {isAdmin && (
-        <span className="mt-2.5 text-[9px] font-bold text-indigo-400/80 uppercase tracking-widest bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 select-none">
+        <span className="mt-2.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-indigo-400/80 uppercase select-none">
           Click Avatar to Upload
         </span>
       )}

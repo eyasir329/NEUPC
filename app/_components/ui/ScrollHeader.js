@@ -1,3 +1,8 @@
+/**
+ * @file Scroll header component
+ * @module ScrollHeader
+ */
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';

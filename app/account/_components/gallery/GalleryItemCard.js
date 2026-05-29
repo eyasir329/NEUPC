@@ -12,7 +12,7 @@ import { getTypeConfig, formatRelativeDate } from './galleryConfig';
 import {
   toggleGalleryFeaturedAction,
   deleteGalleryItemAction,
-} from '@/app/_lib/gallery-actions';
+} from '@/app/_lib/actions/gallery-actions';
 import { Edit2, Trash2, Calendar, Star } from 'lucide-react';
 import { GlassCard, Pill } from '@/app/account/_components/ui';
 
@@ -67,7 +67,7 @@ export default function GalleryItemCard({
     <GlassCard
       hover
       padding="p-0"
-      className="group relative overflow-hidden flex flex-col h-full border-white/[0.08] hover:border-violet-500/30 bg-gray-900 transition-all duration-200 hover:shadow-lg hover:shadow-violet-900/10 cursor-default"
+      className="group relative flex h-full cursor-default flex-col overflow-hidden border-white/[0.08] bg-gray-900 transition-all duration-200 hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-900/10"
     >
       {/* ── Media Preview ──────────────────────────────────────────────────── */}
       <div className="relative aspect-video overflow-hidden bg-slate-900/80">
@@ -91,7 +91,9 @@ export default function GalleryItemCard({
         {/* Caption overlay */}
         {item.caption && (
           <div className="absolute inset-x-0 bottom-0 translate-y-full bg-linear-to-t from-black/80 via-black/50 to-transparent px-3.5 py-2.5 transition-transform duration-200 group-hover:translate-y-0">
-            <p className="line-clamp-2 text-xs text-white/90 leading-relaxed">{item.caption}</p>
+            <p className="line-clamp-2 text-xs leading-relaxed text-white/90">
+              {item.caption}
+            </p>
           </div>
         )}
 
@@ -104,7 +106,7 @@ export default function GalleryItemCard({
             className={`absolute top-2.5 left-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs transition-all duration-150 ${
               featured
                 ? 'scale-110 bg-amber-500 text-white shadow-md shadow-amber-500/40'
-                : 'bg-black/50 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-amber-500/20 hover:text-amber-400 backdrop-blur-xs'
+                : 'bg-black/50 text-slate-400 opacity-0 backdrop-blur-xs group-hover:opacity-100 hover:bg-amber-500/20 hover:text-amber-400'
             }`}
           >
             ★
@@ -120,16 +122,20 @@ export default function GalleryItemCard({
       </div>
 
       {/* ── Info ───────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 p-3.5 space-y-3">
+      <div className="flex flex-1 flex-col space-y-3 p-3.5">
         {/* Category + Event */}
         <div className="flex flex-wrap gap-1.5">
           {item.category && (
-            <Pill tone="gray" className="text-[10px] px-2 py-0.5">
+            <Pill tone="gray" className="px-2 py-0.5 text-[10px]">
               {item.category}
             </Pill>
           )}
           {eventTitle && (
-            <Pill tone="violet" icon={Calendar} className="max-w-[140px] truncate text-[10px] px-2 py-0.5">
+            <Pill
+              tone="violet"
+              icon={Calendar}
+              className="max-w-[140px] truncate px-2 py-0.5 text-[10px]"
+            >
               {eventTitle}
             </Pill>
           )}
@@ -147,7 +153,7 @@ export default function GalleryItemCard({
               </span>
             ))}
             {item.tags.length > 3 && (
-              <span className="text-[10px] text-gray-600 self-center">
+              <span className="self-center text-[10px] text-gray-600">
                 +{item.tags.length - 3}
               </span>
             )}
@@ -155,9 +161,11 @@ export default function GalleryItemCard({
         )}
 
         {/* Footer: uploader + order + actions */}
-        <div className="flex items-center justify-between border-t border-white/[0.06] pt-2.5 mt-auto">
+        <div className="mt-auto flex items-center justify-between border-t border-white/[0.06] pt-2.5">
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-gray-400">{uploaderName}</p>
+            <p className="truncate text-[11px] font-medium text-gray-400">
+              {uploaderName}
+            </p>
             <p className="text-[10px] text-gray-500" suppressHydrationWarning>
               {formatRelativeDate(item.created_at)}
             </p>
@@ -184,7 +192,7 @@ export default function GalleryItemCard({
                 <button
                   onClick={handleConfirmDelete}
                   disabled={deleting}
-                  className="rounded bg-red-500/20 border border-red-500/30 px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/30 transition-all"
+                  className="rounded border border-red-500/30 bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-400 transition-all hover:bg-red-500/30"
                 >
                   {deleting ? '…' : 'Yes'}
                 </button>
@@ -193,7 +201,7 @@ export default function GalleryItemCard({
                     e.stopPropagation();
                     setConfirmDelete(false);
                   }}
-                  className="rounded bg-white/5 border border-white/10 px-2 py-1 text-[10px] font-semibold text-gray-300 hover:bg-white/10 transition-all"
+                  className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-gray-300 transition-all hover:bg-white/10"
                 >
                   No
                 </button>

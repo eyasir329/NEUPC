@@ -1,3 +1,8 @@
+/**
+ * @file Use problem solving.mock
+ * @module useProblemSolving.mock
+ */
+
 const now = Date.now();
 const daysAgo = (d) => new Date(now - d * 86400000).toISOString();
 const daysAgoDate = (d) =>
@@ -192,7 +197,12 @@ const AC_PROBLEMS = [
     tags: ['bitmask-dp', 'graph'],
   },
   { name: 'Grid 1', difficulty: 'Easy', rating: 900, tags: ['dp', 'grid'] },
-  { name: 'Longest Path', difficulty: 'Medium', rating: 1400, tags: ['dp', 'dag'] },
+  {
+    name: 'Longest Path',
+    difficulty: 'Medium',
+    rating: 1400,
+    tags: ['dp', 'dag'],
+  },
   {
     name: 'Knapsack 1',
     difficulty: 'Medium',
@@ -285,7 +295,9 @@ export const dummyData = {
 
   dailyActivity: Array.from({ length: 365 }, (_, i) => {
     const base =
-      i < 42 ? Math.floor(Math.random() * 6) + 1 : Math.floor(Math.random() * 5);
+      i < 42
+        ? Math.floor(Math.random() * 6) + 1
+        : Math.floor(Math.random() * 5);
     return {
       activity_date: daysAgoDate(i),
       problems_solved: i % 11 === 0 ? 0 : base,
@@ -483,7 +495,7 @@ export const dummyData = {
       date: 'Wed, May 14, 20:00',
       duration: '2 hours',
       url: 'https://www.codechef.com/contests',
-    }
+    },
   ],
 
   badges: [
@@ -493,7 +505,8 @@ export const dummyData = {
       icon: '🔥',
       earned_at: daysAgo(5),
       rarity: 'epic',
-      description: 'Maintained a problem-solving streak for 100 consecutive days.',
+      description:
+        'Maintained a problem-solving streak for 100 consecutive days.',
     },
     {
       id: 'b-2',
@@ -509,7 +522,8 @@ export const dummyData = {
       icon: '🏆',
       earned_at: daysAgo(20),
       rarity: 'rare',
-      description: 'Participated in 25+ official contests across all platforms.',
+      description:
+        'Participated in 25+ official contests across all platforms.',
     },
     {
       id: 'b-4',
@@ -533,7 +547,8 @@ export const dummyData = {
       icon: '⭐',
       earned_at: daysAgo(300),
       rarity: 'common',
-      description: 'Successfully solved your very first problem on the platform.',
+      description:
+        'Successfully solved your very first problem on the platform.',
     },
   ],
 

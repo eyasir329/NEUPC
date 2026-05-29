@@ -1,11 +1,16 @@
+/**
+ * @file Roadmap detail client component
+ * @module RoadmapDetailClient
+ */
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
-import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils';
-import { incrementRoadmapViewAction } from '@/app/_lib/roadmap-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
+import { incrementRoadmapViewAction } from '@/app/_lib/actions/roadmap-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 import JoinButton from '@/app/_components/ui/JoinButton';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
@@ -29,7 +34,10 @@ function wrapCodeLines(html) {
         if (m[1] === '/') openSpans.pop();
         else openSpans.push(`<span${m[3]}>`);
       }
-      const closers = [...openSpans].reverse().map(() => '</span>').join('');
+      const closers = [...openSpans]
+        .reverse()
+        .map(() => '</span>')
+        .join('');
       return `<span class="code-line">${reopened}${raw || ' '}${closers}</span>`;
     })
     .join('');
@@ -48,12 +56,13 @@ function injectHeadingIds(htmlString) {
     (match, openTag, level, attrs, inner, closeTag) => {
       if (/\bid=["']/.test(attrs)) return match;
       const text = inner.replace(/<[^>]+>/g, '').trim();
-      let slug = text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '') || `heading-${level}`;
+      let slug =
+        text
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || `heading-${level}`;
       if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
       else seen[slug] = 1;
       return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
@@ -70,8 +79,12 @@ function highlightCodeBlocks(htmlString) {
     (_match, openTag, attrs, gt, codeContent, _closeTag) => {
       blockIndex++;
       const decoded = codeContent
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&#x27;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
       const langMatch = attrs.match(/class="[^"]*language-(\w+)/);
       let lang = langMatch ? langMatch[1] : null;
       let highlighted;
@@ -111,7 +124,11 @@ const FONT_SIZES = [
 const FONT_FAMILIES = [
   { id: 'sans', label: 'Sans', style: '"Inter", system-ui, sans-serif' },
   { id: 'serif', label: 'Serif', style: 'Georgia, "Times New Roman", serif' },
-  { id: 'novel', label: 'Novel', style: '"Palatino Linotype", Palatino, Georgia, serif' },
+  {
+    id: 'novel',
+    label: 'Novel',
+    style: '"Palatino Linotype", Palatino, Georgia, serif',
+  },
   { id: 'mono', label: 'Mono', style: '"JetBrains Mono", Consolas, monospace' },
 ];
 
@@ -137,27 +154,51 @@ const CONTENT_WIDTHS = {
 
 const SHARE_PLATFORMS = [
   {
-    key: 'twitter', label: 'Twitter / X',
+    key: 'twitter',
+    label: 'Twitter / X',
     icon: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
   },
   {
-    key: 'linkedin', label: 'LinkedIn',
+    key: 'linkedin',
+    label: 'LinkedIn',
     icon: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
   },
   {
-    key: 'facebook', label: 'Facebook',
+    key: 'facebook',
+    label: 'Facebook',
     icon: 'M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z',
   },
 ];
 
 const DIFF_CONFIG = {
-  advanced:     { label: 'Advanced',     dot: 'bg-neon-violet', text: 'text-neon-violet', border: 'border-neon-violet/30', bg: 'bg-neon-violet/10' },
-  intermediate: { label: 'Intermediate', dot: 'bg-amber-400',   text: 'text-amber-300',   border: 'border-amber-400/25',   bg: 'bg-amber-400/8'    },
-  beginner:     { label: 'Beginner',     dot: 'bg-neon-lime',   text: 'text-neon-lime',   border: 'border-neon-lime/25',   bg: 'bg-neon-lime/8'    },
+  advanced: {
+    label: 'Advanced',
+    dot: 'bg-neon-violet',
+    text: 'text-neon-violet',
+    border: 'border-neon-violet/30',
+    bg: 'bg-neon-violet/10',
+  },
+  intermediate: {
+    label: 'Intermediate',
+    dot: 'bg-amber-400',
+    text: 'text-amber-300',
+    border: 'border-amber-400/25',
+    bg: 'bg-amber-400/8',
+  },
+  beginner: {
+    label: 'Beginner',
+    dot: 'bg-neon-lime',
+    text: 'text-neon-lime',
+    border: 'border-neon-lime/25',
+    bg: 'bg-neon-lime/8',
+  },
 };
 
 function stripHtml(value) {
-  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function getReadTimeLabel(content) {
@@ -174,7 +215,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       data-section-id={section.id}
       onClick={onClick}
       className={cn(
-        'group relative flex w-full items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 touch-manipulation active:bg-white/5',
+        'group relative flex w-full touch-manipulation items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
           ? 'text-neon-lime'
@@ -186,36 +227,55 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       {isActive && (
         <span className="bg-neon-lime absolute inset-y-1 left-0 w-0.5 rounded-full" />
       )}
-      <span className="flex items-center gap-2 min-w-0">
+      <span className="flex min-w-0 items-center gap-2">
         {level === 2 && sectionNum != null && (
-          <span className={cn(
-            'shrink-0 font-mono text-[9px] font-bold tabular-nums',
-            isActive ? 'text-neon-lime/70' : isPast ? 'text-zinc-600' : 'text-zinc-700'
-          )}>
+          <span
+            className={cn(
+              'shrink-0 font-mono text-[9px] font-bold tabular-nums',
+              isActive
+                ? 'text-neon-lime/70'
+                : isPast
+                  ? 'text-zinc-600'
+                  : 'text-zinc-700'
+            )}
+          >
             {String(sectionNum).padStart(2, '0')}
           </span>
         )}
         {level === 3 && (
-          <span className={cn(
-            'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-            isActive ? 'bg-neon-lime' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
-          )} />
+          <span
+            className={cn(
+              'mt-0.5 h-1 w-1 shrink-0 rounded-full',
+              isActive ? 'bg-neon-lime' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
+            )}
+          />
         )}
-        <span className={cn(
-          'line-clamp-2 leading-snug font-heading text-[10px] font-bold uppercase tracking-widest',
-          isActive && 'font-black'
-        )}>
+        <span
+          className={cn(
+            'font-heading line-clamp-2 text-[10px] leading-snug font-bold tracking-widest uppercase',
+            isActive && 'font-black'
+          )}
+        >
           {section.title}
         </span>
       </span>
       <svg
         className={cn(
           'h-3.5 w-3.5 shrink-0 transition-transform',
-          isActive ? 'text-neon-lime translate-x-0.5' : 'text-zinc-700 hidden group-hover:block group-hover:text-zinc-500'
+          isActive
+            ? 'text-neon-lime translate-x-0.5'
+            : 'hidden text-zinc-700 group-hover:block group-hover:text-zinc-500'
         )}
-        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5l7 7-7 7"
+        />
       </svg>
     </button>
   );
@@ -230,23 +290,25 @@ function RelatedRoadmapCard({ roadmap }) {
   return (
     <Link
       href={`/roadmaps/${roadmap.slug || roadmap.id}`}
-      className="holographic-card group block p-6 rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime hover:border-neon-lime/40"
+      className="holographic-card group focus-visible:ring-neon-lime hover:border-neon-lime/40 block rounded-2xl p-6 transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none"
     >
-      <div className="font-mono text-neon-lime text-[9px] mb-4 font-bold tracking-widest uppercase">
+      <div className="text-neon-lime mb-4 font-mono text-[9px] font-bold tracking-widest uppercase">
         {roadmap.category || 'Roadmap'}
       </div>
-      <h4 className="text-xl font-heading font-black text-white group-hover:text-neon-lime transition-colors uppercase tracking-tighter line-clamp-2">
+      <h4 className="font-heading group-hover:text-neon-lime line-clamp-2 text-xl font-black tracking-tighter text-white uppercase transition-colors">
         {roadmap.title}
       </h4>
-      <div className="mt-6 flex items-center gap-4 text-[9px] font-mono tracking-widest uppercase">
+      <div className="mt-6 flex items-center gap-4 font-mono text-[9px] tracking-widest uppercase">
         <span className={cn('flex items-center gap-1.5', cfg.text)}>
           <span className={cn('h-1.5 w-1.5 rounded-full', cfg.dot)} />
           {cfg.label}
         </span>
         {(roadmap.views ?? 0) > 0 && (
           <>
-            <span className="w-1 h-1 bg-zinc-800 rounded-full" />
-            <span className="text-zinc-600">{roadmap.views.toLocaleString()} views</span>
+            <span className="h-1 w-1 rounded-full bg-zinc-800" />
+            <span className="text-zinc-600">
+              {roadmap.views.toLocaleString()} views
+            </span>
           </>
         )}
       </div>
@@ -256,29 +318,32 @@ function RelatedRoadmapCard({ roadmap }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, relatedRoadmaps = [] }) {
+export default function RoadmapDetailClient({
+  roadmap: propRoadmap = {},
+  relatedRoadmaps = [],
+}) {
   const roadmap = propRoadmap;
 
-  const [activeSection, setActiveSection]     = useState('');
-  const [scrollProgress, setScrollProgress]   = useState(0);
-  const [viewCount, setViewCount]             = useState(0);
-  const [tocCollapsed, setTocCollapsed]       = useState(false);
-  const [showMobileTOC, setShowMobileTOC]     = useState(false);
+  const [activeSection, setActiveSection] = useState('');
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [viewCount, setViewCount] = useState(0);
+  const [tocCollapsed, setTocCollapsed] = useState(false);
+  const [showMobileTOC, setShowMobileTOC] = useState(false);
   useScrollLock(showMobileTOC);
-  const [copied, setCopied]                   = useState(false);
+  const [copied, setCopied] = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
-  const [fontSize, setFontSize]               = useState('md');
-  const [fontFamily, setFontFamily]           = useState('sans');
-  const [bgTheme, setBgTheme]                 = useState('dark');
-  const [lineHeight, setLineHeight]           = useState('relaxed');
-  const [letterSpacing, setLetterSpacing]     = useState('normal');
-  const [paraSpacing, setParaSpacing]         = useState('normal');
-  const [textAlign, setTextAlign]             = useState('left');
-  const [contentWidth, setContentWidth]       = useState('full');
-  const [focusMode, setFocusMode]             = useState(false);
+  const [fontSize, setFontSize] = useState('md');
+  const [fontFamily, setFontFamily] = useState('sans');
+  const [bgTheme, setBgTheme] = useState('dark');
+  const [lineHeight, setLineHeight] = useState('relaxed');
+  const [letterSpacing, setLetterSpacing] = useState('normal');
+  const [paraSpacing, setParaSpacing] = useState('normal');
+  const [textAlign, setTextAlign] = useState('left');
+  const [contentWidth, setContentWidth] = useState('full');
+  const [focusMode, setFocusMode] = useState(false);
   const [showReadingSettings, setShowReadingSettings] = useState(false);
   const contentRef = useRef(null);
-  const tocNavRef  = useRef(null);
+  const tocNavRef = useRef(null);
 
   // ── Normalize roadmap ─────────────────────────────────────────────────────
   const meta = useMemo(() => {
@@ -287,7 +352,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       typeof roadmap.content === 'string'
         ? roadmap.content
         : (roadmap.content?.html ?? roadmap.content?.text ?? '');
-    const prerequisites = Array.isArray(roadmap.prerequisites) ? roadmap.prerequisites : [];
+    const prerequisites = Array.isArray(roadmap.prerequisites)
+      ? roadmap.prerequisites
+      : [];
     const thumbnail = roadmap.thumbnail || null;
 
     return {
@@ -300,7 +367,11 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       authorInitials: getInitials(authorName),
       authorAvatar: roadmap.users?.avatar_url || null,
       date: roadmap.created_at
-        ? new Date(roadmap.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        ? new Date(roadmap.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
         : '',
       readTimeLabel: contentSource ? getReadTimeLabel(contentSource) : null,
       prerequisites,
@@ -339,7 +410,8 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   }, [meta.content]);
 
   const enhancedContent = useMemo(
-    () => (isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content))),
+    () =>
+      isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content)),
     [meta.content, isJsonContent]
   );
 
@@ -376,12 +448,13 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
     headings.forEach((h) => {
       if (!h.id) {
         const text = h.textContent.trim();
-        let slug = text
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+        let slug =
+          text
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
         if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
         else seen[slug] = 1;
         h.id = slug;
@@ -407,7 +480,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   // ── Scroll tracking ───────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => {
-      const total = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const total =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
       if (tableOfContents.length) {
         for (let i = tableOfContents.length - 1; i >= 0; i--) {
@@ -427,7 +502,8 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   // ── Auto-scroll TOC to active ─────────────────────────────────────────────
   useEffect(() => {
     if (!tocNavRef.current || !activeSection) return;
-    tocNavRef.current.querySelector(`[data-section-id="${activeSection}"]`)
+    tocNavRef.current
+      .querySelector(`[data-section-id="${activeSection}"]`)
       ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeSection]);
 
@@ -446,37 +522,69 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       if (p.textAlign) setTextAlign(p.textAlign);
       if (p.contentWidth) setContentWidth(p.contentWidth);
       if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem('neupc-reading-prefs', JSON.stringify({
-        fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed,
-      }));
-    } catch { /* ignore */ }
-  }, [fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed]);
+      localStorage.setItem(
+        'neupc-reading-prefs',
+        JSON.stringify({
+          fontSize,
+          fontFamily,
+          bgTheme,
+          lineHeight,
+          letterSpacing,
+          paraSpacing,
+          textAlign,
+          contentWidth,
+          tocCollapsed,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [
+    fontSize,
+    fontFamily,
+    bgTheme,
+    lineHeight,
+    letterSpacing,
+    paraSpacing,
+    textAlign,
+    contentWidth,
+    tocCollapsed,
+  ]);
 
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
     if (el) {
       const nav = document.querySelector('[data-sticky-nav]');
       const offset = (nav?.offsetHeight ?? 60) + 16;
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - offset,
+        behavior: 'smooth',
+      });
     }
     setShowMobileTOC(false);
   }, []);
 
-  const handleShare = useCallback((platform) => {
-    if (typeof window === 'undefined') return;
-    const url = window.location.href;
-    const map = {
-      twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(meta.title)}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    };
-    if (map[platform]) window.open(map[platform], '_blank', 'width=600,height=400');
-  }, [meta.title]);
+  const handleShare = useCallback(
+    (platform) => {
+      if (typeof window === 'undefined') return;
+      const url = window.location.href;
+      const map = {
+        twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(meta.title)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      };
+      if (map[platform])
+        window.open(map[platform], '_blank', 'width=600,height=400');
+    },
+    [meta.title]
+  );
 
   const handleCopy = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -490,8 +598,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0A0A0B] text-white">
         <div className="text-center">
-          <div className="mb-6 font-mono text-[10px] tracking-[0.4em] text-neon-lime uppercase">ERROR_404</div>
-          <h1 className="mb-3 font-heading text-5xl font-black uppercase text-white tracking-tighter">
+          <div className="text-neon-lime mb-6 font-mono text-[10px] tracking-[0.4em] uppercase">
+            ERROR_404
+          </div>
+          <h1 className="font-heading mb-3 text-5xl font-black tracking-tighter text-white uppercase">
             Path Not Found
           </h1>
           <p className="mb-8 font-mono text-sm tracking-wider text-zinc-500">
@@ -499,7 +609,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           </p>
           <Link
             href="/roadmaps"
-            className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-8 py-3 font-heading text-[10px] font-black tracking-widest text-black uppercase transition-all shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)]"
+            className="bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-8 py-3 text-[10px] font-black tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)]"
           >
             ← Back to Roadmaps
           </Link>
@@ -514,7 +624,11 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   let h2Count = 0;
   const tocItems = tableOfContents.map((s, i) => {
     if (s.level === 2) h2Count++;
-    return { ...s, isPast: i < activeIdx, sectionNum: s.level === 2 ? h2Count : null };
+    return {
+      ...s,
+      isPast: i < activeIdx,
+      sectionNum: s.level === 2 ? h2Count : null,
+    };
   });
 
   return (
@@ -522,14 +636,14 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       className="relative min-h-screen text-white transition-colors duration-500"
       style={{ background: currentBg }}
     >
-
       {/* ── Reading Progress Bar ─────────────────────────────────────────────── */}
       <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
         <div
           className="h-full transition-all duration-150"
           style={{
             width: `${scrollProgress}%`,
-            background: 'linear-gradient(to right, #B6F36B, #B6F36Bcc, #10B981)',
+            background:
+              'linear-gradient(to right, #B6F36B, #B6F36Bcc, #10B981)',
             boxShadow: '0 0 8px rgba(182,243,107,0.6)',
           }}
         />
@@ -546,33 +660,54 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
             <div className="flex items-center gap-3">
               <Link
                 href="/roadmaps"
-                className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 font-heading text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
+                className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all"
               >
-                <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                <svg
+                  className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
                 All Roadmaps
               </Link>
               <span className="hidden text-zinc-700 sm:block">/</span>
               {meta.category && (
-                <span className="hidden rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase sm:block">
+                <span className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hidden rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:block">
                   {meta.category}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 tabular-nums uppercase md:block">
-                {Math.round(scrollProgress)}%{meta.readTimeLabel ? ` · ${meta.readTimeLabel}` : ''}
+              <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
+                {Math.round(scrollProgress)}%
+                {meta.readTimeLabel ? ` · ${meta.readTimeLabel}` : ''}
               </span>
               {hasTOC && (
                 <button
                   onClick={() => setShowMobileTOC(!showMobileTOC)}
                   aria-label="Open learning path"
                   aria-expanded={showMobileTOC}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-lime/30 hover:text-neon-lime active:bg-white/10 xl:hidden"
+                  className="hover:border-neon-lime/30 hover:text-neon-lime flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all active:bg-white/10 xl:hidden"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h7"
+                    />
                   </svg>
                 </button>
               )}
@@ -584,26 +719,48 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       {/* ── Mobile TOC Overlay ────────────────────────────────────────────────── */}
       {showMobileTOC && hasTOC && (
         <div className="fixed inset-0 z-50 xl:hidden">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowMobileTOC(false)}
+          />
           <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
             <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-              <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-lime uppercase">Learning_Path</h3>
+              <h3 className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.6em] uppercase">
+                Learning_Path
+              </h3>
               <button
                 onClick={() => setShowMobileTOC(false)}
                 aria-label="Close learning path"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition-colors touch-manipulation hover:text-white active:bg-white/10"
+                className="flex h-9 w-9 touch-manipulation items-center justify-center rounded-md text-zinc-500 transition-colors hover:text-white active:bg-white/10"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <nav
+              className="flex-1 overflow-y-auto overscroll-contain px-3 py-3"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {tocItems.map((s) => (
                 <TOCItem
-                  key={s.id} section={s} level={s.level}
-                  isActive={activeSection === s.id} isPast={s.isPast}
-                  sectionNum={s.sectionNum} onClick={() => scrollToSection(s.id)}
+                  key={s.id}
+                  section={s}
+                  level={s.level}
+                  isActive={activeSection === s.id}
+                  isPast={s.isPast}
+                  sectionNum={s.sectionNum}
+                  onClick={() => scrollToSection(s.id)}
                 />
               ))}
             </nav>
@@ -613,7 +770,6 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
-
         {/* Background cover image */}
         {meta.thumbnail && (
           <div className="absolute inset-0 z-0">
@@ -624,7 +780,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               aria-hidden
               className="h-full w-full object-cover opacity-10 grayscale"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
+            <div className="absolute inset-0 bg-linear-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
           </div>
         )}
 
@@ -636,15 +792,24 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-
           {/* Back link */}
           <nav className="mb-6 sm:mb-8">
             <Link
               href="/roadmaps"
-              className="group inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
+              className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
             >
-              <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               All Roadmaps
             </Link>
@@ -652,19 +817,30 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
 
           {/* Category + featured eyebrow */}
           <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-5">
-            <span className={cn(
-              'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
-              meta.featured
-                ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-                : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-            )}>
-              <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse', meta.featured ? 'bg-neon-lime' : 'bg-neon-lime')} />
+            <span
+              className={cn(
+                'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
+                meta.featured
+                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                  : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+              )}
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 animate-pulse rounded-full',
+                  meta.featured ? 'bg-neon-lime' : 'bg-neon-lime'
+                )}
+              />
               {meta.featured ? 'Featured' : meta.category}
             </span>
-            <span className={cn(
-              'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
-              diffCfg.bg, diffCfg.border, diffCfg.text
-            )}>
+            <span
+              className={cn(
+                'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
+                diffCfg.bg,
+                diffCfg.border,
+                diffCfg.text
+              )}
+            >
               <span className={cn('h-1.5 w-1.5 rounded-full', diffCfg.dot)} />
               {diffCfg.label}
             </span>
@@ -676,14 +852,14 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           </div>
 
           {/* Title */}
-          <h1 className="kinetic-headline max-w-4xl font-heading text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] font-black text-white uppercase [line-height:1.05] sm:[line-height:0.95]">
+          <h1 className="kinetic-headline font-heading max-w-4xl text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] [line-height:1.05] font-black text-white uppercase sm:[line-height:0.95]">
             {meta.title}
           </h1>
 
           {/* Author + meta chips — identical pattern to blog/event pages */}
           <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
             <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-              <div className="h-8 w-8 shrink-0 rounded-full border border-neon-lime/30 p-0.5">
+              <div className="border-neon-lime/30 h-8 w-8 shrink-0 rounded-full border p-0.5">
                 {meta.authorAvatar ? (
                   <SafeImg
                     src={driveImageUrl(meta.authorAvatar)}
@@ -692,32 +868,48 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     fallback=""
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-full bg-neon-lime/20 font-heading text-[10px] font-black text-neon-lime">
+                  <div className="bg-neon-lime/20 font-heading text-neon-lime flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
                     {meta.authorInitials}
                   </div>
                 )}
               </div>
               <div>
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Curator</span>
-                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.authorName}</span>
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  Curator
+                </span>
+                <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                  {meta.authorName}
+                </span>
               </div>
             </div>
             {meta.date && (
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Published</span>
-                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.date}</span>
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  Published
+                </span>
+                <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                  {meta.date}
+                </span>
               </div>
             )}
             {meta.readTimeLabel && (
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Read Time</span>
-                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.readTimeLabel}</span>
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  Read Time
+                </span>
+                <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                  {meta.readTimeLabel}
+                </span>
               </div>
             )}
             {viewCount > 0 && (
-              <div className="rounded-xl border border-neon-lime/15 bg-neon-lime/5 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Views</span>
-                <span className="mt-0.5 block font-heading text-[13px] font-bold text-neon-lime sm:text-sm">{viewCount.toLocaleString()}</span>
+              <div className="border-neon-lime/15 bg-neon-lime/5 rounded-xl border px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  Views
+                </span>
+                <span className="font-heading text-neon-lime mt-0.5 block text-[13px] font-bold sm:text-sm">
+                  {viewCount.toLocaleString()}
+                </span>
               </div>
             )}
           </div>
@@ -732,35 +924,50 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       </section>
 
       {/* ── Section separator ─────────────────────────────────────────────────── */}
-      <div className="h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+      <div className="h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
       {/* ── Main Reading Layout ───────────────────────────────────────────────── */}
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className={cn(
-          'flex transition-[gap] duration-300',
-          !hasTOC && 'justify-center',
-          hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
-        )}>
-
+        <div
+          className={cn(
+            'flex transition-[gap] duration-300',
+            !hasTOC && 'justify-center',
+            hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
+          )}
+        >
           {/* ── Left sidebar: TOC ─────────────────────────────────────────────── */}
           {hasTOC && (
-            <aside className={cn(
-              'hidden shrink-0 transition-[width] duration-300 ease-out xl:block',
-              tocCollapsed ? 'xl:w-12' : 'xl:w-64'
-            )}>
-              <div className={cn(
-                'sticky top-20 transition-opacity duration-300',
-                focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
-              )}>
+            <aside
+              className={cn(
+                'hidden shrink-0 transition-[width] duration-300 ease-out xl:block',
+                tocCollapsed ? 'xl:w-12' : 'xl:w-64'
+              )}
+            >
+              <div
+                className={cn(
+                  'sticky top-20 transition-opacity duration-300',
+                  focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
+                )}
+              >
                 {tocCollapsed ? (
                   <div className="holographic-card no-lift flex flex-col items-center gap-3 rounded-2xl px-1 py-4">
                     <button
                       onClick={() => setTocCollapsed(false)}
                       title="Expand contents"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-neon-lime/10 hover:text-neon-lime"
+                      className="hover:bg-neon-lime/10 hover:text-neon-lime flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all"
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 6h16M4 12h16M4 18h7"
+                        />
                       </svg>
                     </button>
                     <div className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8">
@@ -769,11 +976,13 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         style={{ height: `${scrollProgress}%` }}
                       />
                     </div>
-                    <span className="font-mono text-[9px] text-zinc-500 tabular-nums">{Math.round(scrollProgress)}%</span>
+                    <span className="font-mono text-[9px] text-zinc-500 tabular-nums">
+                      {Math.round(scrollProgress)}%
+                    </span>
                   </div>
                 ) : (
                   <div
-                    className="overflow-hidden rounded-[2rem] border border-neon-lime/10"
+                    className="border-neon-lime/10 overflow-hidden rounded-[2rem] border"
                     style={{
                       background: 'rgba(20, 20, 22, 0.7)',
                       backdropFilter: 'blur(40px)',
@@ -782,10 +991,22 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   >
                     <div className="flex items-center justify-between border-b border-[#27272A]/50 px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <svg className="h-3.5 w-3.5 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                        <svg
+                          className="text-neon-lime h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 6h16M4 12h16M4 18h7"
+                          />
                         </svg>
-                        <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase">Learning_Path</span>
+                        <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
+                          Learning_Path
+                        </span>
                         <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
                           {tocItems.filter((s) => s.level === 2).length}
                         </span>
@@ -793,30 +1014,52 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       <button
                         onClick={() => setTocCollapsed(true)}
                         title="Collapse"
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-neon-lime"
+                        className="hover:text-neon-lime flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8"
                       >
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
                         </svg>
                       </button>
                     </div>
                     <nav
                       ref={tocNavRef}
                       className="max-h-[calc(100dvh-200px)] space-y-0.5 overflow-y-auto p-3"
-                      style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
+                      style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(255,255,255,0.1) transparent',
+                      }}
                     >
                       {tocItems.map((s) => (
                         <TOCItem
-                          key={s.id} section={s} level={s.level}
-                          isActive={activeSection === s.id} isPast={s.isPast}
-                          sectionNum={s.sectionNum} onClick={() => scrollToSection(s.id)}
+                          key={s.id}
+                          section={s}
+                          level={s.level}
+                          isActive={activeSection === s.id}
+                          isPast={s.isPast}
+                          sectionNum={s.sectionNum}
+                          onClick={() => scrollToSection(s.id)}
                         />
                       ))}
                     </nav>
                     <div className="border-t border-[#27272A]/50 px-6 py-4">
                       <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-zinc-600">
-                        <span>{activeIdx >= 0 ? activeIdx + 1 : 0} / {tableOfContents.length} sections</span>
-                        <span className="font-bold text-neon-lime tabular-nums">{Math.round(scrollProgress)}%</span>
+                        <span>
+                          {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
+                          {tableOfContents.length} sections
+                        </span>
+                        <span className="text-neon-lime font-bold tabular-nums">
+                          {Math.round(scrollProgress)}%
+                        </span>
                       </div>
                       <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                         <div
@@ -826,7 +1069,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       </div>
 
                       <div className="mt-6 space-y-3">
-                        <h4 className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">Broadcast_Signal</h4>
+                        <h4 className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+                          Broadcast_Signal
+                        </h4>
                         <div className="flex gap-2">
                           {[
                             {
@@ -838,11 +1083,20 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                               icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
                               tip: 'Scroll to first code block',
                               action: () => {
-                                const firstPre = contentRef.current?.querySelector('pre');
+                                const firstPre =
+                                  contentRef.current?.querySelector('pre');
                                 if (firstPre) {
-                                  const stickyNav = document.querySelector('[data-sticky-nav]');
-                                  const offset = (stickyNav?.offsetHeight ?? 60) + 16;
-                                  window.scrollTo({ top: firstPre.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+                                  const stickyNav =
+                                    document.querySelector('[data-sticky-nav]');
+                                  const offset =
+                                    (stickyNav?.offsetHeight ?? 60) + 16;
+                                  window.scrollTo({
+                                    top:
+                                      firstPre.getBoundingClientRect().top +
+                                      window.scrollY -
+                                      offset,
+                                    behavior: 'smooth',
+                                  });
                                 }
                               },
                             },
@@ -857,10 +1111,20 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                               title={tip}
                               aria-label={tip}
                               onClick={action}
-                              className="group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all touch-manipulation hover:border-neon-lime/50 hover:bg-neon-lime/8 active:bg-white/8"
+                              className="group hover:border-neon-lime/50 hover:bg-neon-lime/8 flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all active:bg-white/8"
                             >
-                              <svg className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                              <svg
+                                className="group-hover:text-neon-lime h-4 w-4 text-zinc-400 transition-colors"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={1.75}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d={icon}
+                                />
                               </svg>
                             </button>
                           ))}
@@ -874,22 +1138,44 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           )}
 
           {/* ── Article ───────────────────────────────────────────────────────── */}
-          <article className={cn('w-full min-w-0 transition-all duration-300', hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3'))}>
-
+          <article
+            className={cn(
+              'w-full min-w-0 transition-all duration-300',
+              hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3')
+            )}
+          >
             {/* Reading controls */}
             <div className="mb-6 space-y-3">
               <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
                 <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
-                  <svg className="text-neon-lime h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  <svg
+                    className="text-neon-lime h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
                   </svg>
                   <span className="hidden sm:inline">Reading_Config</span>
                   <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 tabular-nums sm:flex">
-                    <span style={{ fontFamily: FONT_FAMILIES.find((f) => f.id === fontFamily)?.style }}>
+                    <span
+                      style={{
+                        fontFamily: FONT_FAMILIES.find(
+                          (f) => f.id === fontFamily
+                        )?.style,
+                      }}
+                    >
                       {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
                     </span>
                     <span className="text-zinc-700">·</span>
-                    <span>{FONT_SIZES.find((f) => f.id === fontSize)?.label}</span>
+                    <span>
+                      {FONT_SIZES.find((f) => f.id === fontSize)?.label}
+                    </span>
                   </span>
                 </span>
                 <div className="flex items-center gap-2">
@@ -899,8 +1185,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         key={fs.id}
                         onClick={() => setFontSize(fs.id)}
                         className={cn(
-                          'rounded px-2 py-0.5 text-xs font-semibold transition-all touch-manipulation',
-                          fontSize === fs.id ? 'bg-neon-lime/20 text-neon-lime' : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                          'touch-manipulation rounded px-2 py-0.5 text-xs font-semibold transition-all',
+                          fontSize === fs.id
+                            ? 'bg-neon-lime/20 text-neon-lime'
+                            : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                         )}
                       >
                         {fs.label}
@@ -912,15 +1200,30 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     onClick={() => setShowReadingSettings((p) => !p)}
                     aria-expanded={showReadingSettings}
                     className={cn(
-                      'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all touch-manipulation',
+                      'flex touch-manipulation items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all',
                       showReadingSettings
                         ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                         : 'border-[#3F3F46] bg-white/5 text-zinc-500 hover:text-zinc-300 active:bg-white/10'
                     )}
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Customize</span>
                   </button>
@@ -931,14 +1234,16 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                 <div className="holographic-card no-lift rounded-xl p-5 shadow-2xl">
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                     <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Typeface</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                        Typeface
+                      </p>
                       <div className="grid grid-cols-2 gap-1.5">
                         {FONT_FAMILIES.map((f) => (
                           <button
                             key={f.id}
                             onClick={() => setFontFamily(f.id)}
                             className={cn(
-                              'rounded-lg border px-2 py-2 text-xs transition-all touch-manipulation',
+                              'touch-manipulation rounded-lg border px-2 py-2 text-xs transition-all',
                               fontFamily === f.id
                                 ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
@@ -951,14 +1256,16 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Size & Align</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                        Size & Align
+                      </p>
                       <div className="flex gap-1">
                         {FONT_SIZES.map((fs) => (
                           <button
                             key={fs.id}
                             onClick={() => setFontSize(fs.id)}
                             className={cn(
-                              'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all touch-manipulation',
+                              'flex-1 touch-manipulation rounded-lg border py-1.5 text-[11px] font-semibold transition-all',
                               fontSize === fs.id
                                 ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
@@ -970,21 +1277,39 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       </div>
                       <div className="flex gap-1.5">
                         {[
-                          { id: 'left', label: 'Left', d: 'M3 6h18M3 12h12M3 18h15' },
-                          { id: 'justify', label: 'Justify', d: 'M3 6h18M3 12h18M3 18h18' },
+                          {
+                            id: 'left',
+                            label: 'Left',
+                            d: 'M3 6h18M3 12h12M3 18h15',
+                          },
+                          {
+                            id: 'justify',
+                            label: 'Justify',
+                            d: 'M3 6h18M3 12h18M3 18h18',
+                          },
                         ].map((a) => (
                           <button
                             key={a.id}
                             onClick={() => setTextAlign(a.id)}
                             className={cn(
-                              'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all touch-manipulation',
+                              'flex flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all',
                               textAlign === a.id
                                 ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                             )}
                           >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d={a.d} />
+                            <svg
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d={a.d}
+                              />
                             </svg>
                             {a.label}
                           </button>
@@ -992,21 +1317,40 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Spacing</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                        Spacing
+                      </p>
                       {[
-                        { label: 'Line height', state: lineHeight, set: setLineHeight, keys: Object.keys(LINE_HEIGHTS) },
-                        { label: 'Letter spacing', state: letterSpacing, set: setLetterSpacing, keys: Object.keys(LETTER_SPACINGS) },
-                        { label: 'Paragraph gap', state: paraSpacing, set: setParaSpacing, keys: Object.keys(PARA_SPACINGS) },
+                        {
+                          label: 'Line height',
+                          state: lineHeight,
+                          set: setLineHeight,
+                          keys: Object.keys(LINE_HEIGHTS),
+                        },
+                        {
+                          label: 'Letter spacing',
+                          state: letterSpacing,
+                          set: setLetterSpacing,
+                          keys: Object.keys(LETTER_SPACINGS),
+                        },
+                        {
+                          label: 'Paragraph gap',
+                          state: paraSpacing,
+                          set: setParaSpacing,
+                          keys: Object.keys(PARA_SPACINGS),
+                        },
                       ].map(({ label, state, set, keys }) => (
                         <div key={label}>
-                          <p className="mb-1.5 text-[10px] text-zinc-600">{label}</p>
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
+                            {label}
+                          </p>
                           <div className="flex gap-1">
                             {keys.map((k) => (
                               <button
                                 key={k}
                                 onClick={() => set(k)}
                                 className={cn(
-                                  'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all touch-manipulation',
+                                  'flex-1 touch-manipulation rounded-lg border py-1.5 text-[11px] capitalize transition-all',
                                   state === k
                                     ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                                     : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
@@ -1020,7 +1364,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       ))}
                     </div>
                     <div className="space-y-3">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Theme & Layout</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                        Theme & Layout
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {BG_THEMES.map((t) => (
                           <button
@@ -1029,7 +1375,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                             title={t.label}
                             aria-label={`Background theme ${t.label}`}
                             className={cn(
-                              'h-8 w-8 rounded-lg transition-all touch-manipulation',
+                              'h-8 w-8 touch-manipulation rounded-lg transition-all',
                               bgTheme === t.id
                                 ? 'ring-neon-lime scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
                                 : 'ring-1 ring-white/15 hover:ring-white/30'
@@ -1039,14 +1385,16 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         ))}
                       </div>
                       <div>
-                        <p className="mb-1.5 text-[10px] text-zinc-600">Content width</p>
+                        <p className="mb-1.5 text-[10px] text-zinc-600">
+                          Content width
+                        </p>
                         <div className="grid grid-cols-2 gap-1.5">
                           {Object.keys(CONTENT_WIDTHS).map((id) => (
                             <button
                               key={id}
                               onClick={() => setContentWidth(id)}
                               className={cn(
-                                'rounded-lg border py-1.5 text-xs capitalize transition-all touch-manipulation',
+                                'touch-manipulation rounded-lg border py-1.5 text-xs capitalize transition-all',
                                 contentWidth === id
                                   ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
@@ -1061,35 +1409,51 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         onClick={() => setFocusMode((p) => !p)}
                         aria-pressed={focusMode}
                         className={cn(
-                          'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all touch-manipulation',
+                          'flex w-full touch-manipulation items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all',
                           focusMode
                             ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
                             : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                         )}
                       >
                         <span>Focus mode</span>
-                        <div className={cn(
-                          'relative flex h-4 w-7 items-center rounded-full border transition-all',
-                          focusMode ? 'border-neon-lime/50 bg-neon-lime/30' : 'border-white/15 bg-white/5'
-                        )}>
-                          <div className={cn(
-                            'absolute h-3 w-3 rounded-full transition-all duration-200',
-                            focusMode ? 'bg-neon-lime left-3.5' : 'left-0.5 bg-gray-600'
-                          )} />
+                        <div
+                          className={cn(
+                            'relative flex h-4 w-7 items-center rounded-full border transition-all',
+                            focusMode
+                              ? 'border-neon-lime/50 bg-neon-lime/30'
+                              : 'border-white/15 bg-white/5'
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'absolute h-3 w-3 rounded-full transition-all duration-200',
+                              focusMode
+                                ? 'bg-neon-lime left-3.5'
+                                : 'left-0.5 bg-gray-600'
+                            )}
+                          />
                         </div>
                       </button>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
-                    <p className="text-[10px] text-zinc-600">Settings saved in your browser</p>
+                    <p className="text-[10px] text-zinc-600">
+                      Settings saved in your browser
+                    </p>
                     <button
                       onClick={() => {
-                        setFontSize('md'); setFontFamily('sans'); setBgTheme('dark');
-                        setLineHeight('relaxed'); setLetterSpacing('normal'); setParaSpacing('normal');
-                        setTextAlign('left'); setContentWidth('full'); setFocusMode(false);
+                        setFontSize('md');
+                        setFontFamily('sans');
+                        setBgTheme('dark');
+                        setLineHeight('relaxed');
+                        setLetterSpacing('normal');
+                        setParaSpacing('normal');
+                        setTextAlign('left');
+                        setContentWidth('full');
+                        setFocusMode(false);
                         setTocCollapsed(false);
                       }}
-                      className="rounded-lg border border-[#3F3F46] bg-white/4 px-3 py-1.5 text-[11px] text-gray-500 transition-all touch-manipulation hover:border-white/20 hover:text-gray-300 active:bg-white/10"
+                      className="touch-manipulation rounded-lg border border-[#3F3F46] bg-white/4 px-3 py-1.5 text-[11px] text-gray-500 transition-all hover:border-white/20 hover:text-gray-300 active:bg-white/10"
                     >
                       Reset defaults
                     </button>
@@ -1101,13 +1465,18 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
             {/* Prerequisites */}
             {meta.prerequisites.length > 0 && (
               <div className="holographic-card no-lift mb-6 rounded-2xl p-5 sm:p-6 md:p-8">
-                <h2 className="mb-4 flex items-center gap-2.5 font-heading text-lg font-black uppercase tracking-tighter text-white">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-400/10 text-sm">📋</span>
+                <h2 className="font-heading mb-4 flex items-center gap-2.5 text-lg font-black tracking-tighter text-white uppercase">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-400/10 text-sm">
+                    📋
+                  </span>
                   Prerequisites
                 </h2>
                 <ul className="space-y-2.5">
                   {meta.prerequisites.map((prereq, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
+                    <li
+                      key={idx}
+                      className="flex items-start gap-3 text-sm text-zinc-300"
+                    >
                       <span className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/6 font-mono text-[10px] font-bold text-zinc-500">
                         {idx + 1}
                       </span>
@@ -1128,8 +1497,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
                 style={{
-                  '--blog-fs': FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
-                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)?.style,
+                  '--blog-fs':
+                    FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
+                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)
+                    ?.style,
                   '--blog-ls': LETTER_SPACINGS[letterSpacing],
                   '--blog-ps': PARA_SPACINGS[paraSpacing],
                   '--blog-bg': currentBg,
@@ -1138,7 +1509,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                 }}
               >
                 {isJsonContent ? (
-                  <LessonContentRenderer content={meta.content} viewerMode={true} />
+                  <LessonContentRenderer
+                    content={meta.content}
+                    viewerMode={true}
+                  />
                 ) : (
                   <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
                 )}
@@ -1157,38 +1531,69 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/6 pb-5">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5 font-mono text-sm text-zinc-500">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.75}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
                     </svg>
-                    <span className="tabular-nums">{viewCount.toLocaleString()}</span> views
+                    <span className="tabular-nums">
+                      {viewCount.toLocaleString()}
+                    </span>{' '}
+                    views
                   </span>
                   {meta.readTimeLabel && (
                     <>
                       <span className="text-zinc-700">·</span>
-                      <span className="font-mono text-sm text-zinc-500">⏱ {meta.readTimeLabel} read</span>
+                      <span className="font-mono text-sm text-zinc-500">
+                        ⏱ {meta.readTimeLabel} read
+                      </span>
                     </>
                   )}
                 </div>
-                <span className={cn(
-                  'flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-[0.18em] uppercase',
-                  diffCfg.bg, diffCfg.border, diffCfg.text
-                )}>
-                  <span className={cn('h-1.5 w-1.5 rounded-full', diffCfg.dot)} />
+                <span
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-[0.18em] uppercase',
+                    diffCfg.bg,
+                    diffCfg.border,
+                    diffCfg.text
+                  )}
+                >
+                  <span
+                    className={cn('h-1.5 w-1.5 rounded-full', diffCfg.dot)}
+                  />
                   {diffCfg.label}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Share:</span>
+                <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                  Share:
+                </span>
                 {SHARE_PLATFORMS.map((p) => (
                   <button
                     key={p.key}
                     onClick={() => handleShare(p.key)}
                     title={`Share on ${p.label}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-neon-emerald/40 hover:text-neon-emerald"
+                    className="hover:border-neon-emerald/40 hover:text-neon-emerald flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all"
                   >
-                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d={p.icon} />
                     </svg>
                   </button>
@@ -1199,20 +1604,40 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-all',
                     copied
                       ? 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime'
-                      : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-neon-lime/30 hover:text-neon-lime'
+                      : 'hover:border-neon-lime/30 hover:text-neon-lime border-[#3F3F46] bg-white/5 text-zinc-400'
                   )}
                 >
                   {copied ? (
                     <>
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                       Copied!
                     </>
                   ) : (
                     <>
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                        />
                       </svg>
                       Copy link
                     </>
@@ -1227,7 +1652,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       {/* ── Related Roadmaps ───────────────────────────────────────────────────── */}
       {relatedRoadmaps.length > 0 && (
         <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
-          <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
             <div className="bg-neon-lime/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
           </div>
@@ -1236,15 +1661,17 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               <div>
                 <div className="flex items-center gap-3">
                   <span className="bg-neon-lime h-px w-6 shrink-0" />
-                  <span className="font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] text-neon-lime">Continue Learning</span>
+                  <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
+                    Continue Learning
+                  </span>
                 </div>
-                <h2 className="kinetic-headline mt-3 font-heading text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
+                <h2 className="kinetic-headline font-heading mt-3 text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
                   Related Roadmaps
                 </h2>
               </div>
               <Link
                 href="/roadmaps"
-                className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime/40 hover:text-neon-lime sm:px-7 sm:py-3 sm:text-[11px]"
+                className="font-heading hover:border-neon-lime/40 hover:text-neon-lime w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors sm:px-7 sm:py-3 sm:text-[11px]"
               >
                 All Roadmaps →
               </Link>
@@ -1264,29 +1691,36 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           <div className="grid-overlay absolute inset-0 opacity-15" />
           <div className="bg-neon-lime/4 absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
         </div>
-        <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+        <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-emerald/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+          <div className="border-neon-lime/15 from-neon-lime/5 to-neon-emerald/5 rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 lg:p-14">
             <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
               <div className="md:col-span-2">
-                <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
+                <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
                   /// Start Your Journey
                 </p>
-                <h2 className="font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
+                <h2 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl lg:text-4xl">
                   Ready to follow this roadmap?
                 </h2>
                 <p className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-400 sm:mt-4">
-                  Join NEUPC to access resources, connect with mentors, and track your learning progress alongside a thriving community of programmers.
+                  Join NEUPC to access resources, connect with mentors, and
+                  track your learning progress alongside a thriving community of
+                  programmers.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:flex-col md:items-end">
                 <JoinButton
                   href="/join"
-                  className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
+                  className="group bg-neon-lime font-heading inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
                 >
                   Join the Club
-                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                  <span
+                    aria-hidden
+                    className="transition-transform group-hover:translate-x-0.5"
+                  >
+                    →
+                  </span>
                 </JoinButton>
                 <Link
                   href="/roadmaps"

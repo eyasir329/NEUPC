@@ -6,9 +6,9 @@
 import {
   getPublicRoadmaps,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import RoadmapsClient from './RoadmapsClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import {
   CollectionPageJsonLd,
   BreadcrumbJsonLd,

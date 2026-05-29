@@ -1,3 +1,8 @@
+/**
+ * @file Roadmap table row component
+ * @module RoadmapTableRow
+ */
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -23,7 +28,7 @@ import {
 import {
   toggleRoadmapFeaturedAction,
   deleteRoadmapAction,
-} from '@/app/_lib/roadmap-actions';
+} from '@/app/_lib/actions/roadmap-actions';
 import toast from 'react-hot-toast';
 
 export default function RoadmapTableRow({ roadmap, onEdit }) {
@@ -48,7 +53,9 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success(roadmap.is_featured ? 'Removed from featured' : 'Marked as featured');
+      toast.success(
+        roadmap.is_featured ? 'Removed from featured' : 'Marked as featured'
+      );
       router.refresh();
     }
   }
@@ -70,27 +77,33 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
   }
 
   return (
-    <tr className="group hover:bg-white/[0.025] transition-colors cursor-pointer">
+    <tr className="group cursor-pointer transition-colors hover:bg-white/[0.025]">
       {/* Roadmap Info */}
-      <td className="py-3.5 px-5">
+      <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden group-hover:border-blue-500/40 transition-colors">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-500/20 bg-blue-500/10 transition-colors group-hover:border-blue-500/40">
             {roadmap.thumbnail ? (
-              <img src={roadmap.thumbnail} alt="" className="w-full h-full object-cover" />
+              <img
+                src={roadmap.thumbnail}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             ) : (
               <Compass className="h-4 w-4 text-blue-400/50" />
             )}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors truncate">
+            <div className="truncate text-sm font-semibold text-white transition-colors group-hover:text-blue-300">
               {roadmap.title}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-0.5">
-              <span className="text-[10px] text-gray-500 font-mono">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] text-gray-500">
                 {cc.icon} {roadmap.category}
               </span>
               <span className="text-gray-700 select-none">•</span>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase ${dc.badge}`}>
+              <span
+                className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase ${dc.badge}`}
+              >
                 <span className={`h-1 w-1 rounded-full ${dc.dot}`} />
                 {dc.label}
               </span>
@@ -100,18 +113,20 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
       </td>
 
       {/* Status */}
-      <td className="py-3.5 px-5">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${sc.badge}`}>
+      <td className="px-5 py-3.5">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${sc.badge}`}
+        >
           <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
           {sc.label}
         </span>
       </td>
 
       {/* Featured */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center">
           {roadmap.is_featured ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
               <Star className="h-2.5 w-2.5 fill-current" />
               Featured
             </span>
@@ -122,7 +137,7 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
       </td>
 
       {/* Views */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center gap-1.5">
           <Eye className="h-3.5 w-3.5 text-blue-400/60" />
           <span className="text-sm font-medium text-white tabular-nums">
@@ -132,7 +147,7 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
       </td>
 
       {/* Duration */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center gap-1.5">
           <Clock className="h-3.5 w-3.5 text-amber-400/60" />
           <span className="text-sm font-medium text-white">
@@ -142,41 +157,43 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
       </td>
 
       {/* Updated / Date */}
-      <td className="py-3.5 px-5">
-        <span className="text-xs text-gray-500 font-mono">
+      <td className="px-5 py-3.5">
+        <span className="font-mono text-xs text-gray-500">
           {formatRoadmapDate(roadmap.created_at)}
         </span>
       </td>
 
       {/* Actions */}
-      <td className="py-3.5 px-5">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="px-5 py-3.5">
+        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onEdit(roadmap);
             }}
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all border border-transparent hover:border-blue-500/20"
+            className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-400"
             title="Edit"
           >
             <Edit3 className="h-3.5 w-3.5" />
           </button>
-          
+
           <button
             onClick={handleToggleFeatured}
             disabled={featuredPending}
-            className={`p-1.5 rounded-lg transition-all border border-transparent ${
+            className={`rounded-lg border border-transparent p-1.5 transition-all ${
               roadmap.is_featured
-                ? 'text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20'
-                : 'text-gray-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20'
+                ? 'text-amber-400 hover:border-amber-500/20 hover:bg-amber-500/10'
+                : 'text-gray-500 hover:border-amber-500/20 hover:bg-amber-500/10 hover:text-amber-400'
             }`}
             title={roadmap.is_featured ? 'Unfeature' : 'Feature'}
           >
             {featuredPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Star className={`h-3.5 w-3.5 ${roadmap.is_featured ? 'fill-current' : ''}`} />
+              <Star
+                className={`h-3.5 w-3.5 ${roadmap.is_featured ? 'fill-current' : ''}`}
+              />
             )}
           </button>
 
@@ -186,7 +203,7 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all border border-transparent hover:border-emerald-500/20"
+              className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-emerald-500/20 hover:bg-emerald-500/10 hover:text-emerald-400"
               title="Preview"
             >
               <ExternalLink className="h-3.5 w-3.5" />
@@ -194,11 +211,14 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
           )}
 
           {deleteConfirm ? (
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={handleDelete}
                 disabled={deletePending}
-                className="px-2 py-1 text-[10px] font-bold text-red-300 bg-red-500/20 hover:bg-red-500/30 rounded transition-all"
+                className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-bold text-red-300 transition-all hover:bg-red-500/30"
               >
                 Confirm
               </button>
@@ -208,7 +228,7 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
                   e.stopPropagation();
                   setDeleteConfirm(false);
                 }}
-                className="text-[10px] text-gray-500 hover:text-white px-1"
+                className="px-1 text-[10px] text-gray-500 hover:text-white"
               >
                 Cancel
               </button>
@@ -220,7 +240,7 @@ export default function RoadmapTableRow({ roadmap, onEdit }) {
                 e.stopPropagation();
                 setDeleteConfirm(true);
               }}
-              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/20"
+              className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-400"
               title="Delete"
             >
               <Trash2 className="h-3.5 w-3.5" />

@@ -155,7 +155,7 @@ function ModalContent({
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl shadow-black/50">
       {/* Header gradient */}
       <div
-        className={`h-1 ${hasError ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'}`}
+        className={`h-1 ${hasError ? 'bg-linear-to-r from-red-500 to-orange-500' : 'bg-linear-to-r from-blue-500 to-cyan-500'}`}
       />
 
       {/* Close button for completed state */}

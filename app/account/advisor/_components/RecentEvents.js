@@ -14,7 +14,7 @@ import {
   Pill,
   ActionButton,
   EmptyState,
-} from '../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 const APPROVAL_TONE = {
   Approved: 'emerald',

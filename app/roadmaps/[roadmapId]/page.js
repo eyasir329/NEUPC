@@ -7,13 +7,13 @@ import { notFound } from 'next/navigation';
 import {
   getPublicRoadmapBySlug,
   getPublicRoadmapsByCategory,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import {
   BreadcrumbJsonLd,
   CollectionPageJsonLd,
 } from '@/app/_components/ui/JsonLd';
 import RoadmapDetailClient from './RoadmapDetailClient';
-import { buildRoadmapMetadata } from '@/app/_lib/seo';
+import { buildRoadmapMetadata } from '@/app/_lib/config/seo';
 
 export async function generateMetadata({ params }) {
   const { roadmapId } = await params;
@@ -36,7 +36,9 @@ export default async function Page({ params }) {
 
   const relatedRoadmaps = roadmap.category
     ? await getPublicRoadmapsByCategory(roadmap.category)
-        .then((rows) => (rows || []).filter((r) => r.id !== roadmap.id).slice(0, 3))
+        .then((rows) =>
+          (rows || []).filter((r) => r.id !== roadmap.id).slice(0, 3)
+        )
         .catch(() => [])
     : [];
 

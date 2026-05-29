@@ -127,11 +127,7 @@ export default function EditUserClient({ user, panelRole = 'admin' }) {
                 className="w-full appearance-none rounded-lg border border-white/10 bg-white/5 py-2.5 pr-4 pl-10 text-white transition-colors focus:border-blue-500/50 focus:outline-none"
               >
                 {roles.map((r) => (
-                  <option
-                    key={r}
-                    value={r}
-                    className="bg-gray-800 text-white"
-                  >
+                  <option key={r} value={r} className="bg-gray-800 text-white">
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </option>
                 ))}

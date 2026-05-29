@@ -1,3 +1,8 @@
+/**
+ * @file Committee client component
+ * @module CommitteeClient
+ */
+
 'use client';
 
 import Image from 'next/image';
@@ -5,16 +10,16 @@ import Link from 'next/link';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { cn, driveImageUrl, getInitials } from '../_lib/utils';
-import CTASection from '../_components/ui/CTASection';
+import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
+import CTASection from '@/app/_components/ui/CTASection';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
@@ -38,8 +43,8 @@ const DEFAULT_ADVISORS = [
 
 const HERO_STATS_DEFAULT = [
   { value: '15+', label: 'Committee Members' },
-  { value: '7',   label: 'Departments'       },
-  { value: '2025-26', label: 'Current Term'  },
+  { value: '7', label: 'Departments' },
+  { value: '2025-26', label: 'Current Term' },
 ];
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
@@ -62,8 +67,18 @@ function LinkedinIcon() {
 
 function MailIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-3.5 w-3.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="h-3.5 w-3.5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+      />
     </svg>
   );
 }
@@ -87,7 +102,7 @@ function Avatar({ name, image, className, imgClassName }) {
           onError={() => setErrored(true)}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neon-violet/20 via-surface to-neon-lime/10">
+        <div className="from-neon-violet/20 via-surface to-neon-lime/10 flex h-full w-full items-center justify-center bg-linear-to-br">
           <span className="font-heading text-xl font-black text-white/40 select-none">
             {getInitials(name)}
           </span>
@@ -107,7 +122,7 @@ function SocialBtn({ href, icon, label }) {
       target={href.startsWith('mailto') ? undefined : '_blank'}
       rel="noopener noreferrer"
       title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-neon-lime/30 hover:text-neon-lime"
+      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200"
     >
       {icon}
     </a>
@@ -119,10 +134,12 @@ function SocialBtn({ href, icon, label }) {
 function StatTile({ value, label, mobileLabel, accent = false }) {
   return (
     <div className="flex flex-col items-start gap-0.5">
-      <span className={cn(
-        'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-        accent ? 'text-neon-lime' : 'text-white'
-      )}>
+      <span
+        className={cn(
+          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
+          accent ? 'text-neon-lime' : 'text-white'
+        )}
+      >
         {value}
       </span>
       <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
@@ -140,18 +157,25 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
+      {...(onMount
+        ? { animate: 'visible' }
+        : { whileInView: 'visible', viewport })}
       className="mb-10 sm:mb-14"
     >
-      <div className="flex items-center gap-3 mb-3">
+      <div className="mb-3 flex items-center gap-3">
         <span className="bg-neon-lime h-px w-7" />
-        <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
+        <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
           {tag}
         </span>
       </div>
       <h2 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl md:text-5xl">
         {title}
-        {accent && <> <span className="neon-text">{accent}</span></>}
+        {accent && (
+          <>
+            {' '}
+            <span className="neon-text">{accent}</span>
+          </>
+        )}
       </h2>
     </motion.div>
   );
@@ -162,13 +186,12 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
 function Hero({ stats }) {
   return (
     <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-
       {/* Ambient background — exact events pattern */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="grid-overlay absolute inset-0 opacity-25" />
-        <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
-        <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
+        <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
+        <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
       </div>
 
       <motion.div
@@ -178,7 +201,6 @@ function Hero({ stats }) {
         className="mx-auto w-full max-w-7xl"
       >
         <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
           {/* Eyebrow */}
           <motion.div variants={fadeUp} className="flex items-center gap-3">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -190,9 +212,10 @@ function Hero({ stats }) {
           {/* Headline */}
           <motion.h1
             variants={fadeUp}
-            className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+            className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
           >
-            Meet the<br />
+            Meet the
+            <br />
             <span className="neon-text">Committee</span>
           </motion.h1>
 
@@ -207,18 +230,25 @@ function Hero({ stats }) {
 
           {/* Stats row */}
           {stats.length > 0 && (
-            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
-              <div className={cn(
-                'grid divide-x divide-white/8',
-                `grid-cols-${Math.min(stats.length, 4)}`
-              )}>
+            <motion.div
+              variants={fadeUp}
+              className="border-t border-white/8 pt-6 sm:pt-8"
+            >
+              <div
+                className={cn(
+                  'grid divide-x divide-white/8',
+                  `grid-cols-${Math.min(stats.length, 4)}`
+                )}
+              >
                 {stats.slice(0, 4).map((stat, i) => (
                   <div
                     key={i}
                     className={cn(
-                      i === 0 ? 'pr-4 sm:pr-8' :
-                      i === stats.length - 1 ? 'pl-4 sm:pl-8' :
-                      'px-4 sm:px-8'
+                      i === 0
+                        ? 'pr-4 sm:pr-8'
+                        : i === stats.length - 1
+                          ? 'pl-4 sm:pl-8'
+                          : 'px-4 sm:px-8'
                     )}
                   >
                     <StatTile
@@ -231,14 +261,15 @@ function Hero({ stats }) {
               </div>
             </motion.div>
           )}
-
         </div>
       </motion.div>
 
       {/* Scroll cue */}
       <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-        <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">Scroll</span>
-        <div className="h-7 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
+        <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
+          Scroll
+        </span>
+        <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
       </div>
     </section>
   );
@@ -252,15 +283,15 @@ function AdvisorCard({ advisor, index }) {
       variants={cardReveal}
       whileHover={{ y: -3 }}
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-      className="glass-panel group relative overflow-hidden rounded-2xl border border-white/8 p-6 transition-all duration-300 hover:border-neon-lime/20 sm:p-8"
+      className="glass-panel group hover:border-neon-lime/20 relative overflow-hidden rounded-2xl border border-white/8 p-6 transition-all duration-300 sm:p-8"
     >
       {/* Ambient glow */}
-      <div className="pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full bg-neon-lime/5 blur-3xl opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+      <div className="bg-neon-lime/5 pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full opacity-0 blur-3xl transition-opacity duration-700 group-hover:opacity-100" />
 
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
         {/* Photo */}
         <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28 md:h-32 md:w-32">
-          <div className="absolute inset-0 rounded-full border border-white/10 transition-colors duration-300 group-hover:border-neon-lime/30" />
+          <div className="group-hover:border-neon-lime/30 absolute inset-0 rounded-full border border-white/10 transition-colors duration-300" />
           <Avatar
             name={advisor.name}
             image={advisor.image}
@@ -269,9 +300,9 @@ function AdvisorCard({ advisor, index }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 text-center sm:text-left space-y-3">
+        <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           {/* Role badge */}
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/30 bg-neon-lime/8 px-3 py-1 font-mono text-[10px] font-bold tracking-[0.3em] text-neon-lime uppercase">
+          <span className="border-neon-lime/30 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
             {advisor.designation || 'Faculty Advisor'}
           </span>
 
@@ -280,16 +311,19 @@ function AdvisorCard({ advisor, index }) {
           </h3>
 
           {(advisor.position || advisor.department) && (
-            <p className="text-sm text-zinc-500 font-light leading-relaxed">
+            <p className="text-sm leading-relaxed font-light text-zinc-500">
               {[advisor.position, advisor.department, advisor.university]
-                .filter(Boolean).join(' · ')}
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           )}
 
           {/* Quote */}
           {advisor.message && (
             <blockquote className="relative mt-1 rounded-xl border border-white/6 bg-white/[0.025] px-4 py-3 text-left">
-              <span className="absolute top-1.5 left-3 font-serif text-2xl leading-none text-neon-lime/25 select-none">"</span>
+              <span className="text-neon-lime/25 absolute top-1.5 left-3 font-serif text-2xl leading-none select-none">
+                "
+              </span>
               <p className="pl-4 text-xs leading-relaxed text-zinc-400 italic sm:text-sm">
                 {advisor.message}
               </p>
@@ -297,9 +331,17 @@ function AdvisorCard({ advisor, index }) {
           )}
 
           {/* Socials */}
-          <div className="flex items-center gap-2 justify-center sm:justify-start pt-1">
-            <SocialBtn href={advisor.github}   icon={<GithubIcon />}   label="GitHub"   />
-            <SocialBtn href={advisor.linkedin} icon={<LinkedinIcon />} label="LinkedIn" />
+          <div className="flex items-center justify-center gap-2 pt-1 sm:justify-start">
+            <SocialBtn
+              href={advisor.github}
+              icon={<GithubIcon />}
+              label="GitHub"
+            />
+            <SocialBtn
+              href={advisor.linkedin}
+              icon={<LinkedinIcon />}
+              label="LinkedIn"
+            />
           </div>
         </div>
       </div>
@@ -318,7 +360,7 @@ function CoreExecCard({ exec, index }) {
       whileHover={{ y: -4 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className={cn(
-        'group relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/8 bg-surface transition-all duration-500',
+        'group bg-surface relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/8 transition-all duration-500',
         isAlt ? 'hover:border-neon-violet/40' : 'hover:border-neon-lime/40'
       )}
     >
@@ -331,33 +373,41 @@ function CoreExecCard({ exec, index }) {
       />
 
       {/* Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/95 via-[#05060b]/30 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/95 via-[#05060b]/30 to-transparent" />
 
       {/* Content */}
-      <div className="absolute inset-x-0 bottom-0 p-5 space-y-2 sm:p-7">
-        <span className={cn(
-          'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase sm:text-[10px]',
-          isAlt
-            ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
-            : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-        )}>
+      <div className="absolute inset-x-0 bottom-0 space-y-2 p-5 sm:p-7">
+        <span
+          className={cn(
+            'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase sm:text-[10px]',
+            isAlt
+              ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+              : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+          )}
+        >
           {exec.role}
         </span>
 
-        <h3 className="font-heading text-xl font-black text-white uppercase leading-tight sm:text-2xl">
+        <h3 className="font-heading text-xl leading-tight font-black text-white uppercase sm:text-2xl">
           {exec.name}
         </h3>
 
         {(exec.department || exec.academicSession) && (
-          <p className="font-mono text-[9px] text-zinc-500 tracking-wider uppercase sm:text-[10px]">
-            {[exec.department, exec.academicSession].filter(Boolean).join(' · ')}
+          <p className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase sm:text-[10px]">
+            {[exec.department, exec.academicSession]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
         )}
 
         {/* Hover-reveal socials */}
-        <div className="flex gap-2 pt-1 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-          <SocialBtn href={exec.github}   icon={<GithubIcon />}   label="GitHub"   />
-          <SocialBtn href={exec.linkedin} icon={<LinkedinIcon />} label="LinkedIn" />
+        <div className="flex translate-y-2 gap-2 pt-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          <SocialBtn href={exec.github} icon={<GithubIcon />} label="GitHub" />
+          <SocialBtn
+            href={exec.linkedin}
+            icon={<LinkedinIcon />}
+            label="LinkedIn"
+          />
           <SocialBtn
             href={exec.email ? `mailto:${exec.email}` : ''}
             icon={<MailIcon />}
@@ -388,13 +438,15 @@ function CouncilCard({ member, index }) {
       )}
     >
       {/* Ambient glow */}
-      <div className={cn(
-        'pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100',
-        isAlt ? 'bg-neon-violet/5' : 'bg-neon-lime/5'
-      )} />
+      <div
+        className={cn(
+          'pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100',
+          isAlt ? 'bg-neon-violet/5' : 'bg-neon-lime/5'
+        )}
+      />
 
       {/* Photo */}
-      <div className="relative mb-5 aspect-square w-full overflow-hidden rounded-xl border border-white/8 bg-surface">
+      <div className="bg-surface relative mb-5 aspect-square w-full overflow-hidden rounded-xl border border-white/8">
         <Avatar
           name={member.name}
           image={member.image}
@@ -404,38 +456,47 @@ function CouncilCard({ member, index }) {
       </div>
 
       {/* Role tag */}
-      <span className={cn(
-        'mb-2 inline-flex self-start items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase transition-colors duration-300',
-        isAlt
-          ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
-          : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
-      )}>
+      <span
+        className={cn(
+          'mb-2 inline-flex items-center self-start rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase transition-colors duration-300',
+          isAlt
+            ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
+            : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
+        )}
+      >
         {member.role}
       </span>
 
       {/* Name */}
-      <h3 className="font-heading text-base font-black text-white uppercase leading-tight sm:text-lg">
+      <h3 className="font-heading text-base leading-tight font-black text-white uppercase sm:text-lg">
         {member.name}
       </h3>
 
       {/* Meta */}
       {(member.department || member.academicSession) && (
         <p className="mt-1 font-mono text-[9px] tracking-wider text-zinc-600 uppercase">
-          {[member.department, member.academicSession].filter(Boolean).join(' · ')}
+          {[member.department, member.academicSession]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
       )}
 
       {/* Bio */}
       {text && (
         <div className="mt-3">
-          <p className={cn('text-xs leading-relaxed text-zinc-500', !expanded && isLong && 'line-clamp-2')}>
+          <p
+            className={cn(
+              'text-xs leading-relaxed text-zinc-500',
+              !expanded && isLong && 'line-clamp-2'
+            )}
+          >
             {text}
           </p>
           {isLong && (
             <button
               type="button"
-              onClick={() => setExpanded(v => !v)}
-              className="mt-1 font-mono text-[10px] text-neon-lime/60 hover:text-neon-lime transition-colors"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-neon-lime/60 hover:text-neon-lime mt-1 font-mono text-[10px] transition-colors"
             >
               {expanded ? '↑ less' : '↓ more'}
             </button>
@@ -444,9 +505,13 @@ function CouncilCard({ member, index }) {
       )}
 
       {/* Socials */}
-      <div className="mt-auto flex items-center gap-1.5 pt-4 border-t border-white/5">
-        <SocialBtn href={member.github}   icon={<GithubIcon />}   label="GitHub"   />
-        <SocialBtn href={member.linkedin} icon={<LinkedinIcon />} label="LinkedIn" />
+      <div className="mt-auto flex items-center gap-1.5 border-t border-white/5 pt-4">
+        <SocialBtn href={member.github} icon={<GithubIcon />} label="GitHub" />
+        <SocialBtn
+          href={member.linkedin}
+          icon={<LinkedinIcon />}
+          label="LinkedIn"
+        />
         <SocialBtn
           href={member.email ? `mailto:${member.email}` : ''}
           icon={<MailIcon />}
@@ -462,7 +527,9 @@ function CouncilCard({ member, index }) {
 function EmptySlot({ message }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.015] py-16 text-center">
-      <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">{message}</p>
+      <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">
+        {message}
+      </p>
     </div>
   );
 }
@@ -471,10 +538,10 @@ function EmptySlot({ message }) {
 
 function Divider() {
   return (
-    <div className="mx-auto max-w-xs flex items-center gap-4 px-4">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/8" />
-      <div className="h-1 w-1 rounded-full bg-neon-lime/30" />
-      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/8" />
+    <div className="mx-auto flex max-w-xs items-center gap-4 px-4">
+      <div className="h-px flex-1 bg-linear-to-r from-transparent to-white/8" />
+      <div className="bg-neon-lime/30 h-1 w-1 rounded-full" />
+      <div className="h-px flex-1 bg-linear-to-l from-transparent to-white/8" />
     </div>
   );
 }
@@ -488,19 +555,24 @@ export default function CommitteeClient({
   heroStats: propHeroStats = [],
   settings = {},
 }) {
-  const advisors  = propAdvisors.length > 0 ? propAdvisors : DEFAULT_ADVISORS;
-  const heroStats = propHeroStats.length > 0 ? propHeroStats : HERO_STATS_DEFAULT;
+  const advisors = propAdvisors.length > 0 ? propAdvisors : DEFAULT_ADVISORS;
+  const heroStats =
+    propHeroStats.length > 0 ? propHeroStats : HERO_STATS_DEFAULT;
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
-
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <Hero stats={heroStats} />
 
       {/* ── Advisory Board ───────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
+      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Guidance & Mentorship" title="Advisory" accent="Board" onMount />
+          <SectionLabel
+            tag="Guidance & Mentorship"
+            title="Advisory"
+            accent="Board"
+            onMount
+          />
           <motion.div
             variants={stagger}
             initial="hidden"
@@ -517,7 +589,7 @@ export default function CommitteeClient({
       <Divider />
 
       {/* ── Core Executive ───────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
+      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionLabel tag="Leadership" title="Core" accent="Executive" />
           {propCore.length > 0 ? (
@@ -542,7 +614,7 @@ export default function CommitteeClient({
 
       {/* ── Executive Council ─────────────────────────────────────────────── */}
       {propExecs.length > 0 && (
-        <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
+        <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <SectionLabel tag="Operations" title="Executive" accent="Council" />
             <motion.div

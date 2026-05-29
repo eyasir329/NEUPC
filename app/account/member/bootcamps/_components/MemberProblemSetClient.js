@@ -36,8 +36,8 @@ import {
   TrendingUp,
   Star,
 } from 'lucide-react';
-import { submitTaskAction } from '@/app/_lib/member-tasks-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { submitTaskAction } from '@/app/_lib/actions/member-tasks-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -623,7 +623,9 @@ export default function MemberProblemSetClient({
             key={label}
             className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 px-4 py-3 shadow-lg shadow-black/20 backdrop-blur-xl transition-all hover:border-white/20"
           >
-            <div className={`pointer-events-none absolute -top-12 -right-12 h-24 w-24 rounded-full ${bg} opacity-40 blur-3xl transition-opacity group-hover:opacity-70`} />
+            <div
+              className={`pointer-events-none absolute -top-12 -right-12 h-24 w-24 rounded-full ${bg} opacity-40 blur-3xl transition-opacity group-hover:opacity-70`}
+            />
             <div
               className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-white/10 ${bg}`}
             >
@@ -633,7 +635,9 @@ export default function MemberProblemSetClient({
               <p className="text-xl leading-none font-bold text-white tabular-nums">
                 {value}
               </p>
-              <p className="mt-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">{label}</p>
+              <p className="mt-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                {label}
+              </p>
             </div>
           </div>
         ))}

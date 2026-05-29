@@ -1,7 +1,16 @@
+/**
+ * @file Quick access cards component
+ * @module QuickAccessCards
+ */
+
 'use client';
 
 import { ImageIcon, Award, BarChart3, Plus, Settings, Eye } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton } from '@/app/account/_components/ui';
+import {
+  GlassCard,
+  SectionHeader,
+  ActionButton,
+} from '@/app/account/_components/ui';
 
 const CARDS = [
   {
@@ -47,7 +56,12 @@ export default function QuickAccessCards() {
             subtitle={card.subtitle}
             accent={card.accent}
           />
-          <ActionButton tone={card.tone} href={card.href} icon={card.btnIcon} className="w-full justify-center">
+          <ActionButton
+            tone={card.tone}
+            href={card.href}
+            icon={card.btnIcon}
+            className="w-full justify-center"
+          >
             {card.btnLabel}
           </ActionButton>
         </GlassCard>

@@ -1,9 +1,21 @@
+/**
+ * @file Todays schedule component
+ * @module TodaysSchedule
+ */
+
 'use client';
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Video, Users, Clock, ExternalLink, Calendar } from 'lucide-react';
-import { GlassCard, SectionHeader, Pill, ActionButton, Avatar, EmptyState } from '@/app/account/_components/ui';
+import {
+  GlassCard,
+  SectionHeader,
+  Pill,
+  ActionButton,
+  Avatar,
+  EmptyState,
+} from '@/app/account/_components/ui';
 
 export default function TodaysSchedule({ todaySessions }) {
   return (
@@ -14,7 +26,11 @@ export default function TodaysSchedule({ todaySessions }) {
         subtitle="Upcoming mentoring sessions"
         accent="emerald"
         action={
-          <ActionButton href="/account/mentor/sessions" tone="emerald" icon={Calendar}>
+          <ActionButton
+            href="/account/mentor/sessions"
+            tone="emerald"
+            icon={Calendar}
+          >
             + Schedule
           </ActionButton>
         }
@@ -41,8 +57,8 @@ export default function TodaysSchedule({ todaySessions }) {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
                   <Video className="h-5 w-5 text-emerald-400" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white text-sm truncate">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">
                     {session.title}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
@@ -60,7 +76,11 @@ export default function TodaysSchedule({ todaySessions }) {
                   </div>
                 </div>
               </div>
-              <ActionButton tone="emerald" icon={ExternalLink} className="shrink-0">
+              <ActionButton
+                tone="emerald"
+                icon={ExternalLink}
+                className="shrink-0"
+              >
                 Join
               </ActionButton>
             </motion.div>

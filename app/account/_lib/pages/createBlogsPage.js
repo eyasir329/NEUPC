@@ -5,7 +5,7 @@
  * @module account/_lib/pages/createBlogsPage
  */
 
-import { getBlogsWithStats } from '@/app/_lib/data-service';
+import { getBlogsWithStats } from '@/app/_lib/services/data-service';
 import BlogManagementClient from '@/app/account/_components/blogs/BlogManagementClient';
 
 /** Build the blog management page component. */

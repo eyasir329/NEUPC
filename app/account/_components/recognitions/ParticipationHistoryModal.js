@@ -19,8 +19,8 @@ import {
   deleteParticipationPhotoAction,
   uploadParticipationFeaturedPhotoAction,
   deleteParticipationFeaturedPhotoAction,
-} from '@/app/_lib/achievement-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/achievement-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 const TABLE_PAGE_SIZE = 15;
 

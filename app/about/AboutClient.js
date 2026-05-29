@@ -1,3 +1,8 @@
+/**
+ * @file About client component
+ * @module AboutClient
+ */
+
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -5,14 +10,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { cn } from '../_lib/utils';
-import CTASection from '../_components/ui/CTASection';
+import { cn } from '@/app/_lib/utils/utils';
+import CTASection from '@/app/_components/ui/CTASection';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 import {
   Rocket,
   Eye,
@@ -36,7 +41,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
@@ -168,12 +173,21 @@ const DEFAULT_WHAT_WE_DO = [
 
 /* ─── Shared section eyebrow (matches AchievementsClient exactly) ──────── */
 
-function SectionEyebrow({ tag, title, accent, description, color = 'lime', onMount = false }) {
+function SectionEyebrow({
+  tag,
+  title,
+  accent,
+  description,
+  color = 'lime',
+  onMount = false,
+}) {
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
+      {...(onMount
+        ? { animate: 'visible' }
+        : { whileInView: 'visible', viewport })}
       className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
       <div className="flex items-center justify-center gap-3">
@@ -285,7 +299,7 @@ function GallerySlider({ images }) {
               sizes="(max-width:768px) 100vw, 80vw"
               priority={i === 0}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/70 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/70 via-transparent to-transparent" />
             {img.caption && (
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
                 <p className="font-mono text-[10px] tracking-widest text-white/70 uppercase">
@@ -369,7 +383,7 @@ function CommitteeCard({ member, accent = 'lime' }) {
               <Users size={48} className="text-zinc-700" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/90 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/90 via-transparent to-transparent" />
         </div>
         <div className="p-5">
           <h3 className="font-heading text-base font-black text-white">
@@ -465,9 +479,9 @@ export default function AboutClient({
         {/* Ambient background */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
+          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
+          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
         </div>
 
         <motion.div
@@ -477,7 +491,6 @@ export default function AboutClient({
           className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
             {/* Eyebrow */}
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -489,7 +502,7 @@ export default function AboutClient({
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               About
               <br />
@@ -508,7 +521,7 @@ export default function AboutClient({
             {/* Status pill */}
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+              className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               {settings?.member_count
@@ -517,11 +530,14 @@ export default function AboutClient({
             </motion.div>
 
             {/* Stats row */}
-            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
+            <motion.div
+              variants={fadeUp}
+              className="border-t border-white/8 pt-6 sm:pt-8"
+            >
               <div className="grid grid-cols-3 divide-x divide-white/8 sm:grid-cols-3">
                 <div className="pr-3 sm:pr-6 lg:pr-8">
                   <div className="space-y-0.5">
-                    <div className="font-heading text-xl font-black text-neon-lime sm:text-2xl">
+                    <div className="font-heading text-neon-lime text-xl font-black sm:text-2xl">
                       {settings?.member_count || '150+'}
                     </div>
                     <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
@@ -552,7 +568,6 @@ export default function AboutClient({
                 </div>
               </div>
             </motion.div>
-
           </div>
         </motion.div>
       </section>
@@ -830,7 +845,7 @@ export default function AboutClient({
           <div className="relative">
             {/* Vertical connector line */}
             <div
-              className="from-neon-lime/30 via-neon-violet/20 pointer-events-none absolute top-0 bottom-0 w-px bg-gradient-to-b to-transparent"
+              className="from-neon-lime/30 via-neon-violet/20 pointer-events-none absolute top-0 bottom-0 w-px bg-linear-to-b to-transparent"
               style={{ left: '1.85rem' }}
               aria-hidden
             />

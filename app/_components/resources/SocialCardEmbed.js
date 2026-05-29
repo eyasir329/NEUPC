@@ -1,3 +1,8 @@
+/**
+ * @file Social card embed component
+ * @module SocialCardEmbed
+ */
+
 'use client';
 
 import { useState } from 'react';

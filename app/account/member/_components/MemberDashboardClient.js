@@ -197,7 +197,7 @@ export default function MemberDashboardClient({ session }) {
     {
       id: 'p4',
       type: 'contest',
-      title: 'Confirm seat for Hackathon \'26',
+      title: "Confirm seat for Hackathon '26",
       subtitle: 'Registration window closes in 2 days',
       accent: 'amber',
       href: '/account/member/events',
@@ -252,21 +252,87 @@ export default function MemberDashboardClient({ session }) {
   ];
 
   const roadmaps = [
-    { name: 'Frontend Development', progress: 78, tone: 'blue', completed: 39, total: 50 },
-    { name: 'Backend with Node.js', progress: 45, tone: 'emerald', completed: 18, total: 40 },
-    { name: 'DSA Mastery Track', progress: 92, tone: 'violet', completed: 46, total: 50 },
-    { name: 'System Design', progress: 22, tone: 'amber', completed: 7, total: 32 },
-    { name: 'DevOps Foundations', progress: 60, tone: 'orange', completed: 21, total: 35 },
-    { name: 'Mobile Dev (Flutter)', progress: 12, tone: 'rose', completed: 4, total: 30 },
+    {
+      name: 'Frontend Development',
+      progress: 78,
+      tone: 'blue',
+      completed: 39,
+      total: 50,
+    },
+    {
+      name: 'Backend with Node.js',
+      progress: 45,
+      tone: 'emerald',
+      completed: 18,
+      total: 40,
+    },
+    {
+      name: 'DSA Mastery Track',
+      progress: 92,
+      tone: 'violet',
+      completed: 46,
+      total: 50,
+    },
+    {
+      name: 'System Design',
+      progress: 22,
+      tone: 'amber',
+      completed: 7,
+      total: 32,
+    },
+    {
+      name: 'DevOps Foundations',
+      progress: 60,
+      tone: 'orange',
+      completed: 21,
+      total: 35,
+    },
+    {
+      name: 'Mobile Dev (Flutter)',
+      progress: 12,
+      tone: 'rose',
+      completed: 4,
+      total: 30,
+    },
   ];
 
   const recentActivities = [
-    { action: 'Solved "Two Pointers Approach" on Codeforces Round 991', time: '12 minutes ago', icon: 'CheckCircle', tone: 'emerald' },
-    { action: 'Registered for NEUPC Monthly Contest #27', time: '2 hours ago', icon: 'Calendar', tone: 'blue' },
-    { action: 'Earned the "30-Day Streak" achievement badge', time: '1 day ago', icon: 'Award', tone: 'amber' },
-    { action: 'Replied to "DP Optimization Tricks" in Help Desk', time: '2 days ago', icon: 'MessageSquare', tone: 'violet' },
-    { action: 'Completed module: "Graph Traversal Patterns"', time: '3 days ago', icon: 'BookOpen', tone: 'cyan' },
-    { action: 'Submitted certificate request for ICPC Regional', time: '5 days ago', icon: 'FileText', tone: 'pink' },
+    {
+      action: 'Solved "Two Pointers Approach" on Codeforces Round 991',
+      time: '12 minutes ago',
+      icon: 'CheckCircle',
+      tone: 'emerald',
+    },
+    {
+      action: 'Registered for NEUPC Monthly Contest #27',
+      time: '2 hours ago',
+      icon: 'Calendar',
+      tone: 'blue',
+    },
+    {
+      action: 'Earned the "30-Day Streak" achievement badge',
+      time: '1 day ago',
+      icon: 'Award',
+      tone: 'amber',
+    },
+    {
+      action: 'Replied to "DP Optimization Tricks" in Help Desk',
+      time: '2 days ago',
+      icon: 'MessageSquare',
+      tone: 'violet',
+    },
+    {
+      action: 'Completed module: "Graph Traversal Patterns"',
+      time: '3 days ago',
+      icon: 'BookOpen',
+      tone: 'cyan',
+    },
+    {
+      action: 'Submitted certificate request for ICPC Regional',
+      time: '5 days ago',
+      icon: 'FileText',
+      tone: 'pink',
+    },
   ];
 
   const achievements = [
@@ -292,8 +358,8 @@ export default function MemberDashboardClient({ session }) {
 
       <MemberStatsGrid stats={stats} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative mt-8">
-        <div className="xl:col-span-8 flex flex-col gap-8">
+      <div className="relative mt-8 grid grid-cols-1 gap-8 xl:grid-cols-12">
+        <div className="flex flex-col gap-8 xl:col-span-8">
           <NextContestCountdown contest={nextContest} />
           <DailyPracticeCard
             problem={dailyProblem}
@@ -306,7 +372,7 @@ export default function MemberDashboardClient({ session }) {
           <VideoWatchTime roadmaps={roadmaps} />
         </div>
 
-        <div className="xl:col-span-4 flex flex-col gap-8">
+        <div className="flex flex-col gap-8 xl:col-span-4">
           <div className="sticky top-8 flex flex-col gap-8">
             <TodaysPlan items={todaysPlan} />
             <NotificationsPreview items={notifications} />

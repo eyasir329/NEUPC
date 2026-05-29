@@ -7,7 +7,7 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import DailyActivityClient from './_components/DailyActivityClient';
 
 export const metadata = { title: 'Daily Activity | Member | NEUPC' };

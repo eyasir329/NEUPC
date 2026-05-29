@@ -3,11 +3,8 @@
  * @module route
  */
 
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
-import {
-  getAllUsers,
-  getUserStats,
-} from '@/app/_lib/data-service';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
+import { getAllUsers, getUserStats } from '@/app/_lib/services/data-service';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {

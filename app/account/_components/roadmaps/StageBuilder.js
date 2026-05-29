@@ -401,7 +401,7 @@ export default function StageBuilder({ value, onChange }) {
                           <button
                             type="button"
                             onClick={() => removeItem(stageIdx, itemIdx)}
-                            className="flex-shrink-0 p-1.5 text-gray-600 transition-colors hover:text-red-400"
+                            className="shrink-0 p-1.5 text-gray-600 transition-colors hover:text-red-400"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

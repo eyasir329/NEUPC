@@ -1,3 +1,8 @@
+/**
+ * @file Position modal component
+ * @module PositionModal
+ */
+
 import { useState } from 'react';
 import { X, Loader } from 'lucide-react';
 
@@ -41,15 +46,17 @@ export default function PositionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg animate-in fade-in zoom-in-95 duration-200">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-md overflow-hidden rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg duration-200">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/8 bg-white/3 px-6 py-4">
           <div>
             <h2 className="text-base font-bold text-white">
-              {type === 'create' ? 'Create Committee Position' : 'Edit Position'}
+              {type === 'create'
+                ? 'Create Committee Position'
+                : 'Edit Position'}
             </h2>
-            <p className="mt-1 text-[11px] text-violet-400 font-mono">
+            <p className="mt-1 font-mono text-[11px] text-violet-400">
               {type === 'create'
                 ? '// Add a new role definition'
                 : `// Editing role: ${position?.title}`}
@@ -66,7 +73,7 @@ export default function PositionModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 select-none">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
               Position Title <span className="text-rose-400">*</span>
             </label>
             <input
@@ -76,13 +83,13 @@ export default function PositionModal({
               onChange={handleChange}
               required
               placeholder="e.g., President, Tech Lead, Public Relations"
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 select-none">
+              <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
                 Category <span className="text-rose-400">*</span>
               </label>
               <div className="relative">
@@ -90,7 +97,7 @@ export default function PositionModal({
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white outline-none focus:border-violet-500/50 transition-all cursor-pointer appearance-none font-sans"
+                  className="w-full cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50"
                   style={{ colorScheme: 'dark' }}
                 >
                   <option value="executive">Executive</option>
@@ -101,7 +108,7 @@ export default function PositionModal({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 select-none">
+              <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
                 Rank Index
               </label>
               <input
@@ -110,13 +117,13 @@ export default function PositionModal({
                 value={formData.rank}
                 onChange={handleChange}
                 placeholder="Optional rank index"
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 select-none">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
               Display Sequence Order
             </label>
             <input
@@ -125,12 +132,12 @@ export default function PositionModal({
               value={formData.display_order}
               onChange={handleChange}
               placeholder="e.g. 0, 1, 2 for sorting"
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
+              className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 select-none">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase select-none">
               Role Responsibilities
             </label>
             <textarea
@@ -139,23 +146,23 @@ export default function PositionModal({
               onChange={handleChange}
               rows={3}
               placeholder="Specify the key responsibilities of this role..."
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
+              className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 border-t border-white/8 pt-5 mt-2">
+          <div className="mt-2 flex gap-3 border-t border-white/8 pt-5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl bg-white/5 border border-white/8 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+              className="flex-1 rounded-xl border border-white/8 bg-white/5 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.35)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
             >
               {isLoading && <Loader className="h-3.5 w-3.5 animate-spin" />}
               {type === 'create' ? 'Create Position' : 'Save Changes'}

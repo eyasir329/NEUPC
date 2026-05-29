@@ -1,3 +1,8 @@
+/**
+ * @file User form panel component
+ * @module UserFormPanel
+ */
+
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
@@ -18,8 +23,8 @@ import {
   updateUserAction,
   uploadUserImageAction,
   getUserProfileForAdminAction,
-} from '@/app/_lib/user-actions';
-import { driveImageUrl } from '@/app/_lib/utils';
+} from '@/app/_lib/actions/user-actions';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none transition-all focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20';

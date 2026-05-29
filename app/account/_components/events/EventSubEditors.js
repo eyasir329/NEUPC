@@ -1,6 +1,19 @@
+/**
+ * @file Event sub editors component
+ * @module EventSubEditors
+ */
+
 'use client';
 
-import { Plus, Trash2, Clock, CalendarClock, Mic2, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Clock,
+  CalendarClock,
+  Mic2,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 
 // Shared Agenda + Speakers list editors used by the Create and Edit event forms.
 // Both emit plain arrays matching what the event detail UI renders:
@@ -61,7 +74,10 @@ export function AgendaEditor({ value = [], onChange }) {
   const update = (id, patch) =>
     onChange(items.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   const add = () =>
-    onChange([...items, { id: uid(), time: '', title: '', description: '', speaker: '' }]);
+    onChange([
+      ...items,
+      { id: uid(), time: '', title: '', description: '', speaker: '' },
+    ]);
   const remove = (id) => onChange(items.filter((it) => it.id !== id));
   const reorder = (i, dir) => onChange(move(items, i, i + dir));
 
@@ -71,7 +87,8 @@ export function AgendaEditor({ value = [], onChange }) {
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8 text-center">
           <CalendarClock className="h-6 w-6 text-gray-600" />
           <p className="text-[12px] text-gray-500">
-            No agenda items yet. Add timeline entries shown under “Event Agenda”.
+            No agenda items yet. Add timeline entries shown under “Event
+            Agenda”.
           </p>
         </div>
       ) : (
@@ -194,7 +211,7 @@ export function SpeakersEditor({ value = [], onChange }) {
                 value={it.avatar}
                 onChange={(e) => update(it.id, { avatar: e.target.value })}
                 placeholder="Avatar image URL (optional)"
-                className={`${fieldCls} sm:col-span-2 font-mono text-[12px]`}
+                className={`${fieldCls} font-mono text-[12px] sm:col-span-2`}
               />
             </div>
             <RowControls

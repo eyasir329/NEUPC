@@ -19,11 +19,11 @@
 'use client';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import {
   editMessageAction,
   deleteMessageAction,
-} from '@/app/_lib/chat-actions';
+} from '@/app/_lib/actions/chat-actions';
 import {
   ChevronDown,
   Pencil,
@@ -37,7 +37,7 @@ import {
   File,
   ExternalLink,
 } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 /* ── Time formatter ────────────────────────────────────── */
 function formatTime(dateStr) {

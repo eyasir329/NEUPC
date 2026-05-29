@@ -38,7 +38,7 @@ import {
   bulkUpdateContactStatusAction,
   bulkDeleteContactSubmissionsAction,
   markContactReadAction,
-} from '@/app/_lib/contact-actions';
+} from '@/app/_lib/actions/contact-actions';
 import {
   PageShell,
   PageHeader,
@@ -50,27 +50,39 @@ import {
 
 // ─── Custom Interactive Stat Card ──────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, accent = 'blue', active, onClick }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accent = 'blue',
+  active,
+  onClick,
+}) {
   const accentClasses = {
     blue: {
       bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-      activeBorder: 'border-blue-500/40 bg-blue-500/10 ring-1 ring-blue-500/20 shadow-md shadow-blue-900/10',
+      activeBorder:
+        'border-blue-500/40 bg-blue-500/10 ring-1 ring-blue-500/20 shadow-md shadow-blue-900/10',
     },
     purple: {
       bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-      activeBorder: 'border-purple-500/40 bg-purple-500/10 ring-1 ring-purple-500/20 shadow-md shadow-purple-900/10',
+      activeBorder:
+        'border-purple-500/40 bg-purple-500/10 ring-1 ring-purple-500/20 shadow-md shadow-purple-900/10',
     },
     sky: {
       bg: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-      activeBorder: 'border-sky-500/40 bg-sky-500/10 ring-1 ring-sky-500/20 shadow-md shadow-sky-900/10',
+      activeBorder:
+        'border-sky-500/40 bg-sky-500/10 ring-1 ring-sky-500/20 shadow-md shadow-sky-900/10',
     },
     green: {
       bg: 'bg-green-500/10 text-green-400 border-green-500/20',
-      activeBorder: 'border-green-500/40 bg-green-500/10 ring-1 ring-green-500/20 shadow-md shadow-green-900/10',
+      activeBorder:
+        'border-green-500/40 bg-green-500/10 ring-1 ring-green-500/20 shadow-md shadow-green-900/10',
     },
     yellow: {
       bg: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-      activeBorder: 'border-yellow-500/40 bg-yellow-500/10 ring-1 ring-yellow-500/20 shadow-md shadow-yellow-900/10',
+      activeBorder:
+        'border-yellow-500/40 bg-yellow-500/10 ring-1 ring-yellow-500/20 shadow-md shadow-yellow-900/10',
     },
   };
 
@@ -93,8 +105,12 @@ function StatCard({ icon: Icon, label, value, accent = 'blue', active, onClick }
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0">
-        <div className="text-xs text-gray-400 font-medium tracking-wide uppercase">{label}</div>
-        <div className="mt-0.5 text-2xl font-black text-white tabular-nums">{value}</div>
+        <div className="text-xs font-medium tracking-wide text-gray-400 uppercase">
+          {label}
+        </div>
+        <div className="mt-0.5 text-2xl font-black text-white tabular-nums">
+          {value}
+        </div>
       </div>
     </button>
   );
@@ -114,7 +130,7 @@ function BulkActionBar({
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center gap-2">
-        <SquareCheck className="h-4 w-4 text-amber-400 animate-pulse" />
+        <SquareCheck className="h-4 w-4 animate-pulse text-amber-400" />
         <span className="text-sm font-semibold text-amber-300">
           {selectedCount} selected
         </span>
@@ -143,7 +159,7 @@ function BulkActionBar({
         </button>
         {deleteConfirm ? (
           <>
-            <span className="text-xs text-rose-300 font-semibold">
+            <span className="text-xs font-semibold text-rose-300">
               Delete {selectedCount}?
             </span>
             <button
@@ -240,10 +256,16 @@ function SubmissionRow({
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 12 },
-        show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 25 } },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: { type: 'spring', stiffness: 260, damping: 25 },
+        },
       }}
       className={`group relative flex items-start gap-4 rounded-2xl border bg-slate-950/20 px-4 py-4 transition-all duration-300 hover:border-white/12 hover:bg-slate-900/40 sm:items-center ${
-        selected ? 'border-amber-500/30 bg-amber-500/[0.02]' : 'border-white/[0.06]'
+        selected
+          ? 'border-amber-500/30 bg-amber-500/[0.02]'
+          : 'border-white/[0.06]'
       } ${sc.rowClass}`}
     >
       {/* Checkbox */}
@@ -260,7 +282,7 @@ function SubmissionRow({
 
       {/* New dot */}
       {sub.status === 'new' && (
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-400 sm:mt-0 animate-pulse shadow-md shadow-amber-500/50" />
+        <div className="mt-1.5 h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-400 shadow-md shadow-amber-500/50 sm:mt-0" />
       )}
 
       {/* Main content — clickable */}
@@ -272,7 +294,7 @@ function SubmissionRow({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-            <span className="truncate text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
+            <span className="truncate text-sm font-bold text-white transition-colors group-hover:text-amber-400">
               {sub.name}
             </span>
           </div>
@@ -296,7 +318,7 @@ function SubmissionRow({
 
         {/* Date */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[11px] text-gray-500 font-medium">
+          <span className="text-[11px] font-medium text-gray-500">
             {dateStr} · {timeStr}
           </span>
         </div>
@@ -419,7 +441,7 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
         className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
       >
         <span className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-          <Globe className="h-3.5 w-3.5 text-blue-400 animate-pulse" />
+          <Globe className="h-3.5 w-3.5 animate-pulse text-blue-400" />
           Contact Page Live Info
           <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300">
             Public
@@ -452,7 +474,7 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="border-t border-white/[0.06] bg-slate-900/10 px-5 py-5 space-y-4">
+            <div className="space-y-4 border-t border-white/[0.06] bg-slate-900/10 px-5 py-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {contactInfo?.email && (
                   <div className="flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-slate-950/20 px-3.5 py-3">
@@ -500,7 +522,7 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
                       <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
                         Address
                       </p>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-300 leading-relaxed">
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-gray-300">
                         {contactInfo.address}
                       </p>
                     </div>
@@ -509,7 +531,7 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
               </div>
 
               {(hasSocials || (faqs && faqs.length > 0)) && (
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.04]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.04] pt-3">
                   {hasSocials && (
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
@@ -536,7 +558,8 @@ function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
                     <div className="flex items-center gap-1.5">
                       <HelpCircle className="h-3 w-3 text-gray-500" />
                       <span className="text-[11px] text-gray-400">
-                        {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} published
+                        {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''}{' '}
+                        published
                       </span>
                     </div>
                   )}
@@ -739,7 +762,7 @@ export default function ContactSubmissionsClient({
           <ActionButton
             href={`/account/${role}`}
             tone="gray"
-            className="text-xs font-semibold animate-pulse"
+            className="animate-pulse text-xs font-semibold"
           >
             ← Dashboard
           </ActionButton>
@@ -791,7 +814,10 @@ export default function ContactSubmissionsClient({
           />
 
           {/* Search Glass Toolbar */}
-          <GlassCard className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between !p-2 md:!p-1.5 md:bg-transparent md:border-none md:shadow-none" padding="p-2">
+          <GlassCard
+            className="flex flex-col gap-3 !p-2 sm:flex-row sm:items-center sm:justify-between md:border-none md:bg-transparent md:!p-1.5 md:shadow-none"
+            padding="p-2"
+          >
             <div className="relative w-full sm:w-72">
               <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
@@ -799,12 +825,12 @@ export default function ContactSubmissionsClient({
                 placeholder="Search sender, email, subject..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-white/[0.06] bg-slate-950/40 py-2 pr-10 pl-10 text-xs text-gray-200 placeholder-gray-600 outline-none transition-all hover:bg-slate-950/60 focus:border-amber-500/20 focus:ring-1 focus:ring-amber-500/10"
+                className="w-full rounded-xl border border-white/[0.06] bg-slate-950/40 py-2 pr-10 pl-10 text-xs text-gray-200 placeholder-gray-600 transition-all outline-none hover:bg-slate-950/60 focus:border-amber-500/20 focus:ring-1 focus:ring-amber-500/10"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -819,7 +845,7 @@ export default function ContactSubmissionsClient({
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSelectAll}
-                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-slate-950/20 px-3 py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-slate-950/20 px-3 py-1.5 text-[11px] font-semibold text-gray-300 transition-all hover:bg-white/5 hover:text-white"
               >
                 {allFilteredSelected ? (
                   <SquareCheck className="h-3.5 w-3.5 text-amber-500" />
@@ -828,8 +854,9 @@ export default function ContactSubmissionsClient({
                 )}
                 {allFilteredSelected ? 'Deselect all' : 'Select all'}
               </button>
-              <span className="text-xs text-gray-500 font-medium">
-                {filtered.length} matching submission{filtered.length !== 1 ? 's' : ''}
+              <span className="text-xs font-medium text-gray-500">
+                {filtered.length} matching submission
+                {filtered.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -861,20 +888,24 @@ export default function ContactSubmissionsClient({
         <EmptyState
           icon={Mail}
           title={
-            activeTab === 'all' ? 'No submissions yet' :
-            activeTab === 'new' ? 'No new messages' :
-            activeTab === 'read' ? 'No read messages' :
-            activeTab === 'replied' ? 'No replied messages' :
-            'No archived messages'
+            activeTab === 'all'
+              ? 'No submissions yet'
+              : activeTab === 'new'
+                ? 'No new messages'
+                : activeTab === 'read'
+                  ? 'No read messages'
+                  : activeTab === 'replied'
+                    ? 'No replied messages'
+                    : 'No archived messages'
           }
           description={
             search
               ? 'Try adjusting your search terms or filters.'
               : activeTab === 'all'
-              ? 'All contact form messages will appear here.'
-              : activeTab === 'new'
-              ? 'All messages have been reviewed. Excellent!'
-              : 'No messages found in this status.'
+                ? 'All contact form messages will appear here.'
+                : activeTab === 'new'
+                  ? 'All messages have been reviewed. Excellent!'
+                  : 'No messages found in this status.'
           }
           accent="purple"
         />
@@ -882,7 +913,7 @@ export default function ContactSubmissionsClient({
         <motion.div
           variants={{
             hidden: { opacity: 0 },
-            show: { opacity: 1, transition: { staggerChildren: 0.05 } }
+            show: { opacity: 1, transition: { staggerChildren: 0.05 } },
           }}
           initial="hidden"
           animate="show"

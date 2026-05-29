@@ -9,8 +9,8 @@
  */
 
 import { redirect } from 'next/navigation';
-import { requireAuth } from '../_lib/auth-guard';
-import { roleDashboards } from '../_lib/roleDashboardConfig';
+import { requireAuth } from '@/app/_lib/auth/auth-guard';
+import { roleDashboards } from '@/app/_lib/config/roleDashboardConfig';
 import AccountPageClient from './_components/AccountPageClient';
 import AccountHeader from './_components/AccountHeader';
 import UserAvatar from './_components/UserAvatar';

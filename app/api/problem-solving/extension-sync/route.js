@@ -16,9 +16,9 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
 import {
   V2_TABLES,
   isV2SchemaAvailable,
@@ -30,7 +30,7 @@ import {
   recalcUserStreaks,
   updateUserTagStats,
   upsertProblemEditorial,
-} from '@/app/_lib/problem-solving-v2-helpers.js';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 // Platforms supported by browser extension
 // These are platforms where direct API doesn't work well or requires authentication
@@ -990,8 +990,7 @@ async function handleV2Sync(userId, data) {
 
     const solveUpdatePayload = {
       solve_count: (existingSolve.solve_count || 0) + 1,
-      best_time_ms:
-        bestTimeMs === Number.POSITIVE_INFINITY ? null : bestTimeMs,
+      best_time_ms: bestTimeMs === Number.POSITIVE_INFINITY ? null : bestTimeMs,
       best_memory_kb:
         bestMemoryKb === Number.POSITIVE_INFINITY ? null : bestMemoryKb,
       updated_at: new Date().toISOString(),
@@ -1286,7 +1285,8 @@ async function handleV2Sync(userId, data) {
   // Step 6: Trigger AI analysis (non-blocking)
   if (shouldRunAnalysis) {
     try {
-      const { analyzeSolution } = await import('@/app/_lib/solution-analyzer');
+      const { analyzeSolution } =
+        await import('@/app/_lib/services/solution-analyzer');
 
       analyzeSolution(newSolution.id, {
         problem_name: problemName,
@@ -1296,7 +1296,10 @@ async function handleV2Sync(userId, data) {
         platform,
         tags,
       }).catch((analysisError) => {
-        console.warn('[EXTENSION-SYNC] Analysis failed:', analysisError.message);
+        console.warn(
+          '[EXTENSION-SYNC] Analysis failed:',
+          analysisError.message
+        );
       });
     } catch (analyzerError) {
       console.warn(
@@ -1761,7 +1764,8 @@ async function handleLegacySync(userId, data) {
 
   // Step 6: Trigger AI analysis
   try {
-    const { analyzeSolution } = await import('@/app/_lib/solution-analyzer');
+    const { analyzeSolution } =
+      await import('@/app/_lib/services/solution-analyzer');
 
     analyzeSolution(newSolution.id, {
       problem_name: problemName,

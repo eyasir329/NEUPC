@@ -1,3 +1,8 @@
+/**
+ * @file Navbar component
+ * @module Navbar
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -11,8 +16,8 @@ import {
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown, LogOut } from 'lucide-react';
 import Image from 'next/image';
-import { cn, driveImageUrl } from '@/app/_lib/utils';
-import { signOutAction } from '@/app/_lib/actions';
+import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
+import { signOutAction } from '@/app/_lib/actions/actions';
 
 const NAV_CONFIG = {
   links: [

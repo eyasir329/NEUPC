@@ -42,9 +42,9 @@ import {
   createBlogAction,
   updateBlogAction,
   uploadBlogImageAction,
-} from '@/app/_lib/blog-actions';
+} from '@/app/_lib/actions/blog-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // ─── Segmented select ─────────────────────────────────────────────────────────
 

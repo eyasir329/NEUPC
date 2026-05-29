@@ -21,7 +21,10 @@ import {
   CheckCircle2,
   ExternalLink,
 } from 'lucide-react';
-import { updateLesson, validateDriveVideo } from '@/app/_lib/bootcamp-actions';
+import {
+  updateLesson,
+  validateDriveVideo,
+} from '@/app/_lib/actions/bootcamp-actions';
 import {
   VIDEO_SOURCES,
   getVideoSourceConfig,
@@ -434,10 +437,12 @@ export default function LessonFormModal({ lesson, onClose, onSaved }) {
               <label className="mb-1.5 block text-xs font-medium text-gray-400">
                 Lesson Content Blocks (Optional)
               </label>
-              <div className="rounded-xl overflow-hidden">
+              <div className="overflow-hidden rounded-xl">
                 <MultiBlockEditor
                   value={formData.content}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, content: val }))}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, content: val }))
+                  }
                 />
               </div>
               <p className="mt-1 text-[10px] text-gray-600">

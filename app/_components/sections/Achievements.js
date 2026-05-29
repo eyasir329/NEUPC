@@ -1,3 +1,8 @@
+/**
+ * @file Achievements component
+ * @module Achievements
+ */
+
 'use client';
 
 import Image from 'next/image';
@@ -5,7 +10,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -106,7 +111,7 @@ function Achievements({
   return (
     <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
       {/* Top divider */}
-      <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-neon-lime/20 to-transparent" />
+      <div className="via-neon-lime/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent to-transparent" />
 
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
@@ -158,7 +163,7 @@ function Achievements({
                 {/* Image */}
                 <div className="w-full max-w-xs sm:max-w-sm lg:w-5/12 lg:max-w-none">
                   <div className="relative">
-                    <div className="aspect-square overflow-hidden rounded-2xl border border-neon-lime/15 bg-[#020307] p-2 sm:p-3">
+                    <div className="border-neon-lime/15 aspect-square overflow-hidden rounded-2xl border bg-[#020307] p-2 sm:p-3">
                       {current.featured_photo?.url ? (
                         <div className="relative h-full w-full overflow-hidden rounded-xl">
                           <Image
@@ -231,9 +236,9 @@ function Achievements({
                         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                       </svg>
                     </div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-neon-violet/20 bg-[#0c0e16] sm:h-14 sm:w-14">
+                    <div className="border-neon-violet/20 flex h-11 w-11 items-center justify-center rounded-full border bg-[#0c0e16] sm:h-14 sm:w-14">
                       <svg
-                        className="h-5 w-5 text-neon-violet sm:h-6 sm:w-6"
+                        className="text-neon-violet h-5 w-5 sm:h-6 sm:w-6"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -256,7 +261,7 @@ function Achievements({
               <div className="mt-6 flex items-center justify-between sm:mt-8">
                 <button
                   onClick={handlePrev}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:outline-none sm:h-11 sm:w-11"
+                  className="hover:border-neon-lime hover:text-neon-lime focus-visible:ring-neon-lime flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all focus-visible:ring-2 focus-visible:outline-none sm:h-11 sm:w-11"
                   aria-label="Previous achievement"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -270,7 +275,7 @@ function Achievements({
                       className={cn(
                         'h-2 rounded-full transition-all duration-300 focus-visible:outline-none',
                         i === currentIndex
-                          ? 'w-6 bg-neon-lime'
+                          ? 'bg-neon-lime w-6'
                           : 'w-2 bg-white/20 hover:bg-white/30'
                       )}
                       aria-label={`Go to achievement ${i + 1}`}
@@ -280,7 +285,7 @@ function Achievements({
 
                 <button
                   onClick={handleNext}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:outline-none sm:h-11 sm:w-11"
+                  className="hover:border-neon-lime hover:text-neon-lime focus-visible:ring-neon-lime flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all focus-visible:ring-2 focus-visible:outline-none sm:h-11 sm:w-11"
                   aria-label="Next achievement"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -354,7 +359,7 @@ function Achievements({
           >
             <Link
               href="/achievements"
-              className="font-heading focus-visible:ring-neon-lime inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
+              className="font-heading focus-visible:ring-neon-lime hover:border-neon-lime hover:text-neon-lime inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               {settings?.homepage_achievements_cta || 'View All Achievements'}
               <svg

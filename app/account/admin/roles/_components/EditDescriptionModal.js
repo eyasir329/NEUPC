@@ -8,7 +8,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { X, Shield, Loader2, Check } from 'lucide-react';
-import { updateRoleDescriptionAction } from '@/app/_lib/role-actions';
+import { updateRoleDescriptionAction } from '@/app/_lib/actions/role-actions';
 import { getRoleConfig } from './roleConfig';
 
 export default function EditDescriptionModal({ role, onClose, onSaved }) {

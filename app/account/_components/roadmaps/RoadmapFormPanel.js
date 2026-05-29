@@ -54,10 +54,13 @@ import {
   generateRoadmapTextAction,
   uploadRoadmapImageAction,
   deleteRoadmapImageAction,
-} from '@/app/_lib/roadmap-actions';
-import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/image-gen';
-import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
-import { driveImageUrl } from '@/app/_lib/utils';
+} from '@/app/_lib/actions/roadmap-actions';
+import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/integrations/image-gen';
+import {
+  TEXT_MODELS,
+  DEFAULT_TEXT_MODEL,
+} from '@/app/_lib/integrations/text-gen';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';

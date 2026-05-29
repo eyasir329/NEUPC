@@ -90,7 +90,7 @@ export default function AccountNotFoundState({
           Think this is an error?{' '}
           <Link
             href="/contact"
-            className="text-white/65 underline underline-offset-2 decoration-white/20 transition hover:text-white hover:decoration-white/50"
+            className="text-white/65 underline decoration-white/20 underline-offset-2 transition hover:text-white hover:decoration-white/50"
           >
             Contact support
           </Link>

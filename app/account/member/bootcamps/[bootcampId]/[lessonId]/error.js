@@ -6,7 +6,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import AccountError from '../../../../_components/AccountError';
+import AccountError from '@/app/account/_components/AccountError';
 
 export default function LessonError({ error, reset }) {
   const params = useParams();

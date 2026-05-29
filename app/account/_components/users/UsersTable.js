@@ -102,7 +102,6 @@ export default function UsersTable({
     { label: '', cls: 'min-w-[110px]' },
   ];
 
-
   return (
     <div className="space-y-2">
       <div className="relative z-10 overflow-hidden rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm">
@@ -137,7 +136,11 @@ export default function UsersTable({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
-                          <Avatar name={user.name} size="sm" src={user.avatar} />
+                          <Avatar
+                            name={user.name}
+                            size="sm"
+                            src={user.avatar}
+                          />
                           {user.isOnline && (
                             <span
                               className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-gray-900"
@@ -373,5 +376,3 @@ export default function UsersTable({
     </div>
   );
 }
-
-

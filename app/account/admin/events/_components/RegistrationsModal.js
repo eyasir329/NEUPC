@@ -1,3 +1,8 @@
+/**
+ * @file Registrations modal component
+ * @module RegistrationsModal
+ */
+
 'use client';
 
 import RegistrationsModal from '@/app/account/_components/events/RegistrationsModal';
@@ -17,16 +22,26 @@ async function adminUpdateStatus(id, status, registrations, setRegistrations) {
 export default function AdminRegistrationsModal({ event, onClose }) {
   const fetchUrl = `/api/admin/events/${event.id}/registrations`;
 
-  async function handleUpdateStatus(id, status, registrations, setRegistrations) {
-    const res = await fetch(`/api/admin/events/${event.id}/registrations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+  async function handleUpdateStatus(
+    id,
+    status,
+    registrations,
+    setRegistrations
+  ) {
+    const res = await fetch(
+      `/api/admin/events/${event.id}/registrations/${id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      }
+    );
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? 'Failed to update.');
     setRegistrations((prev) =>
-      prev.map((r) => r.id === id ? { ...r, status: data.status, attended: data.attended } : r)
+      prev.map((r) =>
+        r.id === id ? { ...r, status: data.status, attended: data.attended } : r
+      )
     );
   }
 

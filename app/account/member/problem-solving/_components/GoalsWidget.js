@@ -1,3 +1,8 @@
+/**
+ * @file Goals widget component
+ * @module GoalsWidget
+ */
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -122,8 +127,8 @@ export default function GoalsWidget({ problems = [] }) {
           <div
             className={`h-full transition-all duration-500 ${
               isComplete
-                ? 'bg-gradient-to-r from-green-500 to-emerald-400'
-                : `bg-gradient-to-r ${color === 'text-amber-400' ? 'from-amber-500 to-yellow-400' : color === 'text-blue-400' ? 'from-blue-500 to-cyan-400' : 'from-purple-500 to-pink-400'}`
+                ? 'bg-linear-to-r from-green-500 to-emerald-400'
+                : `bg-linear-to-r ${color === 'text-amber-400' ? 'from-amber-500 to-yellow-400' : color === 'text-blue-400' ? 'from-blue-500 to-cyan-400' : 'from-purple-500 to-pink-400'}`
             }`}
             style={{ width: `${percentage}%` }}
           />
@@ -243,7 +248,7 @@ export default function GoalsWidget({ problems = [] }) {
       <div
         className={`rounded-xl border p-4 ${
           allComplete
-            ? 'border-green-500/30 bg-gradient-to-br from-green-900/20 to-emerald-900/20'
+            ? 'border-green-500/30 bg-linear-to-br from-green-900/20 to-emerald-900/20'
             : 'border-gray-700 bg-gray-800/50'
         }`}
       >

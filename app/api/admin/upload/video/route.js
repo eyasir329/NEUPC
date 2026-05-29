@@ -32,13 +32,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
 import {
   uploadVideo,
   isValidVideoType,
   isValidFileSize,
-} from '@/app/_lib/bootcamp-upload';
+} from '@/app/_lib/services/bootcamp-upload';
 
 const MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
 const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks

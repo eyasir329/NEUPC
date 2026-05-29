@@ -45,7 +45,7 @@ import {
   exportNoticesAction,
   exportActivityLogsAction,
   exportResourcesAction,
-} from '@/app/_lib/export-actions';
+} from '@/app/_lib/actions/export-actions';
 
 // ─── CSV Helpers ─────────────────────────────────────────────────────────────
 

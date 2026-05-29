@@ -6,12 +6,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import {
   V2_TABLES,
   isV2SchemaAvailable,
-} from '@/app/_lib/problem-solving-v2-helpers';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 export async function GET(request) {
   try {

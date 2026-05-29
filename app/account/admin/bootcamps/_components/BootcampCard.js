@@ -1,3 +1,8 @@
+/**
+ * @file Bootcamp card component
+ * @module BootcampCard
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -37,8 +42,7 @@ export default function BootcampCard({
   const price = formatPrice(bootcamp.price);
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#0c0e16] shadow-xl transition-all duration-300 hover:border-violet-500/30 hover:shadow-[0_8px_40px_rgba(124,92,255,0.15)] hover:-translate-y-0.5">
-
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#0c0e16] shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-500/30 hover:shadow-[0_8px_40px_rgba(124,92,255,0.15)]">
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-[#090b12]">
         {bootcamp.thumbnail ? (
@@ -48,11 +52,13 @@ export default function BootcampCard({
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-900/30 via-[#0a0c14] to-indigo-900/20">
+          <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-violet-900/30 via-[#0a0c14] to-indigo-900/20">
             {/* Subtle grid pattern */}
-            <div className="absolute inset-0 opacity-20"
+            <div
+              className="absolute inset-0 opacity-20"
               style={{
-                backgroundImage: 'linear-gradient(rgba(124,92,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,255,0.15) 1px, transparent 1px)',
+                backgroundImage:
+                  'linear-gradient(rgba(124,92,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,255,0.15) 1px, transparent 1px)',
                 backgroundSize: '24px 24px',
               }}
             />
@@ -61,12 +67,16 @@ export default function BootcampCard({
         )}
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e16] via-transparent to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#0c0e16] via-transparent to-transparent opacity-80" />
 
         {/* Status badge */}
         <div className="absolute top-3 left-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-lg backdrop-blur-md ${sc.badge}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${sc.dot} ${bootcamp.status === 'published' ? 'animate-pulse' : ''}`} />
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-lg backdrop-blur-md ${sc.badge}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${sc.dot} ${bootcamp.status === 'published' ? 'animate-pulse' : ''}`}
+            />
             {sc.label}
           </span>
         </div>
@@ -74,7 +84,7 @@ export default function BootcampCard({
         {/* Featured badge */}
         {bootcamp.is_featured && (
           <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-300 shadow-lg backdrop-blur-md ring-1 ring-amber-500/30">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-300 shadow-lg ring-1 ring-amber-500/30 backdrop-blur-md">
               <Star className="h-2.5 w-2.5 fill-current" />
               Featured
             </span>
@@ -82,8 +92,8 @@ export default function BootcampCard({
         )}
 
         {/* Price tag */}
-        <div className="absolute bottom-3 right-3">
-          <span className="rounded-lg bg-black/70 px-2 py-0.5 text-xs font-bold text-white backdrop-blur-sm ring-1 ring-white/10">
+        <div className="absolute right-3 bottom-3">
+          <span className="rounded-lg bg-black/70 px-2 py-0.5 text-xs font-bold text-white ring-1 ring-white/10 backdrop-blur-sm">
             {price}
           </span>
         </div>
@@ -91,8 +101,7 @@ export default function BootcampCard({
 
       {/* Content */}
       <div className="flex flex-1 flex-col p-4">
-
-        <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white/95 group-hover:text-white transition-colors">
+        <h3 className="line-clamp-2 text-sm leading-snug font-bold text-white/95 transition-colors group-hover:text-white">
           {bootcamp.title}
         </h3>
 
@@ -112,16 +121,22 @@ export default function BootcampCard({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-md bg-blue-500/8 px-2 py-1 text-[11px] text-blue-300/70">
             <Users className="h-3 w-3" />
-            <span className="tabular-nums font-medium">{bootcamp.enrollment_count ?? 0}</span>
+            <span className="font-medium tabular-nums">
+              {bootcamp.enrollment_count ?? 0}
+            </span>
           </div>
           <div className="flex items-center gap-1 rounded-md bg-emerald-500/8 px-2 py-1 text-[11px] text-emerald-300/70">
             <BookOpen className="h-3 w-3" />
-            <span className="tabular-nums font-medium">{bootcamp.total_lessons ?? 0}</span>
+            <span className="font-medium tabular-nums">
+              {bootcamp.total_lessons ?? 0}
+            </span>
           </div>
           {bootcamp.total_duration > 0 && (
             <div className="flex items-center gap-1 rounded-md bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/70">
               <Clock className="h-3 w-3" />
-              <span className="font-medium">{formatDuration(bootcamp.total_duration)}</span>
+              <span className="font-medium">
+                {formatDuration(bootcamp.total_duration)}
+              </span>
             </div>
           )}
         </div>
@@ -144,7 +159,9 @@ export default function BootcampCard({
                 }`}
                 title={bootcamp.is_featured ? 'Unfeature' : 'Feature'}
               >
-                <Star className={`h-3.5 w-3.5 ${bootcamp.is_featured ? 'fill-current' : ''}`} />
+                <Star
+                  className={`h-3.5 w-3.5 ${bootcamp.is_featured ? 'fill-current' : ''}`}
+                />
               </button>
 
               {bootcamp.status === 'published' && (
@@ -174,7 +191,7 @@ export default function BootcampCard({
 
               <Link
                 href={editUrl}
-                className="flex h-7 items-center justify-center gap-1 rounded-lg px-2 text-gray-500 transition-all hover:bg-violet-500/15 hover:text-violet-400 text-[11px] font-medium ml-1"
+                className="ml-1 flex h-7 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-gray-500 transition-all hover:bg-violet-500/15 hover:text-violet-400"
                 title="Edit & Curriculum"
               >
                 <Edit3 className="h-3.5 w-3.5" />

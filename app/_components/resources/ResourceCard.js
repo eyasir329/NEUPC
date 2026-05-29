@@ -1,3 +1,8 @@
+/**
+ * @file Resource card component
+ * @module ResourceCard
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -19,7 +24,7 @@ import {
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 import { safeExternalHref } from '@/app/_lib/resources/embed-utils';
-import { driveImageUrl, getInitials } from '@/app/_lib/utils';
+import { driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
 
 // ─── Type config ─────────────────────────────────────────────────────────────
 
@@ -86,7 +91,11 @@ const FALLBACK_CONFIG = {
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(dateStr));
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(dateStr));
   } catch {
     return null;
   }
@@ -121,8 +130,9 @@ function getExternalUrl(resource) {
   return (
     safeExternalHref(resource?.embed_url) ||
     safeExternalHref(resource?.file_url) ||
-    safeExternalHref(resource?.url)
-  ) || null;
+    safeExternalHref(resource?.url) ||
+    null
+  );
 }
 
 function getCoverSrc(resource) {
@@ -135,7 +145,8 @@ function getCoverSrc(resource) {
     if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
   }
   const extUrl = getExternalUrl(resource);
-  if (extUrl) return `https://image.thum.io/get/width/800/crop/400/noanimate/${encodeURI(extUrl.split('#')[0])}`;
+  if (extUrl)
+    return `https://image.thum.io/get/width/800/crop/400/noanimate/${encodeURI(extUrl.split('#')[0])}`;
   return null;
 }
 
@@ -173,7 +184,10 @@ export default function ResourceCard({
 
   const handleOpen = () => canOpen && onOpen(resource);
   const handleKey = (e) => {
-    if (canOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleOpen(); }
+    if (canOpen && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      handleOpen();
+    }
   };
 
   return (
@@ -181,14 +195,12 @@ export default function ResourceCard({
       layout
       variants={{
         hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 }
+        visible: { opacity: 1, y: 0 },
       }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -4 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`group relative flex flex-col rounded-[20px] border border-white/[0.05] bg-[#12141a]/80 backdrop-blur-xl transition-all duration-300
-        hover:border-white/[0.12] hover:bg-[#161820] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]
-        ${canOpen ? 'cursor-pointer' : ''}`}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className={`group relative flex flex-col rounded-[20px] border border-white/[0.05] bg-[#12141a]/80 backdrop-blur-xl transition-all duration-300 hover:border-white/[0.12] hover:bg-[#161820] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${canOpen ? 'cursor-pointer' : ''}`}
       onClick={handleOpen}
       onKeyDown={handleKey}
       role={canOpen ? 'button' : undefined}
@@ -196,7 +208,9 @@ export default function ResourceCard({
       aria-label={canOpen ? `Open ${resource.title}` : undefined}
     >
       {/* ── Cover area ── */}
-      <div className={`relative w-full overflow-hidden rounded-t-[20px] ${hasCover ? 'h-[170px]' : 'h-[100px]'}`}>
+      <div
+        className={`relative w-full overflow-hidden rounded-t-[20px] ${hasCover ? 'h-[170px]' : 'h-[100px]'}`}
+      >
         {hasCover ? (
           <>
             <Image
@@ -209,21 +223,23 @@ export default function ResourceCard({
               unoptimized={isUnoptimized(coverSrc)}
             />
             {/* scrim */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#12141a] via-[#12141a]/20 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-[#12141a] via-[#12141a]/20 to-transparent" />
             {/* play overlay */}
             {playable && canOpen && (
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-2xl transition-transform group-hover:scale-110">
-                  <Play className="h-5 w-5 text-white fill-white ml-1" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-white/20 shadow-2xl backdrop-blur-md transition-transform group-hover:scale-110">
+                  <Play className="ml-1 h-5 w-5 fill-white text-white" />
                 </div>
               </div>
             )}
           </>
         ) : (
           /* icon gradient placeholder */
-          <div className={`h-full w-full bg-gradient-to-br ${cfg.gradient} bg-[#12141a]`}>
+          <div
+            className={`h-full w-full bg-linear-to-br ${cfg.gradient} bg-[#12141a]`}
+          >
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
-            <div className="flex h-full items-center justify-center relative z-10">
+            <div className="relative z-10 flex h-full items-center justify-center">
               <TypeIcon className="h-8 w-8 text-white/20" />
             </div>
           </div>
@@ -232,11 +248,13 @@ export default function ResourceCard({
         {/* badges top-right */}
         <div className="absolute top-3 right-3 flex items-center gap-2">
           {resource.is_pinned && (
-            <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-black/40 px-2.5 py-1 text-[9.5px] font-bold tracking-wider text-amber-300 backdrop-blur-md shadow-lg">
+            <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-black/40 px-2.5 py-1 text-[9.5px] font-bold tracking-wider text-amber-300 shadow-lg backdrop-blur-md">
               <Pin className="h-2.5 w-2.5" /> PINNED
             </span>
           )}
-          <span className={`rounded-full border px-3 py-1 text-[9.5px] font-bold tracking-wider uppercase backdrop-blur-md shadow-lg ${hasCover ? 'bg-black/40 ' + cfg.accent.replace('bg-', 'border-').split(' ')[0] + ' text-white/90' : cfg.accent}`}>
+          <span
+            className={`rounded-full border px-3 py-1 text-[9.5px] font-bold tracking-wider uppercase shadow-lg backdrop-blur-md ${hasCover ? 'bg-black/40 ' + cfg.accent.replace('bg-', 'border-').split(' ')[0] + ' text-white/90' : cfg.accent}`}
+          >
             {typeLabel}
           </span>
         </div>
@@ -244,16 +262,22 @@ export default function ResourceCard({
         {/* bookmark button */}
         {!showAdminActions && onToggleBookmark && (
           <button
-            onClick={(e) => { e.stopPropagation(); onToggleBookmark(resource.id); }}
-            className={`absolute top-3 left-3 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-200 focus:outline-none shadow-lg
-              ${bookmarked
-                ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 opacity-100 scale-100'
-                : 'border-white/20 bg-black/40 text-white/50 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 hover:border-amber-500/40 hover:bg-amber-500/20 hover:text-amber-300'
-              }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleBookmark(resource.id);
+            }}
+            className={`absolute top-3 left-3 flex h-8 w-8 items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all duration-200 focus:outline-none ${
+              bookmarked
+                ? 'scale-100 border-amber-500/50 bg-amber-500/20 text-amber-300 opacity-100'
+                : 'scale-95 border-white/20 bg-black/40 text-white/50 opacity-0 group-hover:scale-100 group-hover:opacity-100 hover:border-amber-500/40 hover:bg-amber-500/20 hover:text-amber-300'
+            }`}
             aria-label={bookmarked ? `Remove bookmark` : `Bookmark`}
             aria-pressed={bookmarked}
           >
-            <Star className="h-3.5 w-3.5" fill={bookmarked ? 'currentColor' : 'none'} />
+            <Star
+              className="h-3.5 w-3.5"
+              fill={bookmarked ? 'currentColor' : 'none'}
+            />
           </button>
         )}
       </div>
@@ -262,17 +286,23 @@ export default function ResourceCard({
       <div className="flex flex-1 flex-col gap-2.5 p-5 pt-4">
         {/* admin actions row */}
         {showAdminActions && (
-          <div className="flex items-center justify-end gap-1.5 -mt-2 mb-1">
+          <div className="-mt-2 mb-1 flex items-center justify-end gap-1.5">
             <button
-              onClick={(e) => { e.stopPropagation(); onEdit?.(resource); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(resource);
+              }}
               className="flex h-[28px] items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 text-[11px] font-medium text-white/50 transition-all hover:border-blue-500/30 hover:bg-blue-500/15 hover:text-blue-300"
               aria-label={`Edit ${resource.title}`}
             >
               <Edit3 className="h-3 w-3" /> Edit
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete?.(resource); }}
-              className="flex h-[28px] items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 text-[11px] font-medium text-red-400/80 transition-all hover:bg-red-500/15 hover:text-red-300 hover:border-red-500/30"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.(resource);
+              }}
+              className="flex h-[28px] items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 text-[11px] font-medium text-red-400/80 transition-all hover:border-red-500/30 hover:bg-red-500/15 hover:text-red-300"
               aria-label={`Delete ${resource.title}`}
             >
               <Trash2 className="h-3 w-3" />
@@ -282,28 +312,32 @@ export default function ResourceCard({
 
         {/* type dot + label (when no cover) */}
         {!hasCover && (
-          <div className="flex items-center gap-2 -mt-1">
-            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} shadow-[0_0_8px_currentColor]`} />
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-white/40">{typeLabel}</span>
+          <div className="-mt-1 flex items-center gap-2">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${cfg.dot} shadow-[0_0_8px_currentColor]`}
+            />
+            <span className="text-[11px] font-semibold tracking-wide text-white/40 uppercase">
+              {typeLabel}
+            </span>
           </div>
         )}
 
         {/* title */}
-        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-white/90 group-hover:text-white transition-colors">
+        <h3 className="line-clamp-2 text-[15px] leading-snug font-bold tracking-tight text-white/90 transition-colors group-hover:text-white">
           {resource.title}
         </h3>
 
         {/* description */}
         {resource.description && (
-          <p className="line-clamp-2 text-[13px] leading-relaxed text-white/40 group-hover:text-white/50 transition-colors">
+          <p className="line-clamp-2 text-[13px] leading-relaxed text-white/40 transition-colors group-hover:text-white/50">
             {resource.description}
           </p>
         )}
 
         {/* Creator Info */}
         {resource.creator && (
-          <div className="flex items-center gap-2 mt-1.5 mb-0.5">
-            <div className="relative h-5 w-5 rounded-full overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
+          <div className="mt-1.5 mb-0.5 flex items-center gap-2">
+            <div className="relative flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5">
               {resource.creator.avatar_url ? (
                 <img
                   src={driveImageUrl(resource.creator.avatar_url)}
@@ -317,34 +351,48 @@ export default function ResourceCard({
                 />
               ) : null}
               <div
-                className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white/70 bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30"
-                style={{ display: resource.creator.avatar_url ? 'none' : 'flex' }}
+                className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-violet-500/30 to-fuchsia-500/30 text-[8px] font-bold text-white/70"
+                style={{
+                  display: resource.creator.avatar_url ? 'none' : 'flex',
+                }}
               >
                 {getInitials(resource.creator.full_name || '?')}
               </div>
             </div>
-            <span className="text-[11px] font-medium text-white/50 group-hover:text-white/70 transition-colors truncate">
+            <span className="truncate text-[11px] font-medium text-white/50 transition-colors group-hover:text-white/70">
               {resource.creator.full_name || 'Unknown'}
             </span>
           </div>
         )}
 
         {/* footer */}
-        <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-white/[0.06]">
-          <div className="flex min-w-0 items-center gap-2 text-[11.5px] text-white/30 font-medium">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+          <div className="flex min-w-0 items-center gap-2 text-[11.5px] font-medium text-white/30">
             {resource.category?.name && (
-              <span className="truncate max-w-[120px] px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">
+              <span className="max-w-[120px] truncate rounded border border-white/[0.04] bg-white/[0.03] px-2 py-0.5">
                 {resource.category.name}
               </span>
             )}
-            {resource.category?.name && date && <span className="opacity-40">·</span>}
-            {date && <time dateTime={resource?.published_at || resource?.created_at} className="truncate">{date}</time>}
+            {resource.category?.name && date && (
+              <span className="opacity-40">·</span>
+            )}
+            {date && (
+              <time
+                dateTime={resource?.published_at || resource?.created_at}
+                className="truncate"
+              >
+                {date}
+              </time>
+            )}
           </div>
 
           {canOpen && (
             <button
-              onClick={(e) => { e.stopPropagation(); handleOpen(); }}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1 text-[11px] font-semibold text-white/40 transition-all hover:border-white/[0.2] hover:bg-white/[0.06] hover:text-white group-hover:border-white/[0.15] group-hover:text-white/80 group-hover:bg-white/[0.04]"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpen();
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1 text-[11px] font-semibold text-white/40 transition-all group-hover:border-white/[0.15] group-hover:bg-white/[0.04] group-hover:text-white/80 hover:border-white/[0.2] hover:bg-white/[0.06] hover:text-white"
             >
               Open <ExternalLink className="h-3 w-3" />
             </button>

@@ -1,7 +1,19 @@
+/**
+ * @file Quick access grid component
+ * @module QuickAccessGrid
+ */
+
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, BookOpen, BarChart3, FileText, GraduationCap, ArrowRight } from 'lucide-react';
+import {
+  Target,
+  BookOpen,
+  BarChart3,
+  FileText,
+  GraduationCap,
+  ArrowRight,
+} from 'lucide-react';
 import { GlassCard, IconChip } from '@/app/account/_components/ui';
 
 const LINKS = [
@@ -53,13 +65,20 @@ export default function QuickAccessGrid() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: i * 0.07 }}
         >
-          <GlassCard href={link.href} hover padding="p-5" className="flex flex-col gap-3 h-full">
+          <GlassCard
+            href={link.href}
+            hover
+            padding="p-5"
+            className="flex h-full flex-col gap-3"
+          >
             <IconChip icon={link.icon} accent={link.accent} />
             <div className="flex-1">
-              <h3 className="font-semibold text-white text-sm">{link.title}</h3>
+              <h3 className="text-sm font-semibold text-white">{link.title}</h3>
               <p className="mt-1 text-xs text-gray-400">{link.desc}</p>
             </div>
-            <div className={`flex items-center gap-1 text-xs font-semibold ${ARROW_TEXT[link.accent]}`}>
+            <div
+              className={`flex items-center gap-1 text-xs font-semibold ${ARROW_TEXT[link.accent]}`}
+            >
               Open <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </GlassCard>

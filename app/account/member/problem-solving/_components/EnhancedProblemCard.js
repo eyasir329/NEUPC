@@ -612,11 +612,11 @@ export default function EnhancedProblemCard({
       className="group relative"
     >
       <div
-        className={`relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br ${platformConfig.color} shadow-lg shadow-black/5 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.1] hover:shadow-xl hover:shadow-black/10`}
+        className={`relative overflow-hidden rounded-2xl border border-white/[0.06] bg-linear-to-br ${platformConfig.color} shadow-lg shadow-black/5 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.1] hover:shadow-xl hover:shadow-black/10`}
       >
         {/* Top accent line */}
         <div
-          className={`h-[2px] bg-gradient-to-r ${
+          className={`h-[2px] bg-linear-to-r ${
             problem.platform === 'codeforces'
               ? 'from-blue-500/60 via-blue-400/40'
               : problem.platform === 'atcoder'
@@ -630,7 +630,7 @@ export default function EnhancedProblemCard({
         />
 
         {/* Subtle glow effect */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/[0.02] to-transparent" />
 
         <div className="relative p-5">
           {/* ===== HEADER SECTION ===== */}
@@ -1046,7 +1046,7 @@ export default function EnhancedProblemCard({
                                         animate={{
                                           width: `${getComplexityRating(activeSolution.time_complexity)?.score || 50}%`,
                                         }}
-                                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                                        className="h-full bg-linear-to-r from-cyan-500 to-blue-500"
                                       />
                                     </div>
                                   </div>
@@ -1083,7 +1083,7 @@ export default function EnhancedProblemCard({
                                         animate={{
                                           width: `${getComplexityRating(activeSolution.space_complexity)?.score || 50}%`,
                                         }}
-                                        className="h-full bg-gradient-to-r from-violet-500 to-purple-500"
+                                        className="h-full bg-linear-to-r from-violet-500 to-purple-500"
                                       />
                                     </div>
                                   </div>
@@ -1661,7 +1661,7 @@ export default function EnhancedProblemCard({
                                                   animate={{
                                                     width: `${percentage}%`,
                                                   }}
-                                                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400"
+                                                  className="h-full bg-linear-to-r from-purple-500 to-purple-400"
                                                 />
                                               </div>
                                             </div>
@@ -1687,7 +1687,7 @@ export default function EnhancedProblemCard({
                                       >
                                         {/* Member Header */}
                                         <div className="mb-3 flex items-center gap-3">
-                                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-sm font-medium text-purple-300">
+                                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-blue-500/20 text-sm font-medium text-purple-300">
                                             {member.username?.[0]?.toUpperCase() ||
                                               '?'}
                                           </div>
@@ -1960,7 +1960,7 @@ export default function EnhancedProblemCard({
                     animate={{
                       width: `${((activeSolutionIndex + 1) / solutions.length) * 100}%`,
                     }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                    className="h-full bg-linear-to-r from-blue-500 to-cyan-500"
                   />
                 </div>
               </div>

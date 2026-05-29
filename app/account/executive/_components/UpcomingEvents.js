@@ -1,7 +1,17 @@
+/**
+ * @file Upcoming events component
+ * @module UpcomingEvents
+ */
+
 'use client';
 
 import { Calendar, Users, ArrowRight } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton, Pill } from '@/app/account/_components/ui';
+import {
+  GlassCard,
+  SectionHeader,
+  ActionButton,
+  Pill,
+} from '@/app/account/_components/ui';
 
 export default function UpcomingEvents({ upcomingEvents }) {
   return (
@@ -12,7 +22,11 @@ export default function UpcomingEvents({ upcomingEvents }) {
         subtitle="Manage event operations"
         accent="blue"
         action={
-          <ActionButton tone="primary" href="/account/executive/events/manage" icon={ArrowRight}>
+          <ActionButton
+            tone="primary"
+            href="/account/executive/events/manage"
+            icon={ArrowRight}
+          >
             View all
           </ActionButton>
         }
@@ -23,11 +37,11 @@ export default function UpcomingEvents({ upcomingEvents }) {
             key={event.id}
             className="group flex items-start justify-between gap-3 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-white/10 hover:bg-white/4"
           >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-200 truncate group-hover:text-white transition-colors">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-200 transition-colors group-hover:text-white">
                 {event.name}
               </p>
-              <div className="flex items-center gap-3 mt-1.5">
+              <div className="mt-1.5 flex items-center gap-3">
                 <span className="text-xs text-gray-500">{event.date}</span>
                 <span className="flex items-center gap-1 text-xs text-gray-500">
                   <Users className="h-3 w-3" />

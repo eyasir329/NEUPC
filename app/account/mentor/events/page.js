@@ -1,5 +1,10 @@
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getEventsWithStats } from '@/app/_lib/data-service';
+/**
+ * @file Events route page
+ * @module EventsPage
+ */
+
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getEventsWithStats } from '@/app/_lib/services/data-service';
 import MentorEventsClient from './_components/MentorEventsClient';
 
 export const metadata = { title: 'Events | Mentor | NEUPC' };

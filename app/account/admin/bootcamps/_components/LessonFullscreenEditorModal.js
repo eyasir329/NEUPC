@@ -1,12 +1,37 @@
+/**
+ * @file Lesson fullscreen editor modal component
+ * @module LessonFullscreenEditorModal
+ */
+
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { X, Clock, Play, Save, Loader2, BookOpen, ChevronRight, AlertCircle, Star, ExternalLink, Video, Code, Copy, CheckSquare, ChevronUp, ChevronDown, Trash2, Plus, Sparkles } from 'lucide-react';
+import {
+  X,
+  Clock,
+  Play,
+  Save,
+  Loader2,
+  BookOpen,
+  ChevronRight,
+  AlertCircle,
+  Star,
+  ExternalLink,
+  Video,
+  Code,
+  Copy,
+  CheckSquare,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import VideoPlayer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/VideoPlayer';
 import MultiBlockEditor from './MultiBlockEditor';
 import { marked } from 'marked';
-import { generatePracticeProblemsAction } from '@/app/_lib/bootcamp-actions';
+import { generatePracticeProblemsAction } from '@/app/_lib/actions/bootcamp-actions';
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '0:00';
@@ -54,50 +79,56 @@ export default function LessonFullscreenEditorModal({
   const contentHasPractice = useMemo(() => {
     if (!previewContent) return false;
     try {
-      const parsed = typeof previewContent === 'string' ? JSON.parse(previewContent) : previewContent;
-      return Array.isArray(parsed) && parsed.some(b => b.type === 'practice');
-    } catch { return false; }
+      const parsed =
+        typeof previewContent === 'string'
+          ? JSON.parse(previewContent)
+          : previewContent;
+      return Array.isArray(parsed) && parsed.some((b) => b.type === 'practice');
+    } catch {
+      return false;
+    }
   }, [previewContent]);
 
-
-
-  const handleContentChangeWithPreview = useCallback((val) => {
-    handleContentChange(val);
-    setPreviewContent(val);
-  }, [handleContentChange]);
+  const handleContentChangeWithPreview = useCallback(
+    (val) => {
+      handleContentChange(val);
+      setPreviewContent(val);
+    },
+    [handleContentChange]
+  );
 
   const handleClose = () => {
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-100 flex flex-col bg-[#080b11] overflow-hidden">
+    <div className="fixed inset-0 z-100 flex flex-col overflow-hidden bg-[#080b11]">
       {/* Header */}
-      <div className="shrink-0 z-50 flex items-center justify-between border-b border-white/10 bg-[#0d1117] px-4 py-3 sm:px-6 sm:py-4 shadow-md">
+      <div className="z-50 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0d1117] px-4 py-3 shadow-md sm:px-6 sm:py-4">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={handleClose}
-            className="group flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white"
+            className="group flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white sm:h-10 sm:w-10"
           >
-            <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:scale-110" />
+            <X className="h-4 w-4 transition-transform group-hover:scale-110 sm:h-5 sm:w-5" />
           </button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-400 border border-blue-500/20">
+              <span className="rounded-md border border-blue-500/20 bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-400 uppercase">
                 Fullscreen Mode
               </span>
-              <span className="text-sm font-semibold text-white hidden sm:inline">
+              <span className="hidden text-sm font-semibold text-white sm:inline">
                 {form.title || 'Untitled Lesson'}
               </span>
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2 rounded-xl border border-white/10 text-gray-300 text-sm font-semibold hover:bg-white/5 transition-colors"
+            className="rounded-xl border border-white/10 px-5 py-2 text-sm font-semibold text-gray-300 transition-colors hover:bg-white/5"
           >
             Exit Fullscreen
           </button>
@@ -105,30 +136,33 @@ export default function LessonFullscreenEditorModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-violet-500/20"
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-colors hover:bg-violet-500 disabled:opacity-50"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Save Changes
           </button>
         </div>
       </div>
 
       {/* Main split view */}
-      <div className="flex-1 flex overflow-hidden">
-        
+      <div className="flex flex-1 overflow-hidden">
         {/* Leftmost Side: Syllabus */}
-        <div className="w-80 lg:w-96 xl:w-md 2xl:w-lg shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
+        <div className="custom-scrollbar flex w-80 shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto border-r border-white/10 bg-[#010f1f] p-4 lg:w-96 lg:p-6 xl:w-md 2xl:w-lg">
           {syllabusUI}
         </div>
 
         {/* Middle Side: Editor */}
-        <div className="flex-3 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
+        <div className="custom-scrollbar min-w-0 flex-3 overflow-x-hidden overflow-y-auto border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8">
+          <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-20">
             {/* Header card */}
-            <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-4">
+            <div className="flex flex-col gap-4 rounded-xl border border-[#464554] bg-[#010f1f] p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+                <div className="min-w-0 flex-1">
+                  <label className="mb-1 block text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
                     Lesson Title
                   </label>
                   <input
@@ -136,80 +170,92 @@ export default function LessonFullscreenEditorModal({
                     name="title"
                     value={form.title}
                     onChange={handleChange}
-                    className={`w-full text-2xl font-bold text-[#d4e4fa] bg-transparent border-0 border-b-2 focus:ring-0 px-0 py-1 outline-none transition-colors ${
-                      errors.title ? 'border-red-500' : 'border-[#464554] focus:border-[#c0c1ff]'
+                    className={`w-full border-0 border-b-2 bg-transparent px-0 py-1 text-2xl font-bold text-[#d4e4fa] transition-colors outline-none focus:ring-0 ${
+                      errors.title
+                        ? 'border-red-500'
+                        : 'border-[#464554] focus:border-[#c0c1ff]'
                     }`}
                   />
                   {errors.title && (
-                    <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-400">
                       <AlertCircle className="h-3 w-3" /> {errors.title}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3 pt-6 shrink-0">
-                  <span className="text-sm text-[#908fa0] font-medium">Status:</span>
+                <div className="flex shrink-0 items-center gap-3 pt-6">
+                  <span className="text-sm font-medium text-[#908fa0]">
+                    Status:
+                  </span>
                   <div className="relative">
                     <select
                       value={form.is_published ? 'Published' : 'Draft'}
-                      onChange={(e) => set('is_published', e.target.value === 'Published')}
-                      className="appearance-none bg-[#0d1c2d] border border-[#464554] text-[#d4e4fa] text-sm font-semibold rounded-lg pl-4 pr-9 py-2 focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none cursor-pointer"
+                      onChange={(e) =>
+                        set('is_published', e.target.value === 'Published')
+                      }
+                      className="cursor-pointer appearance-none rounded-lg border border-[#464554] bg-[#0d1c2d] py-2 pr-9 pl-4 text-sm font-semibold text-[#d4e4fa] outline-none focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff]"
                     >
                       <option>Published</option>
                       <option>Draft</option>
                     </select>
-                    <ChevronRight className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#908fa0] pointer-events-none h-4 w-4 rotate-90" />
+                    <ChevronRight className="pointer-events-none absolute top-1/2 right-2.5 h-4 w-4 -translate-y-1/2 rotate-90 text-[#908fa0]" />
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-6">
                 <div>
-                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+                  <label className="mb-1 block text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
                     Duration (mins)
                   </label>
                   <input
                     type="number"
                     value={durationMins}
-                    onChange={(e) => set('duration', (parseInt(e.target.value) || 0) * 60)}
+                    onChange={(e) =>
+                      set('duration', (parseInt(e.target.value) || 0) * 60)
+                    }
                     min="0"
-                    className="w-24 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+                    className="w-24 rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff]"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+                  <label className="mb-1 block text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
                     Weight
                   </label>
                   <input
                     type="number"
                     value={form.weight ?? 1}
-                    onChange={(e) => set('weight', Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) =>
+                      set('weight', Math.max(0, parseInt(e.target.value) || 0))
+                    }
                     min="0"
                     title="Progress weight. Higher values count more toward the member's overall progress percentage."
-                    className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+                    className="w-20 rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff]"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+                  <label className="mb-1 block text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
                     Points
                   </label>
                   <input
                     type="number"
                     value={form.points ?? 10}
-                    onChange={(e) => set('points', Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) =>
+                      set('points', Math.max(0, parseInt(e.target.value) || 0))
+                    }
                     min="0"
                     title="Points / Max Score for this lesson on the leaderboard standings."
-                    className="w-20 bg-[#051424] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] outline-none"
+                    className="w-20 rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff]"
                   />
                 </div>
-                <div className="flex items-center gap-3 mt-5">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                <div className="mt-5 flex items-center gap-3">
+                  <label className="flex cursor-pointer items-center gap-2 select-none">
                     <input
                       type="checkbox"
                       checked={form.is_free_preview}
                       onChange={(e) => set('is_free_preview', e.target.checked)}
-                      className="sr-only peer"
+                      className="peer sr-only"
                     />
-                    <div className="relative w-9 h-5 rounded-full bg-[#273647] peer-checked:bg-[#8083ff]/40 transition-colors after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:bg-[#908fa0] after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-[#c0c1ff]" />
+                    <div className="relative h-5 w-9 rounded-full bg-[#273647] transition-colors peer-checked:bg-[#8083ff]/40 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-[#908fa0] after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-[#c0c1ff]" />
                     <span className="text-sm text-[#908fa0]">Free Preview</span>
                   </label>
                 </div>
@@ -217,22 +263,30 @@ export default function LessonFullscreenEditorModal({
             </div>
 
             {/* Notes / content block */}
-            <div className="bg-[#010f1f] rounded-xl border border-[#464554] relative group">
-              <div className="p-6 flex flex-col gap-4">
+            <div className="group relative rounded-xl border border-[#464554] bg-[#010f1f]">
+              <div className="flex flex-col gap-4 p-6">
                 <div className="flex items-center gap-3">
-                  <span className="bg-[#122131] text-[#d4e4fa] p-2 rounded-lg">
+                  <span className="rounded-lg bg-[#122131] p-2 text-[#d4e4fa]">
                     <BookOpen className="h-5 w-5" />
                   </span>
                   <h4 className="text-base font-semibold text-[#d4e4fa]">
-                    {form.type === 'practice' ? 'Practice Notes' : form.type === 'exam' ? 'Exam Guidelines / Prompt' : 'Lesson Notes'}
+                    {form.type === 'practice'
+                      ? 'Practice Notes'
+                      : form.type === 'exam'
+                        ? 'Exam Guidelines / Prompt'
+                        : 'Lesson Notes'}
                   </h4>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
-                    {form.type === 'practice' ? 'Practice Content Blocks' : form.type === 'exam' ? 'Exam Content Blocks' : 'Lesson Content Blocks'}
+                  <label className="mb-1 block text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
+                    {form.type === 'practice'
+                      ? 'Practice Content Blocks'
+                      : form.type === 'exam'
+                        ? 'Exam Content Blocks'
+                        : 'Lesson Content Blocks'}
                   </label>
-                  <div className="rounded-lg overflow-hidden">
+                  <div className="overflow-hidden rounded-lg">
                     <MultiBlockEditor
                       value={contentRef.current}
                       onChange={handleContentChangeWithPreview}
@@ -246,17 +300,19 @@ export default function LessonFullscreenEditorModal({
 
             {/* Practice Problems builder */}
             {form.type === 'practice' && (
-              <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-6">
+              <div className="flex flex-col gap-6 rounded-xl border border-[#464554] bg-[#010f1f] p-6">
                 <div className="flex items-center justify-between border-b border-[#464554] pb-3">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="h-5 w-5 text-violet-400" />
-                    <h4 className="text-base font-semibold text-[#d4e4fa]">Practice Problems ({form.practice_problems?.length || 0})</h4>
+                    <h4 className="text-base font-semibold text-[#d4e4fa]">
+                      Practice Problems ({form.practice_problems?.length || 0})
+                    </h4>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOpenAiProblemsImport(true)}
-                      className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/20"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Import with AI
@@ -267,18 +323,21 @@ export default function LessonFullscreenEditorModal({
                         const newProblems = [
                           ...(form.practice_problems || []),
                           {
-                            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                            id:
+                              typeof crypto !== 'undefined' && crypto.randomUUID
+                                ? crypto.randomUUID()
+                                : Math.random().toString(36).substring(2),
                             name: '',
                             source: '',
                             url: '',
                             video_url: '',
                             editorial: '',
                             solution_code: '',
-                          }
+                          },
                         ];
                         set('practice_problems', newProblems);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-500"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add Problem
@@ -286,15 +345,20 @@ export default function LessonFullscreenEditorModal({
                   </div>
                 </div>
 
-                {(!form.practice_problems || form.practice_problems.length === 0) && (
-                  <div className="text-center py-6 text-sm text-[#908fa0] italic">
-                    No practice problems added yet. Click &quot;Add Problem&quot; to start building your practice list.
+                {(!form.practice_problems ||
+                  form.practice_problems.length === 0) && (
+                  <div className="py-6 text-center text-sm text-[#908fa0] italic">
+                    No practice problems added yet. Click &quot;Add
+                    Problem&quot; to start building your practice list.
                   </div>
                 )}
 
                 <div className="space-y-6">
                   {(form.practice_problems || []).map((p, pIdx) => (
-                    <div key={p.id || pIdx} className="bg-[#051424] rounded-lg border border-[#464554] p-5 flex flex-col gap-4 relative group text-left">
+                    <div
+                      key={p.id || pIdx}
+                      className="group relative flex flex-col gap-4 rounded-lg border border-[#464554] bg-[#051424] p-5 text-left"
+                    >
                       <div className="absolute top-4 right-4 flex items-center gap-2">
                         {/* Reorder Buttons */}
                         <button
@@ -307,7 +371,7 @@ export default function LessonFullscreenEditorModal({
                             newProblems[pIdx - 1] = temp;
                             set('practice_problems', newProblems);
                           }}
-                          className="text-gray-500 hover:text-white p-1 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors cursor-pointer"
+                          className="cursor-pointer p-1 text-gray-500 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-gray-500"
                         >
                           <ChevronUp className="h-4 w-4" />
                         </button>
@@ -321,115 +385,145 @@ export default function LessonFullscreenEditorModal({
                             newProblems[pIdx + 1] = temp;
                             set('practice_problems', newProblems);
                           }}
-                          className="text-gray-500 hover:text-white p-1 disabled:opacity-30 disabled:hover:text-gray-500 transition-colors cursor-pointer"
+                          className="cursor-pointer p-1 text-gray-500 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-gray-500"
                         >
                           <ChevronDown className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            const newProblems = form.practice_problems.filter((_, idx) => idx !== pIdx);
+                            const newProblems = form.practice_problems.filter(
+                              (_, idx) => idx !== pIdx
+                            );
                             set('practice_problems', newProblems);
                           }}
-                          className="text-gray-500 hover:text-red-400 p-1 transition-colors ml-2 cursor-pointer"
+                          className="ml-2 cursor-pointer p-1 text-gray-500 transition-colors hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
                           {pIdx + 1}
                         </span>
-                        <span className="text-xs font-semibold text-[#908fa0] uppercase tracking-wider">Problem {pIdx + 1}</span>
+                        <span className="text-xs font-semibold tracking-wider text-[#908fa0] uppercase">
+                          Problem {pIdx + 1}
+                        </span>
                       </div>
 
                       {/* Name */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Problem Name *</label>
+                        <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                          Problem Name *
+                        </label>
                         <input
                           type="text"
                           required
                           value={p.name || ''}
                           onChange={(e) => {
                             const newProblems = [...form.practice_problems];
-                            newProblems[pIdx] = { ...newProblems[pIdx], name: e.target.value };
+                            newProblems[pIdx] = {
+                              ...newProblems[pIdx],
+                              name: e.target.value,
+                            };
                             set('practice_problems', newProblems);
                           }}
                           placeholder="e.g. Watermelon, Two Sum, etc."
-                          className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-sm text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                          className="w-full rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
                         />
                       </div>
 
                       {/* Row: Source Platform, Problem Link, Video Solution Link */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         {/* Source Platform */}
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Platform</label>
+                          <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                            Platform
+                          </label>
                           <input
                             type="text"
                             value={p.source || ''}
                             onChange={(e) => {
                               const newProblems = [...form.practice_problems];
-                              newProblems[pIdx] = { ...newProblems[pIdx], source: e.target.value };
+                              newProblems[pIdx] = {
+                                ...newProblems[pIdx],
+                                source: e.target.value,
+                              };
                               set('practice_problems', newProblems);
                             }}
                             placeholder="e.g. Codeforces, LeetCode"
-                            className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                            className="w-full rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 text-xs text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
                           />
                         </div>
 
                         {/* Problem Link */}
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Problem URL / Link</label>
+                          <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                            Problem URL / Link
+                          </label>
                           <input
                             type="url"
                             value={p.url || ''}
                             onChange={(e) => {
                               const newProblems = [...form.practice_problems];
-                              newProblems[pIdx] = { ...newProblems[pIdx], url: e.target.value };
+                              newProblems[pIdx] = {
+                                ...newProblems[pIdx],
+                                url: e.target.value,
+                              };
                               set('practice_problems', newProblems);
                             }}
                             placeholder="https://..."
-                            className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                            className="w-full rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 text-xs text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
                           />
                         </div>
 
                         {/* Video Solution Link */}
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Video Solution URL</label>
+                          <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                            Video Solution URL
+                          </label>
                           <input
                             type="url"
                             value={p.video_url || ''}
                             onChange={(e) => {
                               const newProblems = [...form.practice_problems];
-                              newProblems[pIdx] = { ...newProblems[pIdx], video_url: e.target.value };
+                              newProblems[pIdx] = {
+                                ...newProblems[pIdx],
+                                video_url: e.target.value,
+                              };
                               set('practice_problems', newProblems);
                             }}
                             placeholder="https://youtube.com/..."
-                            className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] focus:border-[#c0c1ff] outline-none"
+                            className="w-full rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 text-xs text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
                           />
                         </div>
                       </div>
 
                       {/* Editorial */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Editorial / Explanation</label>
+                        <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                          Editorial / Explanation
+                        </label>
                         <textarea
                           value={p.editorial || ''}
                           onChange={(e) => {
                             const newProblems = [...form.practice_problems];
-                            newProblems[pIdx] = { ...newProblems[pIdx], editorial: e.target.value };
+                            newProblems[pIdx] = {
+                              ...newProblems[pIdx],
+                              editorial: e.target.value,
+                            };
                             set('practice_problems', newProblems);
                           }}
                           rows={4}
                           placeholder="Explain the logic, math, constraints, or step-by-step solution... (Markdown & math formulas supported)"
-                          className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-[#d4e4fa] font-sans focus:border-[#c0c1ff] outline-none resize-y"
+                          className="w-full resize-y rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 font-sans text-xs text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
                         />
                         {p.editorial && (
-                          <div className="mt-2 bg-[#05111d] border border-violet-500/10 rounded-lg p-3">
-                            <div className="text-[9px] font-extrabold text-violet-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                              <Sparkles className="h-3 w-3" /> Live Markdown & Formula Preview
+                          <div className="mt-2 rounded-lg border border-violet-500/10 bg-[#05111d] p-3">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-extrabold tracking-widest text-violet-400 uppercase">
+                              <Sparkles className="h-3 w-3" /> Live Markdown &
+                              Formula Preview
                             </div>
                             <MarkdownPreview text={p.editorial} />
                           </div>
@@ -438,17 +532,22 @@ export default function LessonFullscreenEditorModal({
 
                       {/* Solution Code */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-[#908fa0] uppercase tracking-wider block">Solution Code</label>
+                        <label className="block text-[11px] font-semibold tracking-wider text-[#908fa0] uppercase">
+                          Solution Code
+                        </label>
                         <textarea
                           value={p.solution_code || ''}
                           onChange={(e) => {
                             const newProblems = [...form.practice_problems];
-                            newProblems[pIdx] = { ...newProblems[pIdx], solution_code: e.target.value };
+                            newProblems[pIdx] = {
+                              ...newProblems[pIdx],
+                              solution_code: e.target.value,
+                            };
                             set('practice_problems', newProblems);
                           }}
                           rows={6}
                           placeholder="// Write your clean, commented C++, Python, or Java solution code here..."
-                          className="w-full bg-[#0d1c2d] border border-[#464554] rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono focus:border-[#c0c1ff] outline-none resize-y"
+                          className="w-full resize-y rounded-lg border border-[#464554] bg-[#0d1c2d] px-3 py-2 font-mono text-xs text-emerald-300 outline-none focus:border-[#c0c1ff]"
                         />
                       </div>
                     </div>
@@ -460,10 +559,10 @@ export default function LessonFullscreenEditorModal({
         </div>
 
         {/* Rightmost Side: Preview */}
-        <div className="flex-2 min-w-0 overflow-y-auto overflow-x-hidden bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-3xl mx-auto pb-20">
+        <div className="custom-scrollbar min-w-0 flex-2 overflow-x-hidden overflow-y-auto bg-[#080b11] p-6 lg:p-8">
+          <div className="mx-auto max-w-3xl pb-20">
             {/* Title */}
-            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white lg:text-3xl mb-4">
+            <h1 className="mb-4 text-2xl leading-tight font-extrabold tracking-tight text-white lg:text-3xl">
               {form.title || 'Lesson Title'}
             </h1>
             {form.duration > 0 && (
@@ -474,7 +573,7 @@ export default function LessonFullscreenEditorModal({
             )}
 
             {/* Legacy Global Video Player (if any) */}
-            {(form.video_source && form.video_source !== 'none') && (
+            {form.video_source && form.video_source !== 'none' && (
               <div className="mb-4">
                 <VideoPlayer lesson={form} />
               </div>
@@ -482,20 +581,24 @@ export default function LessonFullscreenEditorModal({
 
             {/* Content Blocks — no wrapping styles */}
             {previewContent ? (
-              <LessonContentRenderer 
-                content={previewContent} 
-                lessonId={lessonId} 
+              <LessonContentRenderer
+                content={previewContent}
+                lessonId={lessonId}
                 practiceProblemsComponent={(problems) => (
                   <PracticeProblemsPreviewCockpit problems={problems} />
                 )}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center border border-white/10 border-dashed rounded-3xl bg-white/2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 mb-4">
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/2 py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
                   <Play className="h-8 w-8 text-gray-500" />
                 </div>
-                <p className="text-gray-400 font-medium">No content added yet.</p>
-                <p className="text-xs text-gray-600 mt-1">Add text, HTML, markdown, or video blocks in the editor.</p>
+                <p className="font-medium text-gray-400">
+                  No content added yet.
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Add text, HTML, markdown, or video blocks in the editor.
+                </p>
               </div>
             )}
           </div>
@@ -503,34 +606,43 @@ export default function LessonFullscreenEditorModal({
       </div>
 
       {openAiProblemsImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#051424] border border-[#464554] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[#464554] bg-[#051424] shadow-2xl duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#464554] bg-[#010f1f]">
+            <div className="flex items-center justify-between border-b border-[#464554] bg-[#010f1f] px-6 py-4">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="h-5 w-5 text-violet-400" />
                 <div>
-                  <h3 className="text-sm font-bold text-white">AI Practice Problems Generator</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Paste raw text, URLs, sheet descriptions, or YouTube links to automatically format practice problems.</p>
+                  <h3 className="text-sm font-bold text-white">
+                    AI Practice Problems Generator
+                  </h3>
+                  <p className="mt-0.5 text-[10px] text-gray-500">
+                    Paste raw text, URLs, sheet descriptions, or YouTube links
+                    to automatically format practice problems.
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpenAiProblemsImport(false)}
-                className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+                className="cursor-pointer text-gray-400 transition-colors hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+            <div className="flex-1 space-y-4 overflow-y-auto p-6 text-left">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Raw Practice Problems Data Input</label>
-                <p className="text-[10px] text-gray-500 leading-normal">
-                  Our model will parse problem name, platform source, direct workspace link, YouTube video solution, step-by-step markdown editorials, and code templates automatically. Example input:
+                <label className="block text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                  Raw Practice Problems Data Input
+                </label>
+                <p className="text-[10px] leading-normal text-gray-500">
+                  Our model will parse problem name, platform source, direct
+                  workspace link, YouTube video solution, step-by-step markdown
+                  editorials, and code templates automatically. Example input:
                 </p>
-                <div className="bg-black/35 rounded-lg p-2.5 border border-white/5 font-mono text-[9px] text-[#908fa0] whitespace-pre">
+                <div className="rounded-lg border border-white/5 bg-black/35 p-2.5 font-mono text-[9px] whitespace-pre text-[#908fa0]">
                   {`1. Two Sum (https://leetcode.com/problems/two-sum)
 Video Solution: https://youtube.com/watch?v=WY
 Editorial: Use a hashmap to store seen values for O(n) lookup.
@@ -546,16 +658,16 @@ class Solution {
                 onChange={(e) => setAiProblemsInput(e.target.value)}
                 placeholder="Paste your unstructured practice problems text, list, or description here..."
                 rows={10}
-                className="w-full bg-[#0d1c2d] border border-[#464554] rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all resize-y min-h-[160px]"
+                className="min-h-[160px] w-full resize-y rounded-xl border border-[#464554] bg-[#0d1c2d] px-3 py-2.5 text-xs text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
               />
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-[#464554] bg-[#010f1f] flex justify-end gap-3">
+            <div className="flex justify-end gap-3 border-t border-[#464554] bg-[#010f1f] px-6 py-4">
               <button
                 type="button"
                 onClick={() => setOpenAiProblemsImport(false)}
-                className="px-4 py-2 rounded-xl border border-[#464554] text-xs font-semibold text-[#d4e4fa] hover:bg-white/5 transition-all"
+                className="rounded-xl border border-[#464554] px-4 py-2 text-xs font-semibold text-[#d4e4fa] transition-all hover:bg-white/5"
               >
                 Cancel
               </button>
@@ -565,7 +677,8 @@ class Solution {
                 onClick={async () => {
                   setGeneratingProblems(true);
                   try {
-                    const res = await generatePracticeProblemsAction(aiProblemsInput);
+                    const res =
+                      await generatePracticeProblemsAction(aiProblemsInput);
                     if (res.error) {
                       toast.error(res.error);
                       return;
@@ -573,19 +686,23 @@ class Solution {
                     if (res.success && Array.isArray(res.problems)) {
                       const mergedProblems = [
                         ...(form.practice_problems || []),
-                        ...res.problems
+                        ...res.problems,
                       ];
                       set('practice_problems', mergedProblems);
                       setOpenAiProblemsImport(false);
-                      toast.success(`Successfully parsed and added ${res.problems.length} practice problems!`);
+                      toast.success(
+                        `Successfully parsed and added ${res.problems.length} practice problems!`
+                      );
                     }
                   } catch (err) {
-                    toast.error('AI problem generation failed. Try checking your format.');
+                    toast.error(
+                      'AI problem generation failed. Try checking your format.'
+                    );
                   } finally {
                     setGeneratingProblems(false);
                   }
                 }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-xs font-bold text-white shadow-lg shadow-violet-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+                className="flex cursor-pointer items-center gap-2 rounded-xl bg-linear-to-r from-violet-600 to-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-violet-500/10 transition-all hover:from-violet-500 hover:to-indigo-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {generatingProblems ? (
                   <>
@@ -603,8 +720,6 @@ class Solution {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }
@@ -617,13 +732,16 @@ function PracticeProblemsPreviewCockpit({ problems }) {
 
   if (!problems || problems.length === 0) {
     return (
-      <div className="mt-8 relative overflow-hidden rounded-2xl border border-dashed border-teal-500/20 bg-teal-500/[0.01] p-6 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-500/5 mx-auto mb-3">
+      <div className="relative mt-8 overflow-hidden rounded-2xl border border-dashed border-teal-500/20 bg-teal-500/[0.01] p-6 text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-teal-500/5">
           <BookOpen className="h-6 w-6 text-teal-400" />
         </div>
-        <h4 className="text-sm font-bold text-white">Practice Problems Cockpit</h4>
-        <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-          No practice problems configured yet. Use the practice problem builder on the left to add your first contest or problem sheet!
+        <h4 className="text-sm font-bold text-white">
+          Practice Problems Cockpit
+        </h4>
+        <p className="mx-auto mt-1 max-w-sm text-xs text-gray-500">
+          No practice problems configured yet. Use the practice problem builder
+          on the left to add your first contest or problem sheet!
         </p>
       </div>
     );
@@ -652,53 +770,56 @@ function PracticeProblemsPreviewCockpit({ problems }) {
 
   return (
     <div className="mt-8 flex flex-col gap-5 text-left">
-      <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-gradient-to-br from-teal-500/[0.03] to-transparent p-5">
-        <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+      <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-linear-to-br from-teal-500/[0.03] to-transparent p-5">
+        <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-4">
           <div>
-            <span className="text-[10px] font-extrabold text-teal-400 tracking-wider uppercase bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-full">
+            <span className="rounded-full border border-teal-500/20 bg-teal-500/10 px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-teal-400 uppercase">
               Practice Cockpit Preview
             </span>
-            <h4 className="text-sm font-bold text-white mt-1.5">
+            <h4 className="mt-1.5 text-sm font-bold text-white">
               Practice Problems Table
             </h4>
           </div>
-          <span className="text-xs font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-full shrink-0">
+          <span className="shrink-0 rounded-full border border-teal-500/20 bg-teal-500/10 px-3 py-1.5 text-xs font-bold text-teal-300">
             {problems.length} Problems
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-white/5 bg-zinc-950/20 custom-scrollbar">
+        <div className="custom-scrollbar overflow-x-auto rounded-xl border border-white/5 bg-zinc-950/20">
           <table className="w-full border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <th className="p-3 text-center w-12">Solved</th>
-                <th className="p-3 text-center w-12">Star</th>
-                <th className="p-3 min-w-[150px]">Problem Name</th>
-                <th className="p-3 text-center w-12">Link</th>
-                <th className="p-3 text-center w-12">Editorial</th>
-                <th className="p-3 text-center w-12">Video</th>
-                <th className="p-3 text-center w-12">Code</th>
-                <th className="p-3 text-center w-20">Source</th>
+              <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                <th className="w-12 p-3 text-center">Solved</th>
+                <th className="w-12 p-3 text-center">Star</th>
+                <th className="min-w-[150px] p-3">Problem Name</th>
+                <th className="w-12 p-3 text-center">Link</th>
+                <th className="w-12 p-3 text-center">Editorial</th>
+                <th className="w-12 p-3 text-center">Video</th>
+                <th className="w-12 p-3 text-center">Code</th>
+                <th className="w-20 p-3 text-center">Source</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {problems.map((p, pIdx) => {
                 const isBookmarked = bookmarkedProblems.includes(pIdx);
-                const workspaceUrl = p.url 
-                  ? p.url 
-                  : (p.source?.startsWith('http') 
-                    ? p.source 
-                    : `https://vjudge.net/problem/${encodeURIComponent(p.source || p.name)}`);
+                const workspaceUrl = p.url
+                  ? p.url
+                  : p.source?.startsWith('http')
+                    ? p.source
+                    : `https://vjudge.net/problem/${encodeURIComponent(p.source || p.name)}`;
 
-                const videoUrl = p.video_url 
-                  ? p.video_url 
+                const videoUrl = p.video_url
+                  ? p.video_url
                   : `https://www.youtube.com/results?search_query=${encodeURIComponent(p.name + ' ' + (p.source || '') + ' solution')}`;
 
                 return (
-                  <tr key={p.id || pIdx} className="hover:bg-white/[0.01] transition-colors">
+                  <tr
+                    key={p.id || pIdx}
+                    className="transition-colors hover:bg-white/[0.01]"
+                  >
                     {/* Solved Checkbox */}
                     <td className="p-3 text-center">
-                      <div className="flex mx-auto h-4 w-4 items-center justify-center rounded border border-[#464554] bg-transparent text-gray-500" />
+                      <div className="mx-auto flex h-4 w-4 items-center justify-center rounded border border-[#464554] bg-transparent text-gray-500" />
                     </td>
 
                     {/* Bookmark Star */}
@@ -706,16 +827,18 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                       <button
                         type="button"
                         onClick={() => {
-                          setBookmarkedProblems(prev =>
-                            isBookmarked ? prev.filter(idx => idx !== pIdx) : [...prev, pIdx]
+                          setBookmarkedProblems((prev) =>
+                            isBookmarked
+                              ? prev.filter((idx) => idx !== pIdx)
+                              : [...prev, pIdx]
                           );
                         }}
-                        className="group flex items-center justify-center transition-transform hover:scale-110 active:scale-90 cursor-pointer w-6 h-6 mx-auto"
+                        className="group mx-auto flex h-6 w-6 cursor-pointer items-center justify-center transition-transform hover:scale-110 active:scale-90"
                       >
-                        <Star 
+                        <Star
                           className={`h-4 w-4 transition-colors ${
-                            isBookmarked 
-                              ? 'fill-amber-400 text-amber-400 filter drop-shadow-[0_0_2px_rgba(251,191,36,0.4)]' 
+                            isBookmarked
+                              ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_2px_rgba(251,191,36,0.4)] filter'
                               : 'text-zinc-600 group-hover:text-zinc-400'
                           }`}
                         />
@@ -728,7 +851,7 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                         href={workspaceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-semibold text-white hover:text-teal-400 hover:underline transition-colors"
+                        className="text-xs font-semibold text-white transition-colors hover:text-teal-400 hover:underline"
                       >
                         {p.name || `Problem ${pIdx + 1}`}
                       </a>
@@ -740,7 +863,7 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                         href={workspaceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center p-1.5 rounded bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/10 transition-all w-6 h-6 mx-auto"
+                        className="mx-auto flex h-6 w-6 items-center justify-center rounded border border-teal-500/10 bg-teal-500/10 p-1.5 text-teal-300 transition-all hover:bg-teal-500/20"
                         title="Open Solve Workspace"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -756,12 +879,12 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                           setSelectedProblem({ problem: p, pIdx });
                           setModalTab('editorial');
                         }}
-                        className={`flex items-center justify-center p-1.5 rounded border transition-all w-6 h-6 mx-auto cursor-pointer ${
-                          !p.editorial 
-                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
-                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        className={`mx-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded border p-1.5 transition-all ${
+                          !p.editorial
+                            ? 'cursor-not-allowed border-white/5 bg-zinc-800/20 text-gray-600 opacity-20'
+                            : 'border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] hover:text-white'
                         }`}
-                        title={p.editorial ? "View Editorial" : "No Editorial"}
+                        title={p.editorial ? 'View Editorial' : 'No Editorial'}
                       >
                         <BookOpen className="h-3.5 w-3.5" />
                       </button>
@@ -773,8 +896,12 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                         href={videoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/10 transition-all w-6 h-6 mx-auto"
-                        title={p.video_url ? "Watch Video Solution" : "Search Video Solution on YouTube"}
+                        className="mx-auto flex h-6 w-6 items-center justify-center rounded border border-red-500/10 bg-red-500/10 p-1.5 text-red-300 transition-all hover:bg-red-500/20"
+                        title={
+                          p.video_url
+                            ? 'Watch Video Solution'
+                            : 'Search Video Solution on YouTube'
+                        }
                       >
                         <Video className="h-3.5 w-3.5" />
                       </a>
@@ -789,12 +916,14 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                           setSelectedProblem({ problem: p, pIdx });
                           setModalTab('solution');
                         }}
-                        className={`flex items-center justify-center p-1.5 rounded border transition-all w-6 h-6 mx-auto cursor-pointer ${
-                          !p.solution_code 
-                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
-                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        className={`mx-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded border p-1.5 transition-all ${
+                          !p.solution_code
+                            ? 'cursor-not-allowed border-white/5 bg-zinc-800/20 text-gray-600 opacity-20'
+                            : 'border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] hover:text-white'
                         }`}
-                        title={p.solution_code ? "View Solution Code" : "No Code"}
+                        title={
+                          p.solution_code ? 'View Solution Code' : 'No Code'
+                        }
                       >
                         <Code className="h-3.5 w-3.5" />
                       </button>
@@ -802,7 +931,10 @@ function PracticeProblemsPreviewCockpit({ problems }) {
 
                     {/* Source Name Platform */}
                     <td className="p-3 text-center">
-                      <div className="text-center text-[9px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2 py-0.5 rounded truncate uppercase tracking-widest inline-block max-w-[80px]" title={p.source}>
+                      <div
+                        className="inline-block max-w-[80px] truncate rounded border border-teal-500/10 bg-[#16222f] px-2 py-0.5 text-center text-[9px] font-extrabold tracking-widest text-teal-300 uppercase"
+                        title={p.source}
+                      >
                         {getPlatformName(p.source)}
                       </div>
                     </td>
@@ -815,116 +947,121 @@ function PracticeProblemsPreviewCockpit({ problems }) {
       </div>
 
       {/* Practice Problem Solution Preview Modal */}
-      {selectedProblem && (() => {
-        const p = selectedProblem.problem;
-        const pIdx = selectedProblem.pIdx;
-        
-        return (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="bg-[#05111d] border border-teal-500/25 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[75vh] animate-in fade-in zoom-in-95 duration-200">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-[#010f1f]">
-                <div className="flex items-center gap-3">
-                  <div className="text-[10px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2.5 py-1 rounded truncate uppercase tracking-widest">
-                    {getPlatformName(p.source)}
-                  </div>
-                  <h3 className="text-sm font-bold text-white">
-                    {p.name || `Problem ${pIdx + 1}`}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedProblem(null)}
-                  className="text-gray-400 hover:text-white transition-colors cursor-pointer bg-white/5 p-1 rounded-lg border border-white/10"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+      {selectedProblem &&
+        (() => {
+          const p = selectedProblem.problem;
+          const pIdx = selectedProblem.pIdx;
 
-              {/* Tab Selector Bar */}
-              <div className="flex items-center border-b border-white/5 bg-[#020b15] px-5 py-1 gap-2">
-                {p.editorial && (
-                  <button
-                    type="button"
-                    onClick={() => setModalTab('editorial')}
-                    className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'editorial'
-                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    Editorial / Explanation
-                  </button>
-                )}
-                {p.solution_code && (
-                  <button
-                    type="button"
-                    onClick={() => setModalTab('solution')}
-                    className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'solution'
-                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <Code className="h-4 w-4" />
-                    Solution Code
-                  </button>
-                )}
-              </div>
-
-              {/* Modal Content Body */}
-              <div className="p-5 overflow-y-auto flex-1 text-left bg-zinc-950/20">
-                {modalTab === 'editorial' && p.editorial && (
-                  <div className="bg-zinc-950/30 rounded-xl p-4 border border-white/5 leading-relaxed">
-                    <div 
-                      className="md-desc prose prose-invert max-w-none text-xs text-gray-300"
-                      dangerouslySetInnerHTML={{ __html: (() => {
-                        try {
-                          return marked.parse(p.editorial, { gfm: true, breaks: true });
-                        } catch {
-                          return `<p>${p.editorial}</p>`;
-                        }
-                      })() }}
-                    />
-                  </div>
-                )}
-
-                {modalTab === 'solution' && p.solution_code && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest">
-                        Clean Code Solution
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCode(p.solution_code, pIdx)}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-gray-300 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-semibold"
-                      >
-                        {copiedIdx === pIdx ? (
-                          <>
-                            <CheckSquare className="h-3.5 w-3.5 text-emerald-400" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            Copy Code
-                          </>
-                        )}
-                      </button>
+          return (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-black/85 p-4 backdrop-blur-md">
+              <div className="animate-in fade-in zoom-in-95 flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-teal-500/25 bg-[#05111d] shadow-2xl duration-200">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between border-b border-white/5 bg-[#010f1f] px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="truncate rounded border border-teal-500/10 bg-[#16222f] px-2.5 py-1 text-[10px] font-extrabold tracking-widest text-teal-300 uppercase">
+                      {getPlatformName(p.source)}
                     </div>
-                    <pre className="overflow-x-auto text-xs font-mono text-emerald-300 bg-zinc-950 rounded-xl p-4 border border-white/5 custom-scrollbar">
-                      <code>{p.solution_code}</code>
-                    </pre>
+                    <h3 className="text-sm font-bold text-white">
+                      {p.name || `Problem ${pIdx + 1}`}
+                    </h3>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProblem(null)}
+                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-1 text-gray-400 transition-colors hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Tab Selector Bar */}
+                <div className="flex items-center gap-2 border-b border-white/5 bg-[#020b15] px-5 py-1">
+                  {p.editorial && (
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('editorial')}
+                      className={`flex cursor-pointer items-center gap-2 border-b-2 px-3 py-2 text-xs font-semibold transition-all ${
+                        modalTab === 'editorial'
+                          ? 'border-teal-400 bg-teal-500/5 text-teal-300'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Editorial / Explanation
+                    </button>
+                  )}
+                  {p.solution_code && (
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('solution')}
+                      className={`flex cursor-pointer items-center gap-2 border-b-2 px-3 py-2 text-xs font-semibold transition-all ${
+                        modalTab === 'solution'
+                          ? 'border-teal-400 bg-teal-500/5 text-teal-300'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Code className="h-4 w-4" />
+                      Solution Code
+                    </button>
+                  )}
+                </div>
+
+                {/* Modal Content Body */}
+                <div className="flex-1 overflow-y-auto bg-zinc-950/20 p-5 text-left">
+                  {modalTab === 'editorial' && p.editorial && (
+                    <div className="rounded-xl border border-white/5 bg-zinc-950/30 p-4 leading-relaxed">
+                      <div
+                        className="md-desc prose prose-invert max-w-none text-xs text-gray-300"
+                        dangerouslySetInnerHTML={{
+                          __html: (() => {
+                            try {
+                              return marked.parse(p.editorial, {
+                                gfm: true,
+                                breaks: true,
+                              });
+                            } catch {
+                              return `<p>${p.editorial}</p>`;
+                            }
+                          })(),
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {modalTab === 'solution' && p.solution_code && (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold tracking-widest text-teal-400 uppercase">
+                          Clean Code Solution
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(p.solution_code, pIdx)}
+                          className="flex cursor-pointer items-center gap-1 rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-1 text-xs font-semibold text-gray-300 transition-all hover:bg-zinc-800 hover:text-white active:scale-95"
+                        >
+                          {copiedIdx === pIdx ? (
+                            <>
+                              <CheckSquare className="h-3.5 w-3.5 text-emerald-400" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy Code
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="custom-scrollbar overflow-x-auto rounded-xl border border-white/5 bg-zinc-950 p-4 font-mono text-xs text-emerald-300">
+                        <code>{p.solution_code}</code>
+                      </pre>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }
@@ -954,8 +1091,10 @@ function MarkdownPreview({ text, className = '' }) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: MD_PREVIEW_STYLES }} />
-      <div className={`md-preview ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className={`md-preview ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </>
   );
 }
-

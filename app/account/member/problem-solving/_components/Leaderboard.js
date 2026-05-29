@@ -227,12 +227,12 @@ export default function Leaderboard({ currentUserId, compact = false }) {
   return (
     <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 shadow-lg shadow-black/5 sm:p-5">
       {/* Top accent line */}
-      <div className="absolute top-0 right-0 left-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-purple-500 to-violet-500" />
+      <div className="absolute top-0 right-0 left-0 h-[2px] rounded-t-2xl bg-linear-to-r from-purple-500 to-violet-500" />
 
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-500 shadow-lg ring-2 shadow-purple-500/20 ring-purple-400/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-purple-500 to-violet-500 shadow-lg ring-2 shadow-purple-500/20 ring-purple-400/20">
             <Users className="h-4 w-4 text-white" />
           </div>
           <div>

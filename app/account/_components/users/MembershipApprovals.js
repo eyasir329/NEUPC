@@ -86,7 +86,9 @@ export default function MembershipApprovals({
                     <p className="text-xs text-gray-600">{user.studentId}</p>
                   )}
                   {user.session && (
-                    <p className="text-xs text-gray-600">Session {user.session}</p>
+                    <p className="text-xs text-gray-600">
+                      Session {user.session}
+                    </p>
                   )}
                   {user.appliedAt && (
                     <p className="mt-1 text-xs text-gray-600">

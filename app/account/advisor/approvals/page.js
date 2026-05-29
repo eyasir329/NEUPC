@@ -6,12 +6,12 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getPendingJoinRequests,
   getPendingMemberProfiles,
   getAllBudgetEntries,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import AdvisorApprovalsClient from './_components/AdvisorApprovalsClient';
 
 export const metadata = { title: 'Approvals | Advisor | NEUPC' };

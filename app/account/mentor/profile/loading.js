@@ -5,7 +5,7 @@
  * @module MentorProfileLoading
  */
 
-import AccountLoading from '../../_components/AccountLoading';
+import AccountLoading from '@/app/account/_components/AccountLoading';
 
 export default function Loading() {
   return <AccountLoading variant="profile" title="Profile" />;

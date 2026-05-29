@@ -6,7 +6,7 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 
 export default async function MentorLayout({ children }) {
   await requireRole('mentor');

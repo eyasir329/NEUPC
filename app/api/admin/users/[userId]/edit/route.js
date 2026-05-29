@@ -4,9 +4,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
-import { updateUser } from '@/app/_lib/data-service';
-import { pickAllowedFields } from '@/app/_lib/validation';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
+import { updateUser } from '@/app/_lib/services/data-service';
+import { pickAllowedFields } from '@/app/_lib/utils/validation';
 
 /** Fields that can be updated via this endpoint. */
 const ALLOWED_USER_FIELDS = [

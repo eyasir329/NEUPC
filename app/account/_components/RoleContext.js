@@ -9,7 +9,14 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 
 const RoleContext = createContext();
 
@@ -75,9 +82,7 @@ export function RoleProvider({
     [activeRole, updateRole, userRoles]
   );
 
-  return (
-    <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
-  );
+  return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
 
 export function useRole() {

@@ -1,10 +1,15 @@
+/**
+ * @file Similar API route handler
+ * @module SimilarRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import {
   V2_TABLES,
   getPlatformId,
-} from '@/app/_lib/problem-solving-v2-helpers';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 /**
  * GET /api/problem-solving/similar?problem_id=xxx&platform=xxx

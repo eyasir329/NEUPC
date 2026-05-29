@@ -10,7 +10,7 @@ import {
   getGalleryAdmin,
   getAllEvents,
   getAllEventGalleryAdmin,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import GalleryManagementClient from '@/app/account/_components/gallery/GalleryManagementClient';
 
 /**

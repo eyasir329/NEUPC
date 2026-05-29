@@ -10,7 +10,7 @@ import { useState, useRef } from 'react';
 import {
   updateEventGalleryItemAction,
   deleteEventGalleryItemAction,
-} from '@/app/_lib/gallery-actions';
+} from '@/app/_lib/actions/gallery-actions';
 
 export default function EventGalleryItemEditModal({ item, onClose }) {
   const formRef = useRef(null);

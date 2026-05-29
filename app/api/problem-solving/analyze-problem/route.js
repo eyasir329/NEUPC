@@ -1,7 +1,12 @@
+/**
+ * @file Analyze problem API route handler
+ * @module AnalyzeProblemRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { createClient } from '@/app/_lib/supabase';
-import { generateCompletion } from '@/app/_lib/llm';
+import { auth } from '@/app/_lib/auth/auth';
+import { createClient } from '@/app/_lib/integrations/supabase';
+import { generateCompletion } from '@/app/_lib/integrations/llm';
 
 /**
  * POST /api/problem-solving/analyze-problem

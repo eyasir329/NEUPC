@@ -3,7 +3,7 @@
  * @module ui/PageHeader
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 export function PageHeader({
   eyebrow,

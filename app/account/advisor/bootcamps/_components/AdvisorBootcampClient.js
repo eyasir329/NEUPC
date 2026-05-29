@@ -14,15 +14,36 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  GraduationCap, Users, BookOpen,
-  Search, X, CheckCircle, Clock, ChevronDown,
-  Star, DollarSign, Target, Layers, UserCheck, Activity, Eye,
+  GraduationCap,
+  Users,
+  BookOpen,
+  Search,
+  X,
+  CheckCircle,
+  Clock,
+  ChevronDown,
+  Star,
+  DollarSign,
+  Target,
+  Layers,
+  UserCheck,
+  Activity,
+  Eye,
 } from 'lucide-react';
 import {
-  PageShell, PageHeader, GlassCard, SectionHeader, StatCard, Pill,
-  GradientBar, TabBar, EmptyState, Avatar, StaggerList,
-} from '../../../_components/ui/dashboard';
-import { getAdvisorBootcampStudents } from '@/app/_lib/bootcamp-actions';
+  PageShell,
+  PageHeader,
+  GlassCard,
+  SectionHeader,
+  StatCard,
+  Pill,
+  GradientBar,
+  TabBar,
+  EmptyState,
+  Avatar,
+  StaggerList,
+} from '@/app/account/_components/ui/dashboard';
+import { getAdvisorBootcampStudents } from '@/app/_lib/actions/bootcamp-actions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -35,7 +56,11 @@ function fmtBDT(n) {
 
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-BD', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function fmtRelative(d) {
@@ -97,15 +122,19 @@ function StudentDrawer({ bootcamp, onClose }) {
         {/* Drawer header */}
         <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] px-6 py-5">
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 mb-1">Student Cohort</p>
-            <h2 className="truncate text-lg font-bold text-white">{bootcamp.title}</h2>
+            <p className="mb-1 text-xs text-gray-500">Student Cohort</p>
+            <h2 className="truncate text-lg font-bold text-white">
+              {bootcamp.title}
+            </h2>
             {bootcamp.batch_info && (
-              <p className="mt-0.5 text-xs text-gray-500">{bootcamp.batch_info}</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                {bootcamp.batch_info}
+              </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-1.5 text-gray-400 hover:bg-white/[0.07] hover:text-white transition-colors"
+            className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-1.5 text-gray-400 transition-colors hover:bg-white/[0.07] hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
@@ -116,7 +145,10 @@ function StudentDrawer({ bootcamp, onClose }) {
           {loading && (
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 animate-pulse rounded-xl border border-white/[0.04] bg-white/[0.02]" />
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-xl border border-white/[0.04] bg-white/[0.02]"
+                />
               ))}
             </div>
           )}
@@ -135,8 +167,9 @@ function StudentDrawer({ bootcamp, onClose }) {
           )}
           {!loading && !error && students?.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 mb-4">
-                {students.length} student{students.length !== 1 ? 's' : ''} • sorted by progress
+              <p className="mb-4 text-xs text-gray-500">
+                {students.length} student{students.length !== 1 ? 's' : ''} •
+                sorted by progress
               </p>
               {students.map((s, idx) => (
                 <motion.div
@@ -147,17 +180,31 @@ function StudentDrawer({ bootcamp, onClose }) {
                 >
                   <GlassCard padding="p-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={s.fullName || '?'} src={s.avatarUrl} size="md" />
+                      <Avatar
+                        name={s.fullName || '?'}
+                        src={s.avatarUrl}
+                        size="md"
+                      />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="truncate text-sm font-semibold text-white">{s.fullName}</p>
-                          <Pill tone={ENROLL_STATUS_CONFIG[s.status]?.tone || 'gray'}>
+                        <div className="mb-1 flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {s.fullName}
+                          </p>
+                          <Pill
+                            tone={
+                              ENROLL_STATUS_CONFIG[s.status]?.tone || 'gray'
+                            }
+                          >
                             {ENROLL_STATUS_CONFIG[s.status]?.label || s.status}
                           </Pill>
                         </div>
-                        {s.email && <p className="text-xs text-gray-500 truncate">{s.email}</p>}
+                        {s.email && (
+                          <p className="truncate text-xs text-gray-500">
+                            {s.email}
+                          </p>
+                        )}
                         <div className="mt-2.5">
-                          <div className="flex items-center justify-between mb-1">
+                          <div className="mb-1 flex items-center justify-between">
                             <span className="text-[11px] text-gray-500">
                               {s.lessonsCompleted}/{s.totalLessons} lessons
                             </span>
@@ -168,7 +215,13 @@ function StudentDrawer({ bootcamp, onClose }) {
                           <GradientBar
                             value={s.progressPercent}
                             max={100}
-                            tone={s.progressPercent >= 80 ? 'emerald' : s.progressPercent >= 40 ? 'blue' : 'amber'}
+                            tone={
+                              s.progressPercent >= 80
+                                ? 'emerald'
+                                : s.progressPercent >= 40
+                                  ? 'blue'
+                                  : 'amber'
+                            }
                             height="h-1.5"
                           />
                         </div>
@@ -183,7 +236,9 @@ function StudentDrawer({ bootcamp, onClose }) {
 
         {/* Drawer footer */}
         <div className="border-t border-white/[0.06] px-6 py-4">
-          <p className="text-[11px] text-gray-600">Read-only view · Advisor access</p>
+          <p className="text-[11px] text-gray-600">
+            Read-only view · Advisor access
+          </p>
         </div>
       </motion.aside>
     </AnimatePresence>
@@ -195,7 +250,12 @@ function StudentDrawer({ bootcamp, onClose }) {
 function BootcampTrackCard({ bootcamp, onViewStudents }) {
   const sc = STATUS_CONFIG[bootcamp.status] || STATUS_CONFIG.draft;
   const pct = bootcamp.stats.avgProgress;
-  const completionTone = bootcamp.stats.completionRate >= 70 ? 'emerald' : bootcamp.stats.completionRate >= 40 ? 'blue' : 'amber';
+  const completionTone =
+    bootcamp.stats.completionRate >= 70
+      ? 'emerald'
+      : bootcamp.stats.completionRate >= 40
+        ? 'blue'
+        : 'amber';
   const [showMentors, setShowMentors] = useState(false);
   const hasMentors = (bootcamp.mentors?.length || 0) > 0;
 
@@ -207,16 +267,22 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
           <GraduationCap className="h-5 w-5 text-indigo-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-            <h3 className="truncate text-sm font-semibold text-white">{bootcamp.title}</h3>
+          <div className="mb-0.5 flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-sm font-semibold text-white">
+              {bootcamp.title}
+            </h3>
             {bootcamp.is_featured && (
               <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
             )}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Pill tone={sc.tone}>{sc.label}</Pill>
-            {bootcamp.batch_info && <Pill tone="gray">{bootcamp.batch_info}</Pill>}
-            {bootcamp.category && <Pill tone="indigo">{bootcamp.category}</Pill>}
+            {bootcamp.batch_info && (
+              <Pill tone="gray">{bootcamp.batch_info}</Pill>
+            )}
+            {bootcamp.category && (
+              <Pill tone="indigo">{bootcamp.category}</Pill>
+            )}
           </div>
         </div>
         <div className="shrink-0 text-right">
@@ -230,12 +296,31 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
       {/* Enrollment stats */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: 'Total', value: bootcamp.stats.totalEnrollments, color: 'text-white' },
-          { label: 'Active', value: bootcamp.stats.active, color: 'text-emerald-400' },
-          { label: 'Done', value: bootcamp.stats.completed, color: 'text-blue-400' },
-          { label: 'Pending', value: bootcamp.stats.pending, color: 'text-amber-400' },
+          {
+            label: 'Total',
+            value: bootcamp.stats.totalEnrollments,
+            color: 'text-white',
+          },
+          {
+            label: 'Active',
+            value: bootcamp.stats.active,
+            color: 'text-emerald-400',
+          },
+          {
+            label: 'Done',
+            value: bootcamp.stats.completed,
+            color: 'text-blue-400',
+          },
+          {
+            label: 'Pending',
+            value: bootcamp.stats.pending,
+            color: 'text-amber-400',
+          },
         ].map((s) => (
-          <div key={s.label} className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-2 py-2 text-center">
+          <div
+            key={s.label}
+            className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-2 py-2 text-center"
+          >
             <p className={`text-base font-bold ${s.color}`}>{s.value}</p>
             <p className="text-[10px] text-gray-500">{s.label}</p>
           </div>
@@ -244,9 +329,13 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
 
       {/* Avg Progress bar */}
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-500">Avg Student Progress</span>
-          <span className="text-[11px] font-semibold text-gray-300">{pct}%</span>
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] text-gray-500">
+            Avg Student Progress
+          </span>
+          <span className="text-[11px] font-semibold text-gray-300">
+            {pct}%
+          </span>
         </div>
         <GradientBar value={pct} max={100} tone="indigo" height="h-1.5" />
       </div>
@@ -256,19 +345,23 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
         <div className="flex items-center gap-3">
           <div>
             <p className="text-[11px] text-gray-500">Revenue</p>
-            <p className="text-sm font-bold text-emerald-400">{fmtBDT(bootcamp.stats.revenue)}</p>
+            <p className="text-sm font-bold text-emerald-400">
+              {fmtBDT(bootcamp.stats.revenue)}
+            </p>
           </div>
           <div className="h-8 w-px bg-white/[0.05]" />
           <div>
             <p className="text-[11px] text-gray-500">Completion</p>
-            <p className={`text-sm font-bold ${completionTone === 'emerald' ? 'text-emerald-400' : completionTone === 'blue' ? 'text-blue-400' : 'text-amber-400'}`}>
+            <p
+              className={`text-sm font-bold ${completionTone === 'emerald' ? 'text-emerald-400' : completionTone === 'blue' ? 'text-blue-400' : 'text-amber-400'}`}
+            >
               {bootcamp.stats.completionRate}%
             </p>
           </div>
         </div>
         <button
           onClick={() => onViewStudents(bootcamp)}
-          className="flex items-center gap-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition-all hover:bg-indigo-500/20 hover:border-indigo-500/30"
+          className="flex items-center gap-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition-all hover:border-indigo-500/30 hover:bg-indigo-500/20"
         >
           <Eye className="h-3.5 w-3.5" />
           Students
@@ -280,13 +373,16 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
         <div className="border-t border-white/[0.04] pt-3">
           <button
             onClick={() => setShowMentors((v) => !v)}
-            className="flex w-full items-center justify-between text-[11px] text-gray-500 hover:text-gray-300 transition-colors mb-2"
+            className="mb-2 flex w-full items-center justify-between text-[11px] text-gray-500 transition-colors hover:text-gray-300"
           >
             <span className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5" />
-              {bootcamp.mentors.length} Mentor{bootcamp.mentors.length !== 1 ? 's' : ''}
+              {bootcamp.mentors.length} Mentor
+              {bootcamp.mentors.length !== 1 ? 's' : ''}
             </span>
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMentors ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${showMentors ? 'rotate-180' : ''}`}
+            />
           </button>
           <AnimatePresence>
             {showMentors && (
@@ -299,19 +395,36 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
               >
                 <div className="space-y-2">
                   {bootcamp.mentors.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3 rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2">
-                      <Avatar name={m.full_name || '?'} src={m.avatar_url} size="sm" />
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2"
+                    >
+                      <Avatar
+                        name={m.full_name || '?'}
+                        src={m.avatar_url}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-gray-200">{m.full_name || 'Unknown Mentor'}</p>
-                        {m.email && <p className="truncate text-[10px] text-gray-600">{m.email}</p>}
+                        <p className="truncate text-xs font-semibold text-gray-200">
+                          {m.full_name || 'Unknown Mentor'}
+                        </p>
+                        {m.email && (
+                          <p className="truncate text-[10px] text-gray-600">
+                            {m.email}
+                          </p>
+                        )}
                       </div>
                       <div className="flex shrink-0 gap-2">
                         <div className="text-center">
-                          <p className="text-xs font-bold text-violet-400">{m.sessionsCount}</p>
+                          <p className="text-xs font-bold text-violet-400">
+                            {m.sessionsCount}
+                          </p>
                           <p className="text-[9px] text-gray-600">sessions</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-cyan-400">{m.menteesCount}</p>
+                          <p className="text-xs font-bold text-cyan-400">
+                            {m.menteesCount}
+                          </p>
                           <p className="text-[9px] text-gray-600">mentees</p>
                         </div>
                       </div>
@@ -337,7 +450,11 @@ const TABS = [
 ];
 
 export default function AdvisorBootcampClient({ analytics }) {
-  const { summaryStats, bootcamps = [], recentEnrollments = [] } = analytics || {};
+  const {
+    summaryStats,
+    bootcamps = [],
+    recentEnrollments = [],
+  } = analytics || {};
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [drawerBootcamp, setDrawerBootcamp] = useState(null);
@@ -359,7 +476,10 @@ export default function AdvisorBootcampClient({ analytics }) {
 
   const tabsWithCount = TABS.map((t) => ({
     ...t,
-    count: t.value === 'all' ? bootcamps.length : bootcamps.filter((b) => b.status === t.value).length,
+    count:
+      t.value === 'all'
+        ? bootcamps.length
+        : bootcamps.filter((b) => b.status === t.value).length,
   }));
 
   return (
@@ -372,8 +492,12 @@ export default function AdvisorBootcampClient({ analytics }) {
         subtitle="Read-only overview of all bootcamp cohorts, student performance, and program health."
         meta={
           <>
-            <Pill tone="indigo" icon={BookOpen}>{summaryStats?.totalTracks ?? 0} Tracks</Pill>
-            <Pill tone="emerald" icon={Users}>{summaryStats?.totalEnrollments ?? 0} Enrolled</Pill>
+            <Pill tone="indigo" icon={BookOpen}>
+              {summaryStats?.totalTracks ?? 0} Tracks
+            </Pill>
+            <Pill tone="emerald" icon={Users}>
+              {summaryStats?.totalEnrollments ?? 0} Enrolled
+            </Pill>
           </>
         }
       />
@@ -431,13 +555,13 @@ export default function AdvisorBootcampClient({ analytics }) {
           {/* Filters row */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search tracks, categories, batches…"
-                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] py-2.5 pl-9 pr-4 text-sm text-gray-200 placeholder-gray-600 outline-none transition-all focus:border-indigo-500/30 focus:bg-white/[0.03] focus:ring-1 focus:ring-indigo-500/20"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] py-2.5 pr-4 pl-9 text-sm text-gray-200 placeholder-gray-600 transition-all outline-none focus:border-indigo-500/30 focus:bg-white/[0.03] focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
           </div>
@@ -448,7 +572,11 @@ export default function AdvisorBootcampClient({ analytics }) {
               <EmptyState
                 icon={BookOpen}
                 title="No tracks found"
-                description={search ? 'Try adjusting your search.' : 'No bootcamp tracks in this status.'}
+                description={
+                  search
+                    ? 'Try adjusting your search.'
+                    : 'No bootcamp tracks in this status.'
+                }
                 accent="indigo"
               />
             </GlassCard>
@@ -490,7 +618,11 @@ export default function AdvisorBootcampClient({ analytics }) {
                     transition={{ delay: idx * 0.04 }}
                     className="flex items-start gap-3"
                   >
-                    <Avatar name={e.student?.full_name || '?'} src={e.student?.avatar_url} size="sm" />
+                    <Avatar
+                      name={e.student?.full_name || '?'}
+                      src={e.student?.avatar_url}
+                      size="sm"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-semibold text-gray-200">
                         {e.student?.full_name || 'Unknown Student'}
@@ -501,10 +633,14 @@ export default function AdvisorBootcampClient({ analytics }) {
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <Pill tone={ENROLL_STATUS_CONFIG[e.status]?.tone || 'gray'}>
+                      <Pill
+                        tone={ENROLL_STATUS_CONFIG[e.status]?.tone || 'gray'}
+                      >
                         {ENROLL_STATUS_CONFIG[e.status]?.label || e.status}
                       </Pill>
-                      <p className="mt-1 text-[10px] text-gray-600">{fmtRelative(e.enrolledAt)}</p>
+                      <p className="mt-1 text-[10px] text-gray-600">
+                        {fmtRelative(e.enrolledAt)}
+                      </p>
                     </div>
                   </motion.div>
                 ))}

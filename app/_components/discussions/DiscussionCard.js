@@ -11,7 +11,7 @@ import { memo } from 'react';
 import Link from 'next/link';
 import { MessageSquare, Eye, ThumbsUp, User, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatRelativeTime } from '@/app/_lib/utils';
+import { formatRelativeTime } from '@/app/_lib/utils/utils';
 import { DiscussionBadges, StatusDot, RoleBadge } from './DiscussionBadges';
 
 /**

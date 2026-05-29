@@ -1,8 +1,18 @@
+/**
+ * @file Page transition component
+ * @module PageTransition
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion';
+import {
+  AnimatePresence,
+  motion,
+  MotionConfig,
+  useReducedMotion,
+} from 'framer-motion';
 import { pageTransition } from './motion';
 
 const reducedPageTransition = {
@@ -16,7 +26,9 @@ export default function PageTransition({ children }) {
   const prefersReduced = useReducedMotion();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const transition = prefersReduced ? reducedPageTransition : pageTransition;
 

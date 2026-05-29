@@ -1,3 +1,8 @@
+/**
+ * @file Blog management client component
+ * @module BlogManagementClient
+ */
+
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -36,9 +41,18 @@ import {
   SORT_OPTIONS,
   sortPosts,
 } from './blogConfig';
-import { PageShell, PageHeader, StatCard, TabBar, EmptyState } from '@/app/account/_components/ui';
+import {
+  PageShell,
+  PageHeader,
+  StatCard,
+  TabBar,
+  EmptyState,
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
-import { toggleBlogFeaturedAction, deleteBlogAction } from '@/app/_lib/blog-actions';
+import {
+  toggleBlogFeaturedAction,
+  deleteBlogAction,
+} from '@/app/_lib/actions/blog-actions';
 
 const PAGE_SIZE = 12;
 
@@ -50,7 +64,13 @@ const STATUS_TABS = [
   { value: 'featured', label: 'Featured' },
 ];
 
-function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete }) {
+function BlogTableRow({
+  post,
+  onEdit,
+  onViewComments,
+  onPostChange,
+  onPostDelete,
+}) {
   const router = useRouter();
   const [featuredPending, setFeaturedPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
@@ -73,7 +93,9 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       toast.error(result.error);
     } else {
       onPostChange?.(post.id, { is_featured: !post.is_featured });
-      toast.success(post.is_featured ? 'Removed from featured' : 'Marked as featured');
+      toast.success(
+        post.is_featured ? 'Removed from featured' : 'Marked as featured'
+      );
     }
   }
 
@@ -94,28 +116,32 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
   }
 
   return (
-    <tr className="group hover:bg-white/[0.025] transition-colors cursor-pointer">
+    <tr className="group cursor-pointer transition-colors hover:bg-white/[0.025]">
       {/* Blog Info */}
-      <td className="py-3.5 px-5">
+      <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden group-hover:border-blue-500/40 transition-colors">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-500/20 bg-blue-500/10 transition-colors group-hover:border-blue-500/40">
             {post.thumbnail ? (
-              <img src={post.thumbnail} alt="" className="w-full h-full object-cover" />
+              <img
+                src={post.thumbnail}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             ) : (
               <span className="text-xl opacity-50 select-none">{cc.emoji}</span>
             )}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors truncate">
+            <div className="truncate text-sm font-semibold text-white transition-colors group-hover:text-blue-300">
               {post.title}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-0.5">
-              <span className="text-[10px] text-gray-500 font-mono">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] text-gray-500">
                 {cc.emoji} {cc.short}
               </span>
               <span className="text-gray-700 select-none">•</span>
               <span className="text-[10px] text-gray-500">
-                @{ (author?.full_name ?? 'unknown').split(' ')[0].toLowerCase() }
+                @{(author?.full_name ?? 'unknown').split(' ')[0].toLowerCase()}
               </span>
             </div>
           </div>
@@ -123,18 +149,20 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       </td>
 
       {/* Status */}
-      <td className="py-3.5 px-5">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${sc.badge}`}>
+      <td className="px-5 py-3.5">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${sc.badge}`}
+        >
           <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
           {sc.label}
         </span>
       </td>
 
       {/* Featured */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center">
           {post.is_featured ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
               <Star className="h-2.5 w-2.5 fill-current" />
               Featured
             </span>
@@ -145,7 +173,7 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       </td>
 
       {/* Views */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center gap-1.5">
           <Eye className="h-3.5 w-3.5 text-blue-400/60" />
           <span className="text-sm font-medium text-white tabular-nums">
@@ -155,7 +183,7 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       </td>
 
       {/* Likes */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <div className="flex items-center justify-center gap-1.5">
           <Heart className="h-3.5 w-3.5 text-rose-400/60" />
           <span className="text-sm font-medium text-white tabular-nums">
@@ -165,14 +193,14 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       </td>
 
       {/* Comments */}
-      <td className="py-3.5 px-5 text-center">
+      <td className="px-5 py-3.5 text-center">
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onViewComments(post);
           }}
-          className="flex items-center justify-center gap-1.5 mx-auto hover:text-violet-400 transition-colors"
+          className="mx-auto flex items-center justify-center gap-1.5 transition-colors hover:text-violet-400"
         >
           <MessageSquare className="h-3.5 w-3.5 text-violet-400/60" />
           <span className="text-sm font-medium text-white tabular-nums">
@@ -187,22 +215,25 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
       </td>
 
       {/* Date */}
-      <td className="py-3.5 px-5">
-        <span className="text-xs text-gray-500 font-mono" title={formatBlogDate(post.created_at)}>
+      <td className="px-5 py-3.5">
+        <span
+          className="font-mono text-xs text-gray-500"
+          title={formatBlogDate(post.created_at)}
+        >
           {formatRelativeDate(post.created_at)}
         </span>
       </td>
 
       {/* Actions */}
-      <td className="py-3.5 px-5">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="px-5 py-3.5">
+        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onEdit(post);
             }}
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all border border-transparent hover:border-blue-500/20"
+            className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-400"
             title="Edit"
           >
             <Edit3 className="h-3.5 w-3.5" />
@@ -211,17 +242,19 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
           <button
             onClick={handleToggleFeatured}
             disabled={featuredPending}
-            className={`p-1.5 rounded-lg transition-all border border-transparent ${
+            className={`rounded-lg border border-transparent p-1.5 transition-all ${
               post.is_featured
-                ? 'text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20'
-                : 'text-gray-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20'
+                ? 'text-amber-400 hover:border-amber-500/20 hover:bg-amber-500/10'
+                : 'text-gray-500 hover:border-amber-500/20 hover:bg-amber-500/10 hover:text-amber-400'
             }`}
             title={post.is_featured ? 'Unfeature' : 'Feature'}
           >
             {featuredPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Star className={`h-3.5 w-3.5 ${post.is_featured ? 'fill-current' : ''}`} />
+              <Star
+                className={`h-3.5 w-3.5 ${post.is_featured ? 'fill-current' : ''}`}
+              />
             )}
           </button>
 
@@ -231,7 +264,7 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all border border-transparent hover:border-emerald-500/20"
+              className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-emerald-500/20 hover:bg-emerald-500/10 hover:text-emerald-400"
               title="Preview"
             >
               <ExternalLink className="h-3.5 w-3.5" />
@@ -239,11 +272,14 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
           )}
 
           {deleteConfirm ? (
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={handleDelete}
                 disabled={deletePending}
-                className="px-2 py-1 text-[10px] font-bold text-red-300 bg-red-500/20 hover:bg-red-500/30 rounded transition-all"
+                className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-bold text-red-300 transition-all hover:bg-red-500/30"
               >
                 Confirm
               </button>
@@ -253,7 +289,7 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
                   e.stopPropagation();
                   setDeleteConfirm(false);
                 }}
-                className="text-[10px] text-gray-500 hover:text-white px-1"
+                className="px-1 text-[10px] text-gray-500 hover:text-white"
               >
                 Cancel
               </button>
@@ -265,7 +301,7 @@ function BlogTableRow({ post, onEdit, onViewComments, onPostChange, onPostDelete
                 e.stopPropagation();
                 setDeleteConfirm(true);
               }}
-              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/20"
+              className="rounded-lg border border-transparent p-1.5 text-gray-500 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-400"
               title="Delete"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -309,19 +345,24 @@ export default function BlogManagementClient({ initialPosts }) {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }, []);
 
-  const stats = useMemo(() => ({
-    total: posts.length,
-    published: posts.filter((p) => p.status === 'published').length,
-    draft: posts.filter((p) => p.status === 'draft').length,
-    featured: posts.filter((p) => p.is_featured).length,
-    totalViews: posts.reduce((s, p) => s + (p.views ?? 0), 0),
-  }), [posts]);
+  const stats = useMemo(
+    () => ({
+      total: posts.length,
+      published: posts.filter((p) => p.status === 'published').length,
+      draft: posts.filter((p) => p.status === 'draft').length,
+      featured: posts.filter((p) => p.is_featured).length,
+      totalViews: posts.reduce((s, p) => s + (p.views ?? 0), 0),
+    }),
+    [posts]
+  );
 
   const filtered = useMemo(() => {
     let result = posts.filter((p) => {
       const matchesTab =
         statusFilter === 'all' ||
-        (statusFilter === 'featured' ? p.is_featured : p.status === statusFilter);
+        (statusFilter === 'featured'
+          ? p.is_featured
+          : p.status === statusFilter);
       const matchesSearch =
         !search ||
         p.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -335,7 +376,9 @@ export default function BlogManagementClient({ initialPosts }) {
   }, [posts, statusFilter, search, categoryFilter, sortBy]);
 
   // Reset to page 1 when filters/sort change
-  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter, sortBy]);
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, categoryFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -370,31 +413,65 @@ export default function BlogManagementClient({ initialPosts }) {
         />
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard icon={BookOpen} label="Total Posts" value={stats.total} accent="blue" delay={0} />
-          <StatCard icon={CheckCircle2} label="Published" value={stats.published} accent="emerald" delay={0.05} />
-          <StatCard icon={Star} label="Featured" value={stats.featured} accent="amber" delay={0.1} />
-          <StatCard icon={Eye} label="Total Views" value={stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}k` : stats.totalViews.toLocaleString()} accent="sky" delay={0.15} />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard
+            icon={BookOpen}
+            label="Total Posts"
+            value={stats.total}
+            accent="blue"
+            delay={0}
+          />
+          <StatCard
+            icon={CheckCircle2}
+            label="Published"
+            value={stats.published}
+            accent="emerald"
+            delay={0.05}
+          />
+          <StatCard
+            icon={Star}
+            label="Featured"
+            value={stats.featured}
+            accent="amber"
+            delay={0.1}
+          />
+          <StatCard
+            icon={Eye}
+            label="Total Views"
+            value={
+              stats.totalViews >= 1000
+                ? `${(stats.totalViews / 1000).toFixed(1)}k`
+                : stats.totalViews.toLocaleString()
+            }
+            accent="sky"
+            delay={0.15}
+          />
         </div>
 
         {/* Status Tabs */}
-        <TabBar tabs={statusTabs} value={statusFilter} onChange={(v) => { setStatusFilter(v); }} />
+        <TabBar
+          tabs={statusTabs}
+          value={statusFilter}
+          onChange={(v) => {
+            setStatusFilter(v);
+          }}
+        />
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Search bar */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+          <div className="relative max-w-md flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search posts by title, excerpt, tag, author…"
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 placeholder:text-gray-600 transition-all"
+              className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -402,13 +479,13 @@ export default function BlogManagementClient({ initialPosts }) {
           </div>
 
           {/* Filters Select row */}
-          <div className="flex items-center flex-wrap gap-2 sm:ml-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {/* Category Filter */}
             <div className="relative">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                className="cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 pr-8 text-xs text-white transition-all outline-none focus:border-blue-500/50"
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="">All Categories</option>
@@ -418,7 +495,7 @@ export default function BlogManagementClient({ initialPosts }) {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 text-gray-500" />
             </div>
 
             {/* Sorting */}
@@ -426,28 +503,30 @@ export default function BlogManagementClient({ initialPosts }) {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                className="cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 pr-8 text-xs text-white transition-all outline-none focus:border-blue-500/50"
                 style={{ colorScheme: 'dark' }}
               >
                 {SORT_OPTIONS.map(({ key, label }) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 text-gray-500" />
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-white/3 border border-white/8 rounded-xl p-1">
+            <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`rounded-lg p-1.5 transition-all ${viewMode === 'grid' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
                 title="Grid view"
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`rounded-lg p-1.5 transition-all ${viewMode === 'list' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
                 title="List view"
               >
                 <LayoutList className="h-4 w-4" />
@@ -460,12 +539,18 @@ export default function BlogManagementClient({ initialPosts }) {
         {(search || statusFilter !== 'all' || categoryFilter) && (
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span>
-              Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
-              <span className="text-white font-medium">{posts.length}</span> posts
+              Showing{' '}
+              <span className="font-medium text-white">{filtered.length}</span>{' '}
+              of <span className="font-medium text-white">{posts.length}</span>{' '}
+              posts
             </span>
             <button
-              onClick={() => { setSearch(''); setStatusFilter('all'); setCategoryFilter(''); }}
-              className="ml-2 flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+                setCategoryFilter('');
+              }}
+              className="ml-2 flex items-center gap-1 font-medium text-blue-400 transition-colors hover:text-blue-300"
             >
               <X className="h-3 w-3" />
               Clear filters
@@ -478,7 +563,11 @@ export default function BlogManagementClient({ initialPosts }) {
           <div className="rounded-2xl border border-dashed border-white/8 bg-white/2 py-4">
             <EmptyState
               icon={BookOpen}
-              title={search || statusFilter !== 'all' || categoryFilter ? 'No posts found' : 'No posts yet'}
+              title={
+                search || statusFilter !== 'all' || categoryFilter
+                  ? 'No posts found'
+                  : 'No posts yet'
+              }
               description={
                 search || statusFilter !== 'all' || categoryFilter
                   ? 'Try adjusting your search or filters.'
@@ -487,15 +576,19 @@ export default function BlogManagementClient({ initialPosts }) {
               action={
                 search || statusFilter !== 'all' || categoryFilter ? (
                   <button
-                    onClick={() => { setSearch(''); setStatusFilter('all'); setCategoryFilter(''); }}
-                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium underline underline-offset-2"
+                    onClick={() => {
+                      setSearch('');
+                      setStatusFilter('all');
+                      setCategoryFilter('');
+                    }}
+                    className="text-xs font-medium text-blue-400 underline underline-offset-2 transition-colors hover:text-blue-300"
                   >
                     Clear all filters
                   </button>
                 ) : (
                   <button
                     onClick={() => setFormModal({ mode: 'create' })}
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-500"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Create Post
@@ -509,7 +602,7 @@ export default function BlogManagementClient({ initialPosts }) {
         {/* Grid View */}
         {filtered.length > 0 && viewMode === 'grid' && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {paginated.map((post) => (
                 <BlogCard
                   key={post.id}
@@ -521,25 +614,46 @@ export default function BlogManagementClient({ initialPosts }) {
                 />
               ))}
             </div>
-            <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={filtered.length}
+              onPage={setPage}
+            />
           </>
         )}
 
         {/* List View */}
         {filtered.length > 0 && viewMode === 'list' && (
-          <div className="rounded-2xl overflow-hidden border border-white/8 bg-white/2">
+          <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/2">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[850px]">
+              <table className="w-full min-w-[850px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-white/6">
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Post</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Featured</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Views</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Likes</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center">Comments</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="py-3 px-5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                    <th className="px-5 py-3 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Post
+                    </th>
+                    <th className="px-5 py-3 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Status
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Featured
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Views
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Likes
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Comments
+                    </th>
+                    <th className="px-5 py-3 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/4">
@@ -556,11 +670,17 @@ export default function BlogManagementClient({ initialPosts }) {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-white/6 px-5 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 border-t border-white/6 px-5 py-3">
               <span className="text-xs text-gray-500">
                 {filtered.length} post{filtered.length !== 1 ? 's' : ''}
               </span>
-              <Pagination page={page} totalPages={totalPages} total={filtered.length} onPage={setPage} compact />
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={filtered.length}
+                onPage={setPage}
+                compact
+              />
             </div>
           </div>
         )}
@@ -597,7 +717,12 @@ function Pagination({ page, totalPages, total, onPage, compact = false }) {
   } else {
     pages.push(1);
     if (page > 3) pages.push('…');
-    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    for (
+      let i = Math.max(2, page - 1);
+      i <= Math.min(totalPages - 1, page + 1);
+      i++
+    )
+      pages.push(i);
     if (page < totalPages - 2) pages.push('…');
     pages.push(totalPages);
   }
@@ -608,15 +733,17 @@ function Pagination({ page, totalPages, total, onPage, compact = false }) {
         <button
           onClick={() => onPage(page - 1)}
           disabled={page === 1}
-          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg p-1 text-gray-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span className="text-xs text-gray-400 px-1">{page} / {totalPages}</span>
+        <span className="px-1 text-xs text-gray-400">
+          {page} / {totalPages}
+        </span>
         <button
           onClick={() => onPage(page + 1)}
           disabled={page === totalPages}
-          className="p-1 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg p-1 text-gray-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
@@ -627,28 +754,36 @@ function Pagination({ page, totalPages, total, onPage, compact = false }) {
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
       <span className="text-xs text-gray-500">
-        Showing <span className="text-white font-medium">{start}–{end}</span> of{' '}
-        <span className="text-white font-medium">{total}</span> posts
+        Showing{' '}
+        <span className="font-medium text-white">
+          {start}–{end}
+        </span>{' '}
+        of <span className="font-medium text-white">{total}</span> posts
       </span>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPage(page - 1)}
           disabled={page === 1}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg p-1.5 text-gray-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         {pages.map((p, i) =>
           p === '…' ? (
-            <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-600 select-none">…</span>
+            <span
+              key={`ellipsis-${i}`}
+              className="px-1 text-xs text-gray-600 select-none"
+            >
+              …
+            </span>
           ) : (
             <button
               key={p}
               onClick={() => onPage(p)}
-              className={`min-w-7.5 h-7.5 rounded-lg text-xs font-medium transition-all ${
+              className={`h-7.5 min-w-7.5 rounded-lg text-xs font-medium transition-all ${
                 p === page
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'text-gray-500 hover:text-white hover:bg-white/5'
+                  ? 'border border-blue-500/30 bg-blue-500/20 text-blue-400'
+                  : 'text-gray-500 hover:bg-white/5 hover:text-white'
               }`}
             >
               {p}
@@ -658,7 +793,7 @@ function Pagination({ page, totalPages, total, onPage, compact = false }) {
         <button
           onClick={() => onPage(page + 1)}
           disabled={page === totalPages}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg p-1.5 text-gray-500 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

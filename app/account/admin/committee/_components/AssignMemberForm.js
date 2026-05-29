@@ -1,9 +1,19 @@
+/**
+ * @file Assign member form component
+ * @module AssignMemberForm
+ */
+
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { createCommitteeMemberAction } from '@/app/_lib/committee-actions';
+import { createCommitteeMemberAction } from '@/app/_lib/actions/committee-actions';
 
-export default function AssignMemberForm({ positions, users, defaultTermStart, defaultTermEnd }) {
+export default function AssignMemberForm({
+  positions,
+  users,
+  defaultTermStart,
+  defaultTermEnd,
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +21,7 @@ export default function AssignMemberForm({ positions, users, defaultTermStart, d
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
-    
+
     const query = searchQuery.toLowerCase();
     return users.filter((user) => {
       const name = user.name?.toLowerCase() || '';
@@ -51,7 +61,7 @@ export default function AssignMemberForm({ positions, users, defaultTermStart, d
               className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-400"
             />
             {isOpen && filteredUsers.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-black/60 shadow-lg">
+              <div className="absolute top-full right-0 left-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-black/60 shadow-lg">
                 {filteredUsers.map((user) => (
                   <button
                     key={user.id}
@@ -66,7 +76,7 @@ export default function AssignMemberForm({ positions, users, defaultTermStart, d
               </div>
             )}
             {isOpen && filteredUsers.length === 0 && searchQuery && (
-              <div className="absolute top-full left-0 right-0 z-10 mt-1 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-gray-400">
+              <div className="absolute top-full right-0 left-0 z-10 mt-1 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-gray-400">
                 No users found
               </div>
             )}

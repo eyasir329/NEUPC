@@ -5,7 +5,7 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import MentorSettingsClient from './_components/MentorSettingsClient';
 
 export const metadata = { title: 'Settings | Mentor | NEUPC' };

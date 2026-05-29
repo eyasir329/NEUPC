@@ -216,7 +216,7 @@ function Hero({ data = {}, settings = {} }) {
         <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
           Scroll
         </span>
-        <div className="h-8 w-[1px] bg-gradient-to-b from-zinc-600 to-transparent" />
+        <div className="h-8 w-[1px] bg-linear-to-b from-zinc-600 to-transparent" />
       </div>
     </section>
   );

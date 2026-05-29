@@ -11,8 +11,8 @@ import Image from 'next/image';
 import {
   addAchievementMemberAction,
   removeAchievementMemberAction,
-} from '@/app/_lib/achievement-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/achievement-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 const POSITIONS = ['Team Lead', 'Member', 'Coach', 'Mentor', 'Co-Lead'];
 

@@ -11,7 +11,7 @@ import { useCallback, useTransition, useState } from 'react';
 import {
   voteThreadAction,
   voteReplyAction,
-} from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/actions/discussion-actions';
 
 /**
  * Calculate updated vote counts after a vote change.

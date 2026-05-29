@@ -4,8 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { V2_TABLES } from '@/app/_lib/problem-solving-v2-helpers';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { V2_TABLES } from '@/app/_lib/services/problem-solving-v2-helpers';
 
 export async function GET(request, { params }) {
   try {

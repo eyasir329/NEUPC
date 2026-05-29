@@ -32,7 +32,7 @@ import {
   updateUserAction,
   uploadUserImageAction,
   sendCustomEmailAction,
-} from '@/app/_lib/user-actions';
+} from '@/app/_lib/actions/user-actions';
 import { MODAL_CONFIG } from './constants';
 import ConfirmModal from './ConfirmModal';
 import Toast from './Toast';
@@ -40,11 +40,7 @@ import UsersTable from './UsersTable';
 import FilterBar from './FilterBar';
 import ModalForm from './ModalForm';
 import UserFormPanel from './UserFormPanel';
-import {
-  PageShell,
-  PageHeader,
-  StatCard,
-} from '@/app/account/_components/ui';
+import { PageShell, PageHeader, StatCard } from '@/app/account/_components/ui';
 
 // ─── main component ──────────────────────────────────────────
 
@@ -236,7 +232,8 @@ NEUPC Team`;
       fd.append('userId', verifyModalUser.id);
       fd.append('emailTemplate', emailTemplate || '');
 
-      const { verifyUserEmailAction } = await import('@/app/_lib/user-actions');
+      const { verifyUserEmailAction } =
+        await import('@/app/_lib/actions/user-actions');
       const result = await verifyUserEmailAction(fd);
 
       if (result.error) throw new Error(result.error);
@@ -357,7 +354,7 @@ NEUPC Team`;
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/account/${role}/users/create`}
-              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20 active:scale-95 flex items-center gap-1.5"
+              className="flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20 active:scale-95"
             >
               <UserPlus className="h-4.5 w-4.5" />
               Add User

@@ -53,10 +53,13 @@ import {
   deleteBlogImageAction,
   generateBlogImageAction,
   generateBlogTextAction,
-} from '@/app/_lib/blog-actions';
-import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/image-gen';
-import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
-import { driveImageUrl } from '@/app/_lib/utils';
+} from '@/app/_lib/actions/blog-actions';
+import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/integrations/image-gen';
+import {
+  TEXT_MODELS,
+  DEFAULT_TEXT_MODEL,
+} from '@/app/_lib/integrations/text-gen';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import { createLowlight, common } from 'lowlight';
@@ -1077,7 +1080,8 @@ export default function BlogFormPanel({ post, onClose, onSaved }) {
                       <div>
                         <div className="mb-1.5 flex items-center justify-between gap-2">
                           <label className={labelCls}>
-                            Blog Content Blocks <span className="text-red-400">*</span>
+                            Blog Content Blocks{' '}
+                            <span className="text-red-400">*</span>
                           </label>
                         </div>
                         <MultiBlockEditor
@@ -1087,7 +1091,8 @@ export default function BlogFormPanel({ post, onClose, onSaved }) {
                           uploadImageAction={uploadBlogImageAction}
                         />
                         <p className={hintCls}>
-                          Design your blog layout dynamically. Add rich text, markdown, HTML, code snippets, videos, and images.
+                          Design your blog layout dynamically. Add rich text,
+                          markdown, HTML, code snippets, videos, and images.
                         </p>
                       </div>
                     </FormSection>

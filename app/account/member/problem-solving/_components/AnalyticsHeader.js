@@ -159,7 +159,7 @@ function DifficultyBar({ label, count, total, color }) {
             initial={{ width: 0 }}
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className={`h-full bg-gradient-to-r ${color}`}
+            className={`h-full bg-linear-to-r ${color}`}
           />
           <div className="absolute inset-0 flex items-center justify-end px-2">
             <span className="text-xs font-medium text-white drop-shadow-lg">

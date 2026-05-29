@@ -1,3 +1,8 @@
+/**
+ * @file Format API route handler
+ * @module FormatRoute
+ */
+
 import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import * as prettier from 'prettier';

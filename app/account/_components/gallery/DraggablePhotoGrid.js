@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { reorderGalleryItemsAction } from '@/app/_lib/gallery-actions';
+import { reorderGalleryItemsAction } from '@/app/_lib/actions/gallery-actions';
 function DragHandle() {
   return (
     <svg

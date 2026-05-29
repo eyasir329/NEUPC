@@ -9,9 +9,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import SafeImg from './SafeImg';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 
@@ -104,7 +104,10 @@ export default function FeaturedSpotlight({
 
   useEffect(() => {
     if (count <= 1 || paused) return;
-    const timer = setInterval(() => setCurrent((i) => (i + 1) % count), interval);
+    const timer = setInterval(
+      () => setCurrent((i) => (i + 1) % count),
+      interval
+    );
     return () => clearInterval(timer);
   }, [count, paused, interval]);
 
@@ -140,8 +143,8 @@ export default function FeaturedSpotlight({
         onMouseLeave={() => setPaused(false)}
       >
         {/* Ambient glows */}
-        <div className="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary-600/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-secondary-600/8 blur-3xl" />
+        <div className="bg-primary-600/10 pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full blur-3xl" />
+        <div className="bg-secondary-600/8 pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full blur-3xl" />
 
         <div className="relative flex flex-col lg:flex-row">
           {/* Thumbnail */}
@@ -188,7 +191,7 @@ export default function FeaturedSpotlight({
             <div className="flex items-center gap-4">
               <a
                 href={href}
-                className="bg-primary-500 hover:bg-primary-400 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/30 transition-all hover:-translate-y-0.5 hover:shadow-primary-900/50 active:translate-y-0"
+                className="bg-primary-500 hover:bg-primary-400 shadow-primary-900/30 hover:shadow-primary-900/50 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 {ctaLabel}
                 <ArrowRightIcon />

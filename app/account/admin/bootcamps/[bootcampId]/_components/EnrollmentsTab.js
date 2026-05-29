@@ -52,7 +52,7 @@ import {
   adminRejectEnrollment,
   exportEnrollmentsCSV,
   getMentorStudentDetailedStats,
-} from '@/app/_lib/bootcamp-actions';
+} from '@/app/_lib/actions/bootcamp-actions';
 import toast from 'react-hot-toast';
 import { StatCard } from '@/app/account/_components/ui';
 
@@ -172,9 +172,13 @@ export default function EnrollmentsTab({ bootcampId }) {
         case 'enrolled_at_asc':
           return new Date(a.enrolled_at) - new Date(b.enrolled_at);
         case 'name_asc':
-          return (a.users?.full_name || '').localeCompare(b.users?.full_name || '');
+          return (a.users?.full_name || '').localeCompare(
+            b.users?.full_name || ''
+          );
         case 'name_desc':
-          return (b.users?.full_name || '').localeCompare(a.users?.full_name || '');
+          return (b.users?.full_name || '').localeCompare(
+            a.users?.full_name || ''
+          );
         case 'progress_desc':
           return (b.progress_percent || 0) - (a.progress_percent || 0);
         case 'progress_asc':
@@ -240,9 +244,13 @@ export default function EnrollmentsTab({ bootcampId }) {
     try {
       const result = await adminApproveEnrollment(enrollmentId);
       setEnrollments((prev) =>
-        prev.map((e) => (e.id === enrollmentId ? { ...e, status: 'active' } : e))
+        prev.map((e) =>
+          e.id === enrollmentId ? { ...e, status: 'active' } : e
+        )
       );
-      toast.success(`${result.enrollment?.users?.full_name || 'Student'} approved`);
+      toast.success(
+        `${result.enrollment?.users?.full_name || 'Student'} approved`
+      );
       const statsData = await getEnrollmentStats(bootcampId);
       setStats(statsData);
     } catch (err) {
@@ -252,11 +260,16 @@ export default function EnrollmentsTab({ bootcampId }) {
 
   // Handle reject pending enrollment
   const handleReject = async (enrollmentId) => {
-    if (!confirm('Reject this enrollment request? The member will be cancelled.')) return;
+    if (
+      !confirm('Reject this enrollment request? The member will be cancelled.')
+    )
+      return;
     try {
       await adminRejectEnrollment(enrollmentId);
       setEnrollments((prev) =>
-        prev.map((e) => (e.id === enrollmentId ? { ...e, status: 'cancelled' } : e))
+        prev.map((e) =>
+          e.id === enrollmentId ? { ...e, status: 'cancelled' } : e
+        )
       );
       toast.success('Enrollment request rejected');
       const statsData = await getEnrollmentStats(bootcampId);
@@ -341,11 +354,38 @@ export default function EnrollmentsTab({ bootcampId }) {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <StatCard label="Total Enrolled" value={stats.total} icon={Users} accent="violet" />
-          <StatCard label="Active" value={stats.active} icon={UserCheck} accent="emerald" />
-          <StatCard label="This Week" value={stats.thisWeek} icon={TrendingUp} accent="blue" sublabel="new" />
-          <StatCard label="This Month" value={stats.thisMonth} icon={Calendar} accent="amber" sublabel="new" />
-          <StatCard label="Completed" value={stats.completed} icon={Award} accent="pink" />
+          <StatCard
+            label="Total Enrolled"
+            value={stats.total}
+            icon={Users}
+            accent="violet"
+          />
+          <StatCard
+            label="Active"
+            value={stats.active}
+            icon={UserCheck}
+            accent="emerald"
+          />
+          <StatCard
+            label="This Week"
+            value={stats.thisWeek}
+            icon={TrendingUp}
+            accent="blue"
+            sublabel="new"
+          />
+          <StatCard
+            label="This Month"
+            value={stats.thisMonth}
+            icon={Calendar}
+            accent="amber"
+            sublabel="new"
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completed}
+            icon={Award}
+            accent="pink"
+          />
         </div>
       )}
 
@@ -354,39 +394,52 @@ export default function EnrollmentsTab({ bootcampId }) {
         <div className="overflow-hidden rounded-2xl border border-amber-500/20 bg-amber-500/5">
           <div className="flex items-center gap-2 border-b border-amber-500/20 px-4 py-3">
             <Clock className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-amber-300">Pending Requests</h3>
+            <h3 className="text-sm font-semibold text-amber-300">
+              Pending Requests
+            </h3>
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
               {pendingEnrollments.length}
             </span>
           </div>
           <div className="divide-y divide-white/5">
             {pendingEnrollments.map((enrollment) => (
-              <div key={enrollment.id} className="flex items-center gap-3 px-4 py-3">
+              <div
+                key={enrollment.id}
+                className="flex items-center gap-3 px-4 py-3"
+              >
                 {enrollment.users?.avatar_url ? (
-                  <img src={enrollment.users.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                  <img
+                    src={enrollment.users.avatar_url}
+                    alt=""
+                    className="h-8 w-8 shrink-0 rounded-full object-cover"
+                  />
                 ) : (
-                  <div className="h-8 w-8 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xs font-semibold text-gray-300">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-gray-300">
                     {enrollment.users?.full_name?.[0]?.toUpperCase() || '?'}
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{enrollment.users?.full_name || 'Unknown'}</p>
-                  <p className="text-xs text-gray-500 truncate">{enrollment.users?.email}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-white">
+                    {enrollment.users?.full_name || 'Unknown'}
+                  </p>
+                  <p className="truncate text-xs text-gray-500">
+                    {enrollment.users?.email}
+                  </p>
                 </div>
-                <span className="text-xs text-gray-500 shrink-0 hidden sm:block">
+                <span className="hidden shrink-0 text-xs text-gray-500 sm:block">
                   {formatDate(enrollment.enrolled_at)}
                 </span>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     onClick={() => handleApprove(enrollment.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-all"
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/30"
                   >
                     <UserCheck className="h-3.5 w-3.5" />
                     Approve
                   </button>
                   <button
                     onClick={() => handleReject(enrollment.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-all"
+                    className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/20"
                   >
                     <UserX className="h-3.5 w-3.5" />
                     Reject
@@ -675,15 +728,19 @@ function EnrollmentRow({
         </div>
         <div className="mt-1 flex items-center gap-2 text-[10px] font-medium">
           <span className="flex items-center gap-0.5 text-amber-400">
-            <Award className="h-3 w-3" />{enrollment.score || 0}pt
+            <Award className="h-3 w-3" />
+            {enrollment.score || 0}pt
           </span>
           {enrollment.watch_time > 0 && (
-            <span className="text-zinc-500 flex items-center gap-0.5">
-              <Clock className="h-2.5 w-2.5" />{fmtTime(enrollment.watch_time)}
+            <span className="flex items-center gap-0.5 text-zinc-500">
+              <Clock className="h-2.5 w-2.5" />
+              {fmtTime(enrollment.watch_time)}
             </span>
           )}
           {enrollment.sessions_attended > 0 && (
-            <span className="text-sky-400">{enrollment.sessions_attended} sess</span>
+            <span className="text-sky-400">
+              {enrollment.sessions_attended} sess
+            </span>
           )}
           {enrollment.task_points > 0 && (
             <span className="text-emerald-400">{enrollment.task_points}t</span>
@@ -765,7 +822,13 @@ function EnrollmentRow({
   );
 }
 
-function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, formatDate }) {
+function StudentProgressDrawer({
+  bootcampId,
+  enrollment,
+  totalLessons,
+  onClose,
+  formatDate,
+}) {
   const [detailedStats, setDetailedStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -802,77 +865,136 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
         className="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#0d1117] shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-5 py-4 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-5 py-4">
           <div className="flex items-center gap-3">
             {user?.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+              <img
+                src={user.avatar_url}
+                alt=""
+                className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
+              />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-violet-500/20 to-pink-500/20 text-sm font-semibold text-white ring-1 ring-white/10">
                 {user?.full_name?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
             <div>
-              <h3 className="text-sm font-semibold text-white">{user?.full_name || 'Unknown'}</h3>
+              <h3 className="text-sm font-semibold text-white">
+                {user?.full_name || 'Unknown'}
+              </h3>
               <p className="text-[11px] text-gray-500">{user?.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-white">
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-all hover:bg-white/8 hover:text-white"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-4 divide-x divide-white/5 border-b border-white/8 shrink-0">
+        <div className="grid shrink-0 grid-cols-4 divide-x divide-white/5 border-b border-white/8">
           <div className="px-2 py-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Status</p>
-            <span className={`mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${sc.badge}`}>
+            <p className="text-[10px] tracking-wider text-gray-500 uppercase">
+              Status
+            </p>
+            <span
+              className={`mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${sc.badge}`}
+            >
               <span className={`h-1 w-1 rounded-full ${sc.dot}`} />
               {sc.label}
             </span>
           </div>
           <div className="px-2 py-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Progress</p>
-            <p className="mt-1 text-sm font-bold text-white">{enrollment.progress_percent || 0}%</p>
-            <p className="text-[9px] text-gray-600 truncate">{enrollment.completed_lessons || 0}/{totalLessons} les</p>
+            <p className="text-[10px] tracking-wider text-gray-500 uppercase">
+              Progress
+            </p>
+            <p className="mt-1 text-sm font-bold text-white">
+              {enrollment.progress_percent || 0}%
+            </p>
+            <p className="truncate text-[9px] text-gray-600">
+              {enrollment.completed_lessons || 0}/{totalLessons} les
+            </p>
           </div>
           <div className="px-2 py-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Score</p>
-            <p className="mt-1 text-sm font-bold text-amber-400">{scoreBreakdown?.total ?? enrollment.score ?? 0}</p>
+            <p className="text-[10px] tracking-wider text-gray-500 uppercase">
+              Score
+            </p>
+            <p className="mt-1 text-sm font-bold text-amber-400">
+              {scoreBreakdown?.total ?? enrollment.score ?? 0}
+            </p>
             <p className="text-[10px] text-gray-600">points</p>
           </div>
           <div className="px-2 py-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Watch</p>
-            <p className="mt-1 text-xs font-bold text-violet-400">{fmtTime(totalWatchTime) || '0m'}</p>
-            {sessionsAttended > 0 && <p className="text-[9px] text-sky-400">{sessionsAttended} sess</p>}
+            <p className="text-[10px] tracking-wider text-gray-500 uppercase">
+              Watch
+            </p>
+            <p className="mt-1 text-xs font-bold text-violet-400">
+              {fmtTime(totalWatchTime) || '0m'}
+            </p>
+            {sessionsAttended > 0 && (
+              <p className="text-[9px] text-sky-400">{sessionsAttended} sess</p>
+            )}
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="px-5 py-3 border-b border-white/5 shrink-0">
+        <div className="shrink-0 border-b border-white/5 px-5 py-3">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-linear-to-r from-violet-500 to-pink-500 transition-all" style={{ width: `${enrollment.progress_percent || 0}%` }} />
+            <div
+              className="h-full rounded-full bg-linear-to-r from-violet-500 to-pink-500 transition-all"
+              style={{ width: `${enrollment.progress_percent || 0}%` }}
+            />
           </div>
         </div>
 
         {/* Score breakdown */}
         {scoreBreakdown && (
-          <div className="px-5 pt-4 shrink-0">
-            <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
-                <Award className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Score Breakdown</span>
-                <span className="ml-auto text-xs font-black text-amber-300 tabular-nums">{scoreBreakdown.total} pts</span>
+          <div className="shrink-0 px-5 pt-4">
+            <div className="overflow-hidden rounded-xl border border-white/8 bg-white/2">
+              <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2">
+                <Award className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                  Score Breakdown
+                </span>
+                <span className="ml-auto text-xs font-black text-amber-300 tabular-nums">
+                  {scoreBreakdown.total} pts
+                </span>
               </div>
               <div className="grid grid-cols-4 gap-px bg-white/5">
                 {[
-                  { label: 'Lessons', value: scoreBreakdown.lesson, color: 'text-violet-400' },
-                  { label: 'Tasks', value: scoreBreakdown.task, color: 'text-emerald-400' },
-                  { label: 'Exams', value: scoreBreakdown.exam, color: 'text-fuchsia-400' },
-                  { label: 'Sessions', value: scoreBreakdown.session, color: 'text-sky-400' },
-                ].map(s => (
-                  <div key={s.label} className="bg-[#0d1117] px-2 py-2.5 text-center">
-                    <p className={`text-sm font-black tabular-nums ${s.color}`}>{s.value}</p>
-                    <p className="text-[9px] text-gray-600 uppercase tracking-wider mt-0.5">{s.label}</p>
+                  {
+                    label: 'Lessons',
+                    value: scoreBreakdown.lesson,
+                    color: 'text-violet-400',
+                  },
+                  {
+                    label: 'Tasks',
+                    value: scoreBreakdown.task,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: 'Exams',
+                    value: scoreBreakdown.exam,
+                    color: 'text-fuchsia-400',
+                  },
+                  {
+                    label: 'Sessions',
+                    value: scoreBreakdown.session,
+                    color: 'text-sky-400',
+                  },
+                ].map((s) => (
+                  <div
+                    key={s.label}
+                    className="bg-[#0d1117] px-2 py-2.5 text-center"
+                  >
+                    <p className={`text-sm font-black tabular-nums ${s.color}`}>
+                      {s.value}
+                    </p>
+                    <p className="mt-0.5 text-[9px] tracking-wider text-gray-600 uppercase">
+                      {s.label}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -881,7 +1003,7 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
         )}
 
         {/* Curriculum */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
@@ -893,7 +1015,9 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
                 {detailedStats?.curriculum?.courses?.map((course) => (
                   <div key={course.id}>
                     {detailedStats.curriculum.courses.length > 1 && (
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{course.title}</p>
+                      <p className="mb-2 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+                        {course.title}
+                      </p>
                     )}
                     <div className="space-y-3">
                       {course.modules?.map((module) => (
@@ -907,20 +1031,35 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
 
               {/* Task submissions */}
               {detailedStats?.taskSubmissions?.length > 0 && (
-                <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5">
-                    <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Task Submissions</span>
+                <div className="overflow-hidden rounded-xl border border-white/8 bg-white/2">
+                  <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2.5">
+                    <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                      Task Submissions
+                    </span>
                   </div>
                   <div className="divide-y divide-white/5">
-                    {detailedStats.taskSubmissions.map(t => (
-                      <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="truncate text-xs text-gray-300 flex-1">{t.weekly_tasks?.title || 'Task'}</span>
-                        <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                          t.status === 'graded' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                          t.status === 'pending' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
-                          'text-gray-400 bg-white/5 border-white/10'
-                        }`}>{t.status === 'graded' ? `${t.points_earned}pt` : t.status}</span>
+                    {detailedStats.taskSubmissions.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2"
+                      >
+                        <span className="flex-1 truncate text-xs text-gray-300">
+                          {t.weekly_tasks?.title || 'Task'}
+                        </span>
+                        <span
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${
+                            t.status === 'graded'
+                              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                              : t.status === 'pending'
+                                ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+                                : 'border-white/10 bg-white/5 text-gray-400'
+                          }`}
+                        >
+                          {t.status === 'graded'
+                            ? `${t.points_earned}pt`
+                            : t.status}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -929,19 +1068,35 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
 
               {/* Session attendance */}
               {detailedStats?.sessionDetails?.length > 0 && (
-                <div className="rounded-xl border border-white/8 bg-white/2 overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5">
-                    <Video className="w-3.5 h-3.5 text-sky-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sessions</span>
-                    <span className="ml-auto text-[9px] text-sky-400 font-bold">{sessionsAttended}/{detailedStats.sessionDetails.length} attended</span>
+                <div className="overflow-hidden rounded-xl border border-white/8 bg-white/2">
+                  <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2.5">
+                    <Video className="h-3.5 w-3.5 text-sky-400" />
+                    <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                      Sessions
+                    </span>
+                    <span className="ml-auto text-[9px] font-bold text-sky-400">
+                      {sessionsAttended}/{detailedStats.sessionDetails.length}{' '}
+                      attended
+                    </span>
                   </div>
-                  <div className="divide-y divide-white/5 max-h-40 overflow-y-auto">
-                    {detailedStats.sessionDetails.map(s => (
-                      <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="truncate text-xs text-gray-300 flex-1">{s.topic || formatDate(s.session_date)}</span>
-                        {s.attended
-                          ? <span className="shrink-0 text-[9px] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-1.5 py-0.5">{s.points > 0 ? `+${s.points}pt` : '✓'}</span>
-                          : <span className="shrink-0 text-[9px] font-bold text-zinc-600 bg-white/5 border border-white/10 rounded-full px-1.5 py-0.5">absent</span>}
+                  <div className="max-h-40 divide-y divide-white/5 overflow-y-auto">
+                    {detailedStats.sessionDetails.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2"
+                      >
+                        <span className="flex-1 truncate text-xs text-gray-300">
+                          {s.topic || formatDate(s.session_date)}
+                        </span>
+                        {s.attended ? (
+                          <span className="shrink-0 rounded-full border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-bold text-sky-400">
+                            {s.points > 0 ? `+${s.points}pt` : '✓'}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-bold text-zinc-600">
+                            absent
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -955,7 +1110,6 @@ function StudentProgressDrawer({ bootcampId, enrollment, totalLessons, onClose, 
   );
 }
 
-
 function fmtTime(seconds) {
   if (!seconds || seconds <= 0) return null;
   const h = Math.floor(seconds / 3600);
@@ -967,36 +1121,50 @@ function fmtTime(seconds) {
 }
 
 function hasVideo(lesson) {
-  return lesson.video_source && lesson.video_source !== 'none' && lesson.video_id;
+  return (
+    lesson.video_source && lesson.video_source !== 'none' && lesson.video_id
+  );
 }
 
 function ModuleProgressBlock({ module }) {
   const lessons = module.lessons || [];
   const completed = lessons.filter((l) => l.progress?.is_completed).length;
   const videoLessons = lessons.filter(hasVideo);
-  const totalWatched = videoLessons.reduce((sum, l) => sum + (l.progress?.watch_time || 0), 0);
-  const totalDuration = videoLessons.reduce((sum, l) => sum + (l.duration || 0), 0);
+  const totalWatched = videoLessons.reduce(
+    (sum, l) => sum + (l.progress?.watch_time || 0),
+    0
+  );
+  const totalDuration = videoLessons.reduce(
+    (sum, l) => sum + (l.duration || 0),
+    0
+  );
   const [open, setOpen] = useState(true);
 
   return (
     <div className="overflow-hidden rounded-xl border border-white/8 bg-white/2">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-white/3 transition-colors"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-white/3"
       >
-        <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform shrink-0 ${open ? '' : '-rotate-90'}`} />
-        <span className="flex-1 text-xs font-semibold text-gray-200 truncate">{module.title}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${open ? '' : '-rotate-90'}`}
+        />
+        <span className="flex-1 truncate text-xs font-semibold text-gray-200">
+          {module.title}
+        </span>
         {videoLessons.length > 0 && totalWatched > 0 && (
-          <span className="text-[10px] tabular-nums text-violet-400 shrink-0">
+          <span className="shrink-0 text-[10px] text-violet-400 tabular-nums">
             {fmtTime(totalWatched)}
-            {totalDuration > 0 && <span className="text-gray-600"> / {fmtTime(totalDuration)}</span>}
+            {totalDuration > 0 && (
+              <span className="text-gray-600"> / {fmtTime(totalDuration)}</span>
+            )}
           </span>
         )}
-        <span className="text-[10px] text-gray-500 shrink-0 ml-1">
+        <span className="ml-1 shrink-0 text-[10px] text-gray-500">
           {completed}/{lessons.length}
         </span>
         {completed === lessons.length && lessons.length > 0 && (
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
         )}
       </button>
 
@@ -1005,26 +1173,40 @@ function ModuleProgressBlock({ module }) {
           {lessons.map((lesson) => {
             const done = lesson.progress?.is_completed;
             const isVideo = hasVideo(lesson);
-            const watchTime = isVideo ? (lesson.progress?.watch_time || 0) : 0;
+            const watchTime = isVideo ? lesson.progress?.watch_time || 0 : 0;
             const duration = lesson.duration || 0;
             return (
-              <div key={lesson.id} className="flex items-center gap-2.5 px-3 py-2">
-                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${done ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+              <div
+                key={lesson.id}
+                className="flex items-center gap-2.5 px-3 py-2"
+              >
+                <div
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${done ? 'bg-emerald-500/20' : 'bg-white/5'}`}
+                >
                   {done ? (
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                   ) : (
                     <div className="h-1.5 w-1.5 rounded-full bg-gray-600" />
                   )}
                 </div>
-                <span className={`flex-1 text-xs truncate ${done ? 'text-gray-300' : 'text-gray-500'}`}>
+                <span
+                  className={`flex-1 truncate text-xs ${done ? 'text-gray-300' : 'text-gray-500'}`}
+                >
                   {lesson.title}
                 </span>
                 {isVideo && (
-                  <span className="text-[10px] shrink-0 tabular-nums">
+                  <span className="shrink-0 text-[10px] tabular-nums">
                     {watchTime > 0 ? (
                       <>
-                        <span className="text-gray-400">{fmtTime(watchTime)}</span>
-                        {duration > 0 && <span className="text-gray-700"> / {fmtTime(duration)}</span>}
+                        <span className="text-gray-400">
+                          {fmtTime(watchTime)}
+                        </span>
+                        {duration > 0 && (
+                          <span className="text-gray-700">
+                            {' '}
+                            / {fmtTime(duration)}
+                          </span>
+                        )}
                       </>
                     ) : duration > 0 ? (
                       <span className="text-gray-700">{fmtTime(duration)}</span>
@@ -1045,20 +1227,35 @@ function CourseTotalWatchTime({ modules }) {
   const videoLessons = allLessons.filter(hasVideo);
   if (videoLessons.length === 0) return null;
 
-  const totalWatched = videoLessons.reduce((sum, l) => sum + (l.progress?.watch_time || 0), 0);
-  const totalDuration = videoLessons.reduce((sum, l) => sum + (l.duration || 0), 0);
+  const totalWatched = videoLessons.reduce(
+    (sum, l) => sum + (l.progress?.watch_time || 0),
+    0
+  );
+  const totalDuration = videoLessons.reduce(
+    (sum, l) => sum + (l.duration || 0),
+    0
+  );
   if (totalDuration === 0 && totalWatched === 0) return null;
 
-  const pct = totalDuration > 0 ? Math.min(100, Math.round((totalWatched / totalDuration) * 100)) : 0;
+  const pct =
+    totalDuration > 0
+      ? Math.min(100, Math.round((totalWatched / totalDuration) * 100))
+      : 0;
 
   return (
     <div className="mt-2 rounded-xl border border-white/8 bg-white/2 px-3 py-2.5">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Total Watch Time</span>
-        <span className="text-[10px] tabular-nums text-gray-400">
-          <span className="text-violet-400 font-medium">{fmtTime(totalWatched) || '0s'}</span>
-          {totalDuration > 0 && <span className="text-gray-600"> / {fmtTime(totalDuration)}</span>}
-          <span className="text-gray-600 ml-1.5">({pct}%)</span>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+          Total Watch Time
+        </span>
+        <span className="text-[10px] text-gray-400 tabular-nums">
+          <span className="font-medium text-violet-400">
+            {fmtTime(totalWatched) || '0s'}
+          </span>
+          {totalDuration > 0 && (
+            <span className="text-gray-600"> / {fmtTime(totalDuration)}</span>
+          )}
+          <span className="ml-1.5 text-gray-600">({pct}%)</span>
         </span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">

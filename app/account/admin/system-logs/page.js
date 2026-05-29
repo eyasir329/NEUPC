@@ -6,8 +6,8 @@
  * @access admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getSystemLogsData } from '@/app/_lib/system-logs-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getSystemLogsData } from '@/app/_lib/services/system-logs-service';
 import SystemLogsClient from './_components/SystemLogsClient';
 
 export const metadata = { title: 'System Logs | Admin | NEUPC' };

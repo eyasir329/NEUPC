@@ -13,7 +13,7 @@ import {
   SectionHeader,
   GradientBar,
   ActionButton,
-} from '../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 const fmt = (n) =>
   typeof n === 'number' ? `৳${n.toLocaleString()}` : `৳${n ?? 0}`;

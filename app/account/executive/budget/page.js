@@ -5,13 +5,13 @@
  * @access executive | admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getBudgetSummary,
   getAllBudgetEntries,
   getAllEvents,
   getAllBootcamps,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import ExecutiveBudgetClient from './_components/ExecutiveBudgetClient';
 
 export const metadata = { title: 'Budget Management | Executive | NEUPC' };

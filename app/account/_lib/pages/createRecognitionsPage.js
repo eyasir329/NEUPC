@@ -7,7 +7,7 @@
  * @module account/_lib/pages/createRecognitionsPage
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getAchievementsAdmin,
   getUsersForSelector,
@@ -18,7 +18,7 @@ import {
   getAllBootcamps,
   getAllCertificates,
   getUsersForCertificates,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import RecognitionsClient from '@/app/account/_components/recognitions/RecognitionsClient';
 
 /**

@@ -10,8 +10,8 @@ import {
   createJourneyItemAction,
   updateJourneyItemAction,
   deleteJourneyItemAction,
-} from '@/app/_lib/achievement-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/achievement-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 /* ── Micro SVG icons ───────────────────────────────────────────────── */
 const IconPlus = () => (
@@ -230,7 +230,7 @@ function TimelineRow({ item, isLast, onEdit, onDelete, deleting }) {
           <span className="h-2 w-2 rounded-full bg-violet-400" />
         </div>
         {!isLast && (
-          <div className="w-px flex-1 bg-gradient-to-b from-violet-500/40 to-transparent" />
+          <div className="w-px flex-1 bg-linear-to-b from-violet-500/40 to-transparent" />
         )}
       </div>
 

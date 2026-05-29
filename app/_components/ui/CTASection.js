@@ -1,3 +1,8 @@
+/**
+ * @file Ctasection component
+ * @module CTASection
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -6,7 +11,12 @@ import { useIsMember } from './UserRoleProvider';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20, filter: 'blur(6px)' },
-  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 const stagger = {
   hidden: {},
@@ -30,8 +40,8 @@ export default function CTASection({
     <section className="relative overflow-hidden py-20 sm:py-28">
       {/* Ambient */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-neon-violet/8 blur-[160px]" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+        <div className="bg-neon-violet/8 absolute top-1/2 left-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/8 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -48,12 +58,15 @@ export default function CTASection({
           </motion.div>
 
           {/* Eyebrow line */}
-          <motion.div variants={fadeUp} className="mb-5 flex items-center justify-center gap-3">
-            <span className="h-px w-8 bg-neon-lime sm:w-10" />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.4em] text-neon-lime sm:text-[11px]">
+          <motion.div
+            variants={fadeUp}
+            className="mb-5 flex items-center justify-center gap-3"
+          >
+            <span className="bg-neon-lime h-px w-8 sm:w-10" />
+            <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
               Get Involved
             </span>
-            <span className="h-px w-8 bg-neon-lime sm:w-10" />
+            <span className="bg-neon-lime h-px w-8 sm:w-10" />
           </motion.div>
 
           {/* Title */}
@@ -79,8 +92,8 @@ export default function CTASection({
             variants={fadeUp}
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
           >
-            {showPrimary && (
-              isExternal ? (
+            {showPrimary &&
+              (isExternal ? (
                 <a
                   href={primaryAction.href}
                   target="_blank"
@@ -88,7 +101,12 @@ export default function CTASection({
                   className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.55)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
                 >
                   {primaryAction.label}
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  <span
+                    aria-hidden
+                    className="transition-transform group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
                 </a>
               ) : (
                 <Link
@@ -96,10 +114,14 @@ export default function CTASection({
                   className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.55)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
                 >
                   {primaryAction.label}
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  <span
+                    aria-hidden
+                    className="transition-transform group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
                 </Link>
-              )
-            )}
+              ))}
 
             <Link
               href={secondaryAction.href}

@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { GALLERY_CATEGORIES } from './galleryConfig';
-import { bulkAddGalleryItemsAction } from '@/app/_lib/gallery-actions';
+import { bulkAddGalleryItemsAction } from '@/app/_lib/actions/gallery-actions';
 
 export default function BulkAddModal({ events = [], onClose }) {
   const [type, setType] = useState('image');

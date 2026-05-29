@@ -12,7 +12,7 @@ import { GALLERY_CATEGORIES } from './galleryConfig';
 import {
   addGalleryItemAction,
   updateGalleryItemAction,
-} from '@/app/_lib/gallery-actions';
+} from '@/app/_lib/actions/gallery-actions';
 
 export default function GalleryItemFormModal({
   item,

@@ -1,3 +1,8 @@
+/**
+ * @file App not-found view
+ * @module AppNotFound
+ */
+
 'use client';
 
 import Link from 'next/link';

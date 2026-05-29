@@ -71,7 +71,7 @@ function CardGrid({ count = 6 }) {
 
 function FormSkeleton({ fields = 6 }) {
   return (
-    <div className={`space-y-5 rounded-[12px] ${SURFACE} p-5 sm:p-6 max-w-4xl`}>
+    <div className={`space-y-5 rounded-[12px] ${SURFACE} max-w-4xl p-5 sm:p-6`}>
       {Array.from({ length: fields }).map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-[11px] w-24" />
@@ -89,7 +89,9 @@ function FormSkeleton({ fields = 6 }) {
 function ProfileSkeleton() {
   return (
     <div className="space-y-5">
-      <div className={`flex items-center gap-4 rounded-[12px] ${SURFACE} p-5 sm:p-6`}>
+      <div
+        className={`flex items-center gap-4 rounded-[12px] ${SURFACE} p-5 sm:p-6`}
+      >
         <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-5 w-44" />

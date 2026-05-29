@@ -10,7 +10,11 @@
 
 import { motion } from 'framer-motion';
 import { CalendarDays, Dot } from 'lucide-react';
-import { GlassCard, SectionHeader, Pill } from '../../_components/ui/dashboard';
+import {
+  GlassCard,
+  SectionHeader,
+  Pill,
+} from '@/app/account/_components/ui/dashboard';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -23,9 +27,10 @@ const TYPE_TONE = {
 
 export default function WeekAtAGlance({ days }) {
   // Normalise: accept either a length-7 array of objects, or [] (no data)
-  const safe = Array.isArray(days) && days.length === 7
-    ? days
-    : DAYS.map((d) => ({ label: d, date: '', items: [] }));
+  const safe =
+    Array.isArray(days) && days.length === 7
+      ? days
+      : DAYS.map((d) => ({ label: d, date: '', items: [] }));
 
   const today = new Date().getDay(); // 0=Sun..6=Sat
   const todayIndex = today === 0 ? 6 : today - 1;

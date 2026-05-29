@@ -8,10 +8,10 @@
  * @module AccountLayout
  */
 
-import { auth } from '@/app/_lib/auth';
+import { auth } from '@/app/_lib/auth/auth';
 import { redirect } from 'next/navigation';
-import { getCachedUserRoles } from '@/app/_lib/auth-guard';
-import { getUserByEmail } from '@/app/_lib/data-service';
+import { getCachedUserRoles } from '@/app/_lib/auth/auth-guard';
+import { getUserByEmail } from '@/app/_lib/services/data-service';
 import AccountLayoutClient from './_components/AccountLayoutClient';
 import { RoleProvider } from './_components/RoleContext';
 import ChatFAB from '@/app/_components/chat/ChatFAB';

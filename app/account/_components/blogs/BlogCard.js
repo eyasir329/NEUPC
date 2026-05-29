@@ -31,7 +31,7 @@ import {
   updateBlogStatusAction,
   toggleBlogFeaturedAction,
   deleteBlogAction,
-} from '@/app/_lib/blog-actions';
+} from '@/app/_lib/actions/blog-actions';
 
 export default function BlogCard({
   post,

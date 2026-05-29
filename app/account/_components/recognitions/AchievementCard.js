@@ -17,7 +17,7 @@ import {
 import {
   deleteAchievementAction,
   toggleAchievementFeaturedAction,
-} from '@/app/_lib/achievement-actions';
+} from '@/app/_lib/actions/achievement-actions';
 import {
   Star,
   Users,
@@ -33,10 +33,10 @@ export function getPlatformBadge(platform) {
   if (p.includes('codeforces')) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-400">
-        <span className="flex items-end gap-0.5 w-3 h-3 mb-[1px]">
-          <span className="w-0.5 h-1.5 bg-blue-400 rounded-2xs" />
-          <span className="w-0.5 h-3 bg-red-400 rounded-2xs" />
-          <span className="w-0.5 h-2 bg-yellow-400 rounded-2xs" />
+        <span className="mb-[1px] flex h-3 w-3 items-end gap-0.5">
+          <span className="rounded-2xs h-1.5 w-0.5 bg-blue-400" />
+          <span className="rounded-2xs h-3 w-0.5 bg-red-400" />
+          <span className="rounded-2xs h-2 w-0.5 bg-yellow-400" />
         </span>
         Codeforces
       </span>
@@ -45,7 +45,11 @@ export function getPlatformBadge(platform) {
   if (p.includes('leetcode')) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-400">
-        <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="h-3 w-3 text-amber-500"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path d="M13.483 0a1.374 1.374 0 0 0-.961.414l-11.75 11.75a1.37 1.37 0 0 0 0 1.94l1.94 1.94a1.37 1.37 0 0 0 1.94 0l11.75-11.75a1.37 1.37 0 0 0 0-1.94L14.444.414A1.374 1.374 0 0 0 13.483 0zm4.27 4.27a1.37 1.37 0 0 0-.97.414l-11.75 11.75a1.37 1.37 0 0 0 0 1.94l1.94 1.94a1.37 1.37 0 0 0 1.94 0l11.75-11.75a1.37 1.37 0 0 0 0-1.94l-1.94-1.94a1.37 1.37 0 0 0-.97-.414z" />
         </svg>
         LeetCode
@@ -76,8 +80,12 @@ export function getPlatformBadge(platform) {
   if (p.includes('hackerrank')) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
-        <svg className="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm3.5 17h-7v-2h7v2zm0-4h-7v-2h7v2zm0-4h-7V7h7v2z"/>
+        <svg
+          className="h-3 w-3 text-emerald-400"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm3.5 17h-7v-2h7v2zm0-4h-7v-2h7v2zm0-4h-7V7h7v2z" />
         </svg>
         HackerRank
       </span>
@@ -153,21 +161,21 @@ export default function AchievementCard({
     >
       <GlassCard
         padding="p-0"
-        className={`group relative overflow-hidden flex flex-col h-full bg-slate-950/40 border transition-all duration-300 backdrop-blur-md ${
+        className={`group relative flex h-full flex-col overflow-hidden border bg-slate-950/40 backdrop-blur-md transition-all duration-300 ${
           isFeatured
             ? 'border-amber-500/40 shadow-lg shadow-amber-950/15 hover:border-amber-500/80 hover:shadow-amber-500/10'
             : 'border-white/[0.06] hover:border-amber-500/30 hover:shadow-slate-950/20'
         }`}
       >
         {/* Glow backdrop effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-purple-500/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-        
+        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-br from-amber-500/[0.03] via-transparent to-purple-500/[0.03] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
         {/* Card border shine light */}
-        <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        <div className="pointer-events-none absolute top-0 right-1/4 left-1/4 h-[1px] bg-linear-to-r from-transparent via-amber-500/30 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
         {/* Top accent bar */}
         <div
-          className={`h-1 bg-gradient-to-r transition-all duration-300 ${
+          className={`h-1 bg-linear-to-r transition-all duration-300 ${
             isFeatured
               ? 'from-amber-500 via-yellow-400 to-amber-500'
               : 'from-amber-600/30 via-amber-500/10 to-transparent'
@@ -179,7 +187,7 @@ export default function AchievementCard({
           onClick={handleToggleFeatured}
           disabled={featuredPending}
           title={isFeatured ? 'Remove from featured' : 'Mark as featured'}
-          className={`absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border transition-all backdrop-blur-sm ${
+          className={`absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border backdrop-blur-sm transition-all ${
             isFeatured
               ? 'border-amber-500/30 bg-amber-500/20 text-amber-400 shadow-md shadow-amber-900/20'
               : 'border-white/10 bg-slate-900/60 text-gray-500 opacity-0 group-hover:opacity-100 hover:border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-400'
@@ -206,18 +214,20 @@ export default function AchievementCard({
               />
             </svg>
           ) : (
-            <Star className={`h-3.5 w-3.5 ${isFeatured ? 'fill-amber-400 text-amber-400' : ''}`} />
+            <Star
+              className={`h-3.5 w-3.5 ${isFeatured ? 'fill-amber-400 text-amber-400' : ''}`}
+            />
           )}
         </button>
 
-        <div className="flex flex-col flex-1 p-5 space-y-4">
+        <div className="flex flex-1 flex-col space-y-4 p-5">
           {/* ── Header row ──────────────────────────────────────────────── */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h3 className="line-clamp-2 text-sm leading-snug font-bold text-white group-hover:text-amber-400 transition-colors">
+              <h3 className="line-clamp-2 text-sm leading-snug font-bold text-white transition-colors group-hover:text-amber-400">
                 {achievement.title}
               </h3>
-              <p className="mt-0.5 truncate text-xs text-gray-400 font-medium">
+              <p className="mt-0.5 truncate text-xs font-medium text-gray-400">
                 {achievement.contest_name}
               </p>
             </div>
@@ -230,12 +240,15 @@ export default function AchievementCard({
 
           {/* ── Result pills ─────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone="emerald" className="text-[10px] font-bold px-2.5 py-0.5 border border-emerald-500/10 bg-emerald-500/5">
+            <Pill
+              tone="emerald"
+              className="border border-emerald-500/10 bg-emerald-500/5 px-2.5 py-0.5 text-[10px] font-bold"
+            >
               🏆 {achievement.result}
             </Pill>
             <Pill
               tone={achievement.is_team ? 'violet' : 'blue'}
-              className="text-[10px] font-semibold px-2.5 py-0.5 border border-white/5"
+              className="border border-white/5 px-2.5 py-0.5 text-[10px] font-semibold"
             >
               {typeConf.emoji} {typeConf.label}
             </Pill>
@@ -260,9 +273,13 @@ export default function AchievementCard({
 
           {/* ── Team name (if team) ─────────────────────────────────────── */}
           {achievement.is_team && achievement.team_name && (
-            <div className="text-xs rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-gray-400 flex items-center gap-1.5">
-              <span className="text-gray-500 font-medium text-[10px] uppercase tracking-wider">Team:</span>{' '}
-              <span className="font-semibold text-gray-300">{achievement.team_name}</span>
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs text-gray-400">
+              <span className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
+                Team:
+              </span>{' '}
+              <span className="font-semibold text-gray-300">
+                {achievement.team_name}
+              </span>
             </div>
           )}
 
@@ -275,18 +292,18 @@ export default function AchievementCard({
 
           {/* ── Participants (plain text list) ──────────────────────────── */}
           {achievement.participants?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 items-center">
+            <div className="flex flex-wrap items-center gap-1.5">
               {achievement.participants.slice(0, 4).map((p) => (
                 <Pill
                   key={p}
                   tone="gray"
-                  className="text-[10px] px-2 py-0.5 text-gray-300 border border-white/5 bg-white/5"
+                  className="border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] text-gray-300"
                 >
                   {p}
                 </Pill>
               ))}
               {achievement.participants.length > 4 && (
-                <span className="text-[10px] text-gray-500 font-semibold ml-1">
+                <span className="ml-1 text-[10px] font-semibold text-gray-500">
                   +{achievement.participants.length - 4}
                 </span>
               )}
@@ -305,7 +322,7 @@ export default function AchievementCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] font-semibold text-gray-400 hover:text-sky-400 underline underline-offset-2 transition-all"
+                    className="text-[10px] font-semibold text-gray-400 underline underline-offset-2 transition-all hover:text-sky-400"
                   >
                     Profile ↗
                   </a>
@@ -320,7 +337,7 @@ export default function AchievementCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 hover:text-amber-400 transition-all w-fit"
+                className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-gray-400 transition-all hover:text-amber-400"
               >
                 <ExternalLink className="h-3 w-3" />
                 View contest page
@@ -329,13 +346,16 @@ export default function AchievementCard({
           </div>
 
           {/* ── Footer ──────────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between border-t border-white/[0.05] pt-3 mt-auto">
+          <div className="mt-auto flex items-center justify-between border-t border-white/[0.05] pt-3">
             <div className="min-w-0 flex-1 pr-2">
               <p className="truncate text-[10px] font-medium text-gray-400">
                 By {creatorName}
               </p>
               {achievement.achievement_date && (
-                <p className="text-[10px] text-gray-500 font-semibold" suppressHydrationWarning>
+                <p
+                  className="text-[10px] font-semibold text-gray-500"
+                  suppressHydrationWarning
+                >
                   {formatDate(achievement.achievement_date)}
                 </p>
               )}
@@ -383,7 +403,7 @@ export default function AchievementCard({
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="rounded bg-red-500/20 border border-red-500/30 px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/30 transition-all"
+                    className="rounded border border-red-500/30 bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-400 transition-all hover:bg-red-500/30"
                   >
                     {deleting ? '…' : 'Yes'}
                   </button>
@@ -392,7 +412,7 @@ export default function AchievementCard({
                       e.stopPropagation();
                       setConfirmDelete(false);
                     }}
-                    className="rounded bg-white/5 border border-white/10 px-2 py-1 text-[10px] font-semibold text-gray-300 hover:bg-white/10 transition-all"
+                    className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-gray-300 transition-all hover:bg-white/10"
                   >
                     No
                   </button>

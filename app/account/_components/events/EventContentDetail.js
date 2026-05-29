@@ -1,3 +1,8 @@
+/**
+ * @file Event content detail component
+ * @module EventContentDetail
+ */
+
 'use client';
 
 import { ArrowLeft, ExternalLink } from 'lucide-react';
@@ -17,26 +22,67 @@ import EventPublicContent from './EventPublicContent';
 
 function fmtDate(d) {
   return d
-    ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(d).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     : '—';
 }
 function fmtDateTime(d) {
   return d
-    ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ? new Date(d).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : '—';
 }
 
-export default function EventContentDetail({ event, onBack, rightSlot, topSlot }) {
+export default function EventContentDetail({
+  event,
+  onBack,
+  rightSlot,
+  topSlot,
+}) {
   const detailRows = [
-    { label: 'Venue', value: event.venue_type ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1) : '—' },
+    {
+      label: 'Venue',
+      value: event.venue_type
+        ? event.venue_type.charAt(0).toUpperCase() + event.venue_type.slice(1)
+        : '—',
+    },
     { label: 'Location', value: event.location || '—' },
-    ...(event.end_date ? [{ label: 'End Date', value: fmtDate(event.end_date) }] : []),
-    { label: 'Participation', value: event.participation_type === 'team' ? `Team · ${event.team_size ?? '?'} members` : 'Individual' },
+    ...(event.end_date
+      ? [{ label: 'End Date', value: fmtDate(event.end_date) }]
+      : []),
+    {
+      label: 'Participation',
+      value:
+        event.participation_type === 'team'
+          ? `Team · ${event.team_size ?? '?'} members`
+          : 'Individual',
+    },
     { label: 'Eligibility', value: event.eligibility || 'All' },
-    ...(event.prerequisites ? [{ label: 'Prerequisites', value: event.prerequisites }] : []),
-    ...(event.registration_required ? [{ label: 'Registration', value: 'Required' }] : []),
-    ...(event.registration_deadline ? [{ label: 'Reg. Deadline', value: fmtDateTime(event.registration_deadline) }] : []),
-    ...(event.max_participants ? [{ label: 'Capacity', value: event.max_participants }] : []),
+    ...(event.prerequisites
+      ? [{ label: 'Prerequisites', value: event.prerequisites }]
+      : []),
+    ...(event.registration_required
+      ? [{ label: 'Registration', value: 'Required' }]
+      : []),
+    ...(event.registration_deadline
+      ? [
+          {
+            label: 'Reg. Deadline',
+            value: fmtDateTime(event.registration_deadline),
+          },
+        ]
+      : []),
+    ...(event.max_participants
+      ? [{ label: 'Capacity', value: event.max_participants }]
+      : []),
   ];
 
   return (
@@ -45,7 +91,7 @@ export default function EventContentDetail({ event, onBack, rightSlot, topSlot }
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime active:scale-95 sm:text-[11px]"
+          className="font-heading hover:border-neon-lime/30 hover:text-neon-lime flex items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all active:scale-95 sm:text-[11px]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> All Events
         </button>
@@ -54,7 +100,7 @@ export default function EventContentDetail({ event, onBack, rightSlot, topSlot }
             href={`/events/${event.slug || event.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
+            className="font-heading hover:border-neon-lime/30 hover:text-neon-lime flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all sm:text-[11px]"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Public Page</span>
@@ -75,8 +121,8 @@ export default function EventContentDetail({ event, onBack, rightSlot, topSlot }
             {/* Event details */}
             <div className="holographic-card no-lift rounded-2xl p-5 sm:p-6">
               <div className="mb-4 flex items-center gap-3">
-                <span className="h-px w-6 shrink-0 bg-neon-lime" />
-                <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
+                <span className="bg-neon-lime h-px w-6 shrink-0" />
+                <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
                   Details
                 </span>
               </div>
@@ -89,7 +135,7 @@ export default function EventContentDetail({ event, onBack, rightSlot, topSlot }
                     <span className="shrink-0 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
                       {label}
                     </span>
-                    <span className="text-right font-heading text-[13px] font-bold leading-snug text-white sm:text-sm">
+                    <span className="font-heading text-right text-[13px] leading-snug font-bold text-white sm:text-sm">
                       {value}
                     </span>
                   </li>

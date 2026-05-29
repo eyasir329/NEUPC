@@ -15,10 +15,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { streamVideo } from '@/app/_lib/bootcamp-video';
-import { getYouTubeEmbedUrl, extractDriveFileId } from '@/app/_lib/utils';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { streamVideo } from '@/app/_lib/services/bootcamp-video';
+import { getYouTubeEmbedUrl, extractDriveFileId } from '@/app/_lib/utils/utils';
 
 // Allowlist of hostnames the redirect responses may target.
 // YouTube stream URLs land on googlevideo.com; uploaded videos live on Drive
@@ -69,8 +69,14 @@ function collectLessonDriveIds(lesson) {
     const data = block.data || {};
     const videos = Array.isArray(data.videos)
       ? data.videos
-      : (data.video_id || data.video_url)
-        ? [{ video_source: data.video_source, video_id: data.video_id, video_url: data.video_url }]
+      : data.video_id || data.video_url
+        ? [
+            {
+              video_source: data.video_source,
+              video_id: data.video_id,
+              video_url: data.video_url,
+            },
+          ]
         : [];
     for (const v of videos) {
       if ((v.video_source || 'drive') !== 'drive') continue;
@@ -98,7 +104,7 @@ async function canAccessLesson(lessonId, userEmail) {
       .select('id')
       .eq('email', userEmail)
       .single();
-    
+
     user = data;
 
     if (user) {
@@ -112,7 +118,10 @@ async function canAccessLesson(lessonId, userEmail) {
   }
 
   // Determine if lessonId is a valid UUID
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lessonId);
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      lessonId
+    );
 
   let lesson = null;
   if (isUuid) {
@@ -141,7 +150,7 @@ async function canAccessLesson(lessonId, userEmail) {
       )
       .eq('id', lessonId)
       .single();
-    
+
     lesson = data;
   }
 
@@ -188,7 +197,11 @@ async function canAccessLesson(lessonId, userEmail) {
 
   // Check user authentication
   if (!user) {
-    return { allowed: false, reason: 'Authentication required', isAdmin: false };
+    return {
+      allowed: false,
+      reason: 'Authentication required',
+      isAdmin: false,
+    };
   }
 
   // Check member role
@@ -205,7 +218,11 @@ async function canAccessLesson(lessonId, userEmail) {
     .single();
 
   if (!enrollment || enrollment.status !== 'active') {
-    return { allowed: false, reason: 'Not enrolled in this bootcamp', isAdmin: false };
+    return {
+      allowed: false,
+      reason: 'Not enrolled in this bootcamp',
+      isAdmin: false,
+    };
   }
 
   return { allowed: true, lesson, isAdmin: false };
@@ -220,7 +237,7 @@ async function canAccessLesson(lessonId, userEmail) {
 export async function GET(request, { params }) {
   try {
     const { lessonId } = await params;
-    
+
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('fileId');
@@ -245,7 +262,9 @@ export async function GET(request, { params }) {
     // Admins: any fileId (preview mode).
     // Members: fileId must match a video embedded in lesson (legacy column or content blocks).
     const allowedDriveIds = collectLessonDriveIds(lesson);
-    const requestedFileId = fileId ? extractDriveFileId(fileId) || fileId : null;
+    const requestedFileId = fileId
+      ? extractDriveFileId(fileId) || fileId
+      : null;
     let targetVideoId;
     let videoSource;
     if (access.isAdmin && requestedFileId) {
@@ -259,7 +278,11 @@ export async function GET(request, { params }) {
       videoSource = lesson.video_source || 'none';
     }
 
-    if (!targetVideoId && videoSource !== 'youtube' && videoSource !== 'upload') {
+    if (
+      !targetVideoId &&
+      videoSource !== 'youtube' &&
+      videoSource !== 'upload'
+    ) {
       return NextResponse.json(
         { error: 'No video configured' },
         { status: 404 }
@@ -303,7 +326,9 @@ export async function GET(request, { params }) {
       }
 
       case 'youtube': {
-        const videoId = extractYouTubeId(targetVideoId || lesson.video_id || lesson.video_url);
+        const videoId = extractYouTubeId(
+          targetVideoId || lesson.video_id || lesson.video_url
+        );
         if (!videoId) {
           return NextResponse.json(
             { error: 'Invalid YouTube video ID' },
@@ -312,7 +337,10 @@ export async function GET(request, { params }) {
         }
 
         const directUrl = await resolveYouTubeStreamUrl(videoId);
-        if (directUrl && isAllowedRedirectHost(directUrl, YOUTUBE_STREAM_HOSTS)) {
+        if (
+          directUrl &&
+          isAllowedRedirectHost(directUrl, YOUTUBE_STREAM_HOSTS)
+        ) {
           return NextResponse.redirect(directUrl);
         }
 
@@ -379,7 +407,9 @@ export async function HEAD(request, { params }) {
 
     const lesson = access.lesson;
     const allowedDriveIds = collectLessonDriveIds(lesson);
-    const requestedFileId = fileId ? extractDriveFileId(fileId) || fileId : null;
+    const requestedFileId = fileId
+      ? extractDriveFileId(fileId) || fileId
+      : null;
     let targetVideoId;
     let videoSource;
     if (access.isAdmin && requestedFileId) {
@@ -394,7 +424,8 @@ export async function HEAD(request, { params }) {
     }
 
     if (videoSource === 'drive' && targetVideoId) {
-      const { getFileMetadata } = await import('@/app/_lib/bootcamp-video');
+      const { getFileMetadata } =
+        await import('@/app/_lib/services/bootcamp-video');
       const metadata = await getFileMetadata(targetVideoId);
 
       return new NextResponse(null, {
@@ -422,7 +453,8 @@ function extractYouTubeId(urlOrId) {
   if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
     return cleanId;
   }
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/;
+  const regExp =
+    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/;
   const match = cleanId.match(regExp);
   if (match && match[2].length === 11) {
     return match[2];
@@ -435,7 +467,7 @@ function extractYouTubeId(urlOrId) {
  */
 async function resolveYouTubeStreamUrl(videoId) {
   if (!videoId) return null;
-  
+
   const clients = [
     {
       clientName: 'ANDROID_TESTSUITE',
@@ -448,42 +480,46 @@ async function resolveYouTubeStreamUrl(videoId) {
     {
       clientName: 'TVHTML5',
       clientVersion: '7.20250101',
-    }
+    },
   ];
 
   for (const client of clients) {
     try {
-      const response = await fetch('https://www.youtube.com/youtubei/v1/player', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-        },
-        body: JSON.stringify({
-          videoId: videoId,
-          context: {
-            client: {
-              clientName: client.clientName,
-              clientVersion: client.clientVersion,
-              hl: 'en',
-              gl: 'US',
-              utcOffsetMinutes: 0,
-            },
+      const response = await fetch(
+        'https://www.youtube.com/youtubei/v1/player',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent':
+              'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
           },
-        }),
-      });
+          body: JSON.stringify({
+            videoId: videoId,
+            context: {
+              client: {
+                clientName: client.clientName,
+                clientVersion: client.clientVersion,
+                hl: 'en',
+                gl: 'US',
+                utcOffsetMinutes: 0,
+              },
+            },
+          }),
+        }
+      );
 
       if (!response.ok) continue;
 
       const data = await response.json();
       const streamingData = data.streamingData || {};
-      
+
       const formats = streamingData.formats || [];
       const adaptiveFormats = streamingData.adaptiveFormats || [];
 
       // Find the highest quality muxed stream (mp4 with video and audio)
       const muxedStream = formats
-        .filter(f => f.url && f.mimeType?.includes('video/mp4'))
+        .filter((f) => f.url && f.mimeType?.includes('video/mp4'))
         .sort((a, b) => (b.width || 0) - (a.width || 0))[0];
 
       if (muxedStream?.url) {
@@ -491,14 +527,16 @@ async function resolveYouTubeStreamUrl(videoId) {
       }
 
       // Check adaptive formats as fallback (find any with video and audio or just any with a url)
-      const anyStream = [...formats, ...adaptiveFormats].find(f => f.url);
+      const anyStream = [...formats, ...adaptiveFormats].find((f) => f.url);
       if (anyStream?.url) {
         return anyStream.url;
       }
     } catch (err) {
-      console.error(`Failed resolving YouTube stream with client ${client.clientName}:`, err);
+      console.error(
+        `Failed resolving YouTube stream with client ${client.clientName}:`,
+        err
+      );
     }
   }
   return null;
 }
-

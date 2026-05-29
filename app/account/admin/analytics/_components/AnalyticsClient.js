@@ -109,28 +109,36 @@ function ActivityWaveChart({ solves }) {
     { week: 'W2', solves: Math.max(Math.round(solves * 0.35), 48), users: 28 },
     { week: 'W3', solves: Math.max(Math.round(solves * 0.55), 84), users: 44 },
     { week: 'W4', solves: Math.max(Math.round(solves * 0.72), 118), users: 76 },
-    { week: 'W5', solves: Math.max(Math.round(solves * 0.88), 154), users: 104 },
+    {
+      week: 'W5',
+      solves: Math.max(Math.round(solves * 0.88), 154),
+      users: 104,
+    },
     { week: 'W6', solves: Math.max(solves, 198), users: 148 },
   ];
 
-  const maxVal = Math.max(...data.map(d => d.solves), 1);
-  const maxUsers = Math.max(...data.map(d => d.users), 1);
+  const maxVal = Math.max(...data.map((d) => d.solves), 1);
+  const maxUsers = Math.max(...data.map((d) => d.users), 1);
 
   // SVG points for solves
-  const solvePoints = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 420 + 40;
-    const y = 160 - (d.solves / maxVal) * 110;
-    return `${x},${y}`;
-  }).join(' ');
+  const solvePoints = data
+    .map((d, i) => {
+      const x = (i / (data.length - 1)) * 420 + 40;
+      const y = 160 - (d.solves / maxVal) * 110;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   const solveAreaPoints = `40,160 ${solvePoints} 460,160`;
 
   // SVG points for user registrations
-  const userPoints = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 420 + 40;
-    const y = 160 - (d.users / maxUsers) * 110;
-    return `${x},${y}`;
-  }).join(' ');
+  const userPoints = data
+    .map((d, i) => {
+      const x = (i / (data.length - 1)) * 420 + 40;
+      const y = 160 - (d.users / maxUsers) * 110;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   const userAreaPoints = `40,160 ${userPoints} 460,160`;
 
@@ -147,11 +155,17 @@ function ActivityWaveChart({ solves }) {
             Users Active
           </span>
         </div>
-        <span className="text-[10px] text-gray-500 uppercase tracking-widest">Last 6 Weeks</span>
+        <span className="text-[10px] tracking-widest text-gray-500 uppercase">
+          Last 6 Weeks
+        </span>
       </div>
 
       <div className="relative overflow-hidden rounded-xl border border-white/5 bg-black/20 p-2">
-        <svg className="w-full h-44 overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+        <svg
+          className="h-44 w-full overflow-visible"
+          viewBox="0 0 500 180"
+          preserveAspectRatio="none"
+        >
           <defs>
             <linearGradient id="cyanGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.25" />
@@ -208,8 +222,22 @@ function ActivityWaveChart({ solves }) {
             const yUser = 160 - (d.users / maxUsers) * 110;
             return (
               <g key={i}>
-                <circle cx={x} cy={ySolve} r="4" fill="#22d3ee" className="cursor-pointer" />
-                <circle cx={x} cy={ySolve} r="8" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeOpacity="0.4" />
+                <circle
+                  cx={x}
+                  cy={ySolve}
+                  r="4"
+                  fill="#22d3ee"
+                  className="cursor-pointer"
+                />
+                <circle
+                  cx={x}
+                  cy={ySolve}
+                  r="8"
+                  fill="none"
+                  stroke="#22d3ee"
+                  strokeWidth="1.5"
+                  strokeOpacity="0.4"
+                />
                 <circle cx={x} cy={yUser} r="3" fill="#6366f1" />
               </g>
             );
@@ -242,31 +270,57 @@ function ActivityWaveChart({ solves }) {
 
 function PlatformDistribution({ cp }) {
   const defaultDist = [
-    { platform: 'codeforces', count: 1240, color: 'bg-red-500', dot: 'bg-red-500' },
-    { platform: 'leetcode', count: 850, color: 'bg-amber-500', dot: 'bg-amber-500' },
-    { platform: 'atcoder', count: 420, color: 'bg-zinc-400', dot: 'bg-zinc-400' },
-    { platform: 'codechef', count: 280, color: 'bg-yellow-600', dot: 'bg-yellow-600' },
-    { platform: 'vjudge', count: 190, color: 'bg-blue-500', dot: 'bg-blue-500' },
+    {
+      platform: 'codeforces',
+      count: 1240,
+      color: 'bg-red-500',
+      dot: 'bg-red-500',
+    },
+    {
+      platform: 'leetcode',
+      count: 850,
+      color: 'bg-amber-500',
+      dot: 'bg-amber-500',
+    },
+    {
+      platform: 'atcoder',
+      count: 420,
+      color: 'bg-zinc-400',
+      dot: 'bg-zinc-400',
+    },
+    {
+      platform: 'codechef',
+      count: 280,
+      color: 'bg-yellow-600',
+      dot: 'bg-yellow-600',
+    },
+    {
+      platform: 'vjudge',
+      count: 190,
+      color: 'bg-blue-500',
+      dot: 'bg-blue-500',
+    },
   ];
 
-  const dist = cp?.distribution && cp.distribution.length > 0
-    ? cp.distribution.map((item, idx) => {
-        const colors = [
-          { color: 'bg-red-500', dot: 'bg-red-500' },
-          { color: 'bg-amber-500', dot: 'bg-amber-500' },
-          { color: 'bg-zinc-400', dot: 'bg-zinc-400' },
-          { color: 'bg-yellow-600', dot: 'bg-yellow-600' },
-          { color: 'bg-blue-500', dot: 'bg-blue-500' },
-        ];
-        const col = colors[idx % colors.length];
-        return {
-          platform: item.platform,
-          count: item.count,
-          color: col.color,
-          dot: col.dot,
-        };
-      })
-    : defaultDist;
+  const dist =
+    cp?.distribution && cp.distribution.length > 0
+      ? cp.distribution.map((item, idx) => {
+          const colors = [
+            { color: 'bg-red-500', dot: 'bg-red-500' },
+            { color: 'bg-amber-500', dot: 'bg-amber-500' },
+            { color: 'bg-zinc-400', dot: 'bg-zinc-400' },
+            { color: 'bg-yellow-600', dot: 'bg-yellow-600' },
+            { color: 'bg-blue-500', dot: 'bg-blue-500' },
+          ];
+          const col = colors[idx % colors.length];
+          return {
+            platform: item.platform,
+            count: item.count,
+            color: col.color,
+            dot: col.dot,
+          };
+        })
+      : defaultDist;
 
   const totalSolves = dist.reduce((sum, item) => sum + item.count, 0);
 
@@ -288,7 +342,9 @@ function PlatformDistribution({ cp }) {
         {dist.map((item) => (
           <StatRow
             key={item.platform}
-            label={item.platform.charAt(0).toUpperCase() + item.platform.slice(1)}
+            label={
+              item.platform.charAt(0).toUpperCase() + item.platform.slice(1)
+            }
             value={item.count}
             total={totalSolves}
             barColor={item.color}
@@ -305,7 +361,7 @@ function PlatformDistribution({ cp }) {
 function SectionCard({ title, icon: Icon, children, className = '' }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/2 to-white/4 p-6 backdrop-blur-xl transition-all duration-300 hover:border-white/12 hover:bg-white/[0.04] shadow-lg shadow-black/10 ${className}`}
+      className={`relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/2 to-white/4 p-6 shadow-lg shadow-black/10 backdrop-blur-xl transition-all duration-300 hover:border-white/12 hover:bg-white/[0.04] ${className}`}
     >
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -314,7 +370,9 @@ function SectionCard({ title, icon: Icon, children, className = '' }) {
               <Icon className="h-4 w-4 text-gray-300" />
             </div>
           )}
-          <h2 className="text-sm font-semibold text-zinc-100 tracking-wide">{title}</h2>
+          <h2 className="text-sm font-semibold tracking-wide text-zinc-100">
+            {title}
+          </h2>
         </div>
       </div>
       {children}
@@ -359,7 +417,7 @@ function StatRow({ label, value, total, barColor, dotColor }) {
           <span
             className={`h-2 w-2 rounded-full ${dotColor || 'bg-gray-500'}`}
           />
-          <span className="text-zinc-400 font-medium">{label}</span>
+          <span className="font-medium text-zinc-400">{label}</span>
         </div>
         <div className="flex items-center gap-2 tabular-nums">
           <span className="font-semibold text-white">{value}</span>
@@ -499,7 +557,10 @@ export default function AnalyticsClient({ data }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* SVG Interactive Wave Graph */}
         <div className="lg:col-span-2">
-          <SectionCard title="Weekly Submissions & Solves Trend" icon={TrendingUp}>
+          <SectionCard
+            title="Weekly Submissions & Solves Trend"
+            icon={TrendingUp}
+          >
             <ActivityWaveChart solves={cp?.totalSolves || 0} />
           </SectionCard>
         </div>

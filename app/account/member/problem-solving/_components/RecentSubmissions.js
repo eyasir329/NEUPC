@@ -21,7 +21,7 @@ import {
   ChevronRight,
   Filter,
 } from 'lucide-react';
-import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/problem-solving-platforms';
+import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
 
 // Build platform config dynamically from registry
 const PLATFORM_CONFIG = PROBLEM_SOLVING_PLATFORMS.reduce((acc, p) => {

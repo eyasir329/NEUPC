@@ -22,8 +22,13 @@ import {
 import {
   execUpdateRegistrationAction,
   execMarkAttendedAction,
-} from '@/app/_lib/executive-actions';
-import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/_components/ui';
+} from '@/app/_lib/actions/executive-actions';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  StatCard,
+} from '@/app/account/_components/ui';
 
 const STATUS_CONFIG = {
   registered: {
@@ -188,10 +193,30 @@ export default function RegistrationsClient({ events }) {
       {selectedEventId && (
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard icon={Users}        label="Total"     value={stats.total}     accent="blue"   />
-            <StatCard icon={UserCheck}    label="Confirmed" value={stats.confirmed} accent="cyan"   />
-            <StatCard icon={CheckCircle}  label="Attended"  value={stats.attended}  accent="emerald"/>
-            <StatCard icon={XCircle}      label="Cancelled" value={stats.cancelled} accent="rose"   />
+            <StatCard
+              icon={Users}
+              label="Total"
+              value={stats.total}
+              accent="blue"
+            />
+            <StatCard
+              icon={UserCheck}
+              label="Confirmed"
+              value={stats.confirmed}
+              accent="cyan"
+            />
+            <StatCard
+              icon={CheckCircle}
+              label="Attended"
+              value={stats.attended}
+              accent="emerald"
+            />
+            <StatCard
+              icon={XCircle}
+              label="Cancelled"
+              value={stats.cancelled}
+              accent="rose"
+            />
           </div>
 
           {/* Filters + Export */}

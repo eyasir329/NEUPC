@@ -22,8 +22,8 @@ import {
   ExternalLink,
   Tag,
 } from 'lucide-react';
-import { getTypeConfig } from '@/app/_lib/discussion-config';
-import { fetchReleaseLogAction } from '@/app/_lib/discussion-actions';
+import { getTypeConfig } from '@/app/_lib/config/discussion-config';
+import { fetchReleaseLogAction } from '@/app/_lib/actions/discussion-actions';
 import { TypeBadge } from '@/app/_components/discussions';
 
 // Type icons mapping

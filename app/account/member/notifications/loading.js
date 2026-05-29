@@ -1,8 +1,19 @@
+/**
+ * @file Notifications loading state
+ * @module NotificationsLoading
+ */
+
 'use client';
 
 const SHIMMER = 'animate-pulse rounded-md bg-white/[0.05]';
 function Sk({ className = '', style }) {
-  return <div className={`${SHIMMER} ${className}`} style={style} aria-hidden="true" />;
+  return (
+    <div
+      className={`${SHIMMER} ${className}`}
+      style={style}
+      aria-hidden="true"
+    />
+  );
 }
 
 export default function Loading() {
@@ -14,8 +25,8 @@ export default function Loading() {
     >
       {/* PageHeader skeleton */}
       <div className="flex items-center gap-4">
-        <Sk className="h-10 w-10 rounded-xl shrink-0" />
-        <div className="space-y-2 flex-1">
+        <Sk className="h-10 w-10 shrink-0 rounded-xl" />
+        <div className="flex-1 space-y-2">
           <Sk className="h-6 w-32" />
           <Sk className="h-3 w-64" />
         </div>
@@ -30,32 +41,32 @@ export default function Loading() {
       </div>
 
       {/* 2-col grid: list + sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
         {/* Notification rows */}
-        <div className="lg:col-span-2 rounded-2xl border border-white/6 bg-white/1 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-white/6 bg-white/1 lg:col-span-2">
           {Array.from({ length: 7 }).map((_, i) => (
             <div
               key={i}
               className={`flex items-start gap-4 p-4 ${i < 6 ? 'border-b border-white/4' : ''}`}
             >
-              <Sk className="h-10 w-10 rounded-full shrink-0 mt-0.5" />
-              <div className="flex-1 space-y-2 min-w-0">
+              <Sk className="mt-0.5 h-10 w-10 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
                 <Sk className="h-3.5 w-3/5" />
                 <Sk className="h-3 w-4/5" />
               </div>
-              <Sk className="h-2.75 w-14 shrink-0 mt-1" />
+              <Sk className="mt-1 h-2.75 w-14 shrink-0" />
             </div>
           ))}
         </div>
 
         {/* Sidebar skeleton */}
-        <div className="hidden lg:flex flex-col gap-6">
-          <div className="rounded-2xl border border-white/8 bg-white/2 p-6 space-y-4">
+        <div className="hidden flex-col gap-6 lg:flex">
+          <div className="space-y-4 rounded-2xl border border-white/8 bg-white/2 p-6">
             <Sk className="h-4 w-28" />
             <Sk className="h-9 w-full rounded-xl" />
             <Sk className="h-9 w-full rounded-xl" />
           </div>
-          <div className="rounded-2xl border border-white/8 bg-white/2 p-6 space-y-4">
+          <div className="space-y-4 rounded-2xl border border-white/8 bg-white/2 p-6">
             <Sk className="h-4 w-28" />
             <div className="space-y-3">
               <div className="flex justify-between">

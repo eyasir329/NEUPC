@@ -35,15 +35,11 @@ import {
   rejectApplicationAction,
   resetApplicationAction,
   deleteApplicationAction,
-} from '@/app/_lib/application-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/application-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // Shared UI components
-import {
-  GlassCard,
-  Pill,
-  Avatar,
-} from '@/app/account/_components/ui';
+import { GlassCard, Pill, Avatar } from '@/app/account/_components/ui';
 
 function InfoItem({ icon: Icon, label, value, mono, href, copyable }) {
   const [copied, setCopied] = useState(false);
@@ -65,7 +61,7 @@ function InfoItem({ icon: Icon, label, value, mono, href, copyable }) {
         <p className="mb-0.5 text-[9px] font-bold tracking-wider text-gray-500 uppercase">
           {label}
         </p>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {href ? (
             <a
               href={href}
@@ -78,7 +74,7 @@ function InfoItem({ icon: Icon, label, value, mono, href, copyable }) {
             </a>
           ) : (
             <p
-              className={`text-sm font-semibold leading-relaxed break-all text-gray-200 ${mono ? 'font-mono' : ''}`}
+              className={`text-sm leading-relaxed font-semibold break-all text-gray-200 ${mono ? 'font-mono' : ''}`}
             >
               {value}
             </p>
@@ -87,13 +83,15 @@ function InfoItem({ icon: Icon, label, value, mono, href, copyable }) {
             <button
               type="button"
               onClick={handleCopy}
-              className="shrink-0 rounded p-1 text-gray-500 hover:bg-white/5 transition-all hover:text-gray-300"
+              className="shrink-0 rounded p-1 text-gray-500 transition-all hover:bg-white/5 hover:text-gray-300"
             >
               <Copy className="h-3.5 w-3.5" />
             </button>
           )}
           {copied && (
-            <span className="shrink-0 text-[10px] font-semibold text-green-400">Copied!</span>
+            <span className="shrink-0 text-[10px] font-semibold text-green-400">
+              Copied!
+            </span>
           )}
         </div>
       </div>
@@ -245,10 +243,10 @@ export default function ApplicationDetailModal({
           <div className="flex min-w-0 items-center gap-3.5">
             <Avatar name={request.name} src={request.avatar} size="md" />
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold text-white leading-tight">
+              <h2 className="truncate text-base leading-tight font-bold text-white">
                 {request.name}
               </h2>
-              <p className="text-[10px] font-semibold text-gray-400 mt-0.5 tracking-wider uppercase">
+              <p className="mt-0.5 text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
                 Membership Request
               </p>
             </div>
@@ -291,24 +289,32 @@ export default function ApplicationDetailModal({
         </AnimatePresence>
 
         {/* Scroll body */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5 scrollbar-thin">
+        <div className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-6 py-5">
           {/* Visual multi-column grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Personal info */}
-            <GlassCard className="border-white/[0.04] bg-white/[0.01] p-4.5 flex flex-col justify-between">
+            <GlassCard className="flex flex-col justify-between border-white/[0.04] bg-white/[0.01] p-4.5">
               <div>
                 <h3 className="mb-2 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
                   Personal Information
                 </h3>
                 <div className="divide-y divide-white/[0.04]">
-                  <InfoItem icon={User} label="Full Name" value={request.name} />
+                  <InfoItem
+                    icon={User}
+                    label="Full Name"
+                    value={request.name}
+                  />
                   <InfoItem
                     icon={Mail}
                     label="Email Address"
                     value={request.email}
                     copyable
                   />
-                  <InfoItem icon={Phone} label="Phone Number" value={request.phone} />
+                  <InfoItem
+                    icon={Phone}
+                    label="Phone Number"
+                    value={request.phone}
+                  />
                 </div>
               </div>
               <a
@@ -357,14 +363,14 @@ export default function ApplicationDetailModal({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {request.codeforces_handle && (
                   <div className="rounded-xl border border-white/[0.04] bg-white/5 p-3">
-                    <p className="text-[9px] font-bold tracking-wider text-gray-500 uppercase mb-1">
+                    <p className="mb-1 text-[9px] font-bold tracking-wider text-gray-500 uppercase">
                       Codeforces Profile
                     </p>
                     <a
                       href={`https://codeforces.com/profile/${request.codeforces_handle}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-blue-400 transition-colors hover:text-blue-300"
                     >
                       <Code className="h-4 w-4 shrink-0 text-blue-400" />
                       {request.codeforces_handle}
@@ -374,7 +380,7 @@ export default function ApplicationDetailModal({
                 )}
                 {request.github && (
                   <div className="rounded-xl border border-white/[0.04] bg-white/5 p-3">
-                    <p className="text-[9px] font-bold tracking-wider text-gray-500 uppercase mb-1">
+                    <p className="mb-1 text-[9px] font-bold tracking-wider text-gray-500 uppercase">
                       GitHub Profile
                     </p>
                     <a
@@ -385,10 +391,13 @@ export default function ApplicationDetailModal({
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-semibold text-violet-400 hover:text-violet-300 transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-violet-400 transition-colors hover:text-violet-300"
                     >
                       <Github className="h-4 w-4 shrink-0 text-violet-400" />
-                      {request.github.replace(/https?:\/\/(www\.)?github\.com\//, '')}
+                      {request.github.replace(
+                        /https?:\/\/(www\.)?github\.com\//,
+                        ''
+                      )}
                       <ExternalLink className="h-3 w-3 opacity-60" />
                     </a>
                   </div>
@@ -405,7 +414,7 @@ export default function ApplicationDetailModal({
               </h3>
               <div className="flex flex-wrap gap-2">
                 {interests.map((interest, i) => (
-                  <Pill key={i} tone="violet" className="py-1 px-3">
+                  <Pill key={i} tone="violet" className="px-3 py-1">
                     {interest}
                   </Pill>
                 ))}
@@ -419,7 +428,7 @@ export default function ApplicationDetailModal({
               <h3 className="mb-2 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
                 Platform Statement / Why do you want to join?
               </h3>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-300 font-medium">
+              <p className="text-sm leading-relaxed font-medium whitespace-pre-wrap text-gray-300">
                 &ldquo;{request.reason}&rdquo;
               </p>
             </GlassCard>
@@ -451,10 +460,10 @@ export default function ApplicationDetailModal({
             <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4">
               <XCircle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-red-400" />
               <div>
-                <p className="text-xs font-bold text-red-300 uppercase tracking-wider mb-1">
+                <p className="mb-1 text-xs font-bold tracking-wider text-red-300 uppercase">
                   Rejection Cause & Comments
                 </p>
-                <p className="text-sm text-red-200 leading-relaxed font-semibold">
+                <p className="text-sm leading-relaxed font-semibold text-red-200">
                   {request.rejection_reason}
                 </p>
               </div>
@@ -464,7 +473,7 @@ export default function ApplicationDetailModal({
           {/* Reject form (inline) */}
           {showRejectForm && (
             <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4.5">
-              <label className="text-xs font-bold text-red-300 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-red-300 uppercase">
                 <AlertCircle className="h-4 w-4 text-red-400" />
                 Specify Rejection Reason (optional)
               </label>
@@ -492,7 +501,7 @@ export default function ApplicationDetailModal({
                 <button
                   type="button"
                   onClick={() => setShowRejectForm(false)}
-                  className="rounded-xl px-3 py-2 text-xs text-gray-500 transition-colors hover:text-gray-300 font-medium"
+                  className="rounded-xl px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:text-gray-300"
                 >
                   Cancel
                 </button>
@@ -510,7 +519,7 @@ export default function ApplicationDetailModal({
                 type="button"
                 onClick={handleApprove}
                 disabled={isPending}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 transition-all hover:scale-[1.01] hover:bg-green-500/25 active:scale-95 disabled:opacity-50 shadow-sm"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/15 px-4 py-2.5 text-sm font-bold text-green-300 shadow-sm transition-all hover:scale-[1.01] hover:bg-green-500/25 active:scale-95 disabled:opacity-50"
               >
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -525,7 +534,7 @@ export default function ApplicationDetailModal({
                 type="button"
                 onClick={() => setShowRejectForm(true)}
                 disabled={isPending}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/15 px-4 py-2.5 text-sm font-bold text-red-300 transition-all hover:scale-[1.01] hover:bg-red-500/25 active:scale-95 disabled:opacity-50 shadow-sm"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/15 px-4 py-2.5 text-sm font-bold text-red-300 shadow-sm transition-all hover:scale-[1.01] hover:bg-red-500/25 active:scale-95 disabled:opacity-50"
               >
                 <XCircle className="h-4 w-4" />
                 Reject Request
@@ -567,7 +576,7 @@ export default function ApplicationDetailModal({
                 <button
                   type="button"
                   onClick={() => setDeleteConfirm(false)}
-                  className="px-2 py-1.5 text-xs text-gray-500 transition-colors hover:text-gray-300 font-medium"
+                  className="px-2 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-300"
                 >
                   Cancel
                 </button>

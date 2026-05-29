@@ -4,7 +4,7 @@
  * @module AdminAvatar
  */
 
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 export default function Avatar({ user }) {
   const avatarSrc = driveImageUrl(user.avatar || '');
@@ -31,7 +31,7 @@ export default function Avatar({ user }) {
   const color = colors[(user.name?.charCodeAt(0) || 0) % colors.length];
   return (
     <div
-      className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${color} text-sm font-bold text-white ring-2 ring-white/10`}
+      className={`flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br ${color} text-sm font-bold text-white ring-2 ring-white/10`}
     >
       {user.avatar}
     </div>

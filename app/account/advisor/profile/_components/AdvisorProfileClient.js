@@ -1,3 +1,8 @@
+/**
+ * @file Advisor profile client component
+ * @module AdvisorProfileClient
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -12,7 +17,7 @@ import {
   Lock,
   Clock,
 } from 'lucide-react';
-import { signOutAction } from '@/app/_lib/actions';
+import { signOutAction } from '@/app/_lib/actions/actions';
 import {
   PageShell,
   PageHeader,
@@ -21,7 +26,7 @@ import {
   Avatar,
   Pill,
   ActionButton,
-} from '../../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 export default function AdvisorProfileClient({ user }) {
   const [signingOut, setSigningOut] = useState(false);
@@ -47,23 +52,25 @@ export default function AdvisorProfileClient({ user }) {
       />
 
       {/* Frosted Faculty Identity Badge */}
-      <GlassCard className="bg-gradient-to-br from-indigo-950/20 via-gray-900/40 to-transparent relative overflow-hidden select-none">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+      <GlassCard className="relative overflow-hidden bg-linear-to-br from-indigo-950/20 via-gray-900/40 to-transparent select-none">
+        <div className="absolute top-0 right-0 -z-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-3xl" />
 
-        <div className="flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left sm:gap-5">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:gap-5 sm:text-left">
           <Avatar name={profileName} size="xl" src={user.avatar_url} />
           <div className="flex-1">
-            <div className="flex flex-col items-center sm:items-start gap-1">
-              <span className="text-[10px] font-bold text-indigo-400 font-mono tracking-widest uppercase">
+            <div className="flex flex-col items-center gap-1 sm:items-start">
+              <span className="font-mono text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
                 Faculty Administration
               </span>
-              <h2 className="text-2xl font-black text-white leading-tight">
+              <h2 className="text-2xl leading-tight font-black text-white">
                 {profileName}
               </h2>
-              <p className="text-xs text-gray-500 font-mono mt-0.5">{user.email}</p>
+              <p className="mt-0.5 font-mono text-xs text-gray-500">
+                {user.email}
+              </p>
             </div>
 
-            <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
+            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               <Pill tone="indigo" icon={Shield}>
                 Faculty Advisor
               </Pill>
@@ -83,14 +90,19 @@ export default function AdvisorProfileClient({ user }) {
           subtitle="Identity credentials compiled from the official campus directory."
           accent="blue"
         />
-        <div className="grid gap-4 sm:grid-cols-2 mt-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <InfoField
             icon={User}
             label="Full Name"
             value={user.full_name || 'Not provided'}
             locked
           />
-          <InfoField icon={Mail} label="Email Address" value={user.email} locked />
+          <InfoField
+            icon={Mail}
+            label="Email Address"
+            value={user.email}
+            locked
+          />
           <InfoField
             icon={Phone}
             label="Contact Number"
@@ -118,7 +130,7 @@ export default function AdvisorProfileClient({ user }) {
           subtitle="Authentication channels and integrity logs."
           accent="emerald"
         />
-        <ul className="space-y-1 mt-4 font-mono text-[11px] text-gray-400">
+        <ul className="mt-4 space-y-1 font-mono text-[11px] text-gray-400">
           <SecurityRow label="Access Protocol" value="Google OAuth 2.0" />
           {user.last_login && (
             <SecurityRow
@@ -137,7 +149,7 @@ export default function AdvisorProfileClient({ user }) {
       {/* Session Redirection Card */}
       <GlassCard
         padding="p-6"
-        className="border-rose-500/10 bg-gradient-to-br from-rose-950/5 via-gray-900/40 to-transparent"
+        className="border-rose-500/10 bg-linear-to-br from-rose-950/5 via-gray-900/40 to-transparent"
       >
         <SectionHeader
           icon={LogOut}
@@ -164,11 +176,11 @@ export default function AdvisorProfileClient({ user }) {
 function InfoField({ icon: Icon, label, value, locked }) {
   return (
     <div className="group">
-      <label className="mb-2 flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase font-mono select-none">
+      <label className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest text-gray-500 uppercase select-none">
         <Icon className="h-3.5 w-3.5 text-gray-600" />
         {label}
         {locked && (
-          <span className="text-[9px] font-bold text-gray-600 font-mono tracking-normal normal-case flex items-center gap-1 shrink-0">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-[9px] font-bold tracking-normal text-gray-600 normal-case">
             <Lock className="h-2.5 w-2.5" /> (read-only)
           </span>
         )}
@@ -190,14 +202,12 @@ const TONE_TEXT = {
 
 function SecurityRow({ label, value, tone = 'gray' }) {
   return (
-    <li className="flex items-center justify-between border-b border-white/6 py-3 last:border-0 select-none">
-      <span className="text-gray-500 flex items-center gap-1.5">
+    <li className="flex items-center justify-between border-b border-white/6 py-3 select-none last:border-0">
+      <span className="flex items-center gap-1.5 text-gray-500">
         <Clock className="h-3.5 w-3.5 text-gray-600" />
         {label}
       </span>
-      <span className={`text-xs ${TONE_TEXT[tone]}`}>
-        {value}
-      </span>
+      <span className={`text-xs ${TONE_TEXT[tone]}`}>{value}</span>
     </li>
   );
 }

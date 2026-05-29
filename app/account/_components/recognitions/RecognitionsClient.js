@@ -42,11 +42,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-import { deleteAchievementAction } from '@/app/_lib/achievement-actions';
+import { deleteAchievementAction } from '@/app/_lib/actions/achievement-actions';
 import {
   execCreateCertificateAction,
   execBulkCreateCertificatesAction,
-} from '@/app/_lib/executive-actions';
+} from '@/app/_lib/actions/executive-actions';
 import {
   getStatCards,
   getCategoryConfig,
@@ -393,7 +393,7 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
     <GlassCard className="space-y-6 border border-white/[0.06] bg-slate-950/20 p-6 backdrop-blur-md">
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-blue-400" />
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+        <h3 className="text-sm font-bold tracking-wider text-white uppercase">
           Generate New Certificates
         </h3>
       </div>
@@ -408,7 +408,7 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
             key={m.key}
             type="button"
             onClick={() => setMode(m.key)}
-            className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition-all ${mode === m.key ? 'bg-blue-500/20 text-blue-400 border border-blue-500/10' : 'text-gray-400 hover:text-gray-300'}`}
+            className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition-all ${mode === m.key ? 'border border-blue-500/10 bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-gray-300'}`}
           >
             {m.label}
           </button>
@@ -426,7 +426,7 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
             key={t.key}
             type="button"
             onClick={() => setSourceType(t.key)}
-            className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${sourceType === t.key ? 'border-blue-500/30 bg-blue-500/15 text-blue-400' : 'border-white/5 text-gray-400 bg-white/[0.01] hover:bg-white/[0.03]'}`}
+            className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${sourceType === t.key ? 'border-blue-500/30 bg-blue-500/15 text-blue-400' : 'border-white/5 bg-white/[0.01] text-gray-400 hover:bg-white/[0.03]'}`}
           >
             <t.icon className="h-3.5 w-3.5" />
             {t.label}
@@ -442,7 +442,8 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
 
       {done && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-400">
-          <CheckCircle className="h-4 w-4" /> Certificate successfully generated!
+          <CheckCircle className="h-4 w-4" /> Certificate successfully
+          generated!
         </div>
       )}
 
@@ -525,7 +526,7 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
               className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5 text-xs text-white focus:outline-none"
             />
           </div>
-          <div className="sm:col-span-2 pt-2">
+          <div className="pt-2 sm:col-span-2">
             <button
               type="submit"
               disabled={isPending}
@@ -602,8 +603,8 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
               className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5 text-xs text-white focus:outline-none"
             />
           </div>
-          <div className="sm:col-span-2 pt-2">
-            <p className="mb-4 text-xs font-medium text-gray-500 leading-relaxed">
+          <div className="pt-2 sm:col-span-2">
+            <p className="mb-4 text-xs leading-relaxed font-medium text-gray-500">
               ⚠️ Certificates will be generated automatically for all enrolled
               members or completed registrants matching this{' '}
               {sourceType === 'event'
@@ -623,7 +624,9 @@ function GenerateForm({ events, bootcamps, contests, users, onSuccess }) {
               ) : (
                 <Users className="h-4 w-4" />
               )}
-              {isPending ? 'Generating credentials…' : 'Bulk Issue Certificates'}
+              {isPending
+                ? 'Generating credentials…'
+                : 'Bulk Issue Certificates'}
             </button>
           </div>
         </form>
@@ -809,7 +812,14 @@ export default function RecognitionsClient({
     }
 
     return items;
-  }, [initialAchievements, tab, search, categoryFilter, yearFilter, currentYear]);
+  }, [
+    initialAchievements,
+    tab,
+    search,
+    categoryFilter,
+    yearFilter,
+    currentYear,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -843,7 +853,11 @@ export default function RecognitionsClient({
         accent="amber"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <ActionButton href="/account/executive" tone="ghost" icon={ArrowLeft}>
+            <ActionButton
+              href="/account/executive"
+              tone="ghost"
+              icon={ArrowLeft}
+            >
               Dashboard
             </ActionButton>
             {activeMainTab === 'achievements' && (
@@ -893,8 +907,10 @@ export default function RecognitionsClient({
           {/* Stat Cards */}
           <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
             {statCards.map((s) => {
-              const mapping =
-                STAT_MAPPING[s.label] || { icon: Trophy, accent: 'amber' };
+              const mapping = STAT_MAPPING[s.label] || {
+                icon: Trophy,
+                accent: 'amber',
+              };
               return (
                 <StatCard
                   key={s.label}
@@ -981,7 +997,11 @@ export default function RecognitionsClient({
                     All categories
                   </option>
                   {allCategories.map((c) => (
-                    <option key={c} value={c} className="bg-slate-950 text-gray-300">
+                    <option
+                      key={c}
+                      value={c}
+                      className="bg-slate-950 text-gray-300"
+                    >
                       {c}
                     </option>
                   ))}
@@ -1071,7 +1091,7 @@ export default function RecognitionsClient({
                             </div>
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400"
+                                className="h-full rounded-full bg-linear-to-r from-amber-500 to-yellow-400"
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
@@ -1141,8 +1161,8 @@ export default function RecognitionsClient({
                       </div>
                     </div>
                     <p className="text-[10px] leading-relaxed font-medium text-gray-500">
-                      Team wins highlight collective milestones, while individual
-                      wins track focused developer mastery.
+                      Team wins highlight collective milestones, while
+                      individual wins track focused developer mastery.
                     </p>
                   </div>
 
@@ -1305,31 +1325,34 @@ export default function RecognitionsClient({
                           <ChevronLeft className="h-3.5 w-3.5" /> Prev
                         </button>
                         <div className="flex items-center gap-1">
-                          {getPageNumbers(currentPage, totalPages).map((p, i) =>
-                            p === '…' ? (
-                              <span
-                                key={`e${i}`}
-                                className="px-1.5 text-xs font-medium text-gray-600"
-                              >
-                                …
-                              </span>
-                            ) : (
-                              <button
-                                key={p}
-                                onClick={() => setPage(p)}
-                                className={`h-8 min-w-8 rounded-lg px-2 text-xs font-bold transition-all ${
-                                  p === currentPage
-                                    ? 'border border-amber-500/30 bg-amber-500/20 text-amber-400 shadow-md shadow-amber-900/10'
-                                    : 'border border-white/[0.08] bg-white/3 text-gray-400 hover:bg-white/5 hover:text-white'
-                                }`}
-                              >
-                                {p}
-                              </button>
-                            )
+                          {getPageNumbers(currentPage, totalPages).map(
+                            (p, i) =>
+                              p === '…' ? (
+                                <span
+                                  key={`e${i}`}
+                                  className="px-1.5 text-xs font-medium text-gray-600"
+                                >
+                                  …
+                                </span>
+                              ) : (
+                                <button
+                                  key={p}
+                                  onClick={() => setPage(p)}
+                                  className={`h-8 min-w-8 rounded-lg px-2 text-xs font-bold transition-all ${
+                                    p === currentPage
+                                      ? 'border border-amber-500/30 bg-amber-500/20 text-amber-400 shadow-md shadow-amber-900/10'
+                                      : 'border border-white/[0.08] bg-white/3 text-gray-400 hover:bg-white/5 hover:text-white'
+                                  }`}
+                                >
+                                  {p}
+                                </button>
+                              )
                           )}
                         </div>
                         <button
-                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                          onClick={() =>
+                            setPage((p) => Math.min(totalPages, p + 1))
+                          }
                           disabled={currentPage >= totalPages}
                           className="flex h-8 items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-white/3 px-2.5 text-xs text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                         >
@@ -1378,7 +1401,7 @@ export default function RecognitionsClient({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-amber-500" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-bold tracking-wider text-white uppercase">
                 Issued Certificate Registry
               </h3>
             </div>
@@ -1441,7 +1464,7 @@ export default function RecognitionsClient({
                             {c.users?.email}
                           </p>
                         </td>
-                        <td className="px-5 py-3.5 text-gray-300 font-medium">
+                        <td className="px-5 py-3.5 font-medium text-gray-300">
                           {c.title}
                         </td>
                         <td className="px-5 py-3.5">
@@ -1462,7 +1485,7 @@ export default function RecognitionsClient({
                             </span>
                           )}
                         </td>
-                        <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-xs whitespace-nowrap text-gray-500">
                           {c.issue_date ? formatDate(c.issue_date) : '—'}
                         </td>
                         <td className="px-5 py-3.5 text-right">
@@ -1471,13 +1494,15 @@ export default function RecognitionsClient({
                               href={c.certificate_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex rounded-lg p-2 text-blue-400 hover:bg-blue-500/10 transition-colors"
+                              className="inline-flex rounded-lg p-2 text-blue-400 transition-colors hover:bg-blue-500/10"
                               title="Download PDF"
                             >
                               <Download className="h-4 w-4" />
                             </a>
                           ) : (
-                            <span className="text-xs text-gray-600 pr-2">—</span>
+                            <span className="pr-2 text-xs text-gray-600">
+                              —
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -1485,7 +1510,7 @@ export default function RecognitionsClient({
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-white/[0.06] bg-slate-900/10 px-5 py-3 text-xs text-gray-500 font-medium">
+              <div className="border-t border-white/[0.06] bg-slate-900/10 px-5 py-3 text-xs font-medium text-gray-500">
                 Showing {filteredCerts.length} of {dbCertificates.length}{' '}
                 credentials in registry
               </div>

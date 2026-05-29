@@ -49,19 +49,26 @@ function extractYouTubeId(urlOrId) {
   if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
     return cleanId;
   }
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/;
+  const regExp =
+    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/|live\/)([^#\&\?]*).*/;
   const match = cleanId.match(regExp);
   if (match && match[2].length === 11) {
     return match[2];
   }
   try {
     const url = new URL(cleanId);
-    if (url.hostname.includes('youtube.com') || url.hostname.includes('youtube-nocookie.com')) {
+    if (
+      url.hostname.includes('youtube.com') ||
+      url.hostname.includes('youtube-nocookie.com')
+    ) {
       const v = url.searchParams.get('v');
       if (v && v.length === 11) return v;
       const pathParts = url.pathname.split('/');
       for (let i = 0; i < pathParts.length; i++) {
-        if (['embed', 'shorts', 'live', 'v'].includes(pathParts[i]) && pathParts[i + 1]?.length === 11) {
+        if (
+          ['embed', 'shorts', 'live', 'v'].includes(pathParts[i]) &&
+          pathParts[i + 1]?.length === 11
+        ) {
           return pathParts[i + 1];
         }
       }
@@ -98,7 +105,8 @@ function loadYouTubeAPI() {
         if (window.YT?.Player) {
           clearInterval(interval);
           resolve(window.YT);
-        } else if (++attempts > 100) { // 10 seconds timeout
+        } else if (++attempts > 100) {
+          // 10 seconds timeout
           clearInterval(interval);
           _ytApiPromise = null;
           reject(new Error('YouTube API load timeout'));
@@ -110,9 +118,14 @@ function loadYouTubeAPI() {
   return _ytApiPromise;
 }
 
-function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 }) {
+function YouTubePlayer({
+  videoId,
+  onProgress,
+  onComplete,
+  initialPosition = 0,
+}) {
   const playerContainerRef = useRef(null); // stable div React renders; YT player mounts inside it
-  const playerRef = useRef(null);          // YT.Player instance
+  const playerRef = useRef(null); // YT.Player instance
   const containerRef = useRef(null);
   const hideControlsTimerRef = useRef(null);
   const cursorHideTimerRef = useRef(null);
@@ -181,14 +194,18 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   // Dismiss resume toast after 6s
   useEffect(() => {
     if (!state.showResumeToast) return;
-    const t = setTimeout(() => setState((s) => ({ ...s, showResumeToast: false })), 6000);
+    const t = setTimeout(
+      () => setState((s) => ({ ...s, showResumeToast: false })),
+      6000
+    );
     return () => clearTimeout(t);
   }, [state.showResumeToast]);
 
   // Fullscreen sync
   useEffect(() => {
     const onFsChange = () => {
-      const fs = !!document.fullscreenElement || !!document.webkitFullscreenElement;
+      const fs =
+        !!document.fullscreenElement || !!document.webkitFullscreenElement;
       setState((s) => ({ ...s, fullscreen: fs }));
     };
     document.addEventListener('fullscreenchange', onFsChange);
@@ -202,7 +219,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   // Load YouTube IFrame API + create YT.Player
   useEffect(() => {
     if (!extractedId) {
-      setState((s) => ({ ...s, loading: false, error: 'No YouTube video ID found.' }));
+      setState((s) => ({
+        ...s,
+        loading: false,
+        error: 'No YouTube video ID found.',
+      }));
       return;
     }
     const container = playerContainerRef.current;
@@ -222,105 +243,128 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       if (!destroyed) setState((s) => ({ ...s, loading: false }));
     }, 8000);
 
-    loadYouTubeAPI().then((YT) => {
-      if (destroyed) return;
+    loadYouTubeAPI()
+      .then((YT) => {
+        if (destroyed) return;
 
-      let savedVolume = 100, savedMuted = false;
-      try {
-        const v = parseFloat(localStorage.getItem(VOLUME_KEY));
-        savedMuted = localStorage.getItem(MUTED_KEY) === '1';
-        if (!isNaN(v) && v >= 0 && v <= 1) {
-          savedVolume = Math.round(v * 100);
-          volumeRef.current = v;
-          setState((s) => ({ ...s, volume: v, muted: savedMuted }));
+        let savedVolume = 100,
+          savedMuted = false;
+        try {
+          const v = parseFloat(localStorage.getItem(VOLUME_KEY));
+          savedMuted = localStorage.getItem(MUTED_KEY) === '1';
+          if (!isNaN(v) && v >= 0 && v <= 1) {
+            savedVolume = Math.round(v * 100);
+            volumeRef.current = v;
+            setState((s) => ({ ...s, volume: v, muted: savedMuted }));
+          }
+        } catch {}
+
+        try {
+          player = new YT.Player(mountDiv, {
+            videoId: extractedId,
+            width: '100%',
+            height: '100%',
+            playerVars: {
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              rel: 0,
+              modestbranding: 1,
+              enablejsapi: 1,
+              origin: window.location.origin,
+              ...(initialPosition > 5
+                ? { start: Math.floor(initialPosition) }
+                : {}),
+            },
+            events: {
+              onReady(e) {
+                if (destroyed) return;
+                clearTimeout(loadingTimer);
+                e.target.setVolume(savedVolume);
+                if (savedMuted) e.target.mute();
+                playerRef.current = e.target;
+                setState((s) => ({ ...s, loading: false, error: null }));
+              },
+              onStateChange(e) {
+                if (destroyed) return;
+                const yt = e.data;
+                if (yt === 1) {
+                  playingRef.current = true;
+                  setState((s) => ({
+                    ...s,
+                    playing: true,
+                    loading: false,
+                    ended: false,
+                  }));
+                  showControlsTemporarily();
+                } else if (yt === 2) {
+                  playingRef.current = false;
+                  setState((s) => ({ ...s, playing: false }));
+                  showControlsTemporarily();
+                } else if (yt === 3) {
+                  setState((s) => ({ ...s, loading: true }));
+                } else if (yt === 5 || yt === -1) {
+                  setState((s) => ({ ...s, loading: false }));
+                } else if (yt === 0) {
+                  playingRef.current = false;
+                  setState((s) => ({
+                    ...s,
+                    playing: false,
+                    ended: true,
+                    showControls: true,
+                  }));
+                  onComplete?.();
+                }
+              },
+              onPlaybackRateChange(e) {
+                if (destroyed) return;
+                rateRef.current = e.data;
+                setState((s) => ({ ...s, rate: e.data }));
+              },
+              onError(e) {
+                if (destroyed) return;
+                clearTimeout(loadingTimer);
+                const code = e.data;
+                let msg = 'Failed to load YouTube video.';
+                if (code === 2) msg = 'Invalid YouTube video ID or URL.';
+                else if (code === 100) msg = 'YouTube video not found.';
+                else if (code === 101 || code === 150)
+                  msg = 'This video cannot be played in embedded players.';
+                setState((s) => ({ ...s, loading: false, error: msg }));
+              },
+            },
+          });
+        } catch {
+          clearTimeout(loadingTimer);
+          setState((s) => ({
+            ...s,
+            loading: false,
+            error: 'Failed to initialize YouTube player.',
+          }));
         }
-      } catch {}
-
-      try {
-        player = new YT.Player(mountDiv, {
-          videoId: extractedId,
-          width: '100%',
-          height: '100%',
-          playerVars: {
-            controls: 0,
-            disablekb: 1,
-            fs: 0,
-            rel: 0,
-            modestbranding: 1,
-            enablejsapi: 1,
-            origin: window.location.origin,
-            ...(initialPosition > 5 ? { start: Math.floor(initialPosition) } : {}),
-          },
-          events: {
-            onReady(e) {
-              if (destroyed) return;
-              clearTimeout(loadingTimer);
-              e.target.setVolume(savedVolume);
-              if (savedMuted) e.target.mute();
-              playerRef.current = e.target;
-              setState((s) => ({ ...s, loading: false, error: null }));
-            },
-            onStateChange(e) {
-              if (destroyed) return;
-              const yt = e.data;
-              if (yt === 1) {
-                playingRef.current = true;
-                setState((s) => ({ ...s, playing: true, loading: false, ended: false }));
-                showControlsTemporarily();
-              } else if (yt === 2) {
-                playingRef.current = false;
-                setState((s) => ({ ...s, playing: false }));
-                showControlsTemporarily();
-              } else if (yt === 3) {
-                setState((s) => ({ ...s, loading: true }));
-              } else if (yt === 5 || yt === -1) {
-                setState((s) => ({ ...s, loading: false }));
-              } else if (yt === 0) {
-                playingRef.current = false;
-                setState((s) => ({ ...s, playing: false, ended: true, showControls: true }));
-                onComplete?.();
-              }
-            },
-            onPlaybackRateChange(e) {
-              if (destroyed) return;
-              rateRef.current = e.data;
-              setState((s) => ({ ...s, rate: e.data }));
-            },
-            onError(e) {
-              if (destroyed) return;
-              clearTimeout(loadingTimer);
-              const code = e.data;
-              let msg = 'Failed to load YouTube video.';
-              if (code === 2) msg = 'Invalid YouTube video ID or URL.';
-              else if (code === 100) msg = 'YouTube video not found.';
-              else if (code === 101 || code === 150) msg = 'This video cannot be played in embedded players.';
-              setState((s) => ({ ...s, loading: false, error: msg }));
-            },
-          },
-        });
-      } catch {
+      })
+      .catch(() => {
+        if (destroyed) return;
         clearTimeout(loadingTimer);
-        setState((s) => ({ ...s, loading: false, error: 'Failed to initialize YouTube player.' }));
-      }
-    }).catch(() => {
-      if (destroyed) return;
-      clearTimeout(loadingTimer);
-      setState((s) => ({
-        ...s,
-        loading: false,
-        error: 'YouTube player blocked or failed to load API. If you are using an ad blocker (e.g. uBlock Origin or Brave Shields), please disable it for this site to load the player.',
-      }));
-    });
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error:
+            'YouTube player blocked or failed to load API. If you are using an ad blocker (e.g. uBlock Origin or Brave Shields), please disable it for this site to load the player.',
+        }));
+      });
 
     return () => {
       destroyed = true;
       clearTimeout(loadingTimer);
-      try { player?.destroy(); } catch {}
+      try {
+        player?.destroy();
+      } catch {}
       playerRef.current = null;
       playingRef.current = false;
       if (mountDiv.parentNode === container) container.removeChild(mountDiv);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extractedId, retryCount]);
 
   // Poll YT.Player for currentTime, duration, buffered (API doesn't push these)
@@ -355,13 +399,18 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       const now = Date.now();
       const prev = lastTickRef.current;
       let curr = 0;
-      try { curr = p.getCurrentTime?.() ?? 0; } catch {}
+      try {
+        curr = p.getCurrentTime?.() ?? 0;
+      } catch {}
       let delta = 0;
       if (prev.time != null && prev.at != null) {
         const wallDelta = (now - prev.at) / 1000;
         // Periodic ticks: skip if fired too soon (interval + visibility race).
         if (!force && wallDelta < 1) return;
-        delta = Math.max(0, Math.min(curr - prev.time, wallDelta, TICK_MS / 1000 + 2));
+        delta = Math.max(
+          0,
+          Math.min(curr - prev.time, wallDelta, TICK_MS / 1000 + 2)
+        );
       }
       lastTickRef.current = { time: curr, at: now };
       // Always report so last_position updates even when delta is 0 (e.g. instant pause).
@@ -376,7 +425,9 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
 
     if (state.playing && onProgress) {
       let curr = 0;
-      try { curr = playerRef.current?.getCurrentTime?.() ?? 0; } catch {}
+      try {
+        curr = playerRef.current?.getCurrentTime?.() ?? 0;
+      } catch {}
       lastTickRef.current = { time: curr, at: Date.now() };
       progressTickRef.current = setInterval(save, TICK_MS);
     } else {
@@ -427,7 +478,9 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
     const isMuted = p.isMuted?.() ?? false;
     if (isMuted) p.unMute();
     else p.mute();
-    try { localStorage.setItem(MUTED_KEY, isMuted ? '0' : '1'); } catch {}
+    try {
+      localStorage.setItem(MUTED_KEY, isMuted ? '0' : '1');
+    } catch {}
     setState((s) => ({ ...s, muted: !isMuted }));
   }, []);
 
@@ -474,9 +527,12 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const isFs = !!document.fullscreenElement || !!document.webkitFullscreenElement;
+    const isFs =
+      !!document.fullscreenElement || !!document.webkitFullscreenElement;
     if (isFs) {
-      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(
+        document
+      );
     } else if (container.requestFullscreen) {
       container.requestFullscreen();
     } else if (container.webkitRequestFullscreen) {
@@ -495,17 +551,48 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')
+        return;
       switch (e.key) {
-        case ' ': case 'k': e.preventDefault(); togglePlay(); break;
-        case 'ArrowLeft': case 'j': e.preventDefault(); seek(-10); break;
-        case 'ArrowRight': case 'l': e.preventDefault(); seek(10); break;
-        case 'ArrowUp': e.preventDefault(); setVolume(volumeRef.current + 0.05); break;
-        case 'ArrowDown': e.preventDefault(); setVolume(volumeRef.current - 0.05); break;
-        case 'm': e.preventDefault(); toggleMute(); break;
-        case 'f': e.preventDefault(); toggleFullscreen(); break;
-        case '>': e.preventDefault(); setRate(Math.min(2, rateRef.current + 0.25)); break;
-        case '<': e.preventDefault(); setRate(Math.max(0.5, rateRef.current - 0.25)); break;
+        case ' ':
+        case 'k':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowLeft':
+        case 'j':
+          e.preventDefault();
+          seek(-10);
+          break;
+        case 'ArrowRight':
+        case 'l':
+          e.preventDefault();
+          seek(10);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setVolume(volumeRef.current + 0.05);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setVolume(volumeRef.current - 0.05);
+          break;
+        case 'm':
+          e.preventDefault();
+          toggleMute();
+          break;
+        case 'f':
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case '>':
+          e.preventDefault();
+          setRate(Math.min(2, rateRef.current + 0.25));
+          break;
+        case '<':
+          e.preventDefault();
+          setRate(Math.max(0.5, rateRef.current - 0.25));
+          break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -513,30 +600,46 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   }, [togglePlay, seek, toggleMute, toggleFullscreen, setRate, setVolume]);
 
   // Progress bar scrubbing
-  const seekToClientX = useCallback((clientX, barEl) => {
-    const p = playerRef.current;
-    if (!p?.getDuration?.() || !barEl) return;
-    const rect = barEl.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    seekToFraction(pos);
-  }, [seekToFraction]);
+  const seekToClientX = useCallback(
+    (clientX, barEl) => {
+      const p = playerRef.current;
+      if (!p?.getDuration?.() || !barEl) return;
+      const rect = barEl.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      seekToFraction(pos);
+    },
+    [seekToFraction]
+  );
 
-  const handleProgressPointerDown = useCallback((e) => {
-    e.stopPropagation();
-    scrubbingRef.current = true;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    seekToClientX(e.clientX, e.currentTarget);
-  }, [seekToClientX]);
+  const handleProgressPointerDown = useCallback(
+    (e) => {
+      e.stopPropagation();
+      scrubbingRef.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      seekToClientX(e.clientX, e.currentTarget);
+    },
+    [seekToClientX]
+  );
 
-  const handleProgressPointerMove = useCallback((e) => {
-    if (!scrubbingRef.current) return;
-    seekToClientX(e.clientX, e.currentTarget);
-    const dur = playerRef.current?.getDuration?.() ?? 0;
-    if (!dur) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setState((s) => ({ ...s, hoverTime: pos * dur, hoverX: pos * rect.width }));
-  }, [seekToClientX]);
+  const handleProgressPointerMove = useCallback(
+    (e) => {
+      if (!scrubbingRef.current) return;
+      seekToClientX(e.clientX, e.currentTarget);
+      const dur = playerRef.current?.getDuration?.() ?? 0;
+      if (!dur) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = Math.max(
+        0,
+        Math.min(1, (e.clientX - rect.left) / rect.width)
+      );
+      setState((s) => ({
+        ...s,
+        hoverTime: pos * dur,
+        hoverX: pos * rect.width,
+      }));
+    },
+    [seekToClientX]
+  );
 
   const handleProgressPointerUp = useCallback((e) => {
     scrubbingRef.current = false;
@@ -556,40 +659,47 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
   }, []);
 
   // Video surface click: double-tap = seek ±10s, single = toggle play / show controls
-  const handleSurfaceClick = useCallback((e) => {
-    const isCoarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const side = (e.clientX - rect.left) < rect.width / 2 ? 'left' : 'right';
-    const now = Date.now();
-    const last = lastTapRef.current;
-    if (now - last.t < 300 && last.side === side) {
-      seek(side === 'left' ? -10 : 10);
-      setState((s) => ({ ...s, seekFlash: side }));
-      setTimeout(() => setState((s) => ({ ...s, seekFlash: null })), 400);
-      lastTapRef.current = { t: 0, side: null };
-      return;
-    }
-    lastTapRef.current = { t: now, side };
-    if (isCoarse) {
-      if (!state.showControls) showControlsTemporarily();
-      else togglePlay();
-    } else {
-      togglePlay();
-    }
-  }, [state.showControls, showControlsTemporarily, togglePlay, seek]);
+  const handleSurfaceClick = useCallback(
+    (e) => {
+      const isCoarse =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(pointer: coarse)').matches;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const side = e.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+      const now = Date.now();
+      const last = lastTapRef.current;
+      if (now - last.t < 300 && last.side === side) {
+        seek(side === 'left' ? -10 : 10);
+        setState((s) => ({ ...s, seekFlash: side }));
+        setTimeout(() => setState((s) => ({ ...s, seekFlash: null })), 400);
+        lastTapRef.current = { t: 0, side: null };
+        return;
+      }
+      lastTapRef.current = { t: now, side };
+      if (isCoarse) {
+        if (!state.showControls) showControlsTemporarily();
+        else togglePlay();
+      } else {
+        togglePlay();
+      }
+    },
+    [state.showControls, showControlsTemporarily, togglePlay, seek]
+  );
 
   if (state.error) {
     return (
-      <div className="relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-xl bg-gray-900 border border-white/10">
+      <div className="relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gray-900">
         <AlertCircle className="mb-3 h-10 w-10 text-red-500" />
-        <p className="mb-4 text-[13px] text-gray-400 px-6 text-center">{state.error}</p>
+        <p className="mb-4 px-6 text-center text-[13px] text-gray-400">
+          {state.error}
+        </p>
         <button
           onClick={() => {
             _ytApiPromise = null;
             setState((s) => ({ ...s, error: null, loading: true }));
             setRetryCount((c) => c + 1);
           }}
-          className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/15 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/15"
         >
           <RefreshCw className="h-4 w-4" />
           Retry
@@ -598,7 +708,12 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
     );
   }
 
-  const VolumeIcon = state.muted || state.volume === 0 ? VolumeX : state.volume < 0.5 ? Volume1 : Volume2;
+  const VolumeIcon =
+    state.muted || state.volume === 0
+      ? VolumeX
+      : state.volume < 0.5
+        ? Volume1
+        : Volume2;
 
   return (
     <div
@@ -608,7 +723,10 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       }`}
     >
       {/* Stable container — YT player is mounted imperatively inside via useEffect */}
-      <div ref={playerContainerRef} className="absolute inset-0 h-full w-full" />
+      <div
+        ref={playerContainerRef}
+        className="absolute inset-0 h-full w-full"
+      />
 
       {/* Click-capture overlay over the video area (above the YT iframe) */}
       <div
@@ -630,7 +748,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
           <button
             onClick={() => {
               playerRef.current?.seekTo(0, true);
-              setState((s) => ({ ...s, showResumeToast: false, currentTime: 0 }));
+              setState((s) => ({
+                ...s,
+                showResumeToast: false,
+                currentTime: 0,
+              }));
             }}
             className="rounded bg-white/15 px-2 py-0.5 hover:bg-white/25"
           >
@@ -666,7 +788,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
           className={`pointer-events-none absolute inset-y-0 z-10 ${state.seekFlash === 'left' ? 'left-0' : 'right-0'} flex w-1/2 items-center justify-center bg-white/10`}
         >
           <div className="flex flex-col items-center text-white">
-            {state.seekFlash === 'left' ? <SkipBack className="h-10 w-10" /> : <SkipForward className="h-10 w-10" />}
+            {state.seekFlash === 'left' ? (
+              <SkipBack className="h-10 w-10" />
+            ) : (
+              <SkipForward className="h-10 w-10" />
+            )}
             <span className="mt-1 text-xs">10s</span>
           </div>
         </div>
@@ -684,12 +810,16 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
       {/* Mini progress bar when controls hidden */}
       <div
         className={`pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/10 transition-opacity ${
-          state.showControls || !state.playing || state.settingsOpen ? 'opacity-0' : 'opacity-100'
+          state.showControls || !state.playing || state.settingsOpen
+            ? 'opacity-0'
+            : 'opacity-100'
         }`}
       >
         <div
           className="h-full bg-emerald-500 transition-[width] duration-150 ease-linear"
-          style={{ width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%` }}
+          style={{
+            width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
+          }}
         />
       </div>
 
@@ -722,15 +852,21 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
           <div className="relative h-1 w-full rounded-full bg-white/20 transition-[height] group-hover/bar:h-1.5">
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-white/30"
-              style={{ width: `${state.duration ? (state.buffered / state.duration) * 100 : 0}%` }}
+              style={{
+                width: `${state.duration ? (state.buffered / state.duration) * 100 : 0}%`,
+              }}
             />
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-emerald-500"
-              style={{ width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%` }}
+              style={{
+                width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
+              }}
             />
             <div
               className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg sm:h-3 sm:w-3"
-              style={{ left: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%` }}
+              style={{
+                left: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
+              }}
             />
           </div>
         </div>
@@ -742,7 +878,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
             aria-label={state.playing ? 'Pause' : 'Play'}
             className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
           >
-            {state.playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
+            {state.playing ? (
+              <Pause className="h-5 w-5 fill-current" />
+            ) : (
+              <Play className="h-5 w-5 fill-current" />
+            )}
           </button>
 
           <button
@@ -793,7 +933,9 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
           {/* Playback speed */}
           <div className="relative">
             <button
-              onClick={() => setState((s) => ({ ...s, settingsOpen: !s.settingsOpen }))}
+              onClick={() =>
+                setState((s) => ({ ...s, settingsOpen: !s.settingsOpen }))
+              }
               aria-label="Settings"
               className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
             >
@@ -801,7 +943,7 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
             </button>
             {state.settingsOpen && (
               <div className="absolute right-0 bottom-12 z-10 w-40 overflow-hidden rounded-lg border border-white/10 bg-black/90 backdrop-blur-md">
-                <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                <div className="px-3 py-2 text-[10px] font-semibold tracking-wider text-white/50 uppercase">
                   Playback speed
                 </div>
                 {PLAYBACK_RATES.map((r) => (
@@ -811,7 +953,9 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
                     className={`flex w-full items-center justify-between px-3 py-1.5 text-xs text-white hover:bg-white/10 ${state.rate === r ? 'bg-white/5' : ''}`}
                   >
                     <span>{r === 1 ? 'Normal' : `${r}x`}</span>
-                    {state.rate === r && <span className="text-emerald-400">✓</span>}
+                    {state.rate === r && (
+                      <span className="text-emerald-400">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -823,7 +967,11 @@ function YouTubePlayer({ videoId, onProgress, onComplete, initialPosition = 0 })
             aria-label={state.fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
           >
-            {state.fullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            {state.fullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
@@ -1028,7 +1176,9 @@ function DriveVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
     video.muted = !video.muted;
-    try { localStorage.setItem(MUTED_KEY, video.muted ? '1' : '0'); } catch {}
+    try {
+      localStorage.setItem(MUTED_KEY, video.muted ? '1' : '0');
+    } catch {}
     setState((s) => ({ ...s, muted: video.muted }));
   }, []);
 
@@ -1149,7 +1299,15 @@ function DriveVideoPlayer({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, seek, toggleMute, toggleFullscreen, togglePip, setRate, setVolume]);
+  }, [
+    togglePlay,
+    seek,
+    toggleMute,
+    toggleFullscreen,
+    togglePip,
+    setRate,
+    setVolume,
+  ]);
 
   const seekToClientX = useCallback((clientX, barEl) => {
     const video = videoRef.current;
@@ -1296,7 +1454,12 @@ function DriveVideoPlayer({
     onPlay: () => setState((s) => ({ ...s, playing: true })),
     onPause: () => setState((s) => ({ ...s, playing: false })),
     onEnded: () => {
-      setState((s) => ({ ...s, playing: false, ended: true, showControls: true }));
+      setState((s) => ({
+        ...s,
+        playing: false,
+        ended: true,
+        showControls: true,
+      }));
       onComplete?.();
     },
     onError: (e) => {
@@ -1313,7 +1476,10 @@ function DriveVideoPlayer({
         setTimeout(() => {
           const v = videoRef.current;
           if (v) {
-            try { v.load(); v.play().catch(() => {}); } catch {}
+            try {
+              v.load();
+              v.play().catch(() => {});
+            } catch {}
           }
         }, delay);
         setState((s) => ({ ...s, loading: true }));
@@ -1321,13 +1487,23 @@ function DriveVideoPlayer({
       }
       fetch(videoSrc, { method: 'GET', headers: { Range: 'bytes=0-0' } })
         .then(async (r) => {
-          if (r.ok || r.status === 206) return `Playback failed (code ${code ?? '?'}).`;
+          if (r.ok || r.status === 206)
+            return `Playback failed (code ${code ?? '?'}).`;
           let msg = `Server ${r.status}`;
-          try { const j = await r.json(); if (j?.error) msg = `${msg}: ${j.error}`; } catch {}
+          try {
+            const j = await r.json();
+            if (j?.error) msg = `${msg}: ${j.error}`;
+          } catch {}
           return msg;
         })
-        .catch(() => isNetwork ? 'Network error while loading video.' : 'Failed to load video. Please try again.')
-        .then((errorMsg) => setState((s) => ({ ...s, loading: false, error: errorMsg })));
+        .catch(() =>
+          isNetwork
+            ? 'Network error while loading video.'
+            : 'Failed to load video. Please try again.'
+        )
+        .then((errorMsg) =>
+          setState((s) => ({ ...s, loading: false, error: errorMsg }))
+        );
     },
     onWaiting: (e) => {
       setState((s) => ({ ...s, loading: true }));
@@ -1352,8 +1528,7 @@ function DriveVideoPlayer({
       errorRetryRef.current = 0;
       setState((s) => ({ ...s, loading: false }));
     },
-    onPlaying: () =>
-      setState((s) => ({ ...s, loading: false, ended: false })),
+    onPlaying: () => setState((s) => ({ ...s, loading: false, ended: false })),
     onVolumeChange: (e) => {
       setState((s) => ({
         ...s,
@@ -1399,11 +1574,12 @@ function DriveVideoPlayer({
     );
   }
 
-  const VolumeIcon = state.muted || state.volume === 0
-    ? VolumeX
-    : state.volume < 0.5
-      ? Volume1
-      : Volume2;
+  const VolumeIcon =
+    state.muted || state.volume === 0
+      ? VolumeX
+      : state.volume < 0.5
+        ? Volume1
+        : Volume2;
 
   return (
     <div
@@ -1428,9 +1604,7 @@ function DriveVideoPlayer({
 
       {/* Loading overlay — hide if buffer ahead exists (transient stutter) */}
       {state.loading &&
-        !(
-          state.buffered > state.currentTime + 0.5 && state.playing
-        ) && (
+        !(state.buffered > state.currentTime + 0.5 && state.playing) && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
             <Loader2 className="h-10 w-10 animate-spin text-white" />
           </div>
@@ -1639,7 +1813,7 @@ function DriveVideoPlayer({
             </button>
             {state.settingsOpen && (
               <div className="absolute right-0 bottom-12 z-10 w-40 overflow-hidden rounded-lg border border-white/10 bg-black/90 backdrop-blur-md">
-                <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                <div className="px-3 py-2 text-[10px] font-semibold tracking-wider text-white/50 uppercase">
                   Playback speed
                 </div>
                 {PLAYBACK_RATES.map((r) => (

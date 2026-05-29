@@ -14,12 +14,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { cn, getFallbackAvatarUrl } from '@/app/_lib/utils';
-import { getInitials } from '@/app/_lib/utils';
+import { cn, getFallbackAvatarUrl } from '@/app/_lib/utils/utils';
+import { getInitials } from '@/app/_lib/utils/utils';
 import {
   getChatableUsersAction,
   createDirectConversationAction,
-} from '@/app/_lib/chat-actions';
+} from '@/app/_lib/actions/chat-actions';
 import { Search, Loader2, Users } from 'lucide-react';
 
 const ROLE_STYLES = {
@@ -189,7 +189,9 @@ export default function NewChatPicker({
                         className="h-11 w-11 rounded-full object-cover ring-1 ring-white/5"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          e.target.src = getFallbackAvatarUrl(user.email || user.full_name);
+                          e.target.src = getFallbackAvatarUrl(
+                            user.email || user.full_name
+                          );
                         }}
                       />
                     ) : (

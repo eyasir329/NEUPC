@@ -1,7 +1,12 @@
+/**
+ * @file View tracker component
+ * @module ViewTracker
+ */
+
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { trackResourceViewAction } from '@/app/_lib/member-resources-actions';
+import { trackResourceViewAction } from '@/app/_lib/actions/member-resources-actions';
 
 /**
  * Fire-and-forget view tracker.  Renders nothing visible — just calls the

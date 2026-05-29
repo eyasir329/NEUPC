@@ -9,7 +9,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 // ─── Search Icon (inline SVG) ─────────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ export default function FilterPanel({
               value={search}
               onChange={onSearchChange}
               placeholder={searchPlaceholder}
-              className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-primary-500/40 focus:bg-white/7 focus:ring-1 focus:ring-primary-500/20"
+              className="focus:border-primary-500/40 focus:ring-primary-500/20 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:bg-white/7 focus:ring-1"
             />
             {search && (
               <button

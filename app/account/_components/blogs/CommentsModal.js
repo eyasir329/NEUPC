@@ -25,8 +25,8 @@ import { formatBlogDate } from './blogConfig';
 import {
   toggleCommentApprovalAction,
   deleteCommentAction,
-} from '@/app/_lib/blog-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/blog-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 export default function CommentsModal({ post, onClose }) {
   const [comments, setComments] = useState([]);

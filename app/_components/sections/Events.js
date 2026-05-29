@@ -1,9 +1,14 @@
+/**
+ * @file Events component
+ * @module Events
+ */
+
 'use client';
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { cn, formatDate, driveImageUrl } from '@/app/_lib/utils';
-import SafeImg from '../ui/SafeImg';
+import { cn, formatDate, driveImageUrl } from '@/app/_lib/utils/utils';
+import SafeImg from '@/app/_components/ui/SafeImg';
 
 const STATUS_LABEL = {
   upcoming: 'Upcoming',
@@ -103,7 +108,7 @@ function EventCard({ event, index = 0 }) {
           ) : (
             <div className="h-full w-full" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/90 via-[#05060b]/20 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/90 via-[#05060b]/20 to-transparent" />
           <div
             className={cn(
               'absolute top-3 left-3 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase backdrop-blur-md sm:top-4 sm:left-4 sm:px-4 sm:py-1.5',
@@ -191,7 +196,7 @@ function Events({
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/events"
-              className="font-heading focus-visible:ring-neon-lime w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime hover:text-neon-lime focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
+              className="font-heading focus-visible:ring-neon-lime hover:border-neon-lime hover:text-neon-lime w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               View All →
             </Link>

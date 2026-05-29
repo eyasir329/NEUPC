@@ -1,3 +1,8 @@
+/**
+ * @file Mentor discussions shell component
+ * @module MentorDiscussionsShell
+ */
+
 'use client';
 
 import { RefreshCw, HelpCircle } from 'lucide-react';

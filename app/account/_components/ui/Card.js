@@ -3,13 +3,13 @@
  * @module ui/Card
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 export function Card({ className, children, as: As = 'div', ...rest }) {
   return (
     <As
       className={cn(
-        'rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm shadow-sm',
+        'rounded-xl border border-white/[0.06] bg-white/[0.02] shadow-sm backdrop-blur-sm',
         className
       )}
       {...rest}

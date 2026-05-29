@@ -23,13 +23,13 @@ import {
   Edit2,
   X,
   ExternalLink,
-  BookOpen
+  BookOpen,
 } from 'lucide-react';
 import {
   execCreateBudgetEntryAction,
   execUpdateBudgetEntryAction,
   execDeleteBudgetEntryAction,
-} from '@/app/_lib/executive-actions';
+} from '@/app/_lib/actions/executive-actions';
 import {
   PageShell,
   PageHeader,
@@ -39,7 +39,7 @@ import {
   ActionButton,
   EmptyState,
   TabBar,
-} from '../../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 const TYPE_TABS = [
   { value: 'all', label: 'All Types' },
@@ -93,7 +93,7 @@ export default function ExecutiveBudgetClient({
     return [...initialEntries]
       .filter((e) => {
         const q = query.toLowerCase();
-        
+
         // Resolve event & bootcamp details for search
         const eventTitle = e.events?.title?.toLowerCase() || '';
         let bootcampTitle = '';
@@ -131,8 +131,17 @@ export default function ExecutiveBudgetClient({
 
         return matchSearch && matchType && matchStatus && matchCategory;
       })
-      .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
-  }, [initialEntries, query, typeFilter, categoryFilter, statusFilter, bootcampMap]);
+      .sort(
+        (a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)
+      );
+  }, [
+    initialEntries,
+    query,
+    typeFilter,
+    categoryFilter,
+    statusFilter,
+    bootcampMap,
+  ]);
 
   const balance = Number(initialSummary.balance ?? 0);
 
@@ -144,7 +153,10 @@ export default function ExecutiveBudgetClient({
       if (res?.error) {
         setNotification({ type: 'error', text: res.error });
       } else {
-        setNotification({ type: 'success', text: res.success || 'Budget entry submitted for review.' });
+        setNotification({
+          type: 'success',
+          text: res.success || 'Budget entry submitted for review.',
+        });
         setIsAddModalOpen(false);
       }
     });
@@ -157,7 +169,10 @@ export default function ExecutiveBudgetClient({
       if (res?.error) {
         setNotification({ type: 'error', text: res.error });
       } else {
-        setNotification({ type: 'success', text: res.success || 'Budget entry updated successfully.' });
+        setNotification({
+          type: 'success',
+          text: res.success || 'Budget entry updated successfully.',
+        });
         setEditingEntry(null);
       }
     });
@@ -172,7 +187,10 @@ export default function ExecutiveBudgetClient({
       if (res?.error) {
         setNotification({ type: 'error', text: res.error });
       } else {
-        setNotification({ type: 'success', text: res.success || 'Budget entry deleted.' });
+        setNotification({
+          type: 'success',
+          text: res.success || 'Budget entry deleted.',
+        });
         setDeletingEntryId(null);
       }
     });
@@ -306,7 +324,10 @@ export default function ExecutiveBudgetClient({
             title="No records found"
             description="No budget entries match your filter configuration. Create a new budget record or clear your active filters."
             action={
-              (query || typeFilter !== 'all' || categoryFilter !== 'all' || statusFilter !== 'all') ? (
+              query ||
+              typeFilter !== 'all' ||
+              categoryFilter !== 'all' ||
+              statusFilter !== 'all' ? (
                 <ActionButton
                   tone="ghost"
                   onClick={() => {
@@ -342,11 +363,15 @@ export default function ExecutiveBudgetClient({
 
             if (entry.category === 'event') {
               categoryLabel = 'Event Related';
-              categoryDetails = entry.events?.title ? `Event: ${entry.events.title}` : 'Associated Event';
+              categoryDetails = entry.events?.title
+                ? `Event: ${entry.events.title}`
+                : 'Associated Event';
             } else if (entry.category?.startsWith('bootcamp:')) {
               categoryLabel = 'Bootcamp Related';
               const bId = entry.category.split(':')[1];
-              categoryDetails = bootcampMap[bId] ? `Bootcamp: ${bootcampMap[bId]}` : 'Associated Bootcamp';
+              categoryDetails = bootcampMap[bId]
+                ? `Bootcamp: ${bootcampMap[bId]}`
+                : 'Associated Bootcamp';
             }
 
             return (
@@ -360,7 +385,15 @@ export default function ExecutiveBudgetClient({
                     <Pill tone={isIncome ? 'emerald' : 'rose'}>
                       {entry.entry_type}
                     </Pill>
-                    <Pill tone={entry.category?.startsWith('bootcamp:') ? 'violet' : entry.category === 'event' ? 'blue' : 'gray'}>
+                    <Pill
+                      tone={
+                        entry.category?.startsWith('bootcamp:')
+                          ? 'violet'
+                          : entry.category === 'event'
+                            ? 'blue'
+                            : 'gray'
+                      }
+                    >
                       {categoryLabel}
                     </Pill>
                     {isApproved ? (
@@ -372,7 +405,7 @@ export default function ExecutiveBudgetClient({
                         Pending Review
                       </Pill>
                     )}
-                    <span className="text-xs text-gray-500 font-medium">
+                    <span className="text-xs font-medium text-gray-500">
                       Submitted by: {entry.users?.full_name || 'Executive'}
                     </span>
                   </div>
@@ -389,11 +422,14 @@ export default function ExecutiveBudgetClient({
                   <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
-                      {new Date(entry.transaction_date).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {new Date(entry.transaction_date).toLocaleDateString(
+                        undefined,
+                        {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )}
                     </span>
                     {categoryDetails && (
                       <span className="flex items-center gap-1 text-slate-300">
@@ -406,7 +442,7 @@ export default function ExecutiveBudgetClient({
                         href={entry.receipt_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-blue-400 hover:underline hover:text-blue-300"
+                        className="flex items-center gap-1 text-blue-400 hover:text-blue-300 hover:underline"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                         View Receipt
@@ -421,7 +457,8 @@ export default function ExecutiveBudgetClient({
                       isIncome ? 'text-emerald-400' : 'text-rose-400'
                     }`}
                   >
-                    {isIncome ? '+' : '−'}৳{Number(entry.amount).toLocaleString()}
+                    {isIncome ? '+' : '−'}৳
+                    {Number(entry.amount).toLocaleString()}
                   </span>
 
                   {!isApproved && (
@@ -479,19 +516,20 @@ export default function ExecutiveBudgetClient({
       {/* DELETE CONFIRMATION MODAL */}
       {deletingEntryId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <GlassCard className="max-w-md w-full border border-slate-700/60 bg-slate-900 shadow-2xl p-6">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+          <GlassCard className="w-full max-w-md border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+              <AlertCircle className="h-5 w-5 shrink-0 text-rose-400" />
               Delete Budget Entry
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Are you sure you want to delete this pending budget entry? This action is permanent and cannot be undone.
+              Are you sure you want to delete this pending budget entry? This
+              action is permanent and cannot be undone.
             </p>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={() => setDeletingEntryId(null)}
-                className="flex-1 rounded-xl bg-slate-800 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+                className="flex-1 rounded-xl bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
                 disabled={isPendingAction}
               >
                 Cancel
@@ -499,7 +537,7 @@ export default function ExecutiveBudgetClient({
               <button
                 type="button"
                 onClick={() => handleDelete(deletingEntryId)}
-                className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
                 disabled={isPendingAction}
               >
                 {isPendingAction ? 'Deleting...' : 'Delete'}
@@ -523,16 +561,17 @@ function BudgetFormModal({
   loading = false,
 }) {
   const isEdit = Boolean(entry);
-  
-  // Resolve base values for edit state
-  const baseCategory = entry?.category === 'event' 
-    ? 'event' 
-    : entry?.category?.startsWith('bootcamp:') 
-    ? 'bootcamp' 
-    : 'maintenance';
 
-  const baseBootcampId = entry?.category?.startsWith('bootcamp:') 
-    ? entry.category.split(':')[1] 
+  // Resolve base values for edit state
+  const baseCategory =
+    entry?.category === 'event'
+      ? 'event'
+      : entry?.category?.startsWith('bootcamp:')
+        ? 'bootcamp'
+        : 'maintenance';
+
+  const baseBootcampId = entry?.category?.startsWith('bootcamp:')
+    ? entry.category.split(':')[1]
     : '';
 
   const [entryType, setEntryType] = useState(entry?.entry_type ?? 'expense');
@@ -558,7 +597,7 @@ function BudgetFormModal({
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
         {/* Sticky Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700/50 bg-slate-900 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
             <span>{isEdit ? '✏️' : '➕'}</span>
             <span>{title}</span>
           </h2>
@@ -722,7 +761,13 @@ function BudgetFormModal({
                 name="transaction_date"
                 type="date"
                 required
-                defaultValue={entry?.transaction_date ? new Date(entry.transaction_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                defaultValue={
+                  entry?.transaction_date
+                    ? new Date(entry.transaction_date)
+                        .toISOString()
+                        .split('T')[0]
+                    : new Date().toISOString().split('T')[0]
+                }
                 className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
             </div>
@@ -755,7 +800,11 @@ function BudgetFormModal({
               disabled={loading}
               className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
             >
-              {loading ? 'Submitting…' : isEdit ? 'Update Entry' : 'Submit Entry'}
+              {loading
+                ? 'Submitting…'
+                : isEdit
+                  ? 'Update Entry'
+                  : 'Submit Entry'}
             </button>
           </div>
         </form>

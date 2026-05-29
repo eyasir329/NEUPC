@@ -13,7 +13,7 @@ import {
   GlassCard,
   SectionHeader,
   ActionButton,
-} from '../../_components/ui/dashboard';
+} from '@/app/account/_components/ui/dashboard';
 
 const REPORTS = [
   { label: 'Annual Report', href: '/account/advisor/reports', tone: 'emerald' },
@@ -22,7 +22,8 @@ const REPORTS = [
 ];
 
 const TONE_CLS = {
-  emerald: 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300 hover:bg-emerald-500/10',
+  emerald:
+    'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300 hover:bg-emerald-500/10',
   blue: 'border-blue-500/20 bg-blue-500/[0.05] text-blue-300 hover:bg-blue-500/10',
   cyan: 'border-cyan-500/20 bg-cyan-500/[0.05] text-cyan-300 hover:bg-cyan-500/10',
 };

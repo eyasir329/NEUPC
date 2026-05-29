@@ -7,7 +7,7 @@ import {
   getPublicEvents,
   getPublicBlogs,
   getPublicRoadmaps,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 
 export default async function sitemap() {
   const baseUrl =

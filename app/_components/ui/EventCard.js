@@ -3,7 +3,7 @@
  * @module EventCard
  */
 
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import SafeImg from '@/app/_components/ui/SafeImg';
 
 /**

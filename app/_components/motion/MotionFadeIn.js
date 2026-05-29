@@ -8,8 +8,15 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { fadeUp, fadeDown, fadeLeft, fadeRight, fadeIn, viewportConfig } from './motion';
-import { cn } from '@/app/_lib/utils';
+import {
+  fadeUp,
+  fadeDown,
+  fadeLeft,
+  fadeRight,
+  fadeIn,
+  viewportConfig,
+} from './motion';
+import { cn } from '@/app/_lib/utils/utils';
 
 const DIRECTION_MAP = {
   up: fadeUp,
@@ -39,9 +46,7 @@ export default function MotionFadeIn({
   const prefersReduced = useReducedMotion();
 
   // Force opacity-only when reduced motion is preferred
-  const variants = prefersReduced
-    ? fadeIn
-    : (DIRECTION_MAP[direction] || fadeUp);
+  const variants = prefersReduced ? fadeIn : DIRECTION_MAP[direction] || fadeUp;
 
   const animateProps = inView
     ? {

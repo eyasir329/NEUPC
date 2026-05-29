@@ -14,8 +14,8 @@
 'use client';
 
 import { memo } from 'react';
-import { cn } from '@/app/_lib/utils';
-import { getInitials } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
+import { getInitials } from '@/app/_lib/utils/utils';
 import { Users } from 'lucide-react';
 
 /* ── Smart timestamp ───────────────────────────────────── */

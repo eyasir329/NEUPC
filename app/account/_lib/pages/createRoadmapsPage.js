@@ -6,7 +6,7 @@
  * @module account/_lib/pages/createRoadmapsPage
  */
 
-import { getAllRoadmaps } from '@/app/_lib/data-service';
+import { getAllRoadmaps } from '@/app/_lib/services/data-service';
 import RoadmapManagementClient from '@/app/account/_components/roadmaps/RoadmapManagementClient';
 
 /** Load roadmaps with a hard timeout, falling back to an empty list. */

@@ -1,14 +1,23 @@
+/**
+ * @file Pending actions component
+ * @module PendingActions
+ */
+
 'use client';
 
 import { UserCheck, UserPlus, FileText, Calendar, Zap } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton } from '@/app/account/_components/ui';
+import {
+  GlassCard,
+  SectionHeader,
+  ActionButton,
+} from '@/app/account/_components/ui';
 
 const iconMap = { UserCheck, UserPlus, FileText, Calendar };
 
 const ACCENT_ROW = {
-  red:    'border-rose-500/20 bg-rose-500/10 text-rose-400',
-  amber:  'border-amber-500/20 bg-amber-500/10 text-amber-400',
-  blue:   'border-blue-500/20 bg-blue-500/10 text-blue-400',
+  red: 'border-rose-500/20 bg-rose-500/10 text-rose-400',
+  amber: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
+  blue: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
   orange: 'border-orange-500/20 bg-orange-500/10 text-orange-400',
 };
 
@@ -23,7 +32,7 @@ export default function PendingActions({ pendingActions }) {
         subtitle="Items requiring immediate attention"
         accent="amber"
         action={
-          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400 px-2.5 py-0.5 text-[11px] font-semibold">
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
             {totalCount} total
           </span>
         }
@@ -35,14 +44,22 @@ export default function PendingActions({ pendingActions }) {
           return (
             <div
               key={action.id}
-              className={`rounded-xl border p-4 transition-all hover:brightness-110 cursor-pointer ${chip.split(' ')[0]} ${chip.split(' ')[1]}`}
+              className={`cursor-pointer rounded-xl border p-4 transition-all hover:brightness-110 ${chip.split(' ')[0]} ${chip.split(' ')[1]}`}
             >
-              <div className="flex items-center justify-between mb-3">
-                {Icon && <Icon className={`h-4.5 w-4.5 ${chip.split(' ')[2]}`} />}
-                <span className={`text-2xl font-bold ${chip.split(' ')[2]}`}>{action.count}</span>
+              <div className="mb-3 flex items-center justify-between">
+                {Icon && (
+                  <Icon className={`h-4.5 w-4.5 ${chip.split(' ')[2]}`} />
+                )}
+                <span className={`text-2xl font-bold ${chip.split(' ')[2]}`}>
+                  {action.count}
+                </span>
               </div>
-              <p className="text-sm font-semibold text-gray-200">{action.label}</p>
-              <button className={`mt-2 text-[11px] font-medium ${chip.split(' ')[2]} hover:underline`}>
+              <p className="text-sm font-semibold text-gray-200">
+                {action.label}
+              </p>
+              <button
+                className={`mt-2 text-[11px] font-medium ${chip.split(' ')[2]} hover:underline`}
+              >
                 View details →
               </button>
             </div>

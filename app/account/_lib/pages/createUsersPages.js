@@ -7,7 +7,11 @@
  */
 
 import Link from 'next/link';
-import { getAllUsers, getUserStats, getUserById } from '@/app/_lib/data-service';
+import {
+  getAllUsers,
+  getUserStats,
+  getUserById,
+} from '@/app/_lib/services/data-service';
 import UserManagementClient from '@/app/account/_components/users/UserManagementClient';
 import CreateUserClient from '@/app/account/_components/users/CreateUserClient';
 import EditUserClient from '@/app/account/_components/users/EditUserClient';

@@ -8,7 +8,11 @@ const SHIMMER = 'animate-pulse rounded-md bg-white/[0.05]';
 
 export default function BootcampLearningLoading() {
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-[#0d0e11]" role="status" aria-label="Loading">
+    <div
+      className="flex h-[calc(100vh-4rem)] bg-[#0d0e11]"
+      role="status"
+      aria-label="Loading"
+    >
       {/* Sidebar skeleton */}
       <aside className="hidden w-80 shrink-0 border-r border-white/[0.06] bg-[#121317] p-4 lg:block">
         <div className="space-y-4">

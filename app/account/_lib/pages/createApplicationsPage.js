@@ -6,11 +6,11 @@
  * @module account/_lib/pages/createApplicationsPage
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getAllJoinRequests,
   getPendingGuestApplications,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import ApplicationsClient from '@/app/account/_components/applications/ApplicationsClient';
 
 /**

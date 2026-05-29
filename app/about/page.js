@@ -9,8 +9,8 @@ import {
   getAllPublicSettings,
   getPublicFeaturedGallery,
   getPublicCommittee,
-} from '@/app/_lib/public-actions';
-import { buildMetadata } from '@/app/_lib/seo';
+} from '@/app/_lib/actions/public-actions';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import { AboutPageJsonLd, BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
 export const metadata = buildMetadata({

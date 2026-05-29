@@ -1,3 +1,8 @@
+/**
+ * @file Recent chats component
+ * @module RecentChats
+ */
+
 'use client';
 
 import { MessageSquare, Send } from 'lucide-react';
@@ -7,14 +12,16 @@ const MOCK_CHATS = [
   {
     id: 'c1',
     name: 'Aisha Rahman',
-    lastMessage: 'Thank you for the session notes! Will try the cleanup pattern tonight.',
+    lastMessage:
+      'Thank you for the session notes! Will try the cleanup pattern tonight.',
     time: '12 min ago',
     unread: 2,
   },
   {
     id: 'c2',
     name: 'Rahul Sharma',
-    lastMessage: 'Got it — I\'ll review the async/await article before tomorrow\'s session.',
+    lastMessage:
+      "Got it — I'll review the async/await article before tomorrow's session.",
     time: '1 hr ago',
     unread: 0,
   },
@@ -28,7 +35,8 @@ const MOCK_CHATS = [
   {
     id: 'c4',
     name: 'John Doe',
-    lastMessage: 'Pushed the Docker compose file to the repo. Can you take a look?',
+    lastMessage:
+      'Pushed the Docker compose file to the repo. Can you take a look?',
     time: 'Yesterday',
     unread: 0,
   },
@@ -60,12 +68,18 @@ export default function RecentChats({ chats = MOCK_CHATS }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <p className={`truncate text-sm ${chat.unread > 0 ? 'font-semibold text-white' : 'font-medium text-gray-300'}`}>
+                <p
+                  className={`truncate text-sm ${chat.unread > 0 ? 'font-semibold text-white' : 'font-medium text-gray-300'}`}
+                >
                   {chat.name}
                 </p>
-                <span className="shrink-0 text-[11px] text-gray-500">{chat.time}</span>
+                <span className="shrink-0 text-[11px] text-gray-500">
+                  {chat.time}
+                </span>
               </div>
-              <p className={`mt-0.5 truncate text-xs ${chat.unread > 0 ? 'text-gray-300' : 'text-gray-500'}`}>
+              <p
+                className={`mt-0.5 truncate text-xs ${chat.unread > 0 ? 'text-gray-300' : 'text-gray-500'}`}
+              >
                 {chat.lastMessage}
               </p>
             </div>

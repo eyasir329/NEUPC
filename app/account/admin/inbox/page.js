@@ -5,8 +5,8 @@
  * @access admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getActiveNotices } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getActiveNotices } from '@/app/_lib/services/data-service';
 import AdminNoticesClient from './_components/AdminNoticesClient';
 
 export const metadata = { title: 'Inbox | Admin | NEUPC' };

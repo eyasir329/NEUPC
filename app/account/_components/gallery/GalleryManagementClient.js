@@ -19,7 +19,7 @@ import Link from 'next/link';
 import {
   reorderEventGalleryAction,
   deleteEventGalleryItemAction,
-} from '@/app/_lib/gallery-actions';
+} from '@/app/_lib/actions/gallery-actions';
 
 // Lucide icons
 import {
@@ -54,10 +54,10 @@ const TABS = ['all', 'image', 'video', 'featured', 'by_event'];
 
 const STAT_MAPPING = {
   'Total Items': { icon: Folder, accent: 'violet' },
-  'Images': { icon: ImageIcon, accent: 'blue' },
-  'Videos': { icon: Video, accent: 'rose' },
-  'Featured': { icon: Star, accent: 'amber' },
-  'Categories': { icon: Tag, accent: 'emerald' },
+  Images: { icon: ImageIcon, accent: 'blue' },
+  Videos: { icon: Video, accent: 'rose' },
+  Featured: { icon: Star, accent: 'amber' },
+  Categories: { icon: Tag, accent: 'emerald' },
   'Linked Events': { icon: Calendar, accent: 'sky' },
 };
 
@@ -271,7 +271,10 @@ export default function GalleryManagementClient({
       {/* ── Stat Cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map((s, idx) => {
-          const mapping = STAT_MAPPING[s.label] || { icon: ImageIcon, accent: 'violet' };
+          const mapping = STAT_MAPPING[s.label] || {
+            icon: ImageIcon,
+            accent: 'violet',
+          };
           return (
             <StatCard
               key={s.label}
@@ -291,19 +294,19 @@ export default function GalleryManagementClient({
       {/* ── Toolbar & Filters ───────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         {/* Search bar */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
+        <div className="relative max-w-md flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search captions, tags, categories, events…"
-            className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -311,13 +314,13 @@ export default function GalleryManagementClient({
         </div>
 
         {/* Dropdown Filters */}
-        <div className="flex items-center flex-wrap gap-2 sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {/* Category filter */}
           <div className="relative">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+              className="cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 pr-8 text-xs text-white transition-all outline-none focus:border-violet-500/50"
               style={{ colorScheme: 'dark' }}
             >
               <option value="">All Categories</option>
@@ -327,7 +330,7 @@ export default function GalleryManagementClient({
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 text-gray-500" />
           </div>
 
           {/* Event filter */}
@@ -336,7 +339,7 @@ export default function GalleryManagementClient({
               <select
                 value={eventFilter}
                 onChange={(e) => setEventFilter(e.target.value)}
-                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                className="cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 pr-8 text-xs text-white transition-all outline-none focus:border-violet-500/50"
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="">All Events</option>
@@ -346,7 +349,7 @@ export default function GalleryManagementClient({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 text-gray-500" />
             </div>
           )}
         </div>
@@ -356,8 +359,12 @@ export default function GalleryManagementClient({
       {(search || categoryFilter || eventFilter) && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>
-            Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
-            <span className="text-white font-medium">{initialItems.length + eventGalleryItems.length}</span> items
+            Showing{' '}
+            <span className="font-medium text-white">{filtered.length}</span> of{' '}
+            <span className="font-medium text-white">
+              {initialItems.length + eventGalleryItems.length}
+            </span>{' '}
+            items
           </span>
           <button
             onClick={() => {
@@ -365,7 +372,7 @@ export default function GalleryManagementClient({
               setCategoryFilter('');
               setEventFilter('');
             }}
-            className="ml-2 flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors font-medium"
+            className="ml-2 flex items-center gap-1 font-medium text-violet-400 transition-colors hover:text-violet-300"
           >
             <X className="h-3 w-3" />
             Clear filters
@@ -382,15 +389,18 @@ export default function GalleryManagementClient({
               className="border-white/[0.06] bg-white/[0.02]"
               padding="p-6"
             >
-              <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10">
                     <Calendar className="h-5 w-5 text-violet-400" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-200">{ev.title}</h3>
+                    <h3 className="text-sm font-semibold text-gray-200">
+                      {ev.title}
+                    </h3>
                     <p className="text-xs text-gray-500">
-                      {evItems.length} item{evItems.length !== 1 ? 's' : ''} in event
+                      {evItems.length} item{evItems.length !== 1 ? 's' : ''} in
+                      event
                     </p>
                   </div>
                 </div>
@@ -445,7 +455,11 @@ export default function GalleryManagementClient({
           {filtered.length === 0 ? (
             <EmptyState
               icon={ImageIcon}
-              title={search || categoryFilter || eventFilter ? 'No items found' : 'No gallery items'}
+              title={
+                search || categoryFilter || eventFilter
+                  ? 'No items found'
+                  : 'No gallery items'
+              }
               description={
                 search || categoryFilter || eventFilter
                   ? 'Try adjusting your search query or dropdown filters.'
@@ -482,7 +496,10 @@ export default function GalleryManagementClient({
                 <p className="text-xs text-gray-500">
                   Showing {(safePage - 1) * ITEMS_PER_PAGE + 1}–
                   {Math.min(safePage * ITEMS_PER_PAGE, filtered.length)} of{' '}
-                  <span className="text-white font-medium">{filtered.length}</span> items
+                  <span className="font-medium text-white">
+                    {filtered.length}
+                  </span>{' '}
+                  items
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -507,15 +524,16 @@ export default function GalleryManagementClient({
 
               {/* ── Pagination Controls ─────────────────────────────────── */}
               {totalPages > 1 && (
-                <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/[0.06] sm:flex-row sm:justify-between">
+                <div className="flex flex-col items-center gap-3 border-t border-white/[0.06] pt-6 sm:flex-row sm:justify-between">
                   <p className="text-xs text-gray-500">
-                    Page <span className="text-white">{safePage}</span> of {totalPages}
+                    Page <span className="text-white">{safePage}</span> of{' '}
+                    {totalPages}
                   </p>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setCurrentPage(1)}
                       disabled={safePage <= 1}
-                      className="inline-flex h-8 items-center justify-center rounded-lg px-2.5 text-xs font-semibold border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 px-2.5 text-xs font-semibold text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       First
                     </button>
@@ -554,7 +572,7 @@ export default function GalleryManagementClient({
                             onClick={() => setCurrentPage(p)}
                             className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
                               p === safePage
-                                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                                ? 'border border-violet-500/30 bg-violet-500/20 text-violet-400'
                                 : 'border border-white/6 bg-white/2 text-gray-400 hover:bg-white/5 hover:text-white'
                             }`}
                           >
@@ -575,7 +593,7 @@ export default function GalleryManagementClient({
                     <button
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={safePage >= totalPages}
-                      className="inline-flex h-8 items-center justify-center rounded-lg px-2.5 text-xs font-semibold border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 px-2.5 text-xs font-semibold text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       Last
                     </button>

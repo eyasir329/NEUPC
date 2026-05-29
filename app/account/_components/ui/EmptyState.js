@@ -3,9 +3,15 @@
  * @module ui/EmptyState
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
-export function EmptyState({ icon: Icon, title, description, action, className }) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
+}) {
   return (
     <div
       className={cn(
