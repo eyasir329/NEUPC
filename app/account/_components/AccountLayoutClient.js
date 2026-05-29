@@ -13,6 +13,8 @@ import { useRole } from './RoleContext';
 import AccountSidebar from './AccountSidebar';
 import DashboardTopbar from './DashboardTopbar';
 import { getSidebarNavigation } from '@/app/_lib/config/sidebarConfig';
+import { cn } from '@/app/_lib/utils/utils';
+
 
 // Valid role segments in the URL
 const VALID_ROLES = [
@@ -180,7 +182,7 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   }, [currentRole, session]);
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-[#0B1121]">
+    <div className={cn("relative flex bg-[#0B1121] w-full", hideSidebar ? "min-h-screen overflow-x-hidden" : "h-screen overflow-hidden")}>
       <AccountSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -194,17 +196,18 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
       />
 
       {/* Main Content Area */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className={cn("flex min-w-0 flex-1 flex-col", hideSidebar ? "w-full" : "overflow-hidden")}>
         {!hideSidebar && (
           <DashboardTopbar
             activeRole={currentRole}
             notificationCount={SIDEBAR_STATS.notifications}
           />
         )}
-        <div className="flex-1 overflow-x-hidden overflow-y-auto">
+        <div className={cn("flex-1", hideSidebar ? "w-full" : "overflow-x-hidden overflow-y-auto")}>
           {children}
         </div>
       </main>
     </div>
   );
 }
+
