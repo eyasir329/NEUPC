@@ -17,7 +17,7 @@ import {
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
-async function requireAdmin() {
+async function requireAdminOrAdvisor() {
   const session = await auth();
   if (!session?.user?.email) throw new Error('Not authenticated');
 
@@ -38,8 +38,10 @@ async function requireAdmin() {
     .eq('user_id', userData.id);
 
   if (roleError) throw new Error(roleError.message);
-  const isAdmin = roleRows?.some((row) => row.roles?.name === 'admin');
-  if (!isAdmin) throw new Error('Unauthorized');
+  const isAuthorized = roleRows?.some(
+    (row) => row.roles?.name === 'admin' || row.roles?.name === 'advisor'
+  );
+  if (!isAuthorized) throw new Error('Unauthorized');
 
   return userData.id;
 }
@@ -69,7 +71,7 @@ function revalidateCommitteeViews() {
 }
 
 export async function createCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const title = formData.get('title')?.toString().trim();
   const category = formData.get('category')?.toString().trim();
@@ -103,7 +105,7 @@ export async function createCommitteePositionAction(formData) {
 }
 
 export async function updateCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Position id is required');
@@ -140,7 +142,7 @@ export async function updateCommitteePositionAction(formData) {
 }
 
 export async function deleteCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Position id is required');
@@ -158,7 +160,7 @@ export async function deleteCommitteePositionAction(formData) {
 }
 
 export async function createCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const userId = formData.get('user_id')?.toString();
   const positionId = formData.get('position_id')?.toString();
@@ -228,7 +230,7 @@ export async function createCommitteeMemberAction(formData) {
 }
 
 export async function updateCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Committee member id is required');
@@ -306,7 +308,7 @@ export async function updateCommitteeMemberAction(formData) {
 }
 
 export async function deleteCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Committee member id is required');

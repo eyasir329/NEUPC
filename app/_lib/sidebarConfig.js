@@ -265,6 +265,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Mail,
             href: '/account/executive/contact-submissions',
           },
+          {
+            id: 'budget',
+            label: 'Budget',
+            icon: DollarSign,
+            href: '/account/executive/budget',
+          },
         ],
       },
       {
@@ -325,6 +331,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Profile',
             icon: User,
             href: '/account/executive/profile',
+          },
+          {
+            id: 'settings',
+            label: 'Settings',
+            icon: Settings,
+            href: '/account/executive/settings',
           },
         ],
       },
@@ -689,6 +701,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Profile',
             icon: User,
             href: '/account/advisor/profile',
+          },
+          {
+            id: 'settings',
+            label: 'Settings',
+            icon: Settings,
+            href: '/account/advisor/settings',
           },
         ],
       },

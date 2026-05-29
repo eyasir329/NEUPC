@@ -1,10 +1,3 @@
-/**
- * @file Advisor analytics client — KPIs, pipeline, engagement, and top
- *   events / achievements using the shared dark-glass primitives.
- *
- * @module AdvisorAnalyticsClient
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -19,6 +12,10 @@ import {
   BarChart3,
   Activity,
   ArrowRight,
+  UserPlus,
+  UserCheck,
+  Mail,
+  Award,
 } from 'lucide-react';
 import {
   PageShell,
@@ -72,10 +69,11 @@ export default function AdvisorAnalyticsClient({
 
   return (
     <PageShell>
+      {/* Page Header */}
       <PageHeader
         icon={BarChart3}
-        title="Analytics"
-        subtitle="Club performance and growth trends"
+        title="Intelligence Centre"
+        subtitle="Analyze platform growth metrics, upcoming activities, and global club performance."
         accent="violet"
         actions={
           <div className="w-full sm:w-auto">
@@ -84,77 +82,94 @@ export default function AdvisorAnalyticsClient({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Primary KPI Stats Grid */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 animate-fade-in select-none">
         <StatCard
           icon={Users}
           label="Total Users"
           value={platformStats.totalUsers ?? 0}
           accent="blue"
+          sublabel="Global platform users"
           delay={0}
         />
         <StatCard
           icon={CheckCircle}
-          label="Approved Members"
+          label="Verified Members"
           value={platformStats.totalApprovedMembers ?? 0}
           accent="emerald"
-          delay={0.04}
+          sublabel="Approved candidates"
+          delay={0.05}
         />
         <StatCard
           icon={Calendar}
-          label="Total Events"
+          label="Hosted Events"
           value={platformStats.totalEvents ?? 0}
           accent="violet"
-          delay={0.08}
+          sublabel="Organized events"
+          delay={0.1}
         />
         <StatCard
           icon={Trophy}
-          label="Total Contests"
+          label="Contests Loaded"
           value={platformStats.totalContests ?? 0}
           accent="amber"
-          delay={0.12}
+          sublabel="Problem solving metrics"
+          delay={0.15}
         />
       </div>
 
-      <GlassCard>
+      {/* Oversight Pipeline Links */}
+      <GlassCard padding="p-6">
         <SectionHeader
           icon={Clock}
-          title="Approval Pipeline"
-          subtitle="Open items across the system"
+          title="Administrative Queue"
+          subtitle="Oversight pipelines that require immediate advisor decision making"
           accent="amber"
         />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mt-4">
           <PipelineTile
             href="/account/advisor/approvals"
             label="Member Approvals"
             value={dashboardMetrics.pendingMemberProfiles ?? 0}
+            icon={UserCheck}
+            accent="blue"
           />
           <PipelineTile
             href="/account/advisor/approvals"
             label="Join Requests"
             value={dashboardMetrics.pendingJoinRequests ?? 0}
+            icon={UserPlus}
+            accent="orange"
           />
           <PipelineTile
             href="/account/advisor/events"
             label="Upcoming Events"
             value={dashboardMetrics.upcomingEvents ?? 0}
+            icon={Calendar}
+            accent="violet"
           />
           <PipelineTile
             href="/account/advisor/reports"
             label="Unread Contacts"
             value={dashboardMetrics.unreadContacts ?? 0}
+            icon={Mail}
+            accent="emerald"
           />
         </div>
       </GlassCard>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <GlassCard>
+      {/* Double Column Intelligence Panels */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Event Engagement Dashboard */}
+        <GlassCard padding="p-6">
           <SectionHeader
             icon={Activity}
-            title="Event Engagement"
-            subtitle="How well events convert registrations to attendance"
+            title="Event Conversion & Engagement"
+            subtitle="Analyze participant retention from registrations to active attendance."
             accent="violet"
           />
-          <div className="grid grid-cols-3 gap-2">
+          
+          <div className="grid grid-cols-3 gap-2 mt-4">
             <EngagementTile
               label="Registrations"
               value={engagement.totalRegistrations}
@@ -166,140 +181,178 @@ export default function AdvisorAnalyticsClient({
               tone="emerald"
             />
             <EngagementTile
-              label="Rate"
+              label="Attendance Rate"
               value={`${engagement.attendanceRate}%`}
               tone="violet"
             />
           </div>
 
+          {/* Visual Conversion progress bar */}
+          <div className="mt-4 p-3 bg-white/2 border border-white/6 rounded-xl select-none">
+            <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">
+              <span>Conversion Meter</span>
+              <span className="text-violet-400">{engagement.attendanceRate}% Conversion</span>
+            </div>
+            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/6">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-emerald-500 transition-all duration-1000"
+                style={{ width: `${engagement.attendanceRate}%` }}
+              />
+            </div>
+          </div>
+
           <div className="mt-5">
-            <h4 className="mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-              Top recent events
+            <h4 className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-500 uppercase font-mono select-none">
+              Top recent events performance
             </h4>
             {pastEvents.length === 0 ? (
               <EmptyState
                 icon={Calendar}
-                title="No past events"
-                description="Completed events with stats will be summarised here."
+                title="No past events loaded"
+                description="Completed activities containing participant stats will appear here."
+                accent="violet"
               />
             ) : (
               <ul className="space-y-2">
                 {pastEvents.map((e) => (
                   <li
                     key={e.id}
-                    className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+                    className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 p-3 hover:bg-white/4 hover:border-white/10 transition-all"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-1 text-sm font-medium text-white">
+                    <div className="min-w-0 flex-1 pr-3">
+                      <p className="line-clamp-1 text-xs font-semibold text-white">
                         {e.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-gray-500">
+                      <p className="mt-0.5 text-[10px] text-gray-500 font-mono">
                         {new Date(e.start_date).toLocaleDateString()}
                       </p>
                     </div>
-                    <Pill tone="blue">
-                      {e.registrationCount ?? 0} registered
-                    </Pill>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-400 font-sans whitespace-nowrap">
+                      {e.registrationCount ?? 0} registrations
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-5">
             <ActionButton
               href="/account/advisor/events"
               tone="ghost"
               icon={ArrowRight}
             >
-              View all events
+              Manage Club Events
             </ActionButton>
           </div>
         </GlassCard>
 
-        <GlassCard>
+        {/* Top Achievements Board */}
+        <GlassCard padding="p-6">
           <SectionHeader
             icon={Trophy}
-            title="Top Achievements"
-            subtitle="Most-earned by members"
+            title="Earned Achievements Ladder"
+            subtitle="Highly claimed accomplishments and awards by registered student members."
             accent="amber"
           />
           {topAchievements.length === 0 ? (
-            <EmptyState
-              icon={Trophy}
-              title="No achievements yet"
-              description="Earned achievements will surface here as members claim them."
-            />
+            <div className="mt-4">
+              <EmptyState
+                icon={Trophy}
+                title="No achievements claimed yet"
+                description="Earned achievements will surface here as members claim them."
+                accent="amber"
+              />
+            </div>
           ) : (
-            <ul className="space-y-2">
-              {topAchievements.map((a, idx) => (
-                <li
-                  key={a.id ?? idx}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                      idx === 0
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : idx === 1
-                          ? 'bg-gray-400/20 text-gray-300'
-                          : idx === 2
-                            ? 'bg-orange-500/20 text-orange-300'
-                            : 'bg-blue-500/20 text-blue-300'
-                    }`}
+            <ul className="space-y-2 mt-4">
+              {topAchievements.map((a, idx) => {
+                const isGold = idx === 0;
+                const isSilver = idx === 1;
+                const isBronze = idx === 2;
+                return (
+                  <li
+                    key={a.id || idx}
+                    className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 p-3 transition-all hover:bg-white/4"
                   >
-                    #{idx + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-1 text-sm font-medium text-white">
-                      {a.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-gray-500">
-                      {a.memberCount ?? 0} members earned
-                    </p>
-                  </div>
-                </li>
-              ))}
+                    {/* Gamified medalled rank display */}
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black border select-none ${
+                        isGold
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+                          : isSilver
+                            ? 'bg-slate-400/20 text-slate-300 border-slate-400/30'
+                            : isBronze
+                              ? 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+                              : 'bg-white/5 text-gray-500 border-white/6'
+                      }`}
+                    >
+                      {idx + 1}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-1 text-xs font-semibold text-white">
+                        {a.title}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-gray-500 font-mono">
+                        {a.memberCount ?? 0} members earned
+                      </p>
+                    </div>
+
+                    {(isGold || isSilver || isBronze) && (
+                      <Trophy
+                        className={`h-4 w-4 shrink-0 ${
+                          isGold ? 'text-amber-400' : isSilver ? 'text-slate-400' : 'text-orange-400'
+                        }`}
+                      />
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
-          <div className="mt-4">
+          <div className="mt-5">
             <ActionButton
               href="/account/advisor/achievements"
               tone="ghost"
               icon={ArrowRight}
             >
-              View all achievements
+              Review Club Achievements
             </ActionButton>
           </div>
         </GlassCard>
       </div>
 
+      {/* Upcoming Activities Tracker */}
       {upcomingEvents.length > 0 && (
-        <GlassCard>
+        <GlassCard padding="p-6">
           <SectionHeader
             icon={TrendingUp}
-            title="Upcoming Events"
-            subtitle="Events still ahead in the calendar"
+            title="Upcoming Activity Tracker"
+            subtitle="Scheduled club events and bootcamps still ahead in the calendar"
             accent="emerald"
           />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-4">
             {upcomingEvents.map((e) => (
               <div
                 key={e.id}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-emerald-500/30 hover:bg-white/[0.04]"
+                className="group relative overflow-hidden rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-emerald-500/30 hover:bg-white/4 flex flex-col justify-between"
               >
-                <p className="line-clamp-1 text-sm font-medium text-white">
-                  {e.title}
-                </p>
-                <p className="mt-1 text-[11px] text-gray-500">
-                  {new Date(e.start_date).toLocaleDateString()}
-                </p>
-                <p className="mt-1 text-xs">
-                  <span className="font-semibold text-emerald-300">
-                    {e.registrationCount ?? 0}
+                <div>
+                  <p className="line-clamp-1 text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors">
+                    {e.title}
+                  </p>
+                  <p className="mt-1.5 text-[10px] text-gray-500 font-mono flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {new Date(e.start_date).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="mt-4 border-t border-white/6 pt-3 flex justify-between items-center text-xs">
+                  <span className="text-gray-500">Enrollment</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    {e.registrationCount ?? 0} registered
                   </span>
-                  <span className="text-gray-500"> registered</span>
-                </p>
+                </div>
               </div>
             ))}
           </div>
@@ -309,20 +362,39 @@ export default function AdvisorAnalyticsClient({
   );
 }
 
-function PipelineTile({ href, label, value }) {
+// ── Pipeline Tile ────────────────────────────────────────────────────────────
+function PipelineTile({ href, label, value, icon: Icon, accent }) {
+  const ACCENT_GLOWS = {
+    blue: 'hover:border-blue-500/30 hover:bg-blue-500/5 group-hover:text-blue-400',
+    orange: 'hover:border-orange-500/30 hover:bg-orange-500/5 group-hover:text-orange-400',
+    violet: 'hover:border-violet-500/30 hover:bg-violet-500/5 group-hover:text-violet-400',
+    emerald: 'hover:border-emerald-500/30 hover:bg-emerald-500/5 group-hover:text-emerald-400',
+  };
+
+  const ACCENT_ICONS = {
+    blue: 'text-blue-500/40 group-hover:text-blue-400',
+    orange: 'text-orange-500/40 group-hover:text-orange-400',
+    violet: 'text-violet-500/40 group-hover:text-violet-400',
+    emerald: 'text-emerald-500/40 group-hover:text-emerald-400',
+  };
+
   return (
     <Link
       href={href}
-      className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-amber-500/30 hover:bg-white/[0.04]"
+      className={`group relative overflow-hidden rounded-xl border border-white/6 bg-white/2 p-4 transition-all flex flex-col justify-between gap-3 ${ACCENT_GLOWS[accent]}`}
     >
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-xs text-gray-400 group-hover:text-amber-300">
+      <div className="flex justify-between items-start">
+        <span className="text-2xl font-black text-white">{value}</span>
+        {Icon && <Icon className={`h-4.5 w-4.5 transition-colors ${ACCENT_ICONS[accent]}`} />}
+      </div>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-white transition-colors">
         {label}
-      </p>
+      </span>
     </Link>
   );
 }
 
+// ── Engagement Tile ──────────────────────────────────────────────────────────
 const ENGAGE_TONE = {
   blue: 'border-blue-500/20 bg-blue-500/[0.05] text-blue-300',
   emerald: 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300',
@@ -331,11 +403,11 @@ const ENGAGE_TONE = {
 
 function EngagementTile({ label, value, tone }) {
   return (
-    <div className={`rounded-xl border p-3 text-center ${ENGAGE_TONE[tone]}`}>
-      <p className="text-xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-[10px] font-medium tracking-wider text-gray-400 uppercase">
+    <div className={`rounded-xl border p-3.5 text-center flex flex-col justify-center items-center select-none ${ENGAGE_TONE[tone]}`}>
+      <span className="text-xl font-black text-white">{value}</span>
+      <span className="mt-1 text-[9px] font-bold tracking-widest text-gray-500 uppercase font-mono">
         {label}
-      </p>
+      </span>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   getUpcomingEvents,
   getBudgetSummary,
   getMostEarnedAchievements,
+  getActivityLogs,
 } from '@/app/_lib/data-service';
 import AdvisorClubOverviewClient from './_components/AdvisorClubOverviewClient';
 
@@ -27,6 +28,7 @@ export default async function AdvisorClubOverviewPage() {
     upcomingEvents,
     budgetSummary,
     topAchievements,
+    activityLogs,
   ] = await Promise.all([
     getPlatformStatistics().catch(() => ({})),
     getDashboardMetrics().catch(() => ({})),
@@ -37,6 +39,7 @@ export default async function AdvisorClubOverviewPage() {
       balance: 0,
     })),
     getMostEarnedAchievements(5).catch(() => []),
+    getActivityLogs(8).catch(() => []),
   ]);
 
   return (
@@ -46,6 +49,7 @@ export default async function AdvisorClubOverviewPage() {
       upcomingEvents={upcomingEvents}
       budgetSummary={budgetSummary}
       topAchievements={topAchievements}
+      activityLogs={activityLogs}
     />
   );
 }

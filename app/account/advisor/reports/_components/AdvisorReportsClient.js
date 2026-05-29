@@ -1,10 +1,3 @@
-/**
- * @file Advisor reports client — activity log, membership snapshot,
- *   events summary, and financial summary tabs with CSV export.
- *
- * @module AdvisorReportsClient
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -16,6 +9,11 @@ import {
   Search,
   Clock,
   FileText,
+  Users,
+  CheckCircle,
+  TrendingUp,
+  TrendingDown,
+  Sliders,
 } from 'lucide-react';
 import {
   PageShell,
@@ -28,39 +26,45 @@ import {
   EmptyState,
   Avatar,
 } from '../../../_components/ui/dashboard';
+import toast from 'react-hot-toast';
 
 const TABS = [
   { value: 'activity-logs', label: 'Activity Logs', icon: Activity },
-  { value: 'membership', label: 'Membership', icon: Activity },
-  { value: 'events', label: 'Events', icon: Calendar },
-  { value: 'financial', label: 'Financial', icon: Wallet },
+  { value: 'membership', label: 'Membership', icon: Users },
+  { value: 'events', label: 'Events Metrics', icon: Calendar },
+  { value: 'financial', label: 'Financial Ledger', icon: Wallet },
 ];
 
 function exportToCSV(data, filename) {
   if (!data || data.length === 0) {
-    alert('No data to export');
+    toast.error('No data available to compile');
     return;
   }
-  const headers = Object.keys(data[0]).join(',');
-  const rows = data
-    .map((row) =>
-      Object.values(row)
-        .map((v) =>
-          typeof v === 'string' && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
-        )
-        .join(',')
-    )
-    .join('\n');
-  const csv = `${headers}\n${rows}`;
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data
+      .map((row) =>
+        Object.values(row)
+          .map((v) =>
+            typeof v === 'string' && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+          )
+          .join(',')
+      )
+      .join('\n');
+    const csv = `${headers}\n${rows}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Successfully compiled and exported ${filename}.csv!`);
+  } catch {
+    toast.error('An error occurred during report compilation');
+  }
 }
 
 export default function AdvisorReportsClient({
@@ -103,120 +107,198 @@ export default function AdvisorReportsClient({
           start_date: e.start_date,
           registered: e.registrationCount ?? 0,
           attended: e.attendedCount ?? 0,
+          rate: e.registrationCount > 0 ? `${Math.round((e.attendedCount / e.registrationCount) * 100)}%` : '0%',
         })),
-        'events-summary'
+        'events-metrics'
+      );
+    } else if (tab === 'membership') {
+      exportToCSV(
+        [
+          {
+            Metric: 'Pending Member Approvals',
+            Count: dashboardMetrics.pendingMemberProfiles ?? 0,
+          },
+          {
+            Metric: 'Pending Join Requests',
+            Count: dashboardMetrics.pendingJoinRequests ?? 0,
+          },
+          {
+            Metric: 'Approved Active Members',
+            Count: platformStats.totalApprovedMembers ?? 0,
+          },
+        ],
+        'membership-snapshot'
+      );
+    } else if (tab === 'financial') {
+      exportToCSV(
+        [
+          {
+            Metric: 'Total Received Income',
+            Amount: `৳${Number(budgetSummary.totalIncome ?? 0).toLocaleString()}`,
+          },
+          {
+            Metric: 'Total Spent Expenses',
+            Amount: `৳${Number(budgetSummary.totalExpenses ?? 0).toLocaleString()}`,
+          },
+          {
+            Metric: 'Current Ledger Balance',
+            Amount: `৳${Number(budgetSummary.balance ?? 0).toLocaleString()}`,
+          },
+        ],
+        'financial-ledger-summary'
       );
     }
   };
 
+  const balance = Number(budgetSummary.balance ?? 0);
+
   return (
     <PageShell>
+      {/* Page Header */}
       <PageHeader
         icon={FileText}
-        title="Reports"
-        subtitle="Operational insights and activity logs"
+        title="Oversight Reports"
+        subtitle="Access system operational logs, membership growth rates, and general financial ledgers."
         accent="emerald"
         actions={
-          <ActionButton tone="primary" icon={Download} onClick={handleExport}>
-            Export CSV
-          </ActionButton>
+          <div className="w-full sm:w-auto">
+            <ActionButton tone="primary" icon={Download} onClick={handleExport}>
+              Compile & Export CSV
+            </ActionButton>
+          </div>
         }
       />
 
-      <GlassCard padding="p-4">
+      {/* Main Tabs Container */}
+      <GlassCard padding="p-5">
         <TabBar tabs={TABS} value={tab} onChange={setTab} />
 
+        {/* ── Activity Logs View ────────────────────────────────────────── */}
         {tab === 'activity-logs' && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-5 space-y-4">
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search logs by user, action, or entity…"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-3 pl-10 text-sm text-white placeholder-gray-500 focus:border-emerald-500/40 focus:outline-none"
+                placeholder="Search audit logs by executive, transaction type, or specific action..."
+                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
+
             {filteredLogs.length === 0 ? (
               <EmptyState
                 icon={Activity}
-                title="No activity logs"
-                description="Recorded system activity will appear here."
+                title="No operational logs match"
+                description="Recorded platform actions logged by executives will surface here."
+                accent="emerald"
               />
             ) : (
-              <ul className="space-y-2">
-                {filteredLogs.slice(0, 50).map((log) => (
-                  <LogRow key={log.id} log={log} />
-                ))}
+              <div className="space-y-3">
+                <ul className="space-y-2">
+                  {filteredLogs.slice(0, 50).map((log) => (
+                    <LogRow key={log.id} log={log} />
+                  ))}
+                </ul>
                 {filteredLogs.length > 50 && (
-                  <li className="text-center text-xs text-gray-500">
-                    Showing first 50 of {filteredLogs.length} entries — export
-                    CSV to see all.
-                  </li>
+                  <p className="text-center text-[10px] font-bold text-gray-500 font-mono tracking-wide uppercase select-none pt-2">
+                    {`Showing first 50 of ${filteredLogs.length} audit entries. Export CSV to extract complete ledger.`}
+                  </p>
                 )}
-              </ul>
+              </div>
             )}
           </div>
         )}
 
+        {/* ── Membership Snapshot View ───────────────────────────────────── */}
         {tab === 'membership' && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 grid-cols-1 sm:grid-cols-3 select-none">
             <StatCard
-              icon={Activity}
-              label="Pending Member Approvals"
+              icon={Users}
+              label="Pending Member Profiles"
               value={dashboardMetrics.pendingMemberProfiles ?? 0}
               accent="amber"
+              sublabel="Identity verifications"
+              delay={0}
             />
             <StatCard
-              icon={Activity}
+              icon={Users}
               label="Pending Join Requests"
               value={dashboardMetrics.pendingJoinRequests ?? 0}
               accent="blue"
+              sublabel="New candidate filings"
+              delay={0.05}
             />
             <StatCard
-              icon={Activity}
-              label="Approved Members"
+              icon={CheckCircle}
+              label="Verified Club Members"
               value={platformStats.totalApprovedMembers ?? 0}
               accent="emerald"
+              sublabel="Total approved profiles"
+              delay={0.1}
             />
           </div>
         )}
 
+        {/* ── Events Metrics View ────────────────────────────────────────── */}
         {tab === 'events' && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-5 space-y-3">
             {eventsWithStats.length === 0 ? (
               <EmptyState
                 icon={Calendar}
-                title="No events"
-                description="Events created on the platform will appear here."
+                title="No club events recorded"
+                description="Upcoming or past bootcamps and workshops will appear here."
+                accent="emerald"
               />
             ) : (
-              eventsWithStats.slice(0, 10).map((e) => (
-                <EventSummaryRow key={e.id} event={e} />
-              ))
+              <div className="space-y-2">
+                {eventsWithStats.slice(0, 10).map((e) => (
+                  <EventSummaryRow key={e.id} event={e} />
+                ))}
+                {eventsWithStats.length > 10 && (
+                  <p className="text-center text-[10px] font-bold text-gray-500 font-mono tracking-wide uppercase select-none pt-2">
+                    {`Showing top 10 recent events. Compile & Export CSV to extract all records.`}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
 
+        {/* ── Financial Ledger View ──────────────────────────────────────── */}
         {tab === 'financial' && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 grid-cols-1 sm:grid-cols-3 select-none">
             <StatCard
-              icon={Wallet}
-              label="Total Income"
+              icon={TrendingUp}
+              label="Total Income Inflow"
               value={`৳${Number(budgetSummary.totalIncome ?? 0).toLocaleString()}`}
               accent="emerald"
+              sublabel="All received club budget"
+              delay={0}
             />
             <StatCard
-              icon={Wallet}
-              label="Total Expenses"
+              icon={TrendingDown}
+              label="Total Spent Outflow"
               value={`৳${Number(budgetSummary.totalExpenses ?? 0).toLocaleString()}`}
               accent="rose"
+              sublabel="All approved transactions"
+              delay={0.05}
             />
             <StatCard
               icon={Wallet}
-              label="Balance"
-              value={`৳${Number(budgetSummary.balance ?? 0).toLocaleString()}`}
-              accent={Number(budgetSummary.balance ?? 0) >= 0 ? 'blue' : 'amber'}
+              label="Net Operational Balance"
+              value={`৳${balance.toLocaleString()}`}
+              accent={balance >= 0 ? 'blue' : 'amber'}
+              sublabel={balance >= 0 ? 'Surplus / Healthy' : 'Deficit — Review Ledger'}
+              delay={0.1}
             />
           </div>
         )}
@@ -225,63 +307,89 @@ export default function AdvisorReportsClient({
   );
 }
 
+// ── Log Row Component ────────────────────────────────────────────────────────
 function LogRow({ log }) {
+  const creatorName = log.users?.full_name || 'System';
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.1] hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-3 rounded-xl border border-white/6 bg-white/2 p-3.5 hover:bg-white/4 hover:border-white/10 transition-all sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <Avatar name={log.users?.full_name ?? '?'} size="sm" />
+        <Avatar name={creatorName} size="sm" src={log.users?.avatar_url} />
         <div className="min-w-0">
-          <p className="truncate text-sm text-white">
-            <span className="font-semibold">
-              {log.users?.full_name || 'Unknown'}
-            </span>{' '}
-            <Pill tone="blue" className="ml-1">
+          <div className="flex items-center flex-wrap gap-2 text-sm text-white">
+            <span className="font-bold">{creatorName}</span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
+                log.action === 'create'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : log.action === 'delete'
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+              }`}
+            >
               {log.action}
-            </Pill>
-          </p>
-          <p className="text-xs text-gray-500">
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-500 font-mono mt-0.5 truncate">
             {log.entity_type && <span className="capitalize">{log.entity_type}</span>}
-            {log.entity_id && <> #{log.entity_id}</>}
+            {log.entity_id && ` // ID: ${log.entity_id.substring(0, 8)}`}
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1 text-xs text-gray-500">
-        <Clock className="h-3 w-3" />
+      <div className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 font-mono select-none">
+        <Clock className="h-3.5 w-3.5 text-gray-600" />
         <span>{new Date(log.created_at).toLocaleString()}</span>
       </div>
     </li>
   );
 }
 
+// ── Event Summary Row Component ──────────────────────────────────────────────
 function EventSummaryRow({ event }) {
   const rate =
     event.registrationCount > 0
       ? Math.round((event.attendedCount / event.registrationCount) * 100)
       : 0;
+
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.1] hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:bg-white/4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">{event.title}</p>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="truncate text-xs font-bold text-white">{event.title}</p>
+        <p className="mt-1 text-[10px] text-gray-500 font-mono flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
           {new Date(event.start_date).toLocaleDateString()}
         </p>
+
+        {/* Attendance conversion meter bar */}
+        <div className="mt-3.5 max-w-xs">
+          <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/6">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-emerald-500 transition-all duration-700"
+              style={{ width: `${rate}%` }}
+            />
+          </div>
+        </div>
       </div>
-      <div className="flex shrink-0 gap-4 text-center">
+
+      <div className="flex shrink-0 gap-5 text-center items-center select-none font-mono">
         <div>
-          <p className="text-base font-bold text-white">
+          <p className="text-sm font-black text-white">
             {event.registrationCount ?? 0}
           </p>
-          <p className="text-[10px] text-gray-500">Registered</p>
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide mt-0.5">Registered</p>
         </div>
+        <div className="border-l border-white/8 h-8" />
         <div>
-          <p className="text-base font-bold text-white">
+          <p className="text-sm font-black text-white">
             {event.attendedCount ?? 0}
           </p>
-          <p className="text-[10px] text-gray-500">Attended</p>
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide mt-0.5">Attended</p>
         </div>
+        <div className="border-l border-white/8 h-8" />
         <div>
-          <p className="text-base font-bold text-white">{rate}%</p>
-          <p className="text-[10px] text-gray-500">Rate</p>
+          <p className="text-sm font-black text-emerald-400">
+            {rate}%
+          </p>
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide mt-0.5">Rate</p>
         </div>
       </div>
     </div>
