@@ -7,7 +7,13 @@
 
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { requireAdmin, createLogger, generateSlug } from '@/app/_lib/helpers';
+import {
+  requireAdmin,
+  createLogger,
+  generateSlug,
+  parseEventAgenda,
+  parseEventSpeakers,
+} from '@/app/_lib/helpers';
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/gdrive';
 import { generateImage } from '@/app/_lib/image-gen';
 import { generateText } from '@/app/_lib/text-gen';
@@ -253,6 +259,8 @@ export async function createEventAction(formData) {
     tags: tags.length ? tags : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     created_by: admin.id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -363,6 +371,8 @@ export async function updateEventAction(formData) {
     tags: tags.length ? tags : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     updated_at: new Date().toISOString(),
   };
 

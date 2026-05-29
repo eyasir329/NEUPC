@@ -10,7 +10,12 @@ import { redirect } from 'next/navigation';
 import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { logActivity, generateSlug } from '@/app/_lib/helpers';
+import {
+  logActivity,
+  generateSlug,
+  parseEventAgenda,
+  parseEventSpeakers,
+} from '@/app/_lib/helpers';
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/gdrive';
 import { generateImage } from '@/app/_lib/image-gen';
 import { generateText } from '@/app/_lib/text-gen';
@@ -159,6 +164,8 @@ export async function execCreateEventAction(formData) {
     participation_type: formData.get('participation_type') || 'individual',
     team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     created_by: user.id,
     approved_by: status !== 'draft' ? user.id : null,
     approved_at: status !== 'draft' ? new Date().toISOString() : null,
@@ -229,6 +236,8 @@ export async function execUpdateEventAction(formData) {
     participation_type: formData.get('participation_type') || 'individual',
     team_size: formData.get('participation_type') === 'team' && formData.get('team_size') ? parseInt(formData.get('team_size'), 10) : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
+    agenda: parseEventAgenda(formData.get('agenda')),
+    speakers: parseEventSpeakers(formData.get('speakers')),
     updated_at: new Date().toISOString(),
   };
 
@@ -367,7 +376,6 @@ export async function execCreateContestAction(formData) {
   await logActivity(user.id, 'exec_create_contest', 'contest', data.id, {
     title,
   });
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true, id: data.id };
 }
@@ -401,7 +409,6 @@ export async function execUpdateContestAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_contest', 'contest', id, { title });
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
@@ -413,7 +420,6 @@ export async function execDeleteContestAction(formData) {
   const { error } = await supabaseAdmin.from('contests').delete().eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_contest', 'contest', id, {});
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
@@ -762,8 +768,8 @@ export async function execCreateNoticeAction(formData) {
   });
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');
@@ -801,8 +807,8 @@ export async function execUpdateNoticeAction(formData) {
   if (error) return { error: error.message };
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');
@@ -817,8 +823,8 @@ export async function execDeleteNoticeAction(formData) {
   if (error) return { error: error.message };
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/executive/notices/create');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/executive/inbox');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');
@@ -844,7 +850,7 @@ export async function execApproveJoinRequestAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(executive.id, 'exec_approve_join', 'join_request', id, {});
-  revalidatePath('/account/executive/members');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/users');
   revalidatePath('/account/advisor/approvals');
   return { success: true };
@@ -869,7 +875,7 @@ export async function execRejectJoinRequestAction(formData) {
   await logActivity(executive.id, 'exec_reject_join', 'join_request', id, {
     rejection_reason,
   });
-  revalidatePath('/account/executive/members');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/users');
   revalidatePath('/account/advisor/approvals');
   return { success: true };
@@ -895,6 +901,7 @@ export async function execCreateCertificateAction(formData) {
     recipient_id,
     event_id: formData.get('event_id') || null,
     contest_id: formData.get('contest_id') || null,
+    bootcamp_id: formData.get('bootcamp_id') || null,
     title,
     description: formData.get('description')?.trim() || null,
     certificate_type: formData.get('certificate_type') || 'participation',
@@ -917,7 +924,7 @@ export async function execCreateCertificateAction(formData) {
     data.id,
     { title }
   );
-  revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/executive/recognitions');
   revalidatePath('/account/member/certificates');
   return { success: true, id: data.id, certificate_number };
 }
@@ -926,6 +933,7 @@ export async function execBulkCreateCertificatesAction(formData) {
   const user = await requireExecutive();
   const event_id = formData.get('event_id') || null;
   const contest_id = formData.get('contest_id') || null;
+  const bootcamp_id = formData.get('bootcamp_id') || null;
   const certificate_type = formData.get('certificate_type') || 'participation';
   const title = formData.get('title')?.trim();
   if (!title) return { error: 'Title is required.' };
@@ -947,6 +955,13 @@ export async function execBulkCreateCertificatesAction(formData) {
       .select('user_id')
       .eq('contest_id', contest_id);
     recipientIds = (data || []).map((r) => r.user_id);
+  } else if (bootcamp_id) {
+    const { data } = await supabaseAdmin
+      .from('bootcamp_enrollments')
+      .select('user_id')
+      .eq('bootcamp_id', bootcamp_id)
+      .in('status', ['active', 'completed']);
+    recipientIds = (data || []).map((r) => r.user_id);
   }
 
   if (recipientIds.length === 0)
@@ -957,6 +972,7 @@ export async function execBulkCreateCertificatesAction(formData) {
     recipient_id: rid,
     event_id,
     contest_id,
+    bootcamp_id,
     title,
     certificate_type,
     issue_date,
@@ -969,7 +985,7 @@ export async function execBulkCreateCertificatesAction(formData) {
     .insert(payload)
     .select();
   if (error) return { error: error.message };
-  revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/executive/recognitions');
   revalidatePath('/account/member/certificates');
   return { success: true, count: data.length };
 }
@@ -1014,6 +1030,14 @@ export async function execUpdateProfileAction(formData) {
       .from('member_profiles')
       .update(profileUpdates)
       .eq('user_id', user.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabaseAdmin
+      .from('member_profiles')
+      .insert({
+        user_id: user.id,
+        ...profileUpdates,
+      });
     if (error) return { error: error.message };
   }
 
@@ -1130,4 +1154,186 @@ export async function generateExecEventTextAction(prompt, mode, model, existingC
     console.error('Exec AI text generation error:', err);
     return { error: err.message || 'Text generation failed.' };
   }
+}
+
+// =============================================================================
+// BUDGET MANAGEMENT
+// =============================================================================
+
+export async function execCreateBudgetEntryAction(formData) {
+  const user = await requireExecutive();
+  
+  const title = formData.get('title')?.trim();
+  const description = formData.get('description')?.trim() || null;
+  const amount = formData.get('amount');
+  const entry_type = formData.get('entry_type');
+  const categoryType = formData.get('category');
+  const event_id = formData.get('event_id') || null;
+  const bootcamp_id = formData.get('bootcamp_id') || null;
+  const transaction_date = formData.get('transaction_date');
+  const receipt_url = formData.get('receipt_url')?.trim() || null;
+
+  if (!title) return { error: 'Title is required.' };
+  if (!amount || isNaN(parseFloat(amount))) return { error: 'Valid amount is required.' };
+  if (!entry_type || !['income', 'expense'].includes(entry_type)) {
+    return { error: 'Valid entry type is required.' };
+  }
+  if (!categoryType || !['event', 'bootcamp', 'maintenance'].includes(categoryType)) {
+    return { error: 'Valid category is required.' };
+  }
+  if (!transaction_date) return { error: 'Transaction date is required.' };
+
+  let category = categoryType;
+  let eventId = null;
+
+  if (categoryType === 'event') {
+    if (!event_id) return { error: 'An event must be selected for Event Related budgets.' };
+    eventId = event_id;
+    category = 'event';
+  } else if (categoryType === 'bootcamp') {
+    if (!bootcamp_id) return { error: 'A bootcamp must be selected for Bootcamp Related budgets.' };
+    category = `bootcamp:${bootcamp_id}`;
+  } else if (categoryType === 'maintenance') {
+    category = 'maintenance';
+  }
+
+  const payload = {
+    title,
+    description,
+    amount: parseFloat(amount),
+    entry_type,
+    category,
+    event_id: eventId,
+    transaction_date: new Date(transaction_date).toISOString().split('T')[0],
+    receipt_url,
+    created_by: user.id,
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('budget_entries')
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+
+  await logActivity(user.id, 'exec_create_budget', 'budget_entry', data.id, { title });
+
+  revalidatePath('/account/executive/budget');
+  revalidatePath('/account/advisor/budget');
+  revalidatePath('/account/advisor/approvals');
+  revalidatePath('/account/advisor/club-overview');
+  revalidatePath('/account/advisor/reports');
+  
+  return { success: 'Budget entry submitted successfully.' };
+}
+
+export async function execUpdateBudgetEntryAction(formData) {
+  const user = await requireExecutive();
+  const entryId = formData.get('entryId');
+  const title = formData.get('title')?.trim();
+  const description = formData.get('description')?.trim() || null;
+  const amount = formData.get('amount');
+  const entry_type = formData.get('entry_type');
+  const categoryType = formData.get('category');
+  const event_id = formData.get('event_id') || null;
+  const bootcamp_id = formData.get('bootcamp_id') || null;
+  const transaction_date = formData.get('transaction_date');
+  const receipt_url = formData.get('receipt_url')?.trim() || null;
+
+  if (!entryId) return { error: 'Entry ID is required.' };
+  if (!title) return { error: 'Title is required.' };
+  if (!amount || isNaN(parseFloat(amount))) return { error: 'Valid amount is required.' };
+  if (!entry_type || !['income', 'expense'].includes(entry_type)) {
+    return { error: 'Valid entry type is required.' };
+  }
+  if (!categoryType || !['event', 'bootcamp', 'maintenance'].includes(categoryType)) {
+    return { error: 'Valid category is required.' };
+  }
+  if (!transaction_date) return { error: 'Transaction date is required.' };
+
+  // Fetch the entry first to ensure it's not approved yet.
+  const { data: entry, error: fetchErr } = await supabaseAdmin
+    .from('budget_entries')
+    .select('approved_at')
+    .eq('id', entryId)
+    .single();
+
+  if (fetchErr || !entry) return { error: 'Budget entry not found.' };
+  if (entry.approved_at) return { error: 'Approved budget entries cannot be modified.' };
+
+  let category = categoryType;
+  let eventId = null;
+
+  if (categoryType === 'event') {
+    if (!event_id) return { error: 'An event must be selected for Event Related budgets.' };
+    eventId = event_id;
+    category = 'event';
+  } else if (categoryType === 'bootcamp') {
+    if (!bootcamp_id) return { error: 'A bootcamp must be selected for Bootcamp Related budgets.' };
+    category = `bootcamp:${bootcamp_id}`;
+  } else if (categoryType === 'maintenance') {
+    category = 'maintenance';
+  }
+
+  const updates = {
+    title,
+    description,
+    amount: parseFloat(amount),
+    entry_type,
+    category,
+    event_id: eventId,
+    transaction_date: new Date(transaction_date).toISOString().split('T')[0],
+    receipt_url,
+  };
+
+  const { error } = await supabaseAdmin
+    .from('budget_entries')
+    .update(updates)
+    .eq('id', entryId);
+
+  if (error) return { error: error.message };
+
+  await logActivity(user.id, 'exec_update_budget', 'budget_entry', entryId, { title });
+
+  revalidatePath('/account/executive/budget');
+  revalidatePath('/account/advisor/budget');
+  revalidatePath('/account/advisor/approvals');
+  revalidatePath('/account/advisor/club-overview');
+  revalidatePath('/account/advisor/reports');
+
+  return { success: 'Budget entry updated successfully.' };
+}
+
+export async function execDeleteBudgetEntryAction(formData) {
+  const user = await requireExecutive();
+  const entryId = formData.get('entryId');
+  if (!entryId) return { error: 'Entry ID is required.' };
+
+  // Fetch the entry first to ensure it's not approved yet.
+  const { data: entry, error: fetchErr } = await supabaseAdmin
+    .from('budget_entries')
+    .select('approved_at, title')
+    .eq('id', entryId)
+    .single();
+
+  if (fetchErr || !entry) return { error: 'Budget entry not found.' };
+  if (entry.approved_at) return { error: 'Approved budget entries cannot be deleted.' };
+
+  const { error } = await supabaseAdmin
+    .from('budget_entries')
+    .delete()
+    .eq('id', entryId);
+
+  if (error) return { error: error.message };
+
+  await logActivity(user.id, 'exec_delete_budget', 'budget_entry', entryId, { title: entry.title });
+
+  revalidatePath('/account/executive/budget');
+  revalidatePath('/account/advisor/budget');
+  revalidatePath('/account/advisor/approvals');
+  revalidatePath('/account/advisor/club-overview');
+  revalidatePath('/account/advisor/reports');
+
+  return { success: 'Budget entry deleted successfully.' };
 }

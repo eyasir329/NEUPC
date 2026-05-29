@@ -16,7 +16,6 @@ import {
   ArrowUpDown,
   X,
   Layers,
-  Eye,
   Clock,
   CheckCircle2,
   Archive,
@@ -27,8 +26,6 @@ import {
   Trash2,
   Loader2,
   Pin,
-  Globe,
-  Lock,
   Tag,
   FolderPlus,
   ChevronDown,
@@ -40,8 +37,6 @@ import ResourcesPageHeader from '@/app/_components/resources/ResourcesPageHeader
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 import ResourceFormPanel from './ResourceFormPanel';
 import {
-  createResourceAction,
-  updateResourceAction,
   deleteResourceAction,
   createResourceCategoryAction,
 } from '@/app/_lib/resource-actions';
@@ -339,7 +334,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
   const [activeStatus, setActiveStatus] = useState('all');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [visibilityFilter, setVisibilityFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [view, setView] = useState('grid');
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -373,8 +367,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
       published: resources.filter((r) => r.status === 'published').length,
       archived: resources.filter((r) => r.status === 'archived').length,
       pinned: resources.filter((r) => r.is_pinned).length,
-      public: resources.filter((r) => r.visibility === 'public').length,
-      members: resources.filter((r) => r.visibility === 'members').length,
     }),
     [resources]
   );
@@ -404,10 +396,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
       list = list.filter((r) => r.category_id === categoryFilter);
     }
 
-    if (visibilityFilter) {
-      list = list.filter((r) => r.visibility === visibilityFilter);
-    }
-
     list = [...list].sort((a, b) => {
       switch (sortBy) {
         case 'oldest':
@@ -426,7 +414,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
     activeStatus,
     search,
     categoryFilter,
-    visibilityFilter,
     sortBy,
   ]);
 
@@ -477,7 +464,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
   const clearFilters = useCallback(() => {
     setSearch('');
     setCategoryFilter('');
-    setVisibilityFilter('');
     setActiveStatus('all');
     setSortBy('newest');
   }, []);
@@ -508,12 +494,11 @@ export default function AdminResourcesClient({ initialResources, categories }) {
   ];
 
   const hasActiveFilters =
-    search || categoryFilter || visibilityFilter || activeStatus !== 'all';
+    search || categoryFilter || activeStatus !== 'all';
 
   const activeFilterCount = [
     search,
     categoryFilter,
-    visibilityFilter,
     activeStatus !== 'all' ? activeStatus : '',
   ].filter(Boolean).length;
 
@@ -525,8 +510,6 @@ export default function AdminResourcesClient({ initialResources, categories }) {
         total={liveStats.total}
         categoryCount={localCategories.length}
         pinnedCount={liveStats.pinned}
-        publicCount={liveStats.public}
-        membersCount={liveStats.members}
         draftCount={liveStats.draft}
         scheduledCount={liveStats.scheduled}
         publishedCount={liveStats.published}
@@ -632,18 +615,7 @@ export default function AdminResourcesClient({ initialResources, categories }) {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Eye className="h-3.5 w-3.5 shrink-0 text-gray-600" />
-              <select
-                value={visibilityFilter}
-                onChange={(e) => setVisibilityFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 pr-8 text-sm text-gray-400 scheme-dark transition-all outline-none focus:border-white/15 focus:text-white"
-              >
-                <option value="">All Visibility</option>
-                <option value="public">Public</option>
-                <option value="members">Members</option>
-              </select>
-            </div>
+
 
             <div className="flex items-center gap-1.5">
               <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-gray-600" />
@@ -729,9 +701,7 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                   <th className="px-5 py-3.5 text-left text-[10px] font-bold tracking-wider text-gray-500 uppercase">
                     Status
                   </th>
-                  <th className="hidden px-5 py-3.5 text-left text-[10px] font-bold tracking-wider text-gray-500 uppercase sm:table-cell">
-                    Visibility
-                  </th>
+
                   <th className="hidden px-5 py-3.5 text-left text-[10px] font-bold tracking-wider text-gray-500 uppercase lg:table-cell">
                     Date
                   </th>
@@ -779,6 +749,12 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                                 {resource.description}
                               </p>
                             )}
+                            {resource.creator && (
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-500">
+                                <span>by</span>
+                                <span className="font-medium text-gray-400">{resource.creator.full_name}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -810,20 +786,7 @@ export default function AdminResourcesClient({ initialResources, categories }) {
                         </span>
                       </td>
 
-                      {/* Visibility */}
-                      <td className="hidden px-5 py-4 sm:table-cell">
-                        {resource.visibility === 'public' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
-                            <Globe className="h-3 w-3" />
-                            Public
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-blue-400">
-                            <Lock className="h-3 w-3" />
-                            Members
-                          </span>
-                        )}
-                      </td>
+
 
                       {/* Date */}
                       <td className="hidden px-5 py-4 text-xs text-gray-500 lg:table-cell">

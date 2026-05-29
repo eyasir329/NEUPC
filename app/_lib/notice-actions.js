@@ -14,7 +14,7 @@ const logActivity = createLogger('notice');
 function revalidate() {
   revalidateTag('notices');
   revalidateTag('homepage');
-  revalidatePath('/account/admin/notices');
+  revalidatePath('/account/admin/inbox');
   revalidatePath('/notices');
   revalidatePath('/account');
   revalidatePath('/');

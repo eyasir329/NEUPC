@@ -17,7 +17,7 @@ import {
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
-async function requireAdmin() {
+async function requireAdminOrAdvisor() {
   const session = await auth();
   if (!session?.user?.email) throw new Error('Not authenticated');
 
@@ -38,8 +38,10 @@ async function requireAdmin() {
     .eq('user_id', userData.id);
 
   if (roleError) throw new Error(roleError.message);
-  const isAdmin = roleRows?.some((row) => row.roles?.name === 'admin');
-  if (!isAdmin) throw new Error('Unauthorized');
+  const isAuthorized = roleRows?.some(
+    (row) => row.roles?.name === 'admin' || row.roles?.name === 'advisor'
+  );
+  if (!isAuthorized) throw new Error('Unauthorized');
 
   return userData.id;
 }
@@ -69,7 +71,7 @@ function revalidateCommitteeViews() {
 }
 
 export async function createCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const title = formData.get('title')?.toString().trim();
   const category = formData.get('category')?.toString().trim();
@@ -103,7 +105,7 @@ export async function createCommitteePositionAction(formData) {
 }
 
 export async function updateCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Position id is required');
@@ -140,7 +142,7 @@ export async function updateCommitteePositionAction(formData) {
 }
 
 export async function deleteCommitteePositionAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Position id is required');
@@ -158,7 +160,7 @@ export async function deleteCommitteePositionAction(formData) {
 }
 
 export async function createCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const userId = formData.get('user_id')?.toString();
   const positionId = formData.get('position_id')?.toString();
@@ -177,6 +179,41 @@ export async function createCommitteeMemberAction(formData) {
     bio: formData.get('bio')?.toString().trim() || null,
   });
 
+  // Upsert profile data
+  const academicSession = formData.get('academic_session')?.toString().trim();
+  const department = formData.get('department')?.toString().trim();
+  const github = formData.get('github')?.toString().trim();
+  const linkedin = formData.get('linkedin')?.toString().trim();
+
+  const profileUpdates = { updated_at: new Date().toISOString() };
+  let hasProfileUpdates = false;
+
+  if (academicSession !== undefined) {
+    profileUpdates.academic_session = academicSession || null;
+    hasProfileUpdates = true;
+  }
+  if (department !== undefined) {
+    profileUpdates.department = department || null;
+    hasProfileUpdates = true;
+  }
+  if (github !== undefined) {
+    profileUpdates.github = github || null;
+    hasProfileUpdates = true;
+  }
+  if (linkedin !== undefined) {
+    profileUpdates.linkedin = linkedin || null;
+    hasProfileUpdates = true;
+  }
+
+  if (hasProfileUpdates) {
+    await supabaseAdmin
+      .from('member_profiles')
+      .upsert(
+        { user_id: userId, ...profileUpdates },
+        { onConflict: 'user_id' }
+      );
+  }
+
   await logActivity(
     adminId,
     'create_committee_member',
@@ -189,10 +226,11 @@ export async function createCommitteeMemberAction(formData) {
   );
 
   revalidateCommitteeViews();
+  return { success: true };
 }
 
 export async function updateCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Committee member id is required');
@@ -211,6 +249,50 @@ export async function updateCommitteeMemberAction(formData) {
     bio: formData.get('bio')?.toString().trim() || null,
   });
 
+  // Get the user ID associated with the committee member
+  const { data: memberData } = await supabaseAdmin
+    .from('committee_members')
+    .select('user_id')
+    .eq('id', id)
+    .single();
+
+  if (memberData?.user_id) {
+    const userId = memberData.user_id;
+    const academicSession = formData.get('academic_session')?.toString().trim();
+    const department = formData.get('department')?.toString().trim();
+    const github = formData.get('github')?.toString().trim();
+    const linkedin = formData.get('linkedin')?.toString().trim();
+
+    const profileUpdates = { updated_at: new Date().toISOString() };
+    let hasProfileUpdates = false;
+
+    if (academicSession !== undefined) {
+      profileUpdates.academic_session = academicSession || null;
+      hasProfileUpdates = true;
+    }
+    if (department !== undefined) {
+      profileUpdates.department = department || null;
+      hasProfileUpdates = true;
+    }
+    if (github !== undefined) {
+      profileUpdates.github = github || null;
+      hasProfileUpdates = true;
+    }
+    if (linkedin !== undefined) {
+      profileUpdates.linkedin = linkedin || null;
+      hasProfileUpdates = true;
+    }
+
+    if (hasProfileUpdates) {
+      await supabaseAdmin
+        .from('member_profiles')
+        .upsert(
+          { user_id: userId, ...profileUpdates },
+          { onConflict: 'user_id' }
+        );
+    }
+  }
+
   await logActivity(
     adminId,
     'update_committee_member',
@@ -222,10 +304,11 @@ export async function updateCommitteeMemberAction(formData) {
   );
 
   revalidateCommitteeViews();
+  return { success: true };
 }
 
 export async function deleteCommitteeMemberAction(formData) {
-  const adminId = await requireAdmin();
+  const adminId = await requireAdminOrAdvisor();
 
   const id = formData.get('id')?.toString();
   if (!id) throw new Error('Committee member id is required');

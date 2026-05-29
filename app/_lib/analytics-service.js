@@ -6,6 +6,21 @@
 import { supabaseAdmin } from './supabase';
 
 /**
+ * Helper to safely await Supabase query builder instances
+ */
+async function safeQuery(queryBuilder, fallbackValue = { data: [], count: 0 }) {
+  try {
+    const res = await queryBuilder;
+    if (res.error) {
+      return fallbackValue;
+    }
+    return res;
+  } catch {
+    return fallbackValue;
+  }
+}
+
+/**
  * Fetches all analytics data in parallel for the admin dashboard.
  * Uses supabaseAdmin to bypass RLS.
  */
@@ -51,6 +66,10 @@ export async function getAnalyticsData() {
     membersApproved,
     // Events by category
     eventsByCategory,
+    // CP Handles
+    cpHandles,
+    // CP Solves
+    cpSolves,
   ] = await Promise.all([
     // Users by status
     supabaseAdmin.from('users').select('*', { count: 'exact', head: true }),
@@ -171,6 +190,22 @@ export async function getAnalyticsData() {
 
     // Events by category
     supabaseAdmin.from('events').select('category').not('category', 'is', null),
+
+    // CP Handles count (Safely catch if table not seeded)
+    safeQuery(
+      supabaseAdmin
+        .from('user_handles')
+        .select('*', { count: 'exact', head: true }),
+      { count: 0 }
+    ),
+
+    // CP Solves count (Safely catch if table not seeded)
+    safeQuery(
+      supabaseAdmin
+        .from('user_problem_stats')
+        .select('platform, solved_count'),
+      { data: [] }
+    ),
   ]);
 
   // Aggregate blog views/likes
@@ -192,10 +227,32 @@ export async function getAnalyticsData() {
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => ({ name, count }));
 
+  // Aggregate CP handles and platform solves
+  const totalHandles = cpHandles?.count || 0;
+  const platformData = cpSolves?.data || [];
+
+  const totalCPProblemsSolved = platformData.reduce(
+    (sum, item) => sum + (item.solved_count || 0),
+    0
+  );
+
+  const platformMap = {};
+  platformData.forEach((item) => {
+    if (item.platform) {
+      platformMap[item.platform] =
+        (platformMap[item.platform] || 0) + (item.solved_count || 0);
+    }
+  });
+
+  const cpDistribution = Object.entries(platformMap)
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     users: {
       total: usersTotal.count || 0,
       active: usersActive.count || 0,
+      running: usersActive.count || 0,
       pending: usersPending.count || 0,
       suspended: usersSuspended.count || 0,
       banned: usersBanned.count || 0,
@@ -236,6 +293,11 @@ export async function getAnalyticsData() {
     members: {
       total: membersTotal.count || 0,
       approved: membersApproved.count || 0,
+    },
+    cp: {
+      totalHandles,
+      totalSolves: totalCPProblemsSolved,
+      distribution: cpDistribution,
     },
     recentActivity: recentActivity.data || [],
     generatedAt: new Date().toISOString(),

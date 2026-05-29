@@ -9,7 +9,7 @@ import { updateUser } from '@/app/_lib/data-service';
 
 export async function PUT(request, { params }) {
   try {
-    const authResult = await requireApiAuth('admin');
+    const authResult = await requireApiAuth(['admin', 'executive']);
     if (isAuthError(authResult)) return authResult;
 
     const adminId = authResult.user.id;

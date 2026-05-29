@@ -59,6 +59,8 @@ import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/image-gen';
 import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
 import { driveImageUrl } from '@/app/_lib/utils';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
+import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import { createLowlight, common } from 'lowlight';
 import { toHtml } from 'hast-util-to-html';
 
@@ -269,9 +271,15 @@ function LivePreview({
   const cc = getCategoryConfig(category);
   const dc = getDifficultyConfig(difficulty);
 
+  const isJsonContent = useMemo(() => {
+    if (!content) return false;
+    const trimmed = content.trim();
+    return trimmed.startsWith('[') && trimmed.endsWith(']');
+  }, [content]);
+
   const enhancedContent = useMemo(
-    () => highlightCodeBlocksAdmin(content),
-    [content]
+    () => (isJsonContent ? '' : highlightCodeBlocksAdmin(content)),
+    [content, isJsonContent]
   );
 
   useEffect(() => {
@@ -382,11 +390,17 @@ function LivePreview({
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {content ? (
           <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <div
-              ref={previewRef}
-              className="blog-content text-xs leading-relaxed text-gray-300"
-              dangerouslySetInnerHTML={{ __html: enhancedContent }}
-            />
+            {isJsonContent ? (
+              <div className="blog-content text-xs leading-relaxed text-gray-300">
+                <LessonContentRenderer content={content} viewerMode={true} />
+              </div>
+            ) : (
+              <div
+                ref={previewRef}
+                className="blog-content text-xs leading-relaxed text-gray-300"
+                dangerouslySetInnerHTML={{ __html: enhancedContent }}
+              />
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-center rounded-xl border border-dashed border-white/8 py-12 text-center">
@@ -1054,7 +1068,11 @@ export default function RoadmapFormPanel({ roadmap, onClose, onSaved }) {
                           Learning Stages & Topics{' '}
                           <span className="text-red-400">*</span>
                         </label>
-                        <RichTextEditor value={content} onChange={setContent} />
+                        <MultiBlockEditor
+                          value={content}
+                          onChange={setContent}
+                          lessonTitle={title}
+                        />
                         <p className={hintCls}>
                           Describe the learning stages, topics, and resources.
                           Use headings, lists, links, and code blocks for

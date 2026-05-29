@@ -12,12 +12,13 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import ResourceEmbed from '@/app/_components/resources/ResourceEmbed';
 import {
   uploadResourceMediaAction,
   deleteResourceMediaAction,
   generateResourceTextAction,
+  createResourceCategoryAction,
 } from '@/app/_lib/resource-actions';
 import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
 import {
@@ -230,6 +231,8 @@ function defaultValue(initialData) {
     content:
       typeof initial.content === 'string'
         ? initial.content
+        : Array.isArray(initial.content)
+        ? JSON.stringify(initial.content)
         : initial.content?.html || '',
     embed_url: initial.embed_url || '',
     file_url: initial.file_url || '',
@@ -261,6 +264,57 @@ export default function ResourceForm({
   onFormChange,
 }) {
   const [form, setForm] = useState(defaultValue(initialData));
+  const [localCategories, setLocalCategories] = useState(categories);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [catPending, setCatPending] = useState(false);
+  const [catError, setCatError] = useState('');
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    setCatError('');
+    setCatPending(true);
+
+    try {
+      const fd = new FormData();
+      fd.set('name', newCatName.trim());
+      fd.set('description', newCatDesc.trim());
+
+      const result = await createResourceCategoryAction(fd);
+      if (result?.error) {
+        setCatError(result.error);
+        return;
+      }
+
+      if (result?.category) {
+        const created = result.category;
+        setLocalCategories((prev) => [...prev, created]);
+        patch('category_id', created.id);
+        setNewCatName('');
+        setNewCatDesc('');
+        setShowAddCategory(false);
+      }
+    } catch (err) {
+      setCatError(err.message || 'Failed to create category.');
+    } finally {
+      setCatPending(false);
+    }
+  };
+
+  const handleUploadBlockImage = async (formData) => {
+    const file = formData.get('file');
+    if (!file) return { error: 'No file provided.' };
+    const fd = new FormData();
+    fd.set('file', file);
+    fd.set('kind', 'media');
+    return uploadResourceMediaAction(fd);
+  };
   const [error, setError] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -585,36 +639,7 @@ export default function ResourceForm({
       </FormSection>
 
       {/* Media & Content */}
-      {form.resource_type === 'rich_text' ? (
-        <FormSection
-          icon={ImageIcon}
-          title="Rich Content"
-          description="Write your article content with formatting"
-        >
-          <div className="mb-1.5 flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-white">Content</h3>
-            <div className="flex items-center gap-1.5">
-              <AiWriteButton
-                mode="content"
-                onGenerated={(html) => patch('content', html)}
-                context={`${form.title || ''} — ${form.description || ''}`}
-              />
-              {form.content && (
-                <AiWriteButton
-                  mode="improve"
-                  onGenerated={(html) => patch('content', html)}
-                  existingContent={form.content}
-                />
-              )}
-            </div>
-          </div>
-          <RichTextEditor
-            value={form.content}
-            onChange={(html) => patch('content', html)}
-            placeholder="Write your article content here... Use the toolbar to format text, add images, code blocks, and more."
-          />
-        </FormSection>
-      ) : isImportType ? (
+      {isImportType ? (
         <FormSection
           icon={ImageIcon}
           title="Media Files"
@@ -747,7 +772,7 @@ export default function ResourceForm({
 
           {/* Thumbnail is now in Basic Information section for consistency */}
         </FormSection>
-      ) : (
+      ) : form.resource_type !== 'rich_text' ? (
         <FormSection
           icon={ImageIcon}
           title="Link & Media"
@@ -766,65 +791,174 @@ export default function ResourceForm({
             </p>
           </div>
         </FormSection>
-      )}
+      ) : null}
 
-      {/* Preview */}
-      {canPreview && (
-        <FormSection
-          icon={ImageIcon}
-          title="Preview"
-          description="How your resource will appear"
-        >
-          <ResourceEmbed resource={form} />
-        </FormSection>
-      )}
+      {/* Rich Content Blocks */}
+      <FormSection
+        icon={ImageIcon}
+        title="Rich Content Blocks"
+        description="Write your article content with formatting, support for markdown, HTML, and rich text"
+      >
+        <div className="mb-1.5 flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-white">Content</h3>
+          <div className="flex items-center gap-1.5">
+            <AiWriteButton
+              mode="content"
+              onGenerated={(html) => patch('content', html)}
+              context={`${form.title || ''} — ${form.description || ''}`}
+            />
+            {form.content && (
+              <AiWriteButton
+                mode="improve"
+                onGenerated={(html) => patch('content', html)}
+                existingContent={form.content}
+              />
+            )}
+          </div>
+        </div>
+        <MultiBlockEditor
+          value={form.content}
+          onChange={(val) => patch('content', val)}
+          uploadImageAction={handleUploadBlockImage}
+        />
+      </FormSection>
+
+
 
       {/* Organization */}
       <FormSection
         icon={Zap}
         title="Organization"
-        description="Category, tags, and visibility"
+        description="Category and tags"
       >
         <div>
-          <label className={labelClass}>Category *</label>
-          <select
-            value={form.category_id}
-            onChange={(e) => patch('category_id', e.target.value)}
-            className={inputClass}
-            style={{
-              colorScheme: 'dark',
-              color: 'white',
-              backgroundColor: 'rgb(255 255 255 / 0.05)',
-              borderColor: 'rgb(255 255 255 / 0.1)',
-            }}
-          >
-            <option
-              value=""
-              style={{
-                backgroundColor: '#0a0d14',
-                color: 'white',
-                padding: '8px',
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className={labelClass}>Category *</label>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddCategory(!showAddCategory);
+                setCatError('');
               }}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
             >
-              Select a category
-            </option>
-            {categories.map((c) => (
-              <option
-                key={c.id}
-                value={c.id}
+              {showAddCategory ? 'Cancel' : '+ New Category'}
+            </button>
+          </div>
+
+          {!showAddCategory ? (
+            <>
+              <select
+                value={form.category_id}
+                onChange={(e) => patch('category_id', e.target.value)}
+                className={inputClass}
                 style={{
-                  backgroundColor: '#0a0d14',
+                  colorScheme: 'dark',
                   color: 'white',
-                  padding: '8px',
+                  backgroundColor: 'rgb(255 255 255 / 0.05)',
+                  borderColor: 'rgb(255 255 255 / 0.1)',
                 }}
               >
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <p className={hintClass}>
-            Choose a category to organize this resource
-          </p>
+                <option
+                  value=""
+                  style={{
+                    backgroundColor: '#0a0d14',
+                    color: 'white',
+                    padding: '8px',
+                  }}
+                >
+                  Select a category
+                </option>
+                {localCategories.map((c) => (
+                  <option
+                    key={c.id}
+                    value={c.id}
+                    style={{
+                      backgroundColor: '#0a0d14',
+                      color: 'white',
+                      padding: '8px',
+                    }}
+                  >
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className={hintClass}>
+                Choose a category to organize this resource
+              </p>
+            </>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                  Create New Category
+                </h4>
+              </div>
+
+              {catError && (
+                <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                  {catError}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-gray-400">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g., Next.js, Data Science"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-blue-500/40"
+                  disabled={catPending}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-gray-400">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={newCatDesc}
+                  onChange={(e) => setNewCatDesc(e.target.value)}
+                  placeholder="Add a brief category description..."
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-blue-500/40"
+                  disabled={catPending}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddCategory(false);
+                    setCatError('');
+                  }}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-gray-300 hover:bg-white/10"
+                  disabled={catPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCategory}
+                  disabled={catPending || !newCatName.trim()}
+                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                >
+                  {catPending ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <span>Create Category</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
@@ -838,43 +972,6 @@ export default function ResourceForm({
           <p className={hintClass}>
             Comma-separated tags to help with discovery and filtering
           </p>
-        </div>
-
-        <div>
-          <label className={labelClass}>Visibility</label>
-          <select
-            value={form.visibility}
-            onChange={(e) => patch('visibility', e.target.value)}
-            className={inputClass}
-            style={{
-              colorScheme: 'dark',
-              color: 'white',
-              backgroundColor: 'rgb(255 255 255 / 0.05)',
-              borderColor: 'rgb(255 255 255 / 0.1)',
-            }}
-          >
-            <option
-              value="members"
-              style={{
-                backgroundColor: '#0a0d14',
-                color: 'white',
-                padding: '8px',
-              }}
-            >
-              Members Only
-            </option>
-            <option
-              value="public"
-              style={{
-                backgroundColor: '#0a0d14',
-                color: 'white',
-                padding: '8px',
-              }}
-            >
-              Public
-            </option>
-          </select>
-          <p className={hintClass}>Control who can access this resource</p>
         </div>
 
         <div>

@@ -12,7 +12,7 @@ export default function LatestNotices({ latestNotices }) {
         subtitle="Recent announcements"
         accent="pink"
         action={
-          <ActionButton tone="primary" href="/account/executive/notices/create" icon={Plus}>
+          <ActionButton tone="primary" href="/account/executive/inbox" icon={Plus}>
             Create
           </ActionButton>
         }

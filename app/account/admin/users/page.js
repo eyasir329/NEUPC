@@ -8,8 +8,6 @@
  */
 
 import { getAllUsers, getUserStats } from '@/app/_lib/data-service';
-import Link from 'next/link';
-import { UserPlus } from 'lucide-react';
 import UserManagementClient from './_components/UserManagementClient';
 
 export const metadata = { title: 'Users | Admin | NEUPC' };
@@ -58,29 +56,12 @@ export default async function AdminUsersPage({ searchParams }) {
   const initialSearch = rawSearch.slice(0, 100); // basic length guard
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">User Management</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Manage user accounts, roles, and permissions
-          </p>
-        </div>
-        <Link
-          href="/account/admin/users/create"
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-500/20 px-4 py-2.5 font-semibold text-blue-300 transition-colors hover:bg-blue-500/30"
-        >
-          <UserPlus className="h-5 w-5" />
-          Add User
-        </Link>
-      </div>
-      <UserManagementClient
-        initialUsers={users}
-        stats={stats}
-        initialFilterRole={initialFilterRole}
-        initialFilterStatus={initialFilterStatus}
-        initialSearch={initialSearch}
-      />
-    </div>
+    <UserManagementClient
+      initialUsers={users}
+      stats={stats}
+      initialFilterRole={initialFilterRole}
+      initialFilterStatus={initialFilterStatus}
+      initialSearch={initialSearch}
+    />
   );
 }

@@ -17,7 +17,18 @@ const LINKEDIN_HOSTS = new Set(['linkedin.com', 'www.linkedin.com']);
 
 function parseUrl(input) {
   try {
-    const u = new URL(String(input || '').trim());
+    let clean = String(input || '').trim();
+    if (!clean) return null;
+
+    // Check if it's already an absolute URL
+    if (!/^https?:\/\//i.test(clean) && !clean.startsWith('/')) {
+      // If it looks like it has a domain (contains a dot and doesn't have spaces)
+      if (clean.includes('.') && !/\s/.test(clean)) {
+        clean = 'https://' + clean;
+      }
+    }
+
+    const u = new URL(clean);
     if (!['http:', 'https:'].includes(u.protocol)) return null;
     return u;
   } catch {
@@ -109,6 +120,9 @@ export function normalizeEmbed(resourceType, inputUrl) {
 }
 
 export function safeExternalHref(inputUrl) {
+  const clean = String(inputUrl || '').trim();
+  if (clean.startsWith('/')) return clean;
+
   const url = parseUrl(inputUrl);
   return url ? url.toString() : null;
 }

@@ -142,22 +142,22 @@ export default function MemberEventsClient({ events: serverEvents, myRegistratio
           onBack={onBack}
           topSlot={<RegisterCta event={event} onFlash={setFlash} />}
           rightSlot={
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-              <div className="border-b border-slate-800 px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Your Registration</span>
+            <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900">
+              <div className="border-b border-white/[0.08] px-4 py-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Your Registration</span>
               </div>
-              <div className="divide-y divide-slate-800/60">
+              <div className="divide-y divide-white/[0.06]">
                 {[
                   {
                     label: 'Status',
                     value: event._userStatus === 'Registered' ? 'Registered ✓' : event._bucket === 'completed' ? 'Past' : 'Open',
-                    highlight: event._userStatus === 'Registered' ? 'text-emerald-400' : event._bucket === 'upcoming' ? 'text-indigo-300' : 'text-slate-400',
+                    highlight: event._userStatus === 'Registered' ? 'text-emerald-400' : event._bucket === 'upcoming' ? 'text-indigo-300' : 'text-gray-400',
                   },
-                  { label: 'Access', value: 'Members Only', highlight: 'text-slate-200' },
-                  ...(event.max_participants ? [{ label: 'Capacity', value: `${event.registrationCount ?? 0} / ${event.max_participants}`, highlight: 'text-slate-200' }] : []),
+                  { label: 'Access', value: 'Members Only', highlight: 'text-gray-200' },
+                  ...(event.max_participants ? [{ label: 'Capacity', value: `${event.registrationCount ?? 0} / ${event.max_participants}`, highlight: 'text-gray-200' }] : []),
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex items-start justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-slate-800/40">
-                    <span className="shrink-0 text-xs text-slate-500">{label}</span>
+                  <div key={label} className="flex items-start justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.02]">
+                    <span className="shrink-0 text-xs text-gray-500">{label}</span>
                     <span className={`text-right text-xs font-semibold ${highlight}`}>{value}</span>
                   </div>
                 ))}

@@ -224,6 +224,8 @@ function TaskDescriptionRenderer({ content }) {
 const LessonContentRenderer = lazy(
   () => import('../[lessonId]/_components/LessonContentRenderer')
 );
+import LessonComments from '@/app/_components/ui/LessonComments';
+import { getLessonCommentsAction } from '@/app/_lib/member-lesson-comments-actions';
 
 // Native History API cache to bypass Next.js monkey-patched router and prevent reloads
 let nativePushState = null;
@@ -1872,6 +1874,7 @@ const LessonPanel = memo(function LessonPanel({
   onProgressUpdate,
   onRefreshEnrollment,
   isArchived = false,
+  currentUser = null,
 }) {
   const contentAreaRef = useRef(null);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -1880,6 +1883,22 @@ const LessonPanel = memo(function LessonPanel({
 
   const initialPosition = lessonProgress[lesson.id]?.last_position || 0;
   const [localCompleted, setLocalCompleted] = useState(isCompleted);
+
+  // Comments: load dynamically when lesson mounts
+  const [lessonComments, setLessonComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  useEffect(() => {
+    if (!lesson?.id) return;
+    let cancelled = false;
+    setCommentsLoading(true);
+    getLessonCommentsAction(lesson.id).then((data) => {
+      if (!cancelled) {
+        setLessonComments(data || []);
+        setCommentsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [lesson?.id]);
 
   const contentHasPractice = useMemo(() => {
     if (!lesson.content) return false;
@@ -3324,6 +3343,20 @@ const LessonPanel = memo(function LessonPanel({
               onSave={onSaveNotes}
               isArchived={isArchived}
             />
+
+            {/* Comments */}
+            {commentsLoading ? (
+              <div className="mt-8 flex items-center justify-center gap-2 border-t border-white/[0.07] pt-8">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-violet-400" />
+                <span className="text-xs text-gray-600">Loading discussion…</span>
+              </div>
+            ) : (
+              <LessonComments
+                lessonId={lesson.id}
+                initialComments={lessonComments}
+                currentUser={currentUser}
+              />
+            )}
           </div>
         </div>
 
@@ -4026,6 +4059,7 @@ export default function BootcampLearningClient({
   bootcamp,
   lessonProgress: initialProgress = {},
   enrollment: initialEnrollment = {},
+  currentUser = null,
 }) {
   const [lessonProgress, setLessonProgress] = useState(initialProgress);
   const [enrollment, setEnrollment] = useState(initialEnrollment);
@@ -4590,6 +4624,7 @@ export default function BootcampLearningClient({
                 onProgressUpdate={setLessonProgress}
                 onRefreshEnrollment={refreshEnrollment}
                 isArchived={isArchived}
+                currentUser={currentUser}
               />
             </div>
           ) : (

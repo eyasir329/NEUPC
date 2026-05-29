@@ -6,6 +6,7 @@ import {
   getBootcampProgress,
   updateEnrollmentAccess,
 } from '@/app/_lib/bootcamp-actions';
+import { getUserByEmail } from '@/app/_lib/data-service';
 import BootcampLearningClient from './_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
@@ -22,6 +23,9 @@ export default async function BootcampLayout({ params, children }) {
   const { bootcampId } = await params;
   await requireRole('member');
 
+  
+  const { user: sessionUser } = await requireRole('member');
+
   let bootcamp;
   try {
     bootcamp = await getBootcampCurriculumLight(bootcampId);
@@ -30,9 +34,16 @@ export default async function BootcampLayout({ params, children }) {
   }
   if (!bootcamp) notFound();
 
-  const [enrollmentCheck, progressResult] = await Promise.all([
+  const [enrollmentCheck, progressResult, currentUser] = await Promise.all([
     checkEnrollment(bootcamp.id),
     getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} })),
+    sessionUser?.email
+      ? getUserByEmail(sessionUser.email)
+          .then((u) =>
+            u ? { id: u.id, full_name: u.full_name, avatar_url: u.avatar_url } : null
+          )
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   if (!enrollmentCheck.enrolled) {
@@ -48,6 +59,7 @@ export default async function BootcampLayout({ params, children }) {
       bootcamp={bootcamp}
       lessonProgress={lessonProgress}
       enrollment={enrollmentCheck.enrollment}
+      currentUser={currentUser}
     />
   );
 }

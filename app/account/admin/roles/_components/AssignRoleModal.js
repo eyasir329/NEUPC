@@ -47,36 +47,7 @@ function buildEmptyDraft(roleName) {
   return {};
 }
 
-function UserAvatar({ user, size = 'md' }) {
-  const isUrl =
-    user.avatar?.startsWith('http') || user.avatar?.startsWith('/api/image/');
-  const sz = size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm';
-  if (isUrl) {
-    return (
-      <img
-        src={user.avatar}
-        alt={user.name}
-        className={`${sz} rounded-full object-cover ring-1 ring-white/10`}
-      />
-    );
-  }
-  const colors = [
-    'from-blue-500 to-blue-600',
-    'from-purple-500 to-purple-600',
-    'from-emerald-500 to-emerald-600',
-    'from-orange-500 to-orange-600',
-    'from-pink-500 to-pink-600',
-    'from-cyan-500 to-cyan-600',
-  ];
-  const color = colors[(user.name?.charCodeAt(0) || 0) % colors.length];
-  return (
-    <div
-      className={`${sz} flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${color} font-semibold text-white ring-1 ring-white/10`}
-    >
-      {user.avatar ?? '?'}
-    </div>
-  );
-}
+import { Avatar } from '../../_components/_ui';
 
 export default function AssignRoleModal({
   role,
@@ -398,7 +369,7 @@ export default function AssignRoleModal({
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <UserAvatar user={user} />
+                      <Avatar name={user.name} size="sm" src={user.avatar} />
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">

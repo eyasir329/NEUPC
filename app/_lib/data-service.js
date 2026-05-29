@@ -3446,7 +3446,7 @@ export async function getResolvedDiscussions({ limit = 50, offset = 0 } = {}) {
 export async function getUserCertificates(userId) {
   const { data, error } = await supabase
     .from('certificates')
-    .select('*, events(id, title, slug), contests(id, title, slug)')
+    .select('*, events(id, title, slug), contests(id, title, slug), bootcamps(id, title, slug)')
     .eq('recipient_id', userId)
     .order('issue_date', { ascending: false });
   if (error) throw new Error(error.message);
@@ -3513,6 +3513,36 @@ export async function deleteCertificate(id) {
     .eq('id', id);
   if (error) throw new Error(error.message);
   return { success: true };
+}
+
+// Get all certificates.
+export async function getAllCertificates() {
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('*, users!certificates_recipient_id_fkey(id, full_name, email), events(id, title, slug), contests(id, title, slug), bootcamps(id, title, slug)')
+    .order('issue_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// Get all bootcamps.
+export async function getAllBootcamps() {
+  const { data, error } = await supabase
+    .from('bootcamps')
+    .select('*')
+    .order('start_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// Get users for certificate selection.
+export async function getUsersForCertificates() {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('id, full_name, email')
+    .order('full_name');
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 // Get all committee positions.

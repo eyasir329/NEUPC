@@ -38,7 +38,7 @@ function revalidateApprovals() {
   revalidatePath('/account/advisor/club-overview');
   revalidatePath('/account/advisor');
   revalidatePath('/account/admin/users');
-  revalidatePath('/account/executive/members');
+  revalidatePath('/account/executive/users');
   revalidatePath('/committee');
   revalidateTag('committee');
 }

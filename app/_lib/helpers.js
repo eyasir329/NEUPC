@@ -13,15 +13,15 @@ import { supabaseAdmin } from '@/app/_lib/supabase';
 // =============================================================================
 
 /**
- * Verify the current user is an active admin. Redirects otherwise.
- * @returns {Promise<object>} The authenticated admin user record
+ * Verify the current user is an active admin or executive. Redirects otherwise.
+ * @returns {Promise<object>} The authenticated user record
  */
 export async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.email) redirect('/login');
 
   const roles = await getUserRoles(session.user.email);
-  if (!roles.includes('admin')) redirect('/account');
+  if (!roles.includes('admin') && !roles.includes('executive')) redirect('/account');
 
   const user = await getUserByEmail(session.user.email);
   if (user?.account_status !== 'active') redirect('/account');
@@ -91,4 +91,49 @@ export function generateSlug(title) {
     '-' +
     Date.now().toString(36)
   );
+}
+
+// =============================================================================
+// EVENT AGENDA / SPEAKERS PARSING
+// =============================================================================
+// Event forms submit agenda/speakers as JSON strings. Sanitise to a known
+// shape and drop entries that are entirely empty so the detail UI stays clean.
+
+export function parseEventAgenda(raw) {
+  if (!raw) return [];
+  let arr;
+  try {
+    arr = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((it, i) => ({
+      id: typeof it?.id === 'string' && it.id ? it.id : `ag_${i}`,
+      time: String(it?.time ?? '').trim(),
+      title: String(it?.title ?? '').trim(),
+      description: String(it?.description ?? '').trim(),
+      speaker: String(it?.speaker ?? '').trim(),
+    }))
+    .filter((it) => it.time || it.title || it.description || it.speaker);
+}
+
+export function parseEventSpeakers(raw) {
+  if (!raw) return [];
+  let arr;
+  try {
+    arr = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((it, i) => ({
+      id: typeof it?.id === 'string' && it.id ? it.id : `sp_${i}`,
+      name: String(it?.name ?? '').trim(),
+      role: String(it?.role ?? '').trim(),
+      avatar: String(it?.avatar ?? '').trim(),
+    }))
+    .filter((it) => it.name || it.role || it.avatar);
 }

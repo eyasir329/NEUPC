@@ -8,6 +8,7 @@ import { incrementRoadmapViewAction } from '@/app/_lib/roadmap-actions';
 import { useScrollLock } from '@/app/_lib/hooks';
 import JoinButton from '@/app/_components/ui/JoinButton';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
+import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import { createLowlight, common } from 'lowlight';
 import { toHtml } from 'hast-util-to-html';
 
@@ -331,9 +332,15 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   }, [roadmap.id, meta.views]);
 
   // ── Syntax highlighting ───────────────────────────────────────────────────
+  const isJsonContent = useMemo(() => {
+    if (!meta.content) return false;
+    const trimmed = meta.content.trim();
+    return trimmed.startsWith('[') && trimmed.endsWith(']');
+  }, [meta.content]);
+
   const enhancedContent = useMemo(
-    () => highlightCodeBlocks(injectHeadingIds(meta.content)),
-    [meta.content]
+    () => (isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content))),
+    [meta.content, isJsonContent]
   );
 
   // ── Copy button delegation ────────────────────────────────────────────────
@@ -358,17 +365,44 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
     return () => container.removeEventListener('click', handleClick);
   }, [enhancedContent]);
 
-  // ── TOC extraction ────────────────────────────────────────────────────────
+  // ── TOC extraction and Heading ID injection ────────────────────────────────
   useEffect(() => {
-    if (!contentRef.current) return;
-    const headings = contentRef.current.querySelectorAll('h2[id], h3[id]');
-    const toc = Array.from(headings).map((h) => ({
+    const container = contentRef.current;
+    if (!container) return;
+
+    // Inject IDs into all h2 and h3 elements that don't have them
+    const headings = container.querySelectorAll('h2, h3');
+    const seen = {};
+    headings.forEach((h) => {
+      if (!h.id) {
+        const text = h.textContent.trim();
+        let slug = text
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+        if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+        else seen[slug] = 1;
+        h.id = slug;
+      }
+    });
+
+    // Query all h2[id] and h3[id] elements inside the container
+    const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
+    const toc = Array.from(headingsWithIds).map((h) => ({
       id: h.id,
       title: h.textContent,
       level: h.tagName === 'H3' ? 3 : 2,
     }));
-    if (toc.length) { setTableOfContents(toc); setActiveSection(toc[0].id); }
-  }, [enhancedContent]);
+    if (toc.length) {
+      setTableOfContents(toc);
+      setActiveSection(toc[0].id);
+    } else {
+      setTableOfContents([]);
+      setActiveSection('');
+    }
+  }, [enhancedContent, isJsonContent, meta.content]);
 
   // ── Scroll tracking ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -1085,7 +1119,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
             )}
 
             {/* Content */}
-            {enhancedContent ? (
+            {isJsonContent || enhancedContent ? (
               <div
                 ref={contentRef}
                 className={cn(
@@ -1102,8 +1136,13 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   lineHeight: LINE_HEIGHTS[lineHeight],
                   textAlign,
                 }}
-                dangerouslySetInnerHTML={{ __html: enhancedContent }}
-              />
+              >
+                {isJsonContent ? (
+                  <LessonContentRenderer content={meta.content} viewerMode={true} />
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
+                )}
+              </div>
             ) : (
               <div className="holographic-card no-lift flex flex-col items-center justify-center rounded-2xl p-16 text-center">
                 <div className="mb-4 text-5xl">📭</div>

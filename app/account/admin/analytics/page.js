@@ -12,11 +12,12 @@ import AnalyticsClient from './_components/AnalyticsClient';
 export const metadata = { title: 'Analytics | Admin | NEUPC' };
 
 export default async function AdminAnalyticsPage() {
-  const analytics = await getAnalyticsData().catch(() => null);
+  let analytics = null;
+  try {
+    analytics = await getAnalyticsData();
+  } catch (err) {
+    console.error("Error in getAnalyticsData:", err);
+  }
 
-  return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
-      <AnalyticsClient data={analytics} />
-    </div>
-  );
+  return <AnalyticsClient data={analytics} />;
 }

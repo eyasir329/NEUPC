@@ -32,9 +32,9 @@ async function requireAdmin() {
 
   if (!userData) throw new Error('User not found');
 
-  // Ensure the admin account itself is active
+  // Ensure the admin/executive account itself is active
   if (userData.account_status !== 'active') {
-    throw new Error('Admin account is not active');
+    throw new Error('Administrative account is not active');
   }
 
   const { data: roles } = await supabaseAdmin
@@ -43,7 +43,7 @@ async function requireAdmin() {
     .eq('user_id', userData.id);
 
   const roleNames = roles?.map((r) => r.roles?.name) || [];
-  if (!roleNames.includes('admin')) throw new Error('Unauthorized');
+  if (!roleNames.includes('admin') && !roleNames.includes('executive')) throw new Error('Unauthorized');
 
   return { adminId: userData.id };
 }
@@ -114,6 +114,7 @@ export async function suspendUserAction(formData) {
   });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account');
   return { success: true };
 }
@@ -140,6 +141,7 @@ export async function activateUserAction(formData) {
   await logActivity(adminId, 'activate_user', 'user', userId, { reason });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account');
   return { success: true };
 }
@@ -166,6 +168,7 @@ export async function banUserAction(formData) {
   await logActivity(adminId, 'ban_user', 'user', userId, { reason });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account');
   return { success: true };
 }
@@ -374,6 +377,7 @@ export async function deleteUserAction(formData) {
 
   await logActivity(adminId, 'delete_user', 'user', userId, { reason });
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account');
   return { success: true };
 }
@@ -408,6 +412,7 @@ export async function changeUserRoleAction(formData) {
   if (error) throw new Error(error.message);
   await logActivity(adminId, 'change_role', 'user', userId, { newRole });
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/roles');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
@@ -459,6 +464,7 @@ export async function approveMemberAction(formData) {
     'Your account access has been approved. Welcome!'
   );
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
   return { success: true };
@@ -590,10 +596,11 @@ export async function approveMembershipAction(formData) {
     {}
   );
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
   revalidatePath('/account/advisor/approvals');
-  revalidatePath('/account/executive/members');
+
   await insertAccountMessage(
     userId,
     adminId,
@@ -626,6 +633,7 @@ export async function rejectGuestAction(formData) {
   await logActivity(adminId, 'reject_guest', 'user', userId, { reason });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
   return { success: true };
@@ -673,6 +681,7 @@ export async function rejectMemberAction(formData) {
   });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
   revalidatePath('/account/advisor/approvals');
@@ -702,6 +711,7 @@ export async function lockUserAction(formData) {
   await logActivity(adminId, 'lock_user', 'user', userId, { reason });
   await insertAccountMessage(userId, adminId, reason);
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account');
   return { success: true };
 }
@@ -1053,6 +1063,7 @@ export async function updateUserAction(formData) {
   }
 
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account');
   revalidatePath('/committee');
@@ -1163,9 +1174,10 @@ export async function submitMembershipApplicationAction(formData) {
 
   revalidatePath('/account/guest/membership-application');
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/applications');
   revalidatePath('/account/advisor/approvals');
-  revalidatePath('/account/executive/members');
+
   return { success: true };
 }
 
@@ -1192,6 +1204,7 @@ export async function uploadUserImageAction(formData) {
 
   const file = formData.get('file');
   const userId = formData.get('userId');
+  const updateDb = formData.get('updateDb') === 'true';
 
   if (!file || !(file instanceof File) || file.size === 0) {
     return { error: 'No image provided.' };
@@ -1216,6 +1229,18 @@ export async function uploadUserImageAction(formData) {
   } catch (err) {
     console.error('Google Drive user avatar upload error:', err);
     return { error: 'Failed to upload image. Please try again.' };
+  }
+
+  if (updateDb) {
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ avatar_url: url, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (dbError) {
+      console.error('Failed to update avatar in database:', dbError);
+      return { error: 'Image uploaded, but failed to save to database.' };
+    }
   }
 
   await logActivity(adminId, 'user_avatar_uploaded', 'user', userId, {
@@ -1276,6 +1301,7 @@ export async function verifyUserEmailAction(formData) {
     hasCustomTemplate: !!String(emailTemplate).trim(),
   });
   revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/users');
   return {
     success: true,
     emailSent: !!emailResult?.success,

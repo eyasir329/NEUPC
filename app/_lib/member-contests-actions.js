@@ -52,7 +52,6 @@ export async function joinContestAction(contestId) {
     return { error: 'Failed to join contest.' };
   }
   revalidatePath('/account/member/problem-solving');
-  revalidatePath('/account/executive/contests/manage');
   return { success: true };
 }
 
@@ -84,6 +83,5 @@ export async function leaveContestAction(contestId) {
     return { error: 'Failed to leave contest.' };
   }
   revalidatePath('/account/member/problem-solving');
-  revalidatePath('/account/executive/contests/manage');
   return { success: true };
 }

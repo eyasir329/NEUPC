@@ -14,28 +14,65 @@ import BulkAddModal from './BulkAddModal';
 import EventBulkUploadModal from './EventBulkUploadModal';
 import DraggablePhotoGrid from './DraggablePhotoGrid';
 import EventGalleryItemEditModal from './EventGalleryItemEditModal';
-import { getStatCards, GALLERY_CATEGORIES } from './galleryConfig';
-import { ImageIcon, ChevronRight } from 'lucide-react';
+import { getStatCards } from './galleryConfig';
 import Link from 'next/link';
 import {
   reorderEventGalleryAction,
   deleteEventGalleryItemAction,
 } from '@/app/_lib/gallery-actions';
 
+// Lucide icons
+import {
+  ImageIcon,
+  Folder,
+  Video,
+  Star,
+  Tag,
+  Calendar,
+  Plus,
+  Upload,
+  Search,
+  ArrowLeft,
+  X,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+
+// Shared UI components
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  StatCard,
+  TabBar,
+  EmptyState,
+  ActionButton,
+} from '../../_components/_ui';
+
 const TABS = ['all', 'image', 'video', 'featured', 'by_event'];
+
+const STAT_MAPPING = {
+  'Total Items': { icon: Folder, accent: 'violet' },
+  'Images': { icon: ImageIcon, accent: 'blue' },
+  'Videos': { icon: Video, accent: 'rose' },
+  'Featured': { icon: Star, accent: 'amber' },
+  'Categories': { icon: Tag, accent: 'emerald' },
+  'Linked Events': { icon: Calendar, accent: 'sky' },
+};
 
 function TabLabel(tab) {
   switch (tab) {
     case 'all':
       return 'All';
     case 'image':
-      return '🖼️ Images';
+      return 'Images';
     case 'video':
-      return '🎬 Videos';
+      return 'Videos';
     case 'featured':
-      return '⭐ Featured';
+      return 'Featured';
     case 'by_event':
-      return '📅 By Event';
+      return 'By Event';
     default:
       return tab;
   }
@@ -179,226 +216,216 @@ export default function GalleryManagementClient({
 
   const statCards = getStatCards(stats);
 
+  const statusTabs = TABS.map((t) => {
+    let icon = ImageIcon;
+    if (t === 'image') icon = ImageIcon;
+    else if (t === 'video') icon = Video;
+    else if (t === 'featured') icon = Star;
+    else if (t === 'by_event') icon = Calendar;
+    else if (t === 'all') icon = Folder;
+
+    return {
+      value: t,
+      label: TabLabel(t),
+      count: counts[t],
+      icon,
+    };
+  });
+
   return (
-    <div className="space-y-6">
+    <PageShell>
       {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
-        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-purple-500/8 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3 text-gray-700" />
-              <span className="font-medium text-gray-400">Gallery</span>
-            </nav>
-            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-500/25">
-                <ImageIcon className="h-5 w-5 text-violet-400" />
-              </div>
-              Gallery Management
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Manage all photos and videos in the public gallery.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+      <PageHeader
+        icon={ImageIcon}
+        title="Gallery Management"
+        subtitle={`${stats.total} media items · ${events.length} managed events`}
+        accent="violet"
+        actions={
+          <div className="flex items-center gap-2">
             <Link
               href="/account/admin"
-              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-4 py-2.5 text-xs font-semibold text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
             >
-              ← Dashboard
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Dashboard
             </Link>
             <button
               onClick={() => setBulkOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-4 py-2.5 text-xs font-semibold text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
             >
-              <svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-3.5 w-3.5"
-              >
-                <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
-                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-              </svg>
+              <Upload className="h-3.5 w-3.5" />
               Bulk Add
             </button>
             <button
               onClick={() => setAddOpen(true)}
-              className="group flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-900/30 transition-all hover:-translate-y-0.5 hover:bg-violet-500 hover:shadow-xl hover:shadow-violet-900/40"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.35)]"
             >
-              <svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-3.5 w-3.5"
-              >
-                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-              </svg>
+              <Plus className="h-3.5 w-3.5" />
               Add Item
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Stat Cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {statCards.map((s) => (
-          <div
-            key={s.label}
-            className={`bg-linear-to-br ${s.color} flex flex-col gap-1 rounded-xl border p-3.5`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-lg">{s.icon}</span>
-              <span className={`text-xl font-bold ${s.text}`}>{s.value}</span>
-            </div>
-            <p className="truncate text-xs text-slate-400">{s.label}</p>
-          </div>
-        ))}
+        {statCards.map((s, idx) => {
+          const mapping = STAT_MAPPING[s.label] || { icon: ImageIcon, accent: 'violet' };
+          return (
+            <StatCard
+              key={s.label}
+              icon={mapping.icon}
+              label={s.label}
+              value={s.value}
+              accent={mapping.accent}
+              delay={idx * 0.04}
+            />
+          );
+        })}
       </div>
 
-      {/* ── Filters ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        {/* Search */}
-        <div className="relative flex-1">
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-              clipRule="evenodd"
-            />
-          </svg>
+      {/* ── Status Tabs ────────────────────────────────────────────────── */}
+      <TabBar tabs={statusTabs} value={tab} onChange={(v) => setTab(v)} />
+
+      {/* ── Toolbar & Filters ───────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Search bar */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search captions, tags, categories…"
-            className="w-full rounded-xl border border-slate-700/50 bg-slate-800/60 py-2 pr-4 pl-9 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-violet-500 focus:outline-none"
+            placeholder="Search captions, tags, categories, events…"
+            className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-9 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 placeholder:text-gray-600 transition-all"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Category filter */}
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 focus:ring-2 focus:ring-violet-500 focus:outline-none"
-        >
-          <option value="">All categories</option>
-          {allCategories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        {/* Event filter */}
-        {events.length > 0 && (
-          <select
-            value={eventFilter}
-            onChange={(e) => setEventFilter(e.target.value)}
-            className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 focus:ring-2 focus:ring-violet-500 focus:outline-none"
-          >
-            <option value="">All events</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.title}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {/* ── Tabs ────────────────────────────────────────────────────────── */}
-      <div className="flex w-fit gap-1 rounded-xl border border-slate-700/40 bg-slate-800/50 p-1">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === t
-                ? 'bg-violet-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {TabLabel(t)}{' '}
-            <span
-              className={`ml-1 text-xs ${tab === t ? 'text-violet-200' : 'text-slate-600'}`}
+        {/* Dropdown Filters */}
+        <div className="flex items-center flex-wrap gap-2 sm:ml-auto">
+          {/* Category filter */}
+          <div className="relative">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+              style={{ colorScheme: 'dark' }}
             >
-              {counts[t]}
-            </span>
-          </button>
-        ))}
+              <option value="">All Categories</option>
+              {allCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+          </div>
+
+          {/* Event filter */}
+          {events.length > 0 && (
+            <div className="relative">
+              <select
+                value={eventFilter}
+                onChange={(e) => setEventFilter(e.target.value)}
+                className="appearance-none bg-white/3 border border-white/8 text-white text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-violet-500/50 transition-all cursor-pointer"
+                style={{ colorScheme: 'dark' }}
+              >
+                <option value="">All Events</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ── Filter Indicator / Reset ────────────────────────────────────── */}
+      {(search || categoryFilter || eventFilter) && (
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span>
+            Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
+            <span className="text-white font-medium">{initialItems.length + eventGalleryItems.length}</span> items
+          </span>
+          <button
+            onClick={() => {
+              setSearch('');
+              setCategoryFilter('');
+              setEventFilter('');
+            }}
+            className="ml-2 flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors font-medium"
+          >
+            <X className="h-3 w-3" />
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {/* ── By Event view ─────────────────────────────────────────────── */}
       {tab === 'by_event' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {groupedByEvent.map(({ event: ev, items: evItems }) => (
-            <div
+            <GlassCard
               key={ev.id}
-              className="rounded-2xl border border-slate-700/40 bg-slate-800/30 p-5"
+              className="border-white/[0.06] bg-white/[0.02]"
+              padding="p-6"
             >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">📅</span>
+              <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20">
+                    <Calendar className="h-5 w-5 text-violet-400" />
+                  </div>
                   <div>
-                    <h3 className="font-semibold text-white">{ev.title}</h3>
-                    <p className="text-xs text-slate-500">
-                      {evItems.length} photo{evItems.length !== 1 ? 's' : ''}
+                    <h3 className="text-sm font-semibold text-gray-200">{ev.title}</h3>
+                    <p className="text-xs text-gray-500">
+                      {evItems.length} item{evItems.length !== 1 ? 's' : ''} in event
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <ActionButton
+                    tone="emerald"
+                    icon={Upload}
                     onClick={() => setBulkUploadEvent(ev)}
-                    className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20"
                   >
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="h-3.5 w-3.5"
-                    >
-                      <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
-                      <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                    </svg>
                     Upload Files
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
+                    tone="violet"
+                    icon={Plus}
                     onClick={() => openAddForEvent(ev.id)}
-                    className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-300 transition-colors hover:bg-violet-500/20"
                   >
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="h-3.5 w-3.5"
-                    >
-                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                    </svg>
                     Add URL
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
               {evItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-700/50 py-10 text-center">
-                  <span className="mb-2 text-3xl opacity-40">🖼️</span>
-                  <p className="text-sm text-slate-500">
-                    No photos yet for this event
-                  </p>
-                  <button
-                    onClick={() => setBulkUploadEvent(ev)}
-                    className="mt-3 text-xs font-medium text-emerald-400 hover:underline"
-                  >
-                    Upload files
-                  </button>
-                </div>
+                <EmptyState
+                  icon={ImageIcon}
+                  title="No photos yet for this event"
+                  description="Upload event pictures or add an external media URL to populate the gallery."
+                  accent="violet"
+                  action={
+                    <ActionButton
+                      tone="emerald"
+                      icon={Upload}
+                      onClick={() => setBulkUploadEvent(ev)}
+                    >
+                      Upload files
+                    </ActionButton>
+                  }
+                />
               ) : (
                 <DraggablePhotoGrid
                   items={evItems}
@@ -406,7 +433,7 @@ export default function GalleryManagementClient({
                   reorderAction={reorderEventGalleryAction}
                 />
               )}
-            </div>
+            </GlassCard>
           ))}
         </div>
       )}
@@ -415,33 +442,48 @@ export default function GalleryManagementClient({
       {tab !== 'by_event' && (
         <>
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-3 text-5xl">🖼️</div>
-              <p className="font-medium text-slate-400">No items found</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {search || categoryFilter || eventFilter
-                  ? 'Try adjusting your filters.'
-                  : 'Add the first gallery item to get started.'}
-              </p>
-              {!search && !categoryFilter && !eventFilter && (
-                <button
-                  onClick={() => setAddOpen(true)}
-                  className="mt-4 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
-                >
-                  Add Item
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={ImageIcon}
+              title={search || categoryFilter || eventFilter ? 'No items found' : 'No gallery items'}
+              description={
+                search || categoryFilter || eventFilter
+                  ? 'Try adjusting your search query or dropdown filters.'
+                  : 'Get started by creating your first gallery item.'
+              }
+              accent="violet"
+              action={
+                search || categoryFilter || eventFilter ? (
+                  <ActionButton
+                    onClick={() => {
+                      setSearch('');
+                      setCategoryFilter('');
+                      setEventFilter('');
+                    }}
+                    tone="violet"
+                    icon={X}
+                  >
+                    Clear Filters
+                  </ActionButton>
+                ) : (
+                  <ActionButton
+                    onClick={() => setAddOpen(true)}
+                    tone="violet"
+                    icon={Plus}
+                  >
+                    Add Item
+                  </ActionButton>
+                )
+              }
+            />
           ) : (
             <>
-              <p className="text-xs text-slate-500">
-                Showing {(safePage - 1) * ITEMS_PER_PAGE + 1}–
-                {Math.min(safePage * ITEMS_PER_PAGE, filtered.length)} of{' '}
-                {filtered.length} items
-                {filtered.length !==
-                  initialItems.length + eventGalleryItems.length &&
-                  ` (${initialItems.length + eventGalleryItems.length} total)`}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  Showing {(safePage - 1) * ITEMS_PER_PAGE + 1}–
+                  {Math.min(safePage * ITEMS_PER_PAGE, filtered.length)} of{' '}
+                  <span className="text-white font-medium">{filtered.length}</span> items
+                </p>
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {paginatedItems.map((item) => (
                   <GalleryItemCard
@@ -464,24 +506,24 @@ export default function GalleryManagementClient({
 
               {/* ── Pagination Controls ─────────────────────────────────── */}
               {totalPages > 1 && (
-                <div className="flex flex-col items-center gap-3 pt-4 sm:flex-row sm:justify-between">
-                  <p className="text-xs text-slate-500">
-                    Page {safePage} of {totalPages}
+                <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/[0.06] sm:flex-row sm:justify-between">
+                  <p className="text-xs text-gray-500">
+                    Page <span className="text-white">{safePage}</span> of {totalPages}
                   </p>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setCurrentPage(1)}
                       disabled={safePage <= 1}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 items-center justify-center rounded-lg px-2.5 text-xs font-semibold border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       First
                     </button>
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={safePage <= 1}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
-                      ← Prev
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
 
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -501,7 +543,7 @@ export default function GalleryManagementClient({
                         typeof p === 'string' ? (
                           <span
                             key={p}
-                            className="px-1.5 text-xs text-slate-600"
+                            className="px-1.5 text-xs text-gray-600 select-none"
                           >
                             …
                           </span>
@@ -509,10 +551,10 @@ export default function GalleryManagementClient({
                           <button
                             key={p}
                             onClick={() => setCurrentPage(p)}
-                            className={`min-w-8 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
                               p === safePage
-                                ? 'bg-violet-600 text-white shadow-sm'
-                                : 'text-slate-400 hover:bg-slate-700/60 hover:text-white'
+                                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                                : 'border border-white/6 bg-white/2 text-gray-400 hover:bg-white/5 hover:text-white'
                             }`}
                           >
                             {p}
@@ -525,14 +567,14 @@ export default function GalleryManagementClient({
                         setCurrentPage((p) => Math.min(totalPages, p + 1))
                       }
                       disabled={safePage >= totalPages}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
-                      Next →
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={safePage >= totalPages}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      className="inline-flex h-8 items-center justify-center rounded-lg px-2.5 text-xs font-semibold border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-white/5 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       Last
                     </button>
@@ -575,6 +617,6 @@ export default function GalleryManagementClient({
           onClose={() => setBulkUploadEvent(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

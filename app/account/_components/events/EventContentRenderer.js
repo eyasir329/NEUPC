@@ -15,8 +15,12 @@ function parseContentBlocks(content) {
   try {
     const parsed = typeof content === 'string' ? JSON.parse(content) : content;
     if (Array.isArray(parsed)) return parsed;
-  } catch (e) {}
-  return [{ id: 'legacy', type: 'richText', content }];
+    if (parsed && typeof parsed === 'object' && parsed.html) {
+      return [{ id: 'legacy', type: 'richText', content: parsed.html }];
+    }
+  } catch {}
+  const stringContent = typeof content === 'object' ? (content?.html || '') : content;
+  return [{ id: 'legacy', type: 'richText', content: stringContent }];
 }
 
 function escapeHtml(str) {

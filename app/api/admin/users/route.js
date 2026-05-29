@@ -12,8 +12,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
-    // Check authentication + admin role + account status
-    const authResult = await requireApiAuth('admin');
+    // Check authentication + admin/executive role + account status
+    const authResult = await requireApiAuth(['admin', 'executive']);
     if (isAuthError(authResult)) return authResult;
 
     // Get query parameters

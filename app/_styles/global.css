@@ -2631,6 +2631,15 @@ html[data-dashboard] [data-public-footer] {
   display: none;
 }
 
+/* Lock outer viewport coordinates for dashboard layouts to prevent scrolling/shifting */
+html[data-dashboard],
+html[data-dashboard] body {
+  overflow: hidden !important;
+  height: 100% !important;
+  height: 100vh !important;
+  scroll-behavior: auto !important;
+}
+
 /* Safe-area padding for notched / dynamic-island devices */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 1rem);

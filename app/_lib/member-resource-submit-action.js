@@ -3,8 +3,10 @@
 import { supabaseAdmin } from './supabase';
 import { revalidatePath } from 'next/cache';
 import { requireActionAuth } from './action-guard';
-import { normalizeEmbed } from './resources/embed-utils';
+import { normalizeEmbed, sanitizeRichHtml } from './resources/embed-utils';
 import { slugify } from './resources/constants';
+import { parseResourceFormData } from './resources/schemas';
+import { upsertTags } from './resource-actions';
 
 const URL_TYPES = ['youtube', 'external_link', 'facebook_post', 'linkedin_post'];
 
@@ -43,7 +45,7 @@ function buildSubmissionPayload(data, userId) {
 }
 
 export async function submitMemberResourceAction(formData) {
-  const auth = await requireActionAuth('member');
+  const auth = await requireActionAuth(['member', 'mentor', 'executive', 'advisor', 'admin']);
   if (auth.error) return { error: auth.error };
 
   const title = String(formData.get('title') || '').trim();
@@ -81,4 +83,268 @@ export async function submitMemberResourceAction(formData) {
 
   revalidatePath('/account/admin/resources');
   return { success: true, id: data.id };
+}
+
+/**
+ * Full submission from the block-editor (ResourceFormPanel) for members.
+ * Forces draft status + members visibility so admin must review. Does NOT
+ * handle file uploads; members can submit URL/rich_text resources.
+ */
+export async function submitMemberFullResourceAction(formData) {
+  const auth = await requireActionAuth(['member', 'mentor', 'executive', 'advisor', 'admin']);
+  if (auth.error) return { error: auth.error };
+
+  const parsed = parseResourceFormData(formData);
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues?.[0]?.message || 'Invalid resource payload.',
+    };
+  }
+
+  const data = parsed.data;
+
+  // Resolve category name (legacy non-null column)
+  let categoryName = 'Other';
+  if (data.category_id) {
+    const { data: catRow } = await supabaseAdmin
+      .from('resource_categories')
+      .select('name')
+      .eq('id', data.category_id)
+      .maybeSingle();
+    if (catRow?.name) categoryName = catRow.name;
+  }
+
+  const payload = {
+    title: data.title,
+    description: data.description || null,
+    url:
+      data.embed_url ||
+      data.file_url ||
+      data.thumbnail ||
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'https://neupc.vercel.app'}/account`,
+    resource_type: data.resource_type,
+    category: categoryName,
+    tags: data.tags?.length ? data.tags : null,
+    content: null,
+    embed_url: null,
+    file_url: data.file_url || null,
+    thumbnail: data.thumbnail || null,
+    category_id: data.category_id || null,
+    // Member submissions always start as drafts pending admin review.
+    visibility: 'members',
+    status: 'draft',
+    is_pinned: false,
+    scheduled_for: null,
+    published_at: null,
+    created_by: auth.user.id,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (data.content) {
+    try {
+      const blocks = JSON.parse(data.content);
+      if (Array.isArray(blocks)) {
+        payload.content = blocks.map((block) => {
+          if (block.type === 'richText' || block.type === 'html') {
+            return { ...block, content: sanitizeRichHtml(block.content || '') };
+          }
+          return block;
+        });
+      } else {
+        payload.content = { html: sanitizeRichHtml(data.content || '') };
+      }
+    } catch {
+      if (typeof data.content === 'string' && data.content.trim()) {
+        payload.content = { html: sanitizeRichHtml(data.content || '') };
+      }
+    }
+  }
+
+  if (URL_TYPES.includes(data.resource_type) && data.embed_url) {
+    const norm = normalizeEmbed(data.resource_type, data.embed_url);
+    if (!norm.ok) return { error: norm.error || 'Invalid embed URL.' };
+    payload.embed_url = norm.url;
+    if (!Array.isArray(payload.content)) {
+      payload.content = {
+        ...(payload.content || {}),
+        provider: norm.provider,
+        embedUrl: norm.embedUrl,
+        videoId: norm.videoId || null,
+        submittedByMember: true,
+      };
+    }
+  }
+
+  const { data: inserted, error } = await supabaseAdmin
+    .from('resources')
+    .insert([payload])
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Member full resource submission error:', error);
+    return { error: 'Failed to submit resource. Please try again.' };
+  }
+
+  try {
+    await upsertTags(inserted.id, data.tags);
+  } catch (tagError) {
+    console.error('Failed to upsert tags during member submission:', tagError);
+  }
+
+  revalidatePath('/account/admin/resources');
+  revalidatePath('/account/member/resources');
+  return { success: true, id: inserted.id };
+}
+
+export async function updateMemberResourceAction(formData) {
+  const auth = await requireActionAuth(['member', 'mentor', 'executive', 'advisor', 'admin']);
+  if (auth.error) return { error: auth.error };
+
+  const id = formData.get('id');
+  if (!id) return { error: 'Resource ID is required.' };
+
+  // Fetch the existing resource to verify ownership
+  const { data: resource, error: fetchErr } = await supabaseAdmin
+    .from('resources')
+    .select('id, created_by, status')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !resource) {
+    return { error: 'Resource not found.' };
+  }
+
+  // Enforce ownership: only the creator can edit their resource!
+  if (resource.created_by !== auth.user.id) {
+    return { error: 'You are not authorized to edit this resource.' };
+  }
+
+  const parsed = parseResourceFormData(formData);
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues?.[0]?.message || 'Invalid resource payload.',
+    };
+  }
+
+  const data = parsed.data;
+
+  // Resolve category name (legacy non-null column)
+  let categoryName = 'Other';
+  if (data.category_id) {
+    const { data: catRow } = await supabaseAdmin
+      .from('resource_categories')
+      .select('name')
+      .eq('id', data.category_id)
+      .maybeSingle();
+    if (catRow?.name) categoryName = catRow.name;
+  }
+
+  const payload = {
+    title: data.title,
+    description: data.description || null,
+    url:
+      data.embed_url ||
+      data.file_url ||
+      data.thumbnail ||
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'https://neupc.vercel.app'}/account`,
+    resource_type: data.resource_type,
+    category: categoryName,
+    content: null,
+    embed_url: null,
+    file_url: data.file_url || null,
+    thumbnail: data.thumbnail || null,
+    category_id: data.category_id || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (data.content) {
+    try {
+      const blocks = JSON.parse(data.content);
+      if (Array.isArray(blocks)) {
+        payload.content = blocks.map((block) => {
+          if (block.type === 'richText' || block.type === 'html') {
+            return { ...block, content: sanitizeRichHtml(block.content || '') };
+          }
+          return block;
+        });
+      } else {
+        payload.content = { html: sanitizeRichHtml(data.content || '') };
+      }
+    } catch {
+      if (typeof data.content === 'string' && data.content.trim()) {
+        payload.content = { html: sanitizeRichHtml(data.content || '') };
+      }
+    }
+  }
+
+  if (URL_TYPES.includes(data.resource_type) && data.embed_url) {
+    const norm = normalizeEmbed(data.resource_type, data.embed_url);
+    if (!norm.ok) return { error: norm.error || 'Invalid embed URL.' };
+    payload.embed_url = norm.url;
+    if (!Array.isArray(payload.content)) {
+      payload.content = {
+        ...(payload.content || {}),
+        provider: norm.provider,
+        embedUrl: norm.embedUrl,
+        videoId: norm.videoId || null,
+      };
+    }
+  }
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('resources')
+    .update(payload)
+    .eq('id', id);
+
+  if (updateErr) {
+    console.error('Member resource update error:', updateErr);
+    return { error: 'Failed to update resource. Please try again.' };
+  }
+
+  try {
+    await upsertTags(id, data.tags);
+  } catch (tagError) {
+    console.error('Failed to upsert tags during member edit:', tagError);
+  }
+
+  revalidatePath('/account/admin/resources');
+  revalidatePath('/account/member/resources');
+  return { success: true };
+}
+
+export async function deleteMemberResourceAction(id) {
+  const auth = await requireActionAuth(['member', 'mentor', 'executive', 'advisor', 'admin']);
+  if (auth.error) return { error: auth.error };
+
+  if (!id) return { error: 'Resource ID is required.' };
+
+  // Fetch resource to verify ownership
+  const { data: resource, error: fetchErr } = await supabaseAdmin
+    .from('resources')
+    .select('id, created_by')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !resource) {
+    return { error: 'Resource not found.' };
+  }
+
+  if (resource.created_by !== auth.user.id) {
+    return { error: 'You are not authorized to delete this resource.' };
+  }
+
+  const { error: deleteErr } = await supabaseAdmin
+    .from('resources')
+    .delete()
+    .eq('id', id);
+
+  if (deleteErr) {
+    console.error('Member resource delete error:', deleteErr);
+    return { error: 'Failed to delete resource. Please try again.' };
+  }
+
+  revalidatePath('/account/admin/resources');
+  revalidatePath('/account/member/resources');
+  return { success: true };
 }

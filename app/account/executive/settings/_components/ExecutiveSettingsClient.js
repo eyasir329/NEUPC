@@ -1,0 +1,170 @@
+'use client';
+
+import { useState } from 'react';
+import { Settings, Bell, Save, Shield, User, Sparkles } from 'lucide-react';
+import {
+  PageShell,
+  PageHeader,
+  GlassCard,
+  SectionHeader,
+  Pill,
+} from '../../../_components/ui/dashboard';
+import toast from 'react-hot-toast';
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all duration-300 ${
+        checked ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]' : 'bg-white/10'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+}
+
+export default function ExecutiveSettingsClient({ user }) {
+  const [savingNotif, setSavingNotif] = useState(false);
+
+  const [notifSettings, setNotifSettings] = useState({
+    event_registrations: true,
+    membership_applications: true,
+    budget_requests: true,
+    system_alerts: false,
+  });
+
+  const handleSaveNotifications = async (e) => {
+    e.preventDefault();
+    setSavingNotif(true);
+    // Simulate backend save
+    await new Promise((r) => setTimeout(r, 800));
+    toast.success('Executive notification preferences saved successfully.');
+    setSavingNotif(false);
+  };
+
+  const active = user?.account_status === 'active';
+
+  return (
+    <PageShell>
+      <PageHeader
+        icon={Settings}
+        title="Account Preferences"
+        subtitle="Manage your executive permissions, operational toggles, and notification routing."
+        accent="indigo"
+      />
+
+      {/* Account Info Cards */}
+      <GlassCard padding="p-6">
+        <SectionHeader
+          icon={User}
+          title="Executive Credentials"
+          subtitle="Administrative identity fields synchronized with the active committee registry."
+          accent="indigo"
+        />
+        <div className="space-y-3 mt-4">
+          {[
+            { label: 'Full Name', value: user?.full_name || 'Executive Officer' },
+            { label: 'Official Email', value: user?.email, note: 'read-only' },
+            {
+              label: 'Account Integrity',
+              value: user?.account_status,
+              badge: active ? { text: 'Active', tone: 'emerald' } : { text: 'Inactive', tone: 'rose' },
+            },
+          ].map(({ label, value, note, badge }) => (
+            <div
+              key={label}
+              className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 px-4 py-3.5"
+            >
+              <div>
+                <p className="text-xs font-bold text-gray-500 font-mono tracking-wider uppercase select-none">
+                  {label}
+                </p>
+                <p className="text-sm font-semibold text-white mt-1">{value}</p>
+              </div>
+              {note && (
+                <span className="text-[10px] font-bold text-gray-600 font-mono tracking-wide uppercase select-none">
+                  {note}
+                </span>
+              )}
+              {badge && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
+                    badge.tone === 'emerald'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  }`}
+                >
+                  {badge.text}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* Notifications Preferences Form */}
+      <GlassCard padding="p-6">
+        <SectionHeader
+          icon={Bell}
+          title="Operational Subscriptions"
+          subtitle="Subscribe to specific events and real-time triggers across club sections."
+          accent="indigo"
+        />
+        <form onSubmit={handleSaveNotifications} className="space-y-4 mt-4">
+          {[
+            {
+              key: 'event_registrations',
+              label: 'Event Registrations',
+              desc: 'Get notified when members register for workshops or contests.',
+            },
+            {
+              key: 'membership_applications',
+              label: 'Membership Filings',
+              desc: 'Receive alerts when new candidate guest registrations are submitted.',
+            },
+            {
+              key: 'budget_requests',
+              label: 'Financial Postings',
+              desc: 'Notify when new event budgets or invoices require review.',
+            },
+            {
+              key: 'system_alerts',
+              label: 'System Analytics Alerts',
+              desc: 'Receive weekly consolidated reports on platform diagnostics and growth.',
+            },
+          ].map(({ key, label, desc }) => (
+            <div
+              key={key}
+              className="flex items-center justify-between gap-4 rounded-xl border border-white/6 bg-white/2 px-4 py-3.5 hover:bg-white/4 hover:border-white/10 transition-all"
+            >
+              <div>
+                <p className="text-sm font-bold text-white">{label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+              </div>
+              <Toggle
+                checked={notifSettings[key]}
+                onChange={(val) => setNotifSettings({ ...notifSettings, [key]: val })}
+              />
+            </div>
+          ))}
+          <div className="pt-3">
+            <button
+              type="submit"
+              disabled={savingNotif}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-indigo-700 active:scale-95 disabled:opacity-50 transition-all select-none cursor-pointer"
+            >
+              <Save className="h-4 w-4" />
+              {savingNotif ? 'Saving modifications...' : 'Save Settings Preferences'}
+            </button>
+          </div>
+        </form>
+      </GlassCard>
+    </PageShell>
+  );
+}
