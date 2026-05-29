@@ -7,7 +7,7 @@ import {
   Paperclip, Check, CheckCheck, Pin, Trophy, Inbox,
   ChevronLeft, ChevronRight, Lock,
 } from 'lucide-react';
-import { PageShell, TabBar, PageHeader, GlassCard, ActionButton, Pill } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader, GlassCard, ActionButton, Pill } from '@/app/account/_components/ui';
 
 const READ_KEY = 'neupc_guest_read_notices';
 

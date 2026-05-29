@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, Save, Loader2, Star, GraduationCap } from 'lucide-react';
 import CurriculumBuilder from '@/app/account/admin/bootcamps/_components/CurriculumBuilder';
 import { getStatusConfig } from '@/app/account/_components/bootcamps/bootcampConfig';
-import { PageShell, PageHeader, Pill } from '@/app/account/mentor/_components/_ui';
+import { PageShell, PageHeader, Pill } from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 const STATUS_TONE = { published: 'emerald', draft: 'amber', archived: 'gray' };

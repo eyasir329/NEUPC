@@ -32,7 +32,7 @@ import {
   EmptyState,
   GlassCard,
   StaggerList,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 export default function RoleManagementClient({
   initialRoles,

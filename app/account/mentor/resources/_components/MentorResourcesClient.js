@@ -7,7 +7,7 @@ import { createResourceAction, deleteResourceAction } from '@/app/_lib/mentor-ac
 import { useScrollLock } from '@/app/_lib/hooks';
 import {
   PageShell, PageHeader, GlassCard, StatCard, Pill, ActionButton, EmptyState,
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 
 const MOCK_MENTOR_ID = 'mock-mentor-id';
 

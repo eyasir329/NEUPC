@@ -31,7 +31,7 @@ import NotificationsPreview from './NotificationsPreview';
 import ProfileCompletenessNudge from './ProfileCompletenessNudge';
 import DailyPracticeCard from './DailyPracticeCard';
 import TodaysPlan from './TodaysPlan';
-import { PageShell } from './_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
 const hoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();

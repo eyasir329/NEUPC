@@ -40,7 +40,7 @@ import {
     PageShell,
     TabBar,
     PageHeader,
-  } from '../../_components/_ui';
+  } from '@/app/account/_components/ui';
 
 // ───────────────────────── Constants ─────────────────────────
 const STORAGE_KEY = 'neupc.member.daily-activity.v1';

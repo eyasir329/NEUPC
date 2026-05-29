@@ -41,7 +41,7 @@ import {
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
 import ProblemDetailModal from './ProblemDetailModal';
-import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 // =====================================================================
 // Constants & helpers

@@ -23,7 +23,7 @@ import {
   execUpdateRegistrationAction,
   execMarkAttendedAction,
 } from '@/app/_lib/executive-actions';
-import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/executive/_components/_ui';
+import { PageShell, PageHeader, GlassCard, StatCard } from '@/app/account/_components/ui';
 
 const STATUS_CONFIG = {
   registered: {

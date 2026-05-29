@@ -25,7 +25,7 @@ import BootcampTableRow from './BootcampTableRow';
 import { sortBootcamps, SORT_OPTIONS } from '@/app/account/_components/bootcamps/bootcampConfig';
 import { deleteBootcamp, toggleBootcampFeatured } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
-import { PageShell, PageHeader, StatCard, TabBar, EmptyState } from '../../_components/_ui';
+import { PageShell, PageHeader, StatCard, TabBar, EmptyState } from '@/app/account/_components/ui';
 
 const STATUS_TABS = [
   { value: 'all', label: 'All' },

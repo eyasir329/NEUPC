@@ -7,7 +7,7 @@ import MentorRecentActivity from './MentorRecentActivity';
 import MenteeProgressOverview from './MenteeProgressOverview';
 import QuickAccessGrid from './QuickAccessGrid';
 import RecentChats from './RecentChats';
-import { PageShell } from './_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 export default function MentorDashboardClient({ session }) {
   const mentorName = session.user.name?.split(' ')[0] || 'Mentor';

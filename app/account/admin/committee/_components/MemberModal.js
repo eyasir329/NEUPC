@@ -3,7 +3,7 @@ import { X, Loader, Search, Calendar, FileText, BookOpen, Award, Github, Linkedi
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { uploadUserImageAction } from '@/app/_lib/user-actions';
-import { Avatar } from '../../_components/_ui';
+import { Avatar } from '@/app/account/_components/ui';
 
 function formatDateForInput(iso) {
   if (!iso) return '';

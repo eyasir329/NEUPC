@@ -81,7 +81,7 @@ import {
   PageHeader,
   EmptyState,
   GlassCard,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 // ─── Section / field definitions ─────────────────────────────────────────────
 

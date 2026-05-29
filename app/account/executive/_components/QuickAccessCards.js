@@ -1,7 +1,7 @@
 'use client';
 
 import { ImageIcon, Award, BarChart3, Plus, Settings, Eye } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton } from './_ui';
+import { GlassCard, SectionHeader, ActionButton } from '@/app/account/_components/ui';
 
 const CARDS = [
   {

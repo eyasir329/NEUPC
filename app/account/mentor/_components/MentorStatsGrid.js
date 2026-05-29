@@ -1,7 +1,7 @@
 'use client';
 
 import { Users, Calendar, CheckCircle, Star, TrendingUp, MessageSquare } from 'lucide-react';
-import { StatCard } from './_ui';
+import { StatCard } from '@/app/account/_components/ui';
 
 export default function MentorStatsGrid({ stats }) {
   const cards = [

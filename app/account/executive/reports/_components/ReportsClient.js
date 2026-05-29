@@ -44,7 +44,7 @@ import {
   Avatar,
   SectionHeader,
   StaggerList,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 const WORKSPACE_TABS = [
   { value: 'overview-logs', label: 'Overview & Logs', icon: Activity },

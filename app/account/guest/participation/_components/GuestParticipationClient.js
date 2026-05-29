@@ -10,7 +10,7 @@ import {
 import {
   PageHeader, GlassCard, SectionHeader, EmptyState,
   Pill, TabBar, ActionButton, PageShell,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 // ─── Formatting helpers ────────────────────────────────────────────────────────
 

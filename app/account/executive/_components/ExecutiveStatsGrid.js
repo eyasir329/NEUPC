@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Calendar, Users, AlertCircle, TrendingUp, Megaphone, BarChart3 } from 'lucide-react';
-import { GlassCard, IconChip } from './_ui';
+import { GlassCard, IconChip } from '@/app/account/_components/ui';
 
 const STAT_CONFIGS = [
   { key: 'totalEvents',           label: 'Total Events',           icon: Calendar,    accent: 'blue',   trend: { dir: 'up', value: '+12%' } },

@@ -33,7 +33,7 @@ import {
   PageShell,
   PageHeader,
   ActionButton,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 import {
   exportUsersAction,
   exportJoinRequestsAction,

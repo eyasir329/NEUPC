@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { User, Mail, Phone, Github, Code, Edit2, Save, X } from 'lucide-react';
 import {
   PageShell, PageHeader, GlassCard, SectionHeader, Avatar, Pill, ActionButton,
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 
 export default function MentorProfileClient({ user, memberProfile }) {
   const [editing, setEditing] = useState(false);

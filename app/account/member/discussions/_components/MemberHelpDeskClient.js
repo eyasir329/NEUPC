@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { PageShell, TabBar as UiTabBar, PageHeader } from '../../_components/_ui';
+import { PageShell, TabBar as UiTabBar, PageHeader } from '@/app/account/_components/ui';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   MessageSquare,

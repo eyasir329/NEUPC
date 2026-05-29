@@ -8,7 +8,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
-import { Avatar } from './_ui';
+import { Avatar } from '@/app/account/_components/ui';
 
 export default function ApprovalCard({ approval }) {
   const handleApprove = () => {

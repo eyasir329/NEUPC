@@ -37,7 +37,7 @@ import {
   GradientBar,
   ActionButton,
   Avatar,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 function formatDate(iso) {
   if (!iso) return '—';

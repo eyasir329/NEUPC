@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, CheckCircle, CalendarCheck, TrendingUp, CheckCircle2, XCircle, Loader2, X, Sparkles } from 'lucide-react';
 import { registerForEventAction } from '@/app/_lib/member-events-actions';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { GlassCard } from '@/app/account/_components/ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';

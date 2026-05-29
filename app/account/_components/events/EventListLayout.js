@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarX, Filter, X, Search } from 'lucide-react';
-import { PageShell, PageHeader, TabBar } from '@/app/account/member/_components/_ui';
+import { PageShell, PageHeader, TabBar } from '@/app/account/_components/ui';
 import EventRow from './EventRow';
 import EventDetail from './EventDetail';
 import { VENUE_TYPES } from './eventConstants';

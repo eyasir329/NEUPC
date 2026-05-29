@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import {
   PageShell, PageHeader, GlassCard, Pill, EmptyState,
   ActionButton, Avatar, GradientBar, StatCard,
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 import { EnrollModal } from './EnrollModal';
 import { StudentDrawer } from './StudentDrawer';
 

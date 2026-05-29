@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GraduationCap, Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
-import { PageShell, PageHeader, EmptyState } from '@/app/account/mentor/_components/_ui';
+import { PageShell, PageHeader, EmptyState } from '@/app/account/_components/ui';
 
 const STATUS_TONE = {
   published: { dot: 'bg-emerald-400', text: 'text-emerald-300', ring: 'border-emerald-500/20 bg-emerald-500/10', glow: 'shadow-[0_0_8px_rgba(52,211,153,0.6)]', pulse: true },

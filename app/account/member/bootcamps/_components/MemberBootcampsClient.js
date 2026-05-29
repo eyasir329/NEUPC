@@ -17,7 +17,7 @@ import { enrollUser, getMemberBootcampSessions, getMemberBootcampTasks, submitTa
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(

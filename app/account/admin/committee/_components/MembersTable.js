@@ -1,5 +1,5 @@
 import { Edit3, Trash2 } from 'lucide-react';
-import { Avatar } from '../../_components/_ui';
+import { Avatar } from '@/app/account/_components/ui';
 
 function formatDate(iso) {
   if (!iso) return '—';

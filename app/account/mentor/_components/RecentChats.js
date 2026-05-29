@@ -1,7 +1,7 @@
 'use client';
 
 import { MessageSquare, Send } from 'lucide-react';
-import { GlassCard, SectionHeader, Avatar } from './_ui';
+import { GlassCard, SectionHeader, Avatar } from '@/app/account/_components/ui';
 
 const MOCK_CHATS = [
   {

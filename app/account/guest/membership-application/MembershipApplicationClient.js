@@ -13,7 +13,7 @@ import { submitMembershipApplicationAction } from '@/app/_lib/user-actions';
 import {
   PageShell, PageHeader, GlassCard, SectionHeader, GradientBar,
   Pill, ActionButton,
-} from '../_components/_ui';
+} from '@/app/account/_components/ui';
 
 const DEPARTMENTS = [
   'Computer Science & Engineering', 'Electrical & Electronic Engineering',

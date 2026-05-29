@@ -1,7 +1,7 @@
 'use client';
 
 import { Users, ArrowRight } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton, Avatar, Pill } from './_ui';
+import { GlassCard, SectionHeader, ActionButton, Avatar, Pill } from '@/app/account/_components/ui';
 
 const activityTone = { High: 'emerald', Medium: 'amber', Low: 'rose' };
 

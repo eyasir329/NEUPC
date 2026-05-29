@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Video, Users, Clock, ExternalLink, Calendar } from 'lucide-react';
-import { GlassCard, SectionHeader, Pill, ActionButton, Avatar, EmptyState } from './_ui';
+import { GlassCard, SectionHeader, Pill, ActionButton, Avatar, EmptyState } from '@/app/account/_components/ui';
 
 export default function TodaysSchedule({ todaySessions }) {
   return (

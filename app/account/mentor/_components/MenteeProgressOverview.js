@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckCircle, Target, AlertCircle, Users } from 'lucide-react';
-import { GlassCard, SectionHeader, GradientBar, Pill, ActionButton, Avatar, EmptyState } from './_ui';
+import { GlassCard, SectionHeader, GradientBar, Pill, ActionButton, Avatar, EmptyState } from '@/app/account/_components/ui';
 
 const STATUS_CONFIG = {
   Excellent:      { tone: 'emerald', icon: CheckCircle },

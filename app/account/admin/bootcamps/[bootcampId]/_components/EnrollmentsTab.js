@@ -54,7 +54,7 @@ import {
   getMentorStudentDetailedStats,
 } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
-import { StatCard } from '../../../_components/_ui';
+import { StatCard } from '@/app/account/_components/ui';
 
 // Status configuration
 const STATUS_CONFIG = {

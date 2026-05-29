@@ -1,7 +1,7 @@
 'use client';
 
 import { Calendar, Clock, MapPin, FileText, ChevronLeft } from 'lucide-react';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { GlassCard } from '@/app/account/_components/ui';
 
 /**
  * Shared event detail view used by all role views.

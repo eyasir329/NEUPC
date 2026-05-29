@@ -17,7 +17,7 @@ import {
   Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageShell, TabBar, PageHeader } from '@/app/account/mentor/_components/_ui';
+import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');

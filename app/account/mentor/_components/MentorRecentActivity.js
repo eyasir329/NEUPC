@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckCircle, UserPlus, BookOpen, Star, Zap } from 'lucide-react';
-import { GlassCard, SectionHeader, Avatar, StaggerList } from './_ui';
+import { GlassCard, SectionHeader, Avatar, StaggerList } from '@/app/account/_components/ui';
 
 const iconMap = { CheckCircle, UserPlus, BookOpen, Star };
 

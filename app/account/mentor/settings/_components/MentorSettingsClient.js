@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Settings, Bell, Save } from 'lucide-react';
 import {
   PageShell, PageHeader, GlassCard, SectionHeader,
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 
 function Toggle({ checked, onChange }) {
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { Calendar, Users, ArrowRight } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton, Pill } from './_ui';
+import { GlassCard, SectionHeader, ActionButton, Pill } from '@/app/account/_components/ui';
 
 export default function UpcomingEvents({ upcomingEvents }) {
   return (

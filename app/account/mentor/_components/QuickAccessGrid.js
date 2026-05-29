@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Target, BookOpen, BarChart3, FileText, GraduationCap, ArrowRight } from 'lucide-react';
-import { GlassCard, IconChip } from './_ui';
+import { GlassCard, IconChip } from '@/app/account/_components/ui';
 
 const LINKS = [
   {

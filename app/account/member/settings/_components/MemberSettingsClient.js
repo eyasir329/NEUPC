@@ -55,7 +55,7 @@ import {
   PageShell,
   TabBar,
   PageHeader,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 function cn(...classes) {

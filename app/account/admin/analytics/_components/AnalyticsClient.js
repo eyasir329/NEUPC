@@ -33,7 +33,7 @@ import {
   PageHeader,
   StatCard,
   EmptyState,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

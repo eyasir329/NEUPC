@@ -12,7 +12,7 @@ import {
 import {
   PageShell, PageHeader, GlassCard, SectionHeader,
   StatCard, Pill, GradientBar, ActionButton, EmptyState,
-} from './_ui';
+} from '@/app/account/_components/ui';
 
 // ─── Fallback data (shown when DB returns empty) ───────────────────────────────
 

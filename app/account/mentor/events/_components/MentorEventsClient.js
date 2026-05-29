@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Calendar, CalendarCheck, TrendingUp, Sparkles, Users } from 'lucide-react';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { GlassCard } from '@/app/account/_components/ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';

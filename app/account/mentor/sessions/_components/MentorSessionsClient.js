@@ -27,7 +27,7 @@ import {
 import { useScrollLock } from '@/app/_lib/hooks';
 import {
   PageShell, PageHeader, GlassCard, StatCard, Avatar, Pill, ActionButton, EmptyState, TabBar, StaggerList
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 function descriptionPreview(desc) {

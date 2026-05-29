@@ -1,7 +1,7 @@
 'use client';
 
 import { UserCheck, UserPlus, FileText, Calendar, Zap } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton } from './_ui';
+import { GlassCard, SectionHeader, ActionButton } from '@/app/account/_components/ui';
 
 const iconMap = { UserCheck, UserPlus, FileText, Calendar };
 

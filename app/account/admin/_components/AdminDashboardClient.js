@@ -24,7 +24,7 @@ import RecentActivity from './RecentActivity';
 import QuickActions from './QuickActions';
 import SystemNotifications from './SystemNotifications';
 import ManagementLinks from './ManagementLinks';
-import { PageShell } from './_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 export default function AdminDashboardClient({ session }) {
   // Mock stats - replace with real data

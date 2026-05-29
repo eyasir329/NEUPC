@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { updateMemberProfileAction } from '@/app/_lib/member-profile-actions';
 import Link from "next/link";
-import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard, PageShell, TabBar, PageHeader } from '../../_components/_ui';
+import { ActionButton, GlassCard, SectionHeader, Pill, Avatar, StaggerList, GradientBar, EmptyState, StatCard, PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');

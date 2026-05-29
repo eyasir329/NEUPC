@@ -25,7 +25,7 @@ import {
   deleteNotificationAction,
 } from '@/app/_lib/notification-actions';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');

@@ -1,32 +1,16 @@
 /**
  * @file Executive membership applications page (server component).
- * Fetches all join requests for executive review and approval.
+ * Body is shared via {@link createApplicationsPage} (see admin panel).
  *
  * @module ExecutiveApplicationsPage
- * @access executive
+ * @access executive | admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import {
-  getAllJoinRequests,
-  getPendingGuestApplications,
-} from '@/app/_lib/data-service';
-import ApplicationsClient from './_components/ApplicationsClient';
+import { createApplicationsPage } from '@/app/account/_lib/pages/createApplicationsPage';
 
 export const metadata = { title: 'Applications | Executive | NEUPC' };
 
-export default async function ExecutiveApplicationsPage() {
-  const [{ user }, requests, guestApps] = await Promise.all([
-    requireRole(['executive', 'admin']),
-    getAllJoinRequests().catch(() => []),
-    getPendingGuestApplications().catch(() => []),
-  ]);
-
-  return (
-    <ApplicationsClient
-      initialRequests={requests}
-      initialGuestApps={guestApps}
-      adminId={user.id}
-    />
-  );
-}
+export default createApplicationsPage({
+  role: 'executive',
+  allowedRoles: ['executive', 'admin'],
+});

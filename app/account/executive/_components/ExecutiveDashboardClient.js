@@ -7,7 +7,7 @@ import UpcomingEvents from './UpcomingEvents';
 import RecentMembers from './RecentMembers';
 import LatestNotices from './LatestNotices';
 import QuickAccessCards from './QuickAccessCards';
-import { PageShell } from './_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 export default function ExecutiveDashboardClient({ session }) {
   const stats = {

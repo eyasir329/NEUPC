@@ -25,7 +25,7 @@ import {
   TabBar,
   Pill,
   ActionButton,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 const NOTIF_KEY = 'neupc_guest_notif_prefs';
 const DEFAULT_PREFS = {

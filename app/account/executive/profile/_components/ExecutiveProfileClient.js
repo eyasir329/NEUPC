@@ -33,7 +33,7 @@ import {
   ActionButton,
   Avatar,
   SectionHeader,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 export default function ExecutiveProfileClient({
   user,

@@ -12,7 +12,7 @@ import {
 import {
   PageHeader, StatCard, GlassCard, SectionHeader, GradientBar,
   EmptyState, Pill, TabBar, ActionButton, PageShell
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 import { useScrollLock } from '@/app/_lib/hooks';
 
 function cn(...classes) {

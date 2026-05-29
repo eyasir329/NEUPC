@@ -82,7 +82,7 @@ import {
   Pill,
   Avatar,
   EmptyState,
-} from '@/app/account/mentor/_components/_ui';
+} from '@/app/account/_components/ui';
 
 
 
