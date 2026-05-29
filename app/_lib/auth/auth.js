@@ -280,7 +280,14 @@ export { signIn, signOut, GET, POST };
 
 export const auth = async (...args) => {
   const session = await nextAuth(...args);
-  if (!session && process.env.NODE_ENV !== 'production') {
+  // Only use the mock when AUTH_MOCK_USER=true is explicitly set.
+  // Without this gate, signOut() is a no-op in dev because the layout
+  // always re-hydrates the fake user after clearing the real session cookie.
+  if (
+    !session &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.AUTH_MOCK_USER === 'true'
+  ) {
     return {
       user: {
         id: '4d4f226e-3324-4680-936e-25c8e4aa41df',

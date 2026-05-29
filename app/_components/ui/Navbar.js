@@ -370,28 +370,24 @@ export default function Navbar({ session }) {
 
         {/* Auth / CTA */}
         {isLoggedIn ? (
-          <div className="ml-1 flex items-center gap-2 sm:ml-2">
-            <li className="hidden min-[900px]:block">
-              <Link
-                href="/account"
-                title="Go to Account"
-                className="block transition-transform duration-200 ease-out hover:scale-105 active:scale-95"
+          <li className="ml-1 hidden min-[900px]:flex sm:ml-2 items-center gap-2">
+            <Link
+              href="/account"
+              title="Go to Account"
+              className="block transition-transform duration-200 ease-out hover:scale-105 active:scale-95"
+            >
+              <UserAvatar user={session.user} size={36} overlay />
+            </Link>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                title="Logout"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-red-500/80 backdrop-blur-sm transition-all duration-200 ease-out hover:scale-105 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 active:scale-95 sm:h-9 sm:w-9"
               >
-                <UserAvatar user={session.user} size={36} overlay />
-              </Link>
-            </li>
-            <li className="hidden min-[900px]:block">
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  title="Logout"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-red-500/80 backdrop-blur-sm transition-all duration-200 ease-out hover:scale-105 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 active:scale-95 sm:h-9 sm:w-9"
-                >
-                  <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-                </button>
-              </form>
-            </li>
-          </div>
+                <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            </form>
+          </li>
         ) : (
           <li className="hidden min-[900px]:pl-1 min-[1100px]:pl-3 sm:block">
             <Link

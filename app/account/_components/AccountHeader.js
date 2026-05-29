@@ -104,7 +104,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {/* Card 1: Member Since */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04]">
+            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/15">
                 <Calendar className="h-5 w-5" />
               </div>
@@ -117,7 +117,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
             </div>
 
             {/* Card 2: Account Level */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04]">
+            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/15">
                 <Award className="h-5 w-5" />
               </div>
@@ -130,7 +130,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
             </div>
 
             {/* Card 3: Security */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04]">
+            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/15">
                 <ShieldCheck className="h-5 w-5" />
               </div>
@@ -143,7 +143,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
             </div>
 
             {/* Card 4: Access Portals */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04]">
+            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/15">
                 <LayoutDashboard className="h-5 w-5" />
               </div>

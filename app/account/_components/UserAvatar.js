@@ -45,7 +45,7 @@ export default function UserAvatar({ session, userId }) {
     <div className="mb-6 flex flex-col items-center justify-center">
       <div className="relative">
         {/* Outer glowing pulsing border ring (Premium Aesthetic) */}
-        <div className="absolute -inset-1.5 animate-pulse rounded-full bg-gradient-to-r from-indigo-500/40 via-purple-500/30 to-pink-500/40 opacity-75 blur-[4px]" />
+        <div className="absolute -inset-1.5 animate-pulse rounded-full bg-gradient-to-r from-indigo-500/40 via-purple-500/30 to-pink-500/40 opacity-75 blur-[4px] will-change-transform" />
         
         <div
           className={cn(
