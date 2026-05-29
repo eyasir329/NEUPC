@@ -724,31 +724,32 @@ const DEFAULT_SETTINGS = [
   // ── Page Content (headings, badges, CTAs) ────────────────────
   {
     key: 'hero_welcome_text',
-    value: 'Welcome to',
+    value:
+      'DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING · NETROKONA UNIVERSITY, NETROKONA, BANGLADESH',
     category: 'page_content',
     description: 'Text shown before the site name in the hero',
   },
   {
     key: 'hero_join_label',
-    value: 'Join Now',
+    value: 'JOIN THE CLUB →',
     category: 'page_content',
     description: 'Hero section join button label',
   },
   {
     key: 'hero_learn_more_label',
-    value: 'Learn More',
+    value: 'VIEW EVENTS',
     category: 'page_content',
     description: 'Hero section learn more button label',
   },
   {
     key: 'homepage_about_badge',
-    value: 'About Us',
+    value: 'IDENTITY / 001',
     category: 'page_content',
     description: 'Homepage about section badge text',
   },
   {
     key: 'homepage_about_title',
-    value: 'Get to Know NEUPC',
+    value: 'WHO WE ARE',
     category: 'page_content',
     description: 'Homepage about section title',
   },
@@ -767,13 +768,13 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_events_badge',
-    value: 'Upcoming Events',
+    value: 'ACTIVITY FEED / 002',
     category: 'page_content',
     description: 'Homepage events section badge text',
   },
   {
     key: 'homepage_events_title',
-    value: 'Recent Events',
+    value: 'RECENT EVENTS',
     category: 'page_content',
     description: 'Homepage events section title',
   },
@@ -786,7 +787,7 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_events_cta',
-    value: 'View All Events',
+    value: 'VIEW ALL →',
     category: 'page_content',
     description: 'Homepage events section CTA button text',
   },
@@ -798,20 +799,20 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_achievements_badge',
-    value: 'Our Achievements',
+    value: 'RECOGNITION / 003',
     category: 'page_content',
     description: 'Homepage achievements section badge text',
   },
   {
     key: 'homepage_achievements_title',
-    value: 'Excellence in Action',
+    value: 'HALL OF VICTORIES',
     category: 'page_content',
     description: 'Homepage achievements section title',
   },
   {
     key: 'homepage_achievements_subtitle',
     value:
-      'Celebrating our journey of competitive programming success and innovation',
+      'Our members compete and win at national and international programming contests.',
     category: 'page_content',
     description: 'Homepage achievements section subtitle',
   },
@@ -829,13 +830,13 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_blogs_badge',
-    value: 'Latest Articles & Resources',
+    value: 'KNOWLEDGE BASE / 004',
     category: 'page_content',
     description: 'Homepage blog section badge text',
   },
   {
     key: 'homepage_blogs_title',
-    value: 'Knowledge Base',
+    value: 'KNOWLEDGE BASE',
     category: 'page_content',
     description: 'Homepage blog section title',
   },
@@ -848,7 +849,7 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_blogs_cta',
-    value: 'Explore All Articles',
+    value: 'VIEW ALL POSTS →',
     category: 'page_content',
     description: 'Homepage blog section CTA button text',
   },
@@ -860,13 +861,13 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_join_badge',
-    value: 'Join Our Community',
+    value: 'MEMBERSHIP',
     category: 'page_content',
     description: 'Homepage join section badge text',
   },
   {
     key: 'homepage_join_title',
-    value: 'Become a Member',
+    value: 'BECOME A MEMBER',
     category: 'page_content',
     description: 'Homepage join section title',
   },
@@ -879,20 +880,20 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'homepage_join_cta_title',
-    value: 'Ready to Start Your Journey?',
+    value: 'READY TO COMPETE AT THE HIGHEST LEVEL?',
     category: 'page_content',
     description: 'Homepage join CTA title',
   },
   {
     key: 'homepage_join_cta_description',
     value:
-      'Join hundreds of students who are already part of NEUPC and take your programming skills to the next level',
+      'Applications are open. Submit once, and our committee reviews within a week.',
     category: 'page_content',
     description: 'Homepage join CTA description',
   },
   {
     key: 'homepage_join_cta_button',
-    value: 'Join NEUPC Now',
+    value: 'Apply now',
     category: 'page_content',
     description: 'Homepage join CTA button text',
   },

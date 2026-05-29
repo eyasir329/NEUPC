@@ -11,7 +11,7 @@
  * @module CommitteePage
  */
 
-import { getPublicCommittee } from '@/app/_lib/actions/public-actions';
+import { getPublicCommittee, getAllPublicSettings } from '@/app/_lib/actions/public-actions';
 import CommitteeClient from './CommitteeClient';
 import { buildMetadata } from '@/app/_lib/config/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
@@ -348,7 +348,11 @@ function buildHeroStats(members, positions) {
 // ============================================================================
 
 export default async function Page() {
-  const { members, positions } = await getPublicCommittee();
+  const [committeeResult, settings] = await Promise.all([
+    getPublicCommittee(),
+    getAllPublicSettings(),
+  ]);
+  const { members, positions } = committeeResult;
 
   console.log('[Committee] member count:', members.length);
   if (members.length > 0) {
@@ -384,6 +388,7 @@ export default async function Page() {
         coreExecutives={coreExecutives}
         executiveMembers={executiveMembers}
         heroStats={heroStats}
+        settings={settings}
       />
     </>
   );

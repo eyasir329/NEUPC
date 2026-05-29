@@ -117,7 +117,7 @@ function Join({ benefits, settings = {} }) {
           <div className="mb-4 flex items-center justify-center gap-3 sm:mb-5 sm:gap-4">
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
             <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-              Membership
+              {settings?.homepage_join_badge || 'Membership'}
             </span>
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
           </div>
@@ -162,11 +162,11 @@ function Join({ benefits, settings = {} }) {
                 /// Next cohort
               </p>
               <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
-                Ready to compete at the highest level?
+                {settings?.homepage_join_cta_title || 'Ready to compete at the highest level?'}
               </h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
-                Applications are open. Submit once, and our committee reviews
-                within a week.
+                {settings?.homepage_join_cta_description ||
+                  'Applications are open. Submit once, and our committee reviews within a week.'}
               </p>
             </div>
 
@@ -180,7 +180,7 @@ function Join({ benefits, settings = {} }) {
                   href="/account"
                   className="group bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
                 >
-                  Apply now
+                  {settings?.homepage_join_cta_button || 'Apply now'}
                   <span
                     aria-hidden
                     className="transition-transform group-hover:translate-x-1"

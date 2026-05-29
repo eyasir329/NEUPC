@@ -186,7 +186,7 @@ function Events({
             <div className="flex items-center gap-3">
               <span className="bg-neon-lime h-px w-8 sm:w-10" />
               <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-                Activity Feed / 002
+                {settings?.homepage_events_badge || 'Activity Feed / 002'}
               </span>
             </div>
             <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
@@ -198,7 +198,7 @@ function Events({
               href="/events"
               className="font-heading focus-visible:ring-neon-lime hover:border-neon-lime hover:text-neon-lime w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
-              View All →
+              {settings?.homepage_events_cta || 'View All →'}
             </Link>
           </motion.div>
         </motion.div>

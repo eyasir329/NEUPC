@@ -183,7 +183,7 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
 
 // ─── Hero ────────────────────────────────────────────────────────────────────
 
-function Hero({ stats }) {
+function Hero({ stats, settings }) {
   return (
     <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
       {/* Ambient background — exact events pattern */}
@@ -205,7 +205,7 @@ function Hero({ stats }) {
           <motion.div variants={fadeUp} className="flex items-center gap-3">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
-              Committee · NEUPC · 2025–26
+              {settings?.committee_page_badge || 'Committee · NEUPC · 2025–26'}
             </span>
           </motion.div>
 
@@ -214,9 +214,21 @@ function Hero({ stats }) {
             variants={fadeUp}
             className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
           >
-            Meet the
-            <br />
-            <span className="neon-text">Committee</span>
+            {(() => {
+              const title = settings?.committee_page_title || 'Meet the Committee';
+              if (title.includes(' ')) {
+                return (
+                  <>
+                    {title.split(' ').slice(0, -1).join(' ')}
+                    <br />
+                    <span className="neon-text">
+                      {title.split(' ').slice(-1)[0]}
+                    </span>
+                  </>
+                );
+              }
+              return <span className="neon-text">{title}</span>;
+            })()}
           </motion.h1>
 
           {/* Description */}
@@ -224,8 +236,8 @@ function Hero({ stats }) {
             variants={fadeUp}
             className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
           >
-            The dedicated architects steering NEUPC — from faculty mentorship to
-            executive operations and everything in between.
+            {settings?.committee_page_description ||
+              'The dedicated architects steering NEUPC — from faculty mentorship to executive operations and everything in between.'}
           </motion.p>
 
           {/* Stats row */}
@@ -562,7 +574,7 @@ export default function CommitteeClient({
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <Hero stats={heroStats} />
+      <Hero stats={heroStats} settings={settings} />
 
       {/* ── Advisory Board ───────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">

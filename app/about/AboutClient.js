@@ -504,9 +504,21 @@ export default function AboutClient({
               variants={fadeUp}
               className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
-              About
-              <br />
-              <span className="neon-text">NEUPC</span>
+              {(() => {
+                const title = settings?.about_page_title || 'About NEUPC';
+                if (title.includes(' ')) {
+                  return (
+                    <>
+                      {title.split(' ').slice(0, -1).join(' ')}
+                      <br />
+                      <span className="neon-text">
+                        {title.split(' ').slice(-1)[0]}
+                      </span>
+                    </>
+                  );
+                }
+                return <span className="neon-text">{title}</span>;
+              })()}
             </motion.h1>
 
             {/* Description */}

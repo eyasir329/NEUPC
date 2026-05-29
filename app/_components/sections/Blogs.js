@@ -178,7 +178,7 @@ function Blogs({
             <div className="flex items-center gap-3">
               <span className="bg-neon-violet h-px w-8 sm:w-10" />
               <span className="text-neon-violet font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-                Knowledge Base / 004
+                {settings?.homepage_blogs_badge || 'Knowledge Base / 004'}
               </span>
             </div>
             <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
@@ -191,7 +191,7 @@ function Blogs({
               href="/blogs"
               className="font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
-              View All Posts →
+              {settings?.homepage_blogs_cta || 'View All Posts →'}
             </Link>
           </motion.div>
         </motion.div>

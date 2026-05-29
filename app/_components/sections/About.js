@@ -81,12 +81,12 @@ function About({ data = {}, settings = {} }) {
           <div className="flex items-center justify-center gap-4">
             <span className="bg-neon-violet h-px w-10" />
             <span className="text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
-              Identity / 001
+              {settings?.homepage_about_badge || 'Identity / 001'}
             </span>
             <span className="bg-neon-violet h-px w-10" />
           </div>
           <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-white uppercase">
-            {title}
+            {settings?.homepage_about_title || title}
           </h2>
         </motion.div>
 

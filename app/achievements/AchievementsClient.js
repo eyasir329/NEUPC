@@ -1558,9 +1558,21 @@ export default function AchievementsClient({
               variants={fadeUp}
               className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
-              Hall of
-              <br />
-              <span className="neon-text">Achievements</span>
+              {(() => {
+                const title = settings?.achievements_page_title || 'Hall of Achievements';
+                if (title.includes(' ')) {
+                  return (
+                    <>
+                      {title.split(' ').slice(0, -1).join(' ')}
+                      <br />
+                      <span className="neon-text">
+                        {title.split(' ').slice(-1)[0]}
+                      </span>
+                    </>
+                  );
+                }
+                return <span className="neon-text">{title}</span>;
+              })()}
             </motion.h1>
 
             {/* Description */}

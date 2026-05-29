@@ -130,16 +130,27 @@ function Achievements({
           <div className="flex items-center justify-center gap-3">
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
             <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-              Recognition / 003
+              {settings?.homepage_achievements_badge || 'Recognition / 003'}
             </span>
             <span className="bg-neon-lime h-px w-8 sm:w-10" />
           </div>
           <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl lg:text-7xl">
-            Hall of <span className="neon-text">Victories</span>
+            {(() => {
+              const fullTitle = settings?.homepage_achievements_title || 'Hall of Victories';
+              const parts = fullTitle.split(' ');
+              if (parts.length <= 1) return <span className="neon-text">{fullTitle}</span>;
+              const last = parts.pop();
+              return (
+                <>
+                  {parts.join(' ')}{' '}
+                  <span className="neon-text">{last}</span>
+                </>
+              );
+            })()}
           </h2>
           <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
-            Our members compete and win at national and international
-            programming contests.
+            {settings?.homepage_achievements_subtitle ||
+              'Our members compete and win at national and international programming contests.'}
           </p>
         </motion.div>
 
