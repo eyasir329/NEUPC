@@ -162,7 +162,7 @@ app/account/
 │
 ├── executive/              # Executive dashboard (10 pages)
 │   ├── blogs/manage/       # Blog CMS
-│   ├── certificates/generate/  # Issue certificates
+│   ├── certificates/       # Issue certificates
 │   ├── contests/manage/    # Contest management
 │   ├── events/manage/      # Event management
 │   ├── gallery/manage/     # Gallery management

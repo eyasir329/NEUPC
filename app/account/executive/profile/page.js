@@ -8,6 +8,7 @@
 
 import { requireRole } from '@/app/_lib/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/supabase';
+import { isV2SchemaAvailable, getUserHandlesV2 } from '@/app/_lib/problem-solving-v2-helpers';
 import ExecutiveProfileClient from './_components/ExecutiveProfileClient';
 
 export const metadata = { title: 'Profile | Executive | NEUPC' };
@@ -15,7 +16,8 @@ export const metadata = { title: 'Profile | Executive | NEUPC' };
 export default async function ExecutiveProfilePage() {
   const { user } = await requireRole(['executive', 'admin']);
 
-  const [{ data: memberProfile }, { data: committeeInfo }, { data: userHandles }] = await Promise.all([
+  // Fetch basic profiles and committee info
+  const [{ data: memberProfile }, { data: committeeInfo }] = await Promise.all([
     supabaseAdmin
       .from('member_profiles')
       .select('*')
@@ -30,11 +32,24 @@ export default async function ExecutiveProfilePage() {
       .eq('user_id', user.id)
       .eq('is_current', true)
       .maybeSingle(),
-    supabaseAdmin
-      .from('user_handles')
-      .select('platform, handle')
-      .eq('user_id', user.id),
   ]);
+
+  // Dynamically fetch user handles based on active schema format (V1 or V2)
+  let userHandles = [];
+  try {
+    const useV2 = await isV2SchemaAvailable();
+    if (useV2) {
+      userHandles = await getUserHandlesV2(user.id);
+    } else {
+      const { data } = await supabaseAdmin
+        .from('user_handles')
+        .select('platform, handle')
+        .eq('user_id', user.id);
+      userHandles = data || [];
+    }
+  } catch (err) {
+    console.error('Error fetching user handles in profile page:', err);
+  }
 
   // Merge handles into memberProfile for backward compatibility
   const handlesMap = {};
@@ -42,9 +57,10 @@ export default async function ExecutiveProfilePage() {
     handlesMap[`${h.platform}_handle`] = h.handle;
   });
 
-  const enrichedProfile = memberProfile
-    ? { ...memberProfile, ...handlesMap }
-    : null;
+  const enrichedProfile = {
+    ...(memberProfile || {}),
+    ...handlesMap,
+  };
 
   return (
     <ExecutiveProfileClient

@@ -376,7 +376,6 @@ export async function execCreateContestAction(formData) {
   await logActivity(user.id, 'exec_create_contest', 'contest', data.id, {
     title,
   });
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true, id: data.id };
 }
@@ -410,7 +409,6 @@ export async function execUpdateContestAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_contest', 'contest', id, { title });
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
@@ -422,7 +420,6 @@ export async function execDeleteContestAction(formData) {
   const { error } = await supabaseAdmin.from('contests').delete().eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_contest', 'contest', id, {});
-  revalidatePath('/account/executive/contests/manage');
   revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
@@ -853,7 +850,7 @@ export async function execApproveJoinRequestAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(executive.id, 'exec_approve_join', 'join_request', id, {});
-  revalidatePath('/account/executive/members');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/users');
   revalidatePath('/account/advisor/approvals');
   return { success: true };
@@ -878,7 +875,7 @@ export async function execRejectJoinRequestAction(formData) {
   await logActivity(executive.id, 'exec_reject_join', 'join_request', id, {
     rejection_reason,
   });
-  revalidatePath('/account/executive/members');
+  revalidatePath('/account/executive/users');
   revalidatePath('/account/admin/users');
   revalidatePath('/account/advisor/approvals');
   return { success: true };
@@ -904,6 +901,7 @@ export async function execCreateCertificateAction(formData) {
     recipient_id,
     event_id: formData.get('event_id') || null,
     contest_id: formData.get('contest_id') || null,
+    bootcamp_id: formData.get('bootcamp_id') || null,
     title,
     description: formData.get('description')?.trim() || null,
     certificate_type: formData.get('certificate_type') || 'participation',
@@ -926,7 +924,7 @@ export async function execCreateCertificateAction(formData) {
     data.id,
     { title }
   );
-  revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/executive/recognitions');
   revalidatePath('/account/member/certificates');
   return { success: true, id: data.id, certificate_number };
 }
@@ -935,6 +933,7 @@ export async function execBulkCreateCertificatesAction(formData) {
   const user = await requireExecutive();
   const event_id = formData.get('event_id') || null;
   const contest_id = formData.get('contest_id') || null;
+  const bootcamp_id = formData.get('bootcamp_id') || null;
   const certificate_type = formData.get('certificate_type') || 'participation';
   const title = formData.get('title')?.trim();
   if (!title) return { error: 'Title is required.' };
@@ -956,6 +955,13 @@ export async function execBulkCreateCertificatesAction(formData) {
       .select('user_id')
       .eq('contest_id', contest_id);
     recipientIds = (data || []).map((r) => r.user_id);
+  } else if (bootcamp_id) {
+    const { data } = await supabaseAdmin
+      .from('bootcamp_enrollments')
+      .select('user_id')
+      .eq('bootcamp_id', bootcamp_id)
+      .in('status', ['active', 'completed']);
+    recipientIds = (data || []).map((r) => r.user_id);
   }
 
   if (recipientIds.length === 0)
@@ -966,6 +972,7 @@ export async function execBulkCreateCertificatesAction(formData) {
     recipient_id: rid,
     event_id,
     contest_id,
+    bootcamp_id,
     title,
     certificate_type,
     issue_date,
@@ -978,7 +985,7 @@ export async function execBulkCreateCertificatesAction(formData) {
     .insert(payload)
     .select();
   if (error) return { error: error.message };
-  revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/executive/recognitions');
   revalidatePath('/account/member/certificates');
   return { success: true, count: data.length };
 }
@@ -1023,6 +1030,14 @@ export async function execUpdateProfileAction(formData) {
       .from('member_profiles')
       .update(profileUpdates)
       .eq('user_id', user.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabaseAdmin
+      .from('member_profiles')
+      .insert({
+        user_id: user.id,
+        ...profileUpdates,
+      });
     if (error) return { error: error.message };
   }
 

@@ -14,7 +14,7 @@ export default function RecentMembers({ recentMembers }) {
         subtitle="Last 7 days"
         accent="emerald"
         action={
-          <ActionButton tone="emerald" href="/account/executive/members" icon={ArrowRight}>
+          <ActionButton tone="emerald" href="/account/executive/users" icon={ArrowRight}>
             Manage
           </ActionButton>
         }

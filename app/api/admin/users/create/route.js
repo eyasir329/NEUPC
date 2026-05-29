@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function POST(request) {
   try {
-    const authResult = await requireApiAuth('admin');
+    const authResult = await requireApiAuth(['admin', 'executive']);
     if (isAuthError(authResult)) return authResult;
 
     const adminId = authResult.user.id;
@@ -36,6 +36,7 @@ export async function POST(request) {
     }
 
     revalidatePath('/account/admin/users');
+    revalidatePath('/account/executive/users');
     revalidatePath('/account/admin/roles');
 
     return NextResponse.json({

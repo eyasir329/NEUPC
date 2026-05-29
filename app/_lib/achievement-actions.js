@@ -16,7 +16,8 @@ function revalidate() {
   revalidateTag('achievements');
   revalidateTag('participations');
   revalidateTag('homepage');
-  revalidatePath('/account/admin/achievements');
+  revalidatePath('/account/admin/recognitions');
+  revalidatePath('/account/executive/recognitions');
   revalidatePath('/achievements');
   revalidatePath('/');
 }
@@ -883,7 +884,7 @@ export async function deleteParticipationFeaturedPhotoAction(formData) {
 
 function revalidateContent() {
   revalidateTag('site-content');
-  revalidatePath('/account/admin/achievements');
+  revalidatePath('/account/admin/recognitions');
   revalidatePath('/achievements');
   revalidatePath('/');
 }

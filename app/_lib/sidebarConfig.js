@@ -31,6 +31,7 @@ import {
   BarChart3,
   GraduationCap,
   Video,
+  Map,
 } from 'lucide-react';
 
 export function getSidebarNavigation(activeRole, stats, session) {
@@ -240,19 +241,29 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/executive/events',
           },
           {
-            id: 'contests',
-            label: 'Contests',
-            icon: Trophy,
-            href: '/account/executive/contests/manage',
+            id: 'users',
+            label: 'Users',
+            icon: Users,
+            href: '/account/executive/users',
+            badge: stats.totalUsers,
           },
           {
-            id: 'members',
-            label: 'Member Approvals',
-            icon: Users,
-            href: '/account/executive/members',
-            badge: stats.pendingMembers,
-            badgeType: 'alert',
-            condition: ({ stats }) => stats.pendingMembers > 0,
+            id: 'applications',
+            label: 'Applications',
+            icon: FileText,
+            href: '/account/executive/applications',
+          },
+          {
+            id: 'recognitions',
+            label: 'Recognitions',
+            icon: Award,
+            href: '/account/executive/recognitions',
+          },
+          {
+            id: 'contact-submissions',
+            label: 'Contact Submissions',
+            icon: Mail,
+            href: '/account/executive/contact-submissions',
           },
         ],
       },
@@ -264,7 +275,13 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'blogs',
             label: 'Blogs',
             icon: PenTool,
-            href: '/account/executive/blogs/manage',
+            href: '/account/executive/blogs',
+          },
+          {
+            id: 'roadmaps',
+            label: 'Roadmaps',
+            icon: Map,
+            href: '/account/executive/roadmaps',
           },
           {
             id: 'bootcamps',
@@ -282,14 +299,9 @@ export function getSidebarNavigation(activeRole, stats, session) {
             id: 'gallery',
             label: 'Gallery',
             icon: Image,
-            href: '/account/executive/gallery/manage',
+            href: '/account/executive/gallery',
           },
-          {
-            id: 'certificates',
-            label: 'Certificates',
-            icon: Award,
-            href: '/account/executive/certificates/generate',
-          },
+
         ],
       },
       {
@@ -401,7 +413,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'roadmaps',
             label: 'Roadmaps',
-            icon: Compass,
+            icon: Map,
             href: '/account/admin/roadmaps',
           },
           {
@@ -423,10 +435,10 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/admin/gallery',
           },
           {
-            id: 'achievements',
-            label: 'Achievements',
+            id: 'recognitions',
+            label: 'Recognitions',
             icon: Award,
-            href: '/account/admin/achievements',
+            href: '/account/admin/recognitions',
           },
         ],
       },

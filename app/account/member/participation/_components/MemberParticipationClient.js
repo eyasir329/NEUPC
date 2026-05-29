@@ -367,9 +367,9 @@ function AchievementsTab({ memberAchievements = [] }) {
 function CertModal({ cert, onClose }) {
   useScrollLock();
   const meta = CERT_TYPE[cert?.certificate_type] ?? CERT_TYPE.participation;
-  const linkedName = cert?.events?.title ?? cert?.contests?.title ?? null;
-  const linkedSlug = cert?.events?.slug ?? cert?.contests?.slug ?? null;
-  const linkedPath = cert?.events ? `/events/${linkedSlug}` : cert?.contests ? `/contests/${linkedSlug}` : null;
+  const linkedName = cert?.events?.title ?? cert?.bootcamps?.title ?? cert?.contests?.title ?? null;
+  const linkedSlug = cert?.events?.slug ?? cert?.bootcamps?.slug ?? cert?.contests?.slug ?? null;
+  const linkedPath = cert?.events ? `/events/${linkedSlug}` : (cert?.bootcamps ? `/bootcamps/${linkedSlug}` : (cert?.contests ? `/contests/${linkedSlug}` : null));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -409,7 +409,7 @@ function CertModal({ cert, onClose }) {
             )}
             {linkedName && (
               <div className="col-span-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{cert?.events ? 'Event' : 'Contest'}</p>
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{cert?.events ? 'Event' : (cert?.bootcamps ? 'Bootcamp' : 'Contest')}</p>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-200">{linkedName}</p>
                   {linkedPath && <a href={linkedPath} target="_blank" rel="noreferrer" className="rounded-lg p-1.5 text-gray-400 hover:bg-white/[0.08] hover:text-gray-200"><ExternalLink size={16} /></a>}
@@ -453,7 +453,7 @@ function CertificatesTab({ certificates }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((cert, i) => {
           const meta = CERT_TYPE[cert.certificate_type] ?? CERT_TYPE.participation;
-          const linkedTo = cert.events?.title ?? cert.contests?.title ?? null;
+          const linkedTo = cert.events?.title ?? cert.bootcamps?.title ?? cert.contests?.title ?? null;
           return (
             <motion.div key={cert.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.05 }} onClick={() => setSelected(cert)} className="group cursor-pointer overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04]">
               <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-4 py-4" style={{ background: `radial-gradient(circle at 80% 30%, ${meta.bannerGlow}, transparent 60%), rgba(255,255,255,0.01)` }}>

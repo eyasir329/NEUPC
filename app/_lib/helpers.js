@@ -13,15 +13,15 @@ import { supabaseAdmin } from '@/app/_lib/supabase';
 // =============================================================================
 
 /**
- * Verify the current user is an active admin. Redirects otherwise.
- * @returns {Promise<object>} The authenticated admin user record
+ * Verify the current user is an active admin or executive. Redirects otherwise.
+ * @returns {Promise<object>} The authenticated user record
  */
 export async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.email) redirect('/login');
 
   const roles = await getUserRoles(session.user.email);
-  if (!roles.includes('admin')) redirect('/account');
+  if (!roles.includes('admin') && !roles.includes('executive')) redirect('/account');
 
   const user = await getUserByEmail(session.user.email);
   if (user?.account_status !== 'active') redirect('/account');
