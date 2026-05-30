@@ -354,14 +354,6 @@ export default async function Page() {
   ]);
   const { members, positions } = committeeResult;
 
-  console.log('[Committee] member count:', members.length);
-  if (members.length > 0) {
-    const m = members[0];
-    console.log('[Committee] first raw member keys:', Object.keys(m));
-    console.log('[Committee] users field:', JSON.stringify(m.users));
-    console.log('[Committee] user_id field:', m.user_id);
-  }
-
   // Transform raw data into display format
   const transformedMembers = members.map(transformMemberData);
 

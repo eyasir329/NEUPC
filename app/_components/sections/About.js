@@ -164,7 +164,8 @@ function About({ data = {}, settings = {} }) {
             {/* Active chip */}
             <div className="border-neon-lime/30 bg-neon-lime/10 absolute top-8 -right-3 -rotate-6 rounded-xl border px-3 py-1.5 backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
               <span className="text-neon-lime font-mono text-[9px] font-bold tracking-[0.25em] uppercase sm:text-[10px]">
-                Active · {settings?.member_count || '150+'}
+                Active
+                {settings?.member_count ? ` · ${settings.member_count}` : ''}
               </span>
             </div>
           </motion.div>

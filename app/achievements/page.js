@@ -6,9 +6,7 @@
 import {
   getPublicAchievements,
   getPublicParticipations,
-  getAboutData,
   getAllPublicSettings,
-  getPublicJourney,
 } from '@/app/_lib/actions/public-actions';
 import AchievementsClient from './AchievementsClient';
 import { buildMetadata } from '@/app/_lib/config/seo';
@@ -32,16 +30,11 @@ export const metadata = buildMetadata({
 });
 
 export default async function Page() {
-  const [achievements, participations, aboutData, settings, journey] =
-    await Promise.all([
-      getPublicAchievements(),
-      getPublicParticipations(),
-      getAboutData(),
-      getAllPublicSettings(),
-      getPublicJourney(),
-    ]);
-
-  const stats = aboutData.stats || [];
+  const [achievements, participations, settings] = await Promise.all([
+    getPublicAchievements(),
+    getPublicParticipations(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
@@ -56,8 +49,6 @@ export default async function Page() {
       <AchievementsClient
         achievements={achievements}
         participations={participations}
-        timeline={journey}
-        stats={stats}
         settings={settings}
       />
     </>

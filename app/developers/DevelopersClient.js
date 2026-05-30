@@ -11,6 +11,9 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
 import CTASection from '@/app/_components/ui/CTASection';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -22,60 +25,12 @@ const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
-// ─── Fallback data ────────────────────────────────────────────────────────────
-
-const DEFAULT_TECH_STACK = {
-  frontend: [
-    { name: 'Next.js', label: 'FRAMEWORK' },
-    { name: 'React', label: 'UI_LIBRARY' },
-    { name: 'Tailwind CSS', label: 'STYLING' },
-    { name: 'JavaScript', label: 'LANGUAGE' },
-  ],
-  backend: [
-    { name: 'Next.js API Routes', label: 'API_LAYER' },
-    { name: 'NextAuth v5', label: 'AUTH' },
-    { name: 'Supabase', label: 'BaaS' },
-    { name: 'PostgreSQL', label: 'DATABASE' },
-  ],
-  deployment: [
-    { name: 'Vercel', label: 'HOSTING' },
-    { name: 'GitHub Actions', label: 'CI_CD' },
-    { name: 'Supabase Cloud', label: 'CLOUD' },
-    { name: 'Edge Functions', label: 'SERVERLESS' },
-  ],
-};
+// ─── Tech stack display categories (presentation only) ────────────────────────
 
 const TECH_CATEGORIES = [
   { key: 'frontend', label: '01 Frontend', accent: 'lime' },
   { key: 'backend', label: '02 Backend', accent: 'violet' },
   { key: 'deployment', label: '03 Deployment', accent: 'lime' },
-];
-
-const DEFAULT_TIMELINE = [
-  {
-    year: '2024',
-    title: 'Project Initiated',
-    description: 'Website concept proposed and planning began',
-    status: 'completed',
-  },
-  {
-    year: '2025',
-    title: 'MVP Launch',
-    description: 'Public website launched with core features',
-    status: 'completed',
-  },
-  {
-    year: '2026',
-    title: 'Member Portal',
-    description: 'Authentication and member dashboard added',
-    status: 'current',
-  },
-  {
-    year: 'Future',
-    title: 'Mobile App',
-    description: 'Native mobile application development',
-    status: 'planned',
-  },
 ];
 
 // ─── Inline SVG icons ─────────────────────────────────────────────────────────
@@ -160,27 +115,6 @@ function SocialBtn({ href, icon, label }) {
   );
 }
 
-// ─── Stat tile (exact match events page) ─────────────────────────────────────
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
-  );
-}
-
 // ─── Section heading (exact match events / achievements) ─────────────────────
 
 function SectionLabel({ tag, title, accent, onMount = false }) {
@@ -229,13 +163,7 @@ function Divider() {
 function Hero({ stats, settings }) {
   return (
     <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-      {/* Ambient background — exact events pattern */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="grid-overlay absolute inset-0 opacity-25" />
-        <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-        <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-      </div>
+      <HeroAmbient />
 
       <motion.div
         variants={stagger}
@@ -248,7 +176,8 @@ function Hero({ stats, settings }) {
           <motion.div variants={fadeUp} className="flex items-center gap-3">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
-              {settings?.developers_page_badge || 'Developers · NEUPC · Digital Infrastructure'}
+              {settings?.developers_page_badge ||
+                'Developers · NEUPC · Digital Infrastructure'}
             </span>
           </motion.div>
 
@@ -258,7 +187,8 @@ function Hero({ stats, settings }) {
             className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
           >
             {(() => {
-              const title = settings?.developers_page_title || 'Meet the Architects';
+              const title =
+                settings?.developers_page_title || 'Meet the Architects';
               if (title.includes(' ')) {
                 return (
                   <>
@@ -323,13 +253,7 @@ function Hero({ stats, settings }) {
         </div>
       </motion.div>
 
-      {/* Scroll indicator */}
-      <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-        <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-          Scroll
-        </span>
-        <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-      </div>
+      <ScrollCue />
     </section>
   );
 }
@@ -660,37 +584,40 @@ export default function DevelopersClient({
   githubStats: propGithubStats = {},
   settings = {},
 }) {
-  const coreDevelopers =
-    propCoreDevelopers.length > 0 ? propCoreDevelopers : [];
-  const contributors = propContributors.length > 0 ? propContributors : [];
-  const techStack =
-    Object.keys(propTechStack).length > 0 ? propTechStack : DEFAULT_TECH_STACK;
-  const timeline = propTimeline.length > 0 ? propTimeline : DEFAULT_TIMELINE;
+  const coreDevelopers = propCoreDevelopers;
+  const contributors = propContributors;
+  const techStack = propTechStack;
+  const timeline = propTimeline;
 
   const totalContributors = coreDevelopers.length + contributors.length;
+  const contributorCount = totalContributors || propGithubStats.contributors;
+
+  const hasTechStack = TECH_CATEGORIES.some(
+    (cat) => (techStack[cat.key] || []).length > 0
+  );
 
   const heroStats = [
-    {
-      value: propGithubStats.commits || '500+',
+    propGithubStats.commits && {
+      value: propGithubStats.commits,
       label: 'Commits',
       mobileLabel: 'Commits',
     },
-    {
-      value: String(totalContributors || propGithubStats.contributors || '15+'),
+    contributorCount && {
+      value: String(contributorCount),
       label: 'Contributors',
       mobileLabel: 'Devs',
     },
-    {
-      value: propGithubStats.stars || '42',
+    propGithubStats.stars && {
+      value: propGithubStats.stars,
       label: 'GitHub Stars',
       mobileLabel: 'Stars',
     },
-    {
-      value: propGithubStats.forks || '12',
+    propGithubStats.forks && {
+      value: propGithubStats.forks,
       label: 'Forks',
       mobileLabel: 'Forks',
     },
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
@@ -753,54 +680,63 @@ export default function DevelopersClient({
       )}
 
       {/* ── Tech Stack ───────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Architecture" title="Core" accent="Tech Stack" />
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="grid gap-6 sm:gap-7 md:grid-cols-3"
-          >
-            {TECH_CATEGORIES.map((cat) => (
-              <TechStackCard
-                key={cat.key}
-                category={cat}
-                items={(techStack[cat.key] || []).map((t) =>
-                  typeof t === 'string' ? { name: t } : t
-                )}
+      {hasTechStack && (
+        <>
+          <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+              <SectionLabel
+                tag="Architecture"
+                title="Core"
+                accent="Tech Stack"
               />
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      <Divider />
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                className="grid gap-6 sm:gap-7 md:grid-cols-3"
+              >
+                {TECH_CATEGORIES.map((cat) => (
+                  <TechStackCard
+                    key={cat.key}
+                    category={cat}
+                    items={(techStack[cat.key] || []).map((t) =>
+                      typeof t === 'string' ? { name: t } : t
+                    )}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </section>
+          <Divider />
+        </>
+      )}
 
       {/* ── Timeline ─────────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="History" title="Development" accent="Timeline" />
+      {timeline.length > 0 && (
+        <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionLabel tag="History" title="Development" accent="Timeline" />
 
-          <div className="relative">
-            {/* Vertical track line */}
-            <div className="from-neon-lime/30 via-neon-violet/20 absolute top-0 bottom-0 left-[1.1rem] w-px bg-linear-to-b to-transparent sm:left-1/2 sm:-translate-x-px" />
+            <div className="relative">
+              {/* Vertical track line */}
+              <div className="from-neon-lime/30 via-neon-violet/20 absolute top-0 bottom-0 left-[1.1rem] w-px bg-linear-to-b to-transparent sm:left-1/2 sm:-translate-x-px" />
 
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="space-y-10 sm:space-y-14"
-            >
-              {timeline.map((item, i) => (
-                <TimelineItem key={i} item={item} index={i} />
-              ))}
-            </motion.div>
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                className="space-y-10 sm:space-y-14"
+              >
+                {timeline.map((item, i) => (
+                  <TimelineItem key={i} item={item} index={i} />
+                ))}
+              </motion.div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <CTASection

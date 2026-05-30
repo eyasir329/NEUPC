@@ -11,9 +11,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
-import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
-import { getCategoryLabel } from '@/app/_lib/config/blog-config';
+import { getCategoryLabel, CATEGORY_KEYS } from '@/app/_lib/config/blog-config';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -26,17 +29,6 @@ const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  { key: 'CP', label: 'Competitive Programming' },
-  { key: 'Programming', label: 'Programming' },
-  { key: 'WebDev', label: 'Web Dev' },
-  { key: 'AI-ML', label: 'AI / ML' },
-  { key: 'Career', label: 'Career' },
-  { key: 'News', label: 'News' },
-  { key: 'Tutorial', label: 'Tutorial' },
-  { key: 'Other', label: 'Other' },
-];
 
 const SORT_OPTIONS = [
   { key: 'newest', label: 'Newest First' },
@@ -69,197 +61,6 @@ function normalizeBlog(b) {
     featured: b.is_featured ?? false,
     views: b.views ?? 0,
   };
-}
-
-// ─── Stat tile (exact pattern from events + achievements) ─────────────────────
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
-  );
-}
-
-// ─── Section eyebrow (exact pattern from achievements page) ──────────────────
-
-function SectionEyebrow({ tag, title, accent, right, onMount = false }) {
-  return (
-    <motion.div
-      variants={stagger}
-      initial="hidden"
-      {...(onMount
-        ? { animate: 'visible' }
-        : { whileInView: 'visible', viewport })}
-      className={cn(
-        'mb-8 flex flex-col gap-1 sm:mb-10',
-        right && 'sm:flex-row sm:items-end sm:justify-between'
-      )}
-    >
-      <div>
-        <motion.div variants={fadeUp} className="flex items-center gap-3">
-          <span className="bg-neon-lime h-px w-7" />
-          <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-            {tag}
-          </span>
-        </motion.div>
-        <motion.h2
-          variants={fadeUp}
-          className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-        >
-          {title}
-          {accent && (
-            <>
-              {' '}
-              <span className="neon-text">{accent}</span>
-            </>
-          )}
-        </motion.h2>
-      </div>
-      {right && (
-        <motion.p
-          variants={fadeUp}
-          className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-        >
-          {right}
-        </motion.p>
-      )}
-    </motion.div>
-  );
-}
-
-// ─── Featured banner — compact horizontal split ───────────────────────────────
-
-function FeaturedBanner({ blog }) {
-  const image = blog.thumbnail ? driveImageUrl(blog.thumbnail) : null;
-
-  return (
-    <Link
-      href={`/blogs/${blog.slug || blog.id}`}
-      className="group focus-visible:ring-neon-lime block focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none"
-    >
-      <article className="group-hover:border-neon-lime/20 relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300 group-hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.25)]">
-        {/* Top accent line */}
-        <div className="via-neon-lime/50 absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent to-transparent" />
-
-        <div className="flex flex-col sm:flex-row">
-          {/* ── Image panel ── */}
-          <div className="relative w-full shrink-0 overflow-hidden sm:w-[42%]">
-            <div className="relative aspect-[4/3] w-full sm:aspect-auto sm:h-full sm:min-h-[220px]">
-              {image ? (
-                <>
-                  {/* Blurred bg fill */}
-                  <SafeImg
-                    src={image}
-                    alt=""
-                    aria-hidden
-                    className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-2xl"
-                  />
-                  <SafeImg
-                    src={image}
-                    alt={blog.title || 'Featured post'}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  />
-                </>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/3">
-                  <svg
-                    className="h-12 w-12 text-zinc-700"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={0.75}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-              )}
-              {/* Right fade into content panel on desktop */}
-              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-16 bg-linear-to-r from-transparent to-[#08090f] sm:block" />
-              {/* Bottom fade on mobile */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-[#08090f] to-transparent sm:hidden" />
-            </div>
-          </div>
-
-          {/* ── Content panel ── */}
-          <div className="flex flex-1 flex-col justify-center gap-4 px-5 py-5 sm:px-7 sm:py-6 lg:px-8 lg:py-7">
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="border-neon-lime/30 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.2em] uppercase">
-                <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_5px_1px_rgba(182,243,107,0.7)]" />
-                Featured
-              </span>
-              {blog.category && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
-                  {getCategoryLabel(blog.category)}
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h3 className="font-heading group-hover:text-neon-lime text-xl leading-tight font-black text-white transition-colors duration-200 sm:text-2xl lg:text-3xl">
-              {blog.title}
-            </h3>
-
-            {/* Excerpt */}
-            {blog.excerpt && (
-              <p className="line-clamp-2 text-sm leading-relaxed text-zinc-500">
-                {blog.excerpt}
-              </p>
-            )}
-
-            {/* Meta row */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/5 pt-3">
-              {blog.author && (
-                <div className="flex items-center gap-2">
-                  <div className="bg-neon-lime/15 font-heading text-neon-lime flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black">
-                    {blog.author.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-mono text-[10px] tracking-wider text-zinc-500">
-                    {blog.author}
-                  </span>
-                </div>
-              )}
-              {blog.date && (
-                <>
-                  {blog.author && <span className="h-3 w-px bg-white/10" />}
-                  <span className="font-mono text-[10px] tracking-wider text-zinc-600">
-                    {blog.date}
-                  </span>
-                </>
-              )}
-              {blog.readTime && (
-                <>
-                  <span className="h-3 w-px bg-white/10" />
-                  <span className="font-mono text-[10px] tracking-wider text-zinc-600">
-                    {blog.readTime} read
-                  </span>
-                </>
-              )}
-              <span className="text-neon-lime ml-auto font-mono text-[10px] font-bold tracking-widest uppercase transition-transform duration-200 group-hover:translate-x-0.5">
-                Read →
-              </span>
-            </div>
-          </div>
-        </div>
-      </article>
-    </Link>
-  );
 }
 
 // ─── Blog card (holographic-card pattern from homepage / events) ──────────────
@@ -381,13 +182,23 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
   const blogs = useMemo(() => initialBlogs.map(normalizeBlog), [initialBlogs]);
   const featuredBlogs = useMemo(() => blogs.filter((b) => b.featured), [blogs]);
 
+  // Category tabs derived from the categories actually present in the posts,
+  // ordered by the shared enum config. Labels come from blog-config.
+  const categories = useMemo(() => {
+    const present = new Set(blogs.map((b) => b.category).filter(Boolean));
+    return CATEGORY_KEYS.filter((key) => present.has(key)).map((key) => ({
+      key,
+      label: getCategoryLabel(key),
+    }));
+  }, [blogs]);
+
   const counts = useMemo(() => {
     const map = { all: blogs.length };
-    CATEGORIES.forEach(({ key }) => {
+    categories.forEach(({ key }) => {
       map[key] = blogs.filter((b) => b.category === key).length;
     });
     return map;
-  }, [blogs]);
+  }, [blogs, categories]);
 
   const filtered = useMemo(() => {
     let list = blogs;
@@ -462,13 +273,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -561,44 +366,8 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
-
-      {/* ── Featured article ──────────────────────────────────────────────── */}
-      {featuredBlogs.length > 0 && (
-        <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
-          <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
-            <motion.div variants={stagger} initial="hidden" animate="visible">
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  {featuredBlogs.length > 1
-                    ? 'Featured Articles'
-                    : 'Featured Article'}
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                Editor&apos;s Pick{featuredBlogs.length > 1 ? 's' : ''}
-              </motion.h2>
-            </motion.div>
-            <FeaturedCarousel
-              items={featuredBlogs}
-              ariaLabel="Featured articles"
-              getKey={(b) => b.id ?? b.slug ?? b.title}
-              renderItem={(blog) => <FeaturedBanner blog={blog} />}
-            />
-          </div>
-        </section>
-      )}
 
       {/* ── All articles grid ─────────────────────────────────────────────── */}
       <section
@@ -715,7 +484,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                   </span>
                 </button>
 
-                {CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <button
                     key={cat.key}
                     onClick={() => handleCategory(cat.key)}
@@ -771,9 +540,9 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                   hidden: {},
                   visible: { transition: { staggerChildren: 0.08 } },
                 }}
+                key={`${category}-${sortBy}-${currentPage}-${search}`}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
               >
                 {pageBlogs.map((blog) => (

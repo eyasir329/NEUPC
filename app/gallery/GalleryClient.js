@@ -11,6 +11,9 @@ import dynamic from 'next/dynamic';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -42,13 +45,6 @@ const SORT_OPTIONS = [
   { id: 'oldest', label: 'Oldest First' },
   { id: 'a-z', label: 'A → Z' },
   { id: 'z-a', label: 'Z → A' },
-];
-
-const DEFAULT_STATS = [
-  { id: 1, value: '30+', label: 'Events Hosted' },
-  { id: 2, value: '200+', label: 'Active Members' },
-  { id: 3, value: '5+', label: 'Competitions' },
-  { id: 4, value: '1000+', label: 'Photos Captured' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,26 +90,6 @@ function fmtShortDate(dateStr) {
   } catch {
     return '';
   }
-}
-
-// ─── Stat tile (synced with events page) ──────────────────────────────────────
-
-function StatTile({ value, label, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        {label}
-      </span>
-    </div>
-  );
 }
 
 // ─── Gallery card ─────────────────────────────────────────────────────────────
@@ -352,9 +328,19 @@ export default function GalleryClient({
   const [currentPage, setPage] = useState(1);
   const [lightbox, setLightbox] = useState(null);
   const sortRef = useRef(null);
+  const gridRef = useRef(null);
+
+  const scrollToGrid = useCallback(() => {
+    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const changePage = useCallback((p) => {
+    setPage(p);
+    setTimeout(() => scrollToGrid(), 50);
+  }, [scrollToGrid]);
 
   const galleryItems = useMemo(() => propItems.map(normalizeItem), [propItems]);
-  const stats = propStats.length > 0 ? propStats : DEFAULT_STATS;
+  const stats = propStats;
 
   const years = useMemo(
     () =>
@@ -495,13 +481,7 @@ export default function GalleryClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -556,41 +536,37 @@ export default function GalleryClient({
             </motion.div>
 
             {/* Stats row */}
-            <motion.div
-              variants={fadeUp}
-              className="border-t border-white/8 pt-6 sm:pt-8"
-            >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                {stats.map((s, i) => (
-                  <div
-                    key={s.id}
-                    className={cn(
-                      i === 0
-                        ? 'pr-3 sm:pr-6 lg:pr-8'
-                        : i === stats.length - 1
-                          ? 'pl-3 sm:pl-6 lg:pl-8'
-                          : 'px-3 sm:px-6 lg:px-8'
-                    )}
-                  >
-                    <StatTile
-                      value={s.value}
-                      label={s.label}
-                      accent={i === 3}
-                    />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            {stats.length > 0 && (
+              <motion.div
+                variants={fadeUp}
+                className="border-t border-white/8 pt-6 sm:pt-8"
+              >
+                <div className="grid grid-cols-4 divide-x divide-white/8">
+                  {stats.map((s, i) => (
+                    <div
+                      key={s.id}
+                      className={cn(
+                        i === 0
+                          ? 'pr-3 sm:pr-6 lg:pr-8'
+                          : i === stats.length - 1
+                            ? 'pl-3 sm:pl-6 lg:pl-8'
+                            : 'px-3 sm:px-6 lg:px-8'
+                      )}
+                    >
+                      <StatTile
+                        value={s.value}
+                        label={s.label}
+                        accent={i === 3}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Search & Filter ───────────────────────────────────────────────── */}
@@ -865,7 +841,7 @@ export default function GalleryClient({
       </section>
 
       {/* ── Gallery Grid ──────────────────────────────────────────────────── */}
-      <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <section ref={gridRef} className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8" style={{ scrollMarginTop: '80px' }}>
         <div className="mx-auto max-w-7xl">
           {/* Section header */}
           <motion.div
@@ -905,9 +881,9 @@ export default function GalleryClient({
                   hidden: {},
                   visible: { transition: { staggerChildren: 0.07 } },
                 }}
+                key={`${activeFilter}-${activeYear}-${sortBy}-${currentPage}-${search}`}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
               >
                 {pagedItems.map((item) => (
@@ -924,7 +900,7 @@ export default function GalleryClient({
                 totalPages={totalPages}
                 total={filteredItems.length}
                 perPage={ITEMS_PER_PAGE}
-                onPageChange={setPage}
+                onPageChange={changePage}
                 itemLabel="photo"
               />
             </>

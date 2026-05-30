@@ -9,31 +9,6 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import * as Icons from 'lucide-react';
 
-const DEFAULT_BENEFITS = [
-  {
-    icon: 'Zap',
-    title: 'Contest Access',
-    description: 'Exclusive internal contests and national team selections.',
-  },
-  {
-    icon: 'Users',
-    title: 'Mentorship',
-    description:
-      'Guidance from seniors who have competed at the highest level.',
-  },
-  {
-    icon: 'BookOpen',
-    title: 'Curated Learning',
-    description:
-      'Roadmaps, resources, and weekly problem sets to sharpen skills.',
-  },
-  {
-    icon: 'Trophy',
-    title: 'Recognition',
-    description: 'Showcase your wins on a platform built for problem solvers.',
-  },
-];
-
 // Variants
 const headerVariant = {
   hidden: { opacity: 0, y: 30 },
@@ -92,10 +67,7 @@ function BenefitCard({ benefit }) {
 }
 
 function Join({ benefits, settings = {} }) {
-  const items =
-    Array.isArray(benefits) && benefits.length > 0
-      ? benefits
-      : DEFAULT_BENEFITS;
+  const items = Array.isArray(benefits) ? benefits : [];
 
   return (
     <section className="relative overflow-hidden py-20 sm:py-24 lg:py-32">
@@ -162,7 +134,8 @@ function Join({ benefits, settings = {} }) {
                 /// Next cohort
               </p>
               <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
-                {settings?.homepage_join_cta_title || 'Ready to compete at the highest level?'}
+                {settings?.homepage_join_cta_title ||
+                  'Ready to compete at the highest level?'}
               </h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
                 {settings?.homepage_join_cta_description ||

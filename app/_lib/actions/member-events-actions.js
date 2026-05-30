@@ -24,6 +24,12 @@ async function getRoleNamesForUser(userId) {
 
 /** Resolve a role UUID → role name. Returns null if not found. */
 async function getRoleNameById(roleId) {
+  if (!roleId) return null;
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(roleId);
+  if (!isUUID) {
+    // If it's already a role name (like 'member'), return it directly
+    return roleId;
+  }
   const { data } = await supabaseAdmin
     .from('roles')
     .select('name')

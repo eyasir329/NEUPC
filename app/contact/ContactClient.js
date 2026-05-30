@@ -17,6 +17,9 @@ import {
   TwitterIcon,
   YouTubeIcon,
 } from '@/app/_components/ui/SocialIcons';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { submitContactFormAction } from '@/app/_lib/actions/contact-actions';
 import { cn } from '@/app/_lib/utils/utils';
 import {
@@ -31,88 +34,6 @@ const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
 });
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const SUBJECT_OPTIONS = [
-  'General Inquiry',
-  'Membership Information',
-  'Event Participation',
-  'Collaboration Proposal',
-  'Sponsorship Inquiry',
-  'Technical Support',
-  'Feedback / Suggestion',
-];
-
-const DEFAULT_CONTACT_INFO = {
-  email: 'programmingclub@nu.edu.bd',
-  phone: '+880 1XXX-XXXXXX',
-  address: 'Department of CSE, Netrokona University, Netrokona, Bangladesh',
-  officeHours: 'Sunday – Thursday, 10:00 AM – 4:00 PM',
-};
-
-const DEFAULT_KEY_CONTACTS = [
-  {
-    id: 1,
-    role: 'President',
-    name: 'TBD',
-    email: 'president@neupc.com',
-    linkedin: '#',
-  },
-  {
-    id: 2,
-    role: 'General Secretary',
-    name: 'TBD',
-    email: 'gs@neupc.com',
-    linkedin: '#',
-  },
-  {
-    id: 3,
-    role: 'Faculty Advisor',
-    name: 'TBD',
-    email: 'advisor@nu.edu.bd',
-    linkedin: '#',
-  },
-];
-
-const DEFAULT_FAQS = [
-  {
-    id: 1,
-    question: 'How can I join the programming club?',
-    answer:
-      'Fill out the membership form on our Join page. All CSE students are welcome to participate in our activities.',
-  },
-  {
-    id: 2,
-    question: 'When are events typically held?',
-    answer:
-      'We organize events throughout the academic year — weekly problem-solving sessions, monthly workshops, and annual programming contests. Check our Events page for the latest schedule.',
-  },
-  {
-    id: 3,
-    question: 'Do I need prior programming experience?',
-    answer:
-      'No. We welcome students of all skill levels. Beginner-friendly workshops are designed to help you learn and grow from scratch.',
-  },
-  {
-    id: 4,
-    question: 'How can I sponsor or collaborate with the club?',
-    answer:
-      'Use the contact form with subject "Collaboration Proposal" or "Sponsorship Inquiry". Our team responds promptly.',
-  },
-  {
-    id: 5,
-    question: 'What is the response time for inquiries?',
-    answer:
-      'We typically respond within 24–48 hours during office hours (Sunday–Thursday, 10 AM–4 PM).',
-  },
-];
-
-const DEFAULT_SOCIAL_NAMES = [
-  'Facebook',
-  'LinkedIn',
-  'GitHub',
-  'Twitter',
-  'YouTube',
-];
 
 const SOCIAL_ICON_MAP = {
   facebook: FacebookIcon,
@@ -225,28 +146,6 @@ const INFO_ITEMS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionEyebrow({ tag, title, accent }) {
-  return (
-    <div className="mb-10 sm:mb-12">
-      <div className="flex items-center gap-3">
-        <span className="bg-neon-lime h-px w-7" />
-        <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase sm:text-[11px]">
-          {tag}
-        </span>
-      </div>
-      <h2 className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl">
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <span className="neon-text">{accent}</span>
-          </>
-        )}
-      </h2>
-    </div>
-  );
-}
-
 function FaqItem({ faq, isActive, onToggle }) {
   return (
     <div className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.03] transition-colors hover:border-white/12 hover:bg-white/[0.05]">
@@ -315,39 +214,23 @@ export default function ContactClient({
   const [activeFaq, setActiveFaq] = useState(null);
 
   // Data normalization
-  const contactInfo = { ...DEFAULT_CONTACT_INFO, ...propContactInfo };
+  const contactInfo = { ...propContactInfo };
   if (propContactInfo.office_hours && !propContactInfo.officeHours) {
     contactInfo.officeHours = propContactInfo.office_hours;
   }
 
-  const keyContacts =
-    propKeyContacts.length > 0 ? propKeyContacts : DEFAULT_KEY_CONTACTS;
+  const keyContacts = propKeyContacts;
 
-  const socialLinks = (() => {
-    const entries = Object.entries(propSocialLinks)
-      .filter(([, url]) => url && url !== '#')
-      .map(([name, url], idx) => {
-        const Icon = SOCIAL_ICON_MAP[name.toLowerCase()] || GitHubIcon;
-        return {
-          id: idx + 1,
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-          url,
-          Icon,
-        };
-      });
-    if (entries.length > 0) return entries;
-    return DEFAULT_SOCIAL_NAMES.map((name, idx) => ({
+  const socialLinks = Object.entries(propSocialLinks)
+    .filter(([, url]) => url && url !== '#')
+    .map(([name, url], idx) => ({
       id: idx + 1,
-      name,
-      url: '#',
-      Icon: SOCIAL_ICON_MAP[name.toLowerCase()],
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      url,
+      Icon: SOCIAL_ICON_MAP[name.toLowerCase()] || GitHubIcon,
     }));
-  })();
 
-  const faqs =
-    propFaqs.length > 0
-      ? propFaqs.map((f, i) => ({ ...f, id: f.id || i + 1 }))
-      : DEFAULT_FAQS;
+  const faqs = propFaqs.map((f, i) => ({ ...f, id: f.id || i + 1 }));
 
   // Form logic
   const validateForm = () => {
@@ -405,13 +288,7 @@ export default function ContactClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background — identical to events/achievements */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -467,9 +344,8 @@ export default function ContactClient({
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-3 divide-x divide-white/8">
+              <div className="grid grid-cols-2 divide-x divide-white/8">
                 {[
-                  { value: '24h', label: 'Avg Response', mobile: '24h' },
                   { value: faqs.length, label: 'FAQ Answered', mobile: 'FAQs' },
                   {
                     value: keyContacts.length,
@@ -481,11 +357,7 @@ export default function ContactClient({
                     key={i}
                     className={cn(
                       'flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left',
-                      i === 0
-                        ? 'pr-3 sm:pr-6 lg:pr-8'
-                        : i === 1
-                          ? 'px-3 sm:px-6 lg:px-8'
-                          : 'pl-3 sm:pl-6 lg:pl-8'
+                      i === 0 ? 'pr-3 sm:pr-6 lg:pr-8' : 'pl-3 sm:pl-6 lg:pl-8'
                     )}
                   >
                     <span
@@ -507,13 +379,7 @@ export default function ContactClient({
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Main Contact Grid ──────────────────────────────────────────────── */}
@@ -540,6 +406,7 @@ export default function ContactClient({
                   {INFO_ITEMS.map(
                     ({ key, label, isLink, prefix, format, icon }) => {
                       const value = contactInfo[key];
+                      if (!value) return null;
                       const href = isLink
                         ? `${prefix}${format ? format(value) : value}`
                         : undefined;
@@ -573,96 +440,100 @@ export default function ContactClient({
               </motion.div>
 
               {/* Social links */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                animate="visible"
-                className="glass-panel rounded-2xl p-6 sm:p-7"
-              >
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="bg-neon-lime h-px w-7" />
-                  <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
-                    Follow Us
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-                  {socialLinks.map((social) => (
-                    <motion.a
-                      key={social.id}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="hover:border-neon-lime/30 hover:bg-neon-lime/5 flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-all"
-                    >
-                      <span className="group-hover:text-neon-lime shrink-0 text-zinc-400 transition-colors">
-                        <social.Icon className="h-4 w-4" />
-                      </span>
-                      <span className="truncate font-mono text-[10px] font-bold tracking-wider text-zinc-400 uppercase transition-colors hover:text-white">
-                        {social.name}
-                      </span>
-                    </motion.a>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Key contacts */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                animate="visible"
-                className="glass-panel rounded-2xl p-6 sm:p-7"
-              >
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="bg-neon-lime h-px w-7" />
-                  <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
-                    Key Contacts
-                  </span>
-                </div>
+              {socialLinks.length > 0 && (
                 <motion.div
-                  className="space-y-3"
-                  variants={{
-                    hidden: {},
-                    visible: { transition: { staggerChildren: 0.08 } },
-                  }}
+                  variants={fadeUp}
                   initial="hidden"
-                  whileInView="visible"
-                  viewport={viewport}
+                  animate="visible"
+                  className="glass-panel rounded-2xl p-6 sm:p-7"
                 >
-                  {keyContacts.map((contact) => (
-                    <motion.div
-                      key={contact.id}
-                      variants={cardReveal}
-                      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-                      className="hover:border-neon-lime/20 flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-neon-lime font-mono text-[9px] font-bold tracking-widest uppercase">
-                          {contact.role}
-                        </p>
-                        <p className="mt-0.5 text-sm font-bold text-white">
-                          {contact.name}
-                        </p>
-                        <a
-                          href={`mailto:${contact.email}`}
-                          className="hover:text-neon-lime mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors"
-                        >
-                          {contact.email}
-                        </a>
-                      </div>
-                      <a
-                        href={contact.linkedin}
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
+                      Follow Us
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                    {socialLinks.map((social) => (
+                      <motion.a
+                        key={social.id}
+                        href={social.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:border-neon-lime/40 hover:bg-neon-lime/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="hover:border-neon-lime/30 hover:bg-neon-lime/5 flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-all"
                       >
-                        <LinkedInIcon className="h-4 w-4 text-zinc-400" />
-                      </a>
-                    </motion.div>
-                  ))}
+                        <span className="group-hover:text-neon-lime shrink-0 text-zinc-400 transition-colors">
+                          <social.Icon className="h-4 w-4" />
+                        </span>
+                        <span className="truncate font-mono text-[10px] font-bold tracking-wider text-zinc-400 uppercase transition-colors hover:text-white">
+                          {social.name}
+                        </span>
+                      </motion.a>
+                    ))}
+                  </div>
                 </motion.div>
-              </motion.div>
+              )}
+
+              {/* Key contacts */}
+              {keyContacts.length > 0 && (
+                <motion.div
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                  className="glass-panel rounded-2xl p-6 sm:p-7"
+                >
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
+                      Key Contacts
+                    </span>
+                  </div>
+                  <motion.div
+                    className="space-y-3"
+                    variants={{
+                      hidden: {},
+                      visible: { transition: { staggerChildren: 0.08 } },
+                    }}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={viewport}
+                  >
+                    {keyContacts.map((contact) => (
+                      <motion.div
+                        key={contact.id}
+                        variants={cardReveal}
+                        whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                        className="hover:border-neon-lime/20 flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-neon-lime font-mono text-[9px] font-bold tracking-widest uppercase">
+                            {contact.role}
+                          </p>
+                          <p className="mt-0.5 text-sm font-bold text-white">
+                            {contact.name}
+                          </p>
+                          <a
+                            href={`mailto:${contact.email}`}
+                            className="hover:text-neon-lime mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors"
+                          >
+                            {contact.email}
+                          </a>
+                        </div>
+                        <a
+                          href={contact.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:border-neon-lime/40 hover:bg-neon-lime/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all"
+                        >
+                          <LinkedInIcon className="h-4 w-4 text-zinc-400" />
+                        </a>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </motion.div>
+              )}
             </div>
 
             {/* ── RIGHT: Contact Form ── */}
@@ -837,7 +708,7 @@ export default function ContactClient({
                         <option value="" className="bg-[#0c0e16]">
                           Select a subject
                         </option>
-                        {SUBJECT_OPTIONS.map((s) => (
+                        {(contactInfo.subjects || []).map((s) => (
                           <option
                             key={s}
                             value={s}
@@ -934,61 +805,66 @@ export default function ContactClient({
       </section>
 
       {/* ── FAQ Section ────────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="mb-10 flex flex-col gap-1 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  FAQ
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                Common <span className="neon-text">Questions</span>
-              </motion.h2>
-            </div>
-            <motion.p
-              variants={fadeUp}
-              className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
+      {faqs.length > 0 && (
+        <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="mb-10 flex flex-col gap-1 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
             >
-              {faqs.length} answers
-            </motion.p>
-          </motion.div>
+              <div>
+                <motion.div
+                  variants={fadeUp}
+                  className="flex items-center gap-3"
+                >
+                  <span className="bg-neon-lime h-px w-7" />
+                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
+                    FAQ
+                  </span>
+                </motion.div>
+                <motion.h2
+                  variants={fadeUp}
+                  className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
+                >
+                  Common <span className="neon-text">Questions</span>
+                </motion.h2>
+              </div>
+              <motion.p
+                variants={fadeUp}
+                className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
+              >
+                {faqs.length} answers
+              </motion.p>
+            </motion.div>
 
-          <motion.div
-            className="grid gap-3 lg:grid-cols-2"
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.07 } },
-            }}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-          >
-            {faqs.map((faq) => (
-              <motion.div key={faq.id} variants={cardReveal}>
-                <FaqItem
-                  faq={faq}
-                  isActive={activeFaq === faq.id}
-                  onToggle={() =>
-                    setActiveFaq(activeFaq === faq.id ? null : faq.id)
-                  }
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+            <motion.div
+              className="grid gap-3 lg:grid-cols-2"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.07 } },
+              }}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+            >
+              {faqs.map((faq) => (
+                <motion.div key={faq.id} variants={cardReveal}>
+                  <FaqItem
+                    faq={faq}
+                    isActive={activeFaq === faq.id}
+                    onToggle={() =>
+                      setActiveFaq(activeFaq === faq.id ? null : faq.id)
+                    }
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA Strip — same pattern as events page join prompt ───────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">

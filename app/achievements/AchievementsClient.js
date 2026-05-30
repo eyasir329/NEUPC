@@ -5,13 +5,17 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { cn } from '@/app/_lib/utils/utils';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionHeading from '@/app/_components/ui/SectionHeading';
 import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
 import {
   pageFadeUp as fadeUp,
@@ -23,41 +27,6 @@ import {
 const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
-
-function SectionEyebrow({ tag, title, accent, description, onMount = false }) {
-  return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      {...(onMount
-        ? { animate: 'visible' }
-        : { whileInView: 'visible', viewport })}
-      className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
-    >
-      <div className="flex items-center justify-center gap-3">
-        <span className="bg-neon-lime h-px w-8 sm:w-10" />
-        <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-          {tag}
-        </span>
-        <span className="bg-neon-lime h-px w-8 sm:w-10" />
-      </div>
-      <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <span className="neon-text">{accent}</span>
-          </>
-        )}
-      </h2>
-      {description && (
-        <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
-          {description}
-        </p>
-      )}
-    </motion.div>
-  );
-}
 
 function EmptyState({ icon, title, description, onClear }) {
   return (
@@ -89,38 +58,20 @@ function EmptyState({ icon, title, description, onClear }) {
 // ---------------------------------------------------------------------------
 // Stat tile — same as events page
 // ---------------------------------------------------------------------------
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CATEGORIES = [
-  { name: 'All', icon: '🏆' },
-  { name: 'ICPC', icon: '🌏' },
-  { name: 'IUPC', icon: '🏁' },
-  { name: 'Contest', icon: '⚔️' },
-  { name: 'Hackathon', icon: '💻' },
-  { name: 'Individual', icon: '⭐' },
-];
+// Emoji icons for known achievement categories (presentation only).
+// The category filter list itself is derived from achievement data.
+const CATEGORY_ICONS = {
+  All: '🏆',
+  ICPC: '🌏',
+  IUPC: '🏁',
+  Contest: '⚔️',
+  Hackathon: '💻',
+  Individual: '⭐',
+};
+const DEFAULT_CATEGORY_ICON = '🏅';
 
 const ACHIEVEMENT_PAGE_SIZE = 9;
 const PARTICIPATION_PAGE_SIZE = 9;
@@ -1391,6 +1342,28 @@ export default function AchievementsClient({
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [selectedParticipation, setSelectedParticipation] = useState(null);
 
+  // ── Scroll refs & callbacks ──────────────────────────────────────────────
+  const achGridRef = useRef(null);
+  const participGridRef = useRef(null);
+
+  const scrollToAchGrid = useCallback(() => {
+    achGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const scrollToParticipGrid = useCallback(() => {
+    participGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const changeAchPage = useCallback((p) => {
+    setAchPage(p);
+    setTimeout(() => scrollToAchGrid(), 50);
+  }, [scrollToAchGrid]);
+
+  const changeParticipPage = useCallback((p) => {
+    setParticipatPage(p);
+    setTimeout(() => scrollToParticipGrid(), 50);
+  }, [scrollToParticipGrid]);
+
   // ── Data ─────────────────────────────────────────────────────────────────
   const achievements = propAchievements;
 
@@ -1419,10 +1392,21 @@ export default function AchievementsClient({
         : []
     )
   );
-  const categories = DEFAULT_CATEGORIES.filter(
-    (c) => c.name === 'All' || categorySet.has(c.name)
+  const knownCategoryOrder = Object.keys(CATEGORY_ICONS).filter(
+    (name) => name !== 'All'
   );
-  if (categories.length <= 1) categories.push(...DEFAULT_CATEGORIES.slice(1));
+  const categories = [
+    { name: 'All', icon: CATEGORY_ICONS.All },
+    // Known categories present in the data, in registry order
+    ...knownCategoryOrder
+      .filter((name) => categorySet.has(name))
+      .map((name) => ({ name, icon: CATEGORY_ICONS[name] })),
+    // Any other categories found in the data
+    ...[...categorySet]
+      .filter((name) => !knownCategoryOrder.includes(name))
+      .sort()
+      .map((name) => ({ name, icon: DEFAULT_CATEGORY_ICON })),
+  ];
 
   // Filtered achievements — applies all four filters
   const filteredAchievements = useMemo(() => {
@@ -1530,13 +1514,7 @@ export default function AchievementsClient({
     <main className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ══════════════════════ HERO ══════════════════════ */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -1559,7 +1537,8 @@ export default function AchievementsClient({
               className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               {(() => {
-                const title = settings?.achievements_page_title || 'Hall of Achievements';
+                const title =
+                  settings?.achievements_page_title || 'Hall of Achievements';
                 if (title.includes(' ')) {
                   return (
                     <>
@@ -1634,20 +1613,14 @@ export default function AchievementsClient({
           </div>
         </motion.div>
 
-        {/* Scroll cue – desktop only */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ══════════════════════ FEATURED CAROUSEL ══════════════════════ */}
       {featuredAchievements.length > 0 && (
         <section className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <SectionEyebrow
+            <SectionHeading
               tag="Recognition / 001"
               title="Featured"
               accent="Victory"
@@ -1664,10 +1637,12 @@ export default function AchievementsClient({
       {/* ══════════════════════ VICTORY LOG (Achievements) ══════════════════════ */}
       <section
         id="achievements"
+        ref={achGridRef}
         className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+        style={{ scrollMarginTop: '80px' }}
       >
         <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
-          <SectionEyebrow
+          <SectionHeading
             tag="Operations Log / 002"
             title="Victory"
             accent="Log"
@@ -1798,10 +1773,10 @@ export default function AchievementsClient({
           ) : (
             <>
               <motion.div
+                key={`${activeFilter}-${achYearFilter}-${achTypeFilter}-${achResultFilter}-${achCurrentPage}`}
                 variants={stagger}
                 initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
+                animate="visible"
                 className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
               >
                 {paginatedAchievements.map((achievement) => (
@@ -1822,7 +1797,7 @@ export default function AchievementsClient({
                 totalPages={achTotalPages}
                 total={filteredAchievements.length}
                 perPage={ACHIEVEMENT_PAGE_SIZE}
-                onPageChange={setAchPage}
+                onPageChange={changeAchPage}
                 itemLabel="achievement"
               />
             </>
@@ -1834,10 +1809,12 @@ export default function AchievementsClient({
       {propParticipations.length > 0 && (
         <section
           id="participation"
+          ref={participGridRef}
           className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+          style={{ scrollMarginTop: '80px' }}
         >
           <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
-            <SectionEyebrow
+            <SectionHeading
               tag="Contest Records / 003"
               title="Participation"
               accent="History"
@@ -1949,10 +1926,10 @@ export default function AchievementsClient({
             ) : (
               <>
                 <motion.div
+                  key={`${participCatFilter}-${participYearFilter}-${participCurrentPage}`}
                   variants={stagger}
                   initial="hidden"
-                  whileInView="visible"
-                  viewport={viewport}
+                  animate="visible"
                   className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
                   {paginatedParticipations.map((record) => (
@@ -1973,7 +1950,7 @@ export default function AchievementsClient({
                   totalPages={participTotalPages}
                   total={filteredParticipations.length}
                   perPage={PARTICIPATION_PAGE_SIZE}
-                  onPageChange={setParticipatPage}
+                  onPageChange={changeParticipPage}
                   itemLabel="record"
                 />
               </>

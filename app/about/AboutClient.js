@@ -12,6 +12,9 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { cn } from '@/app/_lib/utils/utils';
 import CTASection from '@/app/_components/ui/CTASection';
+import EmptyState from '@/app/_components/ui/EmptyState';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import SectionHeading from '@/app/_components/ui/SectionHeading';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -100,134 +103,6 @@ function resolveIcon(value, size = 20) {
     );
   const C = ICON_MAP[value];
   return C ? <C size={size} /> : <Lightbulb size={size} />;
-}
-
-/* ─── Fallback data ─────────────────────────────────────────────────────── */
-
-const DEFAULT_MISSION = [
-  'Enhance programming skills through consistent practice and peer learning',
-  'Introduce branches of CS beyond the academic coursework',
-  'Prepare students for competitive contests — ICPC, NCPC, and beyond',
-  'Organize workshops, bootcamps, and internal hack sessions',
-  'Build a thriving programming community within the university',
-];
-const DEFAULT_VISION = [
-  'To become a leading university programming community nurturing skilled, ethical, and innovative engineers capable of competing at national and international levels.',
-];
-const DEFAULT_PRINCIPLES = [
-  { label: 'Algorithmic Excellence', icon: Network, color: 'lime' },
-  { label: 'Collaborative Growth', icon: Users, color: 'violet' },
-  { label: 'Technical Superiority', icon: Layers, color: 'lime' },
-  { label: 'Ethical Conduct', icon: ShieldCheck, color: 'violet' },
-  { label: 'Radical Transparency', icon: Eye, color: 'lime' },
-  { label: 'Non-profit Mission', icon: Globe, color: 'violet' },
-];
-const DEFAULT_ORG = [
-  {
-    title: 'Faculty Advisors',
-    desc: 'Lecturers from the Department of CSE',
-    icon: GraduationCap,
-    color: 'lime',
-  },
-  {
-    title: 'Executive Committee',
-    desc: 'President, VP, Secretary, and officers',
-    icon: Briefcase,
-    color: 'violet',
-  },
-  {
-    title: 'Mentors',
-    desc: 'Senior students and alumni guiding newer members',
-    icon: Star,
-    color: 'lime',
-  },
-  {
-    title: 'Members',
-    desc: 'Active student participants driving the club forward',
-    icon: Users,
-    color: 'violet',
-  },
-];
-const DEFAULT_WHAT_WE_DO = [
-  {
-    icon: Terminal,
-    title: 'Competitive Programming',
-    desc: 'Weekly sessions, algorithm workshops, and mock contests.',
-  },
-  {
-    icon: GraduationCap,
-    title: 'Academic Development',
-    desc: 'Career guidance, research talks, and industry workshops.',
-  },
-  {
-    icon: Trophy,
-    title: 'Contest Participation',
-    desc: 'ICPC preparation, national and inter-university competitions.',
-  },
-  {
-    icon: Users,
-    title: 'Women in Engineering',
-    desc: 'Focused sessions, leadership programs, inclusive community.',
-  },
-];
-
-/* ─── Shared section eyebrow (matches AchievementsClient exactly) ──────── */
-
-function SectionEyebrow({
-  tag,
-  title,
-  accent,
-  description,
-  color = 'lime',
-  onMount = false,
-}) {
-  return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      {...(onMount
-        ? { animate: 'visible' }
-        : { whileInView: 'visible', viewport })}
-      className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
-    >
-      <div className="flex items-center justify-center gap-3">
-        <span
-          className={cn(
-            'h-px w-8 sm:w-10',
-            color === 'lime' ? 'bg-neon-lime' : 'bg-neon-violet'
-          )}
-        />
-        <span
-          className={cn(
-            'font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]',
-            color === 'lime' ? 'text-neon-lime' : 'text-neon-violet'
-          )}
-        >
-          {tag}
-        </span>
-        <span
-          className={cn(
-            'h-px w-8 sm:w-10',
-            color === 'lime' ? 'bg-neon-lime' : 'bg-neon-violet'
-          )}
-        />
-      </div>
-      <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <span className="neon-text">{accent}</span>
-          </>
-        )}
-      </h2>
-      {description && (
-        <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
-          {description}
-        </p>
-      )}
-    </motion.div>
-  );
 }
 
 /* ─── Icon box (shared) ─────────────────────────────────────────────────── */
@@ -423,6 +298,7 @@ export default function AboutClient({
     whatWeDo = [],
     coreValues = [],
     orgStructure = [],
+    stats = [],
     wieTitle = '',
     wieDescription = '',
     mentorshipTitle = '',
@@ -430,15 +306,16 @@ export default function AboutClient({
     mentorshipAreas = [],
   } = data;
 
-  const missionItems = mission?.length ? mission : DEFAULT_MISSION;
-  const visionItems = vision?.length
+  const missionItems = Array.isArray(mission) ? mission : [];
+  const visionItems = Array.isArray(vision)
     ? vision
     : typeof vision === 'string' && vision
       ? [vision]
-      : DEFAULT_VISION;
-  const principles = coreValues?.length ? coreValues : DEFAULT_PRINCIPLES;
-  const orgItems = orgStructure?.length ? orgStructure : DEFAULT_ORG;
-  const activities = whatWeDo?.length ? whatWeDo : DEFAULT_WHAT_WE_DO;
+      : [];
+  const principles = Array.isArray(coreValues) ? coreValues : [];
+  const orgItems = Array.isArray(orgStructure) ? orgStructure : [];
+  const activities = Array.isArray(whatWeDo) ? whatWeDo : [];
+  const statItems = Array.isArray(stats) ? stats : [];
 
   const coreExecutive = committeeMembers
     .filter((m) => m.committee_positions?.rank === 2)
@@ -448,22 +325,17 @@ export default function AboutClient({
         (b.committee_positions?.display_order ?? 999)
     );
 
-  const displayWieTitle = wieTitle || 'Women in Engineering';
-  const displayWieDesc =
-    wieDescription ||
-    'The Programming Club runs a dedicated WIE branch to encourage female participation in programming and leadership, with focused sessions, mentoring programs, and awareness initiatives.';
-  const displayMentorTitle = mentorshipTitle || 'Mentorship & Guidance';
-  const displayMentorDesc =
-    mentorshipDescription ||
-    'Supported by faculty advisors and experienced mentors guiding students in:';
-  const displayMentorAreas = mentorshipAreas?.length
+  const displayWieTitle = wieTitle || '';
+  const displayWieDesc = wieDescription || '';
+  const displayMentorTitle = mentorshipTitle || '';
+  const displayMentorDesc = mentorshipDescription || '';
+  const displayMentorAreas = Array.isArray(mentorshipAreas)
     ? mentorshipAreas
-    : [
-        'Competitive programming strategies',
-        'Academic development',
-        'Career direction',
-        'Project building',
-      ];
+    : [];
+  const hasWie = Boolean(displayWieTitle || displayWieDesc);
+  const hasMentorship = Boolean(
+    displayMentorTitle || displayMentorDesc || displayMentorAreas.length
+  );
 
   const PREVIEW = 3;
   const shownMission = missionExpanded
@@ -476,13 +348,7 @@ export default function AboutClient({
       {/* HERO — same pattern as EventsClient                             */}
       {/* ================================================================ */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -495,7 +361,7 @@ export default function AboutClient({
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
               <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
-                {settings?.about_page_badge || 'About · NEUPC'}
+                {settings?.about_page_badge || ''}
               </span>
             </motion.div>
 
@@ -505,7 +371,7 @@ export default function AboutClient({
               className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               {(() => {
-                const title = settings?.about_page_title || 'About NEUPC';
+                const title = settings?.about_page_title || '';
                 if (title.includes(' ')) {
                   return (
                     <>
@@ -522,64 +388,60 @@ export default function AboutClient({
             </motion.h1>
 
             {/* Description */}
-            <motion.p
-              variants={fadeUp}
-              className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
-            >
-              {description1 ||
-                "NEUPC is the nexus of algorithmic thought and software craftsmanship at Netrokona University — a collective of developers, researchers, and visionaries pushing the boundaries of what's possible."}
-            </motion.p>
+            {description1 && (
+              <motion.p
+                variants={fadeUp}
+                className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
+              >
+                {description1}
+              </motion.p>
+            )}
 
             {/* Status pill */}
-            <motion.div
-              variants={fadeUp}
-              className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
-            >
-              <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
-              {settings?.member_count
-                ? `${settings.member_count} Members & Growing`
-                : 'Est. 2025 · Dept of CSE'}
-            </motion.div>
+            {settings?.member_count && (
+              <motion.div
+                variants={fadeUp}
+                className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+              >
+                <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
+                {`${settings.member_count} Members & Growing`}
+              </motion.div>
+            )}
 
             {/* Stats row */}
-            <motion.div
-              variants={fadeUp}
-              className="border-t border-white/8 pt-6 sm:pt-8"
-            >
-              <div className="grid grid-cols-3 divide-x divide-white/8 sm:grid-cols-3">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
-                  <div className="space-y-0.5">
-                    <div className="font-heading text-neon-lime text-xl font-black sm:text-2xl">
-                      {settings?.member_count || '150+'}
+            {statItems.length > 0 && (
+              <motion.div
+                variants={fadeUp}
+                className="border-t border-white/8 pt-6 sm:pt-8"
+              >
+                <div
+                  className={cn(
+                    'grid gap-x-6 gap-y-4',
+                    statItems.length >= 4
+                      ? 'grid-cols-2 sm:grid-cols-4'
+                      : statItems.length === 3
+                        ? 'grid-cols-3'
+                        : 'grid-cols-2'
+                  )}
+                >
+                  {statItems.map((s, i) => (
+                    <div key={s.label || i} className="space-y-0.5">
+                      <div
+                        className={cn(
+                          'font-heading text-xl font-black sm:text-2xl',
+                          i === 0 ? 'text-neon-lime' : 'text-white'
+                        )}
+                      >
+                        {s.value}
+                      </div>
+                      <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
+                        {s.label}
+                      </div>
                     </div>
-                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
-                      <span className="hidden sm:inline">Members</span>
-                      <span className="sm:hidden">Members</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
-                  <div className="space-y-0.5">
-                    <div className="font-heading text-xl font-black text-white sm:text-2xl">
-                      {settings?.contest_count || '40+'}
-                    </div>
-                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
-                      Contests
-                    </div>
-                  </div>
-                </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
-                  <div className="space-y-0.5">
-                    <div className="font-heading text-xl font-black text-white sm:text-2xl">
-                      {settings?.award_count || '12+'}
-                    </div>
-                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
-                      Awards
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </section>
@@ -593,7 +455,7 @@ export default function AboutClient({
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionEyebrow
+          <SectionHeading
             tag="Our Purpose · 001"
             title="Mission &"
             accent="Vision"
@@ -624,23 +486,29 @@ export default function AboutClient({
                   Mission
                 </h3>
               </div>
-              <ul className="space-y-4">
-                {shownMission.map((item, i) => {
-                  const text =
-                    typeof item === 'string' ? item : item?.title || '';
-                  return (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
-                    >
-                      <span className="bg-neon-lime mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
-                      <span className="text-sm leading-relaxed sm:text-base">
-                        {text}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              {missionItems.length > 0 ? (
+                <ul className="space-y-4">
+                  {shownMission.map((item, i) => {
+                    const text =
+                      typeof item === 'string' ? item : item?.title || '';
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
+                      >
+                        <span className="bg-neon-lime mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
+                        <span className="text-sm leading-relaxed sm:text-base">
+                          {text}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Mission details coming soon.
+                </p>
+              )}
               {missionItems.length > PREVIEW && (
                 <button
                   type="button"
@@ -670,23 +538,29 @@ export default function AboutClient({
                   Vision
                 </h3>
               </div>
-              <ul className="space-y-4">
-                {visionItems.map((item, i) => {
-                  const text =
-                    typeof item === 'string' ? item : item?.title || '';
-                  return (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
-                    >
-                      <span className="bg-neon-violet mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
-                      <span className="text-sm leading-relaxed sm:text-base">
-                        {text}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              {visionItems.length > 0 ? (
+                <ul className="space-y-4">
+                  {visionItems.map((item, i) => {
+                    const text =
+                      typeof item === 'string' ? item : item?.title || '';
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
+                      >
+                        <span className="bg-neon-violet mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
+                        <span className="text-sm leading-relaxed sm:text-base">
+                          {text}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Vision details coming soon.
+                </p>
+              )}
               {description2 && (
                 <p className="mt-6 border-t border-white/5 pt-5 text-sm leading-relaxed text-zinc-500 sm:text-base">
                   {description2}
@@ -706,7 +580,7 @@ export default function AboutClient({
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionEyebrow
+          <SectionHeading
             tag="Activities · 002"
             title="What We"
             accent="Do"
@@ -714,69 +588,73 @@ export default function AboutClient({
             color="lime"
           />
 
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className={cn(
-              'grid gap-5',
-              activities.length >= 4
-                ? 'sm:grid-cols-2 lg:grid-cols-4'
-                : activities.length === 3
-                  ? 'sm:grid-cols-2 lg:grid-cols-3'
-                  : 'sm:grid-cols-2'
-            )}
-          >
-            {activities.map((card, i) => {
-              const accent = i % 2 === 0 ? 'lime' : 'violet';
-              const items = Array.isArray(card.items) ? card.items : [];
-              return (
-                <motion.div
-                  key={card.title || i}
-                  variants={cardReveal}
-                  className="flex"
-                >
-                  <div className="holographic-card group flex h-full w-full flex-col rounded-2xl p-7">
-                    <IconBox
-                      icon={card.icon || card.emoji}
-                      size={22}
-                      accent={accent}
-                      className="mb-5 h-12 w-12"
-                    />
-                    <h3 className="font-heading mb-3 text-lg font-black text-white">
-                      {card.title}
-                    </h3>
-                    {(card.desc || card.description) && (
-                      <p className="text-sm leading-relaxed text-zinc-500">
-                        {card.desc || card.description}
-                      </p>
-                    )}
-                    {items.length > 0 && (
-                      <ul className="mt-4 space-y-2.5">
-                        {items.map((it, j) => (
-                          <li
-                            key={j}
-                            className="flex items-start gap-2.5 text-sm text-zinc-500"
-                          >
-                            <span
-                              className={cn(
-                                'mt-[0.35rem] h-1 w-1 shrink-0 rounded-full',
-                                accent === 'lime'
-                                  ? 'bg-neon-lime'
-                                  : 'bg-neon-violet'
-                              )}
-                            />
-                            {it}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          {activities.length > 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className={cn(
+                'grid gap-5',
+                activities.length >= 4
+                  ? 'sm:grid-cols-2 lg:grid-cols-4'
+                  : activities.length === 3
+                    ? 'sm:grid-cols-2 lg:grid-cols-3'
+                    : 'sm:grid-cols-2'
+              )}
+            >
+              {activities.map((card, i) => {
+                const accent = i % 2 === 0 ? 'lime' : 'violet';
+                const items = Array.isArray(card.items) ? card.items : [];
+                return (
+                  <motion.div
+                    key={card.title || i}
+                    variants={cardReveal}
+                    className="flex"
+                  >
+                    <div className="holographic-card group flex h-full w-full flex-col rounded-2xl p-7">
+                      <IconBox
+                        icon={card.icon || card.emoji}
+                        size={22}
+                        accent={accent}
+                        className="mb-5 h-12 w-12"
+                      />
+                      <h3 className="font-heading mb-3 text-lg font-black text-white">
+                        {card.title}
+                      </h3>
+                      {(card.desc || card.description) && (
+                        <p className="text-sm leading-relaxed text-zinc-500">
+                          {card.desc || card.description}
+                        </p>
+                      )}
+                      {items.length > 0 && (
+                        <ul className="mt-4 space-y-2.5">
+                          {items.map((it, j) => (
+                            <li
+                              key={j}
+                              className="flex items-start gap-2.5 text-sm text-zinc-500"
+                            >
+                              <span
+                                className={cn(
+                                  'mt-[0.35rem] h-1 w-1 shrink-0 rounded-full',
+                                  accent === 'lime'
+                                    ? 'bg-neon-lime'
+                                    : 'bg-neon-violet'
+                                )}
+                              />
+                              {it}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            <EmptyState />
+          )}
 
           {galleryImages.length > 0 && (
             <motion.div
@@ -800,7 +678,7 @@ export default function AboutClient({
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionEyebrow
+          <SectionHeading
             tag="Foundation · 003"
             title="Core"
             accent="Principles"
@@ -808,32 +686,36 @@ export default function AboutClient({
             color="lime"
           />
 
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {principles.map((p, i) => {
-              const accent = p.color || (i % 2 === 0 ? 'lime' : 'violet');
-              return (
-                <motion.div key={p.label || i} variants={cardReveal}>
-                  <div className="holographic-card no-lift group flex items-center gap-4 rounded-2xl p-5 sm:p-6">
-                    <IconBox
-                      icon={p.icon}
-                      size={20}
-                      accent={accent}
-                      className="h-11 w-11 shrink-0 group-hover:scale-110"
-                    />
-                    <span className="text-sm font-medium text-zinc-300 transition-colors group-hover:text-white sm:text-base">
-                      {p.label}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          {principles.length > 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {principles.map((p, i) => {
+                const accent = p.color || (i % 2 === 0 ? 'lime' : 'violet');
+                return (
+                  <motion.div key={p.label || i} variants={cardReveal}>
+                    <div className="holographic-card no-lift group flex items-center gap-4 rounded-2xl p-5 sm:p-6">
+                      <IconBox
+                        icon={p.icon}
+                        size={20}
+                        accent={accent}
+                        className="h-11 w-11 shrink-0 group-hover:scale-110"
+                      />
+                      <span className="text-sm font-medium text-zinc-300 transition-colors group-hover:text-white sm:text-base">
+                        {p.label}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            <EmptyState />
+          )}
         </div>
       </section>
 
@@ -846,7 +728,7 @@ export default function AboutClient({
         </div>
 
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <SectionEyebrow
+          <SectionHeading
             tag="Structure · 004"
             title="How We're"
             accent="Organized"
@@ -862,49 +744,54 @@ export default function AboutClient({
               aria-hidden
             />
 
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="space-y-4"
-            >
-              {orgItems.map((item, i) => {
-                const accent = item.color || (i % 2 === 0 ? 'lime' : 'violet');
-                return (
-                  <motion.div key={item.title || i} variants={fadeUp}>
-                    <div className="holographic-card no-lift group relative flex items-center gap-5 rounded-xl py-5 pr-6 pl-16 md:pl-20">
-                      {/* Connector dot */}
-                      <div
-                        className={cn(
-                          'absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-[#05060b] shadow-lg transition-transform duration-300 group-hover:scale-125',
-                          accent === 'lime'
-                            ? 'bg-neon-lime shadow-[0_0_8px_rgba(182,243,107,0.4)]'
-                            : 'bg-neon-violet shadow-[0_0_8px_rgba(124,92,255,0.4)]'
-                        )}
-                        style={{ left: '1.6rem' }}
-                      />
+            {orgItems.length > 0 ? (
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                className="space-y-4"
+              >
+                {orgItems.map((item, i) => {
+                  const accent =
+                    item.color || (i % 2 === 0 ? 'lime' : 'violet');
+                  return (
+                    <motion.div key={item.title || i} variants={fadeUp}>
+                      <div className="holographic-card no-lift group relative flex items-center gap-5 rounded-xl py-5 pr-6 pl-16 md:pl-20">
+                        {/* Connector dot */}
+                        <div
+                          className={cn(
+                            'absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-[#05060b] shadow-lg transition-transform duration-300 group-hover:scale-125',
+                            accent === 'lime'
+                              ? 'bg-neon-lime shadow-[0_0_8px_rgba(182,243,107,0.4)]'
+                              : 'bg-neon-violet shadow-[0_0_8px_rgba(124,92,255,0.4)]'
+                          )}
+                          style={{ left: '1.6rem' }}
+                        />
 
-                      <IconBox
-                        icon={item.icon}
-                        size={18}
-                        accent={accent}
-                        className="h-10 w-10 shrink-0"
-                      />
+                        <IconBox
+                          icon={item.icon}
+                          size={18}
+                          accent={accent}
+                          className="h-10 w-10 shrink-0"
+                        />
 
-                      <div className="min-w-0">
-                        <h4 className="font-heading text-base font-black text-white sm:text-lg">
-                          {item.title}
-                        </h4>
-                        <p className="mt-0.5 text-sm text-zinc-500">
-                          {item.desc || item.description}
-                        </p>
+                        <div className="min-w-0">
+                          <h4 className="font-heading text-base font-black text-white sm:text-lg">
+                            {item.title}
+                          </h4>
+                          <p className="mt-0.5 text-sm text-zinc-500">
+                            {item.desc || item.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <EmptyState />
+            )}
           </div>
         </div>
       </section>
@@ -919,7 +806,7 @@ export default function AboutClient({
           </div>
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <SectionEyebrow
+            <SectionHeading
               tag="Leadership · 005"
               title="Core"
               accent="Architects"
@@ -983,7 +870,7 @@ export default function AboutClient({
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionEyebrow
+          <SectionHeading
             tag="Community · 006"
             title="Growth &"
             accent="Inclusivity"
@@ -991,72 +878,90 @@ export default function AboutClient({
             color="lime"
           />
 
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="grid gap-6 lg:grid-cols-2 lg:gap-8"
-          >
-            {/* WIE */}
+          {hasWie || hasMentorship ? (
             <motion.div
-              variants={fadeUp}
-              className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="grid gap-6 lg:grid-cols-2 lg:gap-8"
             >
-              <div className="mb-6 flex items-center gap-4">
-                <IconBox
-                  icon={Users}
-                  size={22}
-                  accent="lime"
-                  className="h-12 w-12"
-                />
-                <div>
-                  <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
-                    {displayWieTitle}
-                  </h3>
-                  <div className="bg-neon-lime mt-1.5 h-0.5 w-14 rounded-full" />
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed text-zinc-400 sm:text-base">
-                {displayWieDesc}
-              </p>
-            </motion.div>
+              {/* WIE */}
+              {hasWie && (
+                <motion.div
+                  variants={fadeUp}
+                  className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
+                >
+                  <div className="mb-6 flex items-center gap-4">
+                    <IconBox
+                      icon={Users}
+                      size={22}
+                      accent="lime"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      {displayWieTitle && (
+                        <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
+                          {displayWieTitle}
+                        </h3>
+                      )}
+                      <div className="bg-neon-lime mt-1.5 h-0.5 w-14 rounded-full" />
+                    </div>
+                  </div>
+                  {displayWieDesc && (
+                    <p className="text-sm leading-relaxed text-zinc-400 sm:text-base">
+                      {displayWieDesc}
+                    </p>
+                  )}
+                </motion.div>
+              )}
 
-            {/* Mentorship */}
-            <motion.div
-              variants={fadeUp}
-              className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
-            >
-              <div className="mb-6 flex items-center gap-4">
-                <IconBox
-                  icon={GraduationCap}
-                  size={22}
-                  accent="violet"
-                  className="h-12 w-12"
-                />
-                <div>
-                  <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
-                    {displayMentorTitle}
-                  </h3>
-                  <div className="bg-neon-violet mt-1.5 h-0.5 w-14 rounded-full" />
-                </div>
-              </div>
-              <p className="mb-5 text-sm text-zinc-400 sm:text-base">
-                {displayMentorDesc}
-              </p>
-              <ul className="space-y-3">
-                {displayMentorAreas.map((area, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center gap-3 text-sm text-zinc-400 transition-colors hover:text-zinc-200 sm:text-base"
-                  >
-                    <span className="bg-neon-violet h-1 w-1 shrink-0 rounded-full" />
-                    {area}
-                  </li>
-                ))}
-              </ul>
+              {/* Mentorship */}
+              {hasMentorship && (
+                <motion.div
+                  variants={fadeUp}
+                  className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
+                >
+                  <div className="mb-6 flex items-center gap-4">
+                    <IconBox
+                      icon={GraduationCap}
+                      size={22}
+                      accent="violet"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      {displayMentorTitle && (
+                        <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
+                          {displayMentorTitle}
+                        </h3>
+                      )}
+                      <div className="bg-neon-violet mt-1.5 h-0.5 w-14 rounded-full" />
+                    </div>
+                  </div>
+                  {displayMentorDesc && (
+                    <p className="mb-5 text-sm text-zinc-400 sm:text-base">
+                      {displayMentorDesc}
+                    </p>
+                  )}
+                  {displayMentorAreas.length > 0 && (
+                    <ul className="space-y-3">
+                      {displayMentorAreas.map((area, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-3 text-sm text-zinc-400 transition-colors hover:text-zinc-200 sm:text-base"
+                        >
+                          <span className="bg-neon-violet h-1 w-1 shrink-0 rounded-full" />
+                          {area}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.div>
+              )}
             </motion.div>
-          </motion.div>
+          ) : (
+            <EmptyState />
+          )}
         </div>
       </section>
 
@@ -1086,11 +991,8 @@ export default function AboutClient({
       {/* ================================================================ */}
       <CTASection
         icon="🎯"
-        title={settings?.about_page_cta_title || 'Ready to Join Us?'}
-        description={
-          settings?.about_page_cta_description ||
-          'Become part of a community dedicated to excellence in programming and innovation.'
-        }
+        title={settings?.about_page_cta_title}
+        description={settings?.about_page_cta_description}
         primaryAction={{ label: 'Join the Club', href: '/join' }}
         secondaryAction={{ label: 'Meet Our Committee', href: '/committee' }}
       />

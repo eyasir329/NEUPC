@@ -26,7 +26,7 @@ const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const PER_PAGE = 6;
+export const EVENTS_PER_PAGE = 6;
 
 const STATUS_STYLES = {
   upcoming: {
@@ -478,13 +478,19 @@ function ArchiveRow({ event }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function EventsClient({ events = [], settings = {} }) {
+export default function EventsClient({
+  events = [],
+  featuredEvents = [],
+  settings = {},
+}) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatus] = useState('active');
   const [categoryFilter, setCategory] = useState('all');
   const [currentPage, setPage] = useState(1);
   const [showAllArchive, setShowAll] = useState(false);
 
+  // Status counts + categories describe the whole published set, so they stay
+  // accurate regardless of the current page/filter.
   const counts = useMemo(
     () => ({
       all: events.length,
@@ -496,7 +502,6 @@ export default function EventsClient({ events = [], settings = {} }) {
     }),
     [events]
   );
-
   const categories = useMemo(
     () => [
       'all',
@@ -507,28 +512,24 @@ export default function EventsClient({ events = [], settings = {} }) {
     [events]
   );
 
-  const featuredEvents = useMemo(() => {
-    const flagged = events.filter((e) => e.is_featured);
-    if (flagged.length > 0) {
-      const rank = (e) => (['upcoming', 'ongoing'].includes(e.status) ? 0 : 1);
-      return [...flagged].sort((a, b) => rank(a) - rank(b));
-    }
-    const fallback =
-      events.find((e) => ['upcoming', 'ongoing'].includes(e.status)) ||
-      events[0];
-    return fallback ? [fallback] : [];
-  }, [events]);
+  // Soonest-first for live/upcoming, most-recent-first for past/all.
+  const sort =
+    statusFilter === 'completed' || statusFilter === 'all'
+      ? 'date_desc'
+      : 'date_asc';
 
+  // Filter + sort the full set in the browser. The dataset is small, so this
+  // avoids a server round-trip on every filter/page click.
   const filtered = useMemo(() => {
-    let list = [...events];
+    let list = events;
     if (statusFilter === 'active')
       list = list.filter((e) => ['upcoming', 'ongoing'].includes(e.status));
     else if (statusFilter !== 'all')
       list = list.filter((e) => e.status === statusFilter);
     if (categoryFilter !== 'all')
       list = list.filter((e) => e.category === categoryFilter);
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
+    if (q)
       list = list.filter(
         (e) =>
           e.title?.toLowerCase().includes(q) ||
@@ -536,17 +537,24 @@ export default function EventsClient({ events = [], settings = {} }) {
           e.location?.toLowerCase().includes(q) ||
           e.category?.toLowerCase().includes(q)
       );
-    }
-    return list.sort((a, b) => {
-      const w = { ongoing: 0, upcoming: 1, completed: 2 };
-      const d = (w[a.status] ?? 3) - (w[b.status] ?? 3);
-      return d !== 0
-        ? d
-        : new Date(a.start_date || 0) - new Date(b.start_date || 0);
-    });
-  }, [events, statusFilter, categoryFilter, search]);
+    const asc = sort === 'date_asc';
+    return [...list].sort((a, b) =>
+      asc
+        ? new Date(a.start_date || 0) - new Date(b.start_date || 0)
+        : new Date(b.start_date || 0) - new Date(a.start_date || 0)
+    );
+  }, [events, statusFilter, categoryFilter, search, sort]);
 
-  const archive = useMemo(
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / EVENTS_PER_PAGE);
+  // Clamp so a shrinking result set never strands us on an empty page.
+  const safePage = Math.min(currentPage, totalPages || 1);
+  const items = filtered.slice(
+    (safePage - 1) * EVENTS_PER_PAGE,
+    safePage * EVENTS_PER_PAGE
+  );
+
+  const archiveEvents = useMemo(
     () =>
       events
         .filter((e) => e.status === 'completed')
@@ -555,19 +563,15 @@ export default function EventsClient({ events = [], settings = {} }) {
         ),
     [events]
   );
-
-  const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const pageEvents = filtered.slice(
-    (currentPage - 1) * PER_PAGE,
-    currentPage * PER_PAGE
-  );
-  const visibleArchive = showAllArchive ? archive : archive.slice(0, 5);
+  const visibleArchive = showAllArchive
+    ? archiveEvents
+    : archiveEvents.slice(0, 5);
 
   const heroTitle = settings?.events_page_title || 'Events & Challenges';
   const heroDesc =
     settings?.events_page_description ||
     "Join NEUPC's competitive programming events, technical workshops, and elite hackathons designed to sharpen your edge.";
-  const liveCount = counts.upcoming + counts.ongoing;
+  const liveCount = (counts.upcoming || 0) + (counts.ongoing || 0);
 
   const gridRef = useRef(null);
 
@@ -776,7 +780,7 @@ export default function EventsClient({ events = [], settings = {} }) {
               variants={fadeUp}
               className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
             >
-              {filtered.length} event{filtered.length !== 1 ? 's' : ''}
+              {total} event{total !== 1 ? 's' : ''}
             </motion.p>
           </motion.div>
 
@@ -897,60 +901,62 @@ export default function EventsClient({ events = [], settings = {} }) {
           </motion.div>
 
           {/* Cards grid */}
-          {pageEvents.length > 0 ? (
-            <>
-              <motion.div
-                variants={{
-                  hidden: {},
-                  visible: { transition: { staggerChildren: 0.08 } },
-                }}
-                initial="hidden"
-                whileInView="visible"
-                viewport={viewport}
-                className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
-              >
-                {pageEvents.map((event, i) => (
-                  <EventCard key={event.id} event={event} index={i} />
-                ))}
-              </motion.div>
-              <InlinePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                total={filtered.length}
-                perPage={PER_PAGE}
-                onPageChange={changePage}
-                itemLabel="event"
-              />
-            </>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={viewport}
-              className="ph flex flex-col items-center gap-3 rounded-2xl py-16 text-center sm:py-24"
-            >
-              <div className="text-3xl">🔍</div>
-              <p className="font-heading text-base font-bold text-white sm:text-lg">
-                No events found
-              </p>
-              <p className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 uppercase">
-                Try different keywords or clear your filters
-              </p>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearAll}
-                  className="hover:border-neon-lime/30 hover:text-neon-lime mt-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase transition-colors"
+          <div>
+            {items.length > 0 ? (
+              <>
+                <motion.div
+                  key={`${statusFilter}-${categoryFilter}-${safePage}`}
+                  variants={{
+                    hidden: {},
+                    visible: { transition: { staggerChildren: 0.08 } },
+                  }}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
-                  Clear filters
-                </button>
-              )}
-            </motion.div>
-          )}
+                  {items.map((event, i) => (
+                    <EventCard key={event.id} event={event} index={i} />
+                  ))}
+                </motion.div>
+                <InlinePagination
+                  currentPage={safePage}
+                  totalPages={totalPages}
+                  total={total}
+                  perPage={EVENTS_PER_PAGE}
+                  onPageChange={changePage}
+                  itemLabel="event"
+                />
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={viewport}
+                className="ph flex flex-col items-center gap-3 rounded-2xl py-16 text-center sm:py-24"
+              >
+                <div className="text-3xl">🔍</div>
+                <p className="font-heading text-base font-bold text-white sm:text-lg">
+                  No events found
+                </p>
+                <p className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 uppercase">
+                  Try different keywords or clear your filters
+                </p>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="hover:border-neon-lime/30 hover:text-neon-lime mt-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase transition-colors"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </div>
         </div>
       </section>
 
       {/* ── Archive ───────────────────────────────────────────────────────── */}
-      {archive.length > 0 && (
+      {archiveEvents.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <motion.div
@@ -981,7 +987,7 @@ export default function EventsClient({ events = [], settings = {} }) {
                 variants={fadeUp}
                 className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
               >
-                {archive.length} completed
+                {archiveEvents.length} completed
               </motion.p>
             </motion.div>
 
@@ -996,13 +1002,19 @@ export default function EventsClient({ events = [], settings = {} }) {
               className="border-t border-white/5"
             >
               {visibleArchive.map((event) => (
-                <motion.div key={event.id} variants={cardReveal}>
+                <motion.div
+                  key={event.id}
+                  variants={cardReveal}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={viewport}
+                >
                   <ArchiveRow event={event} />
                 </motion.div>
               ))}
             </motion.div>
 
-            {archive.length > 5 && (
+            {archiveEvents.length > 5 && (
               <div className="mt-8 text-center sm:mt-10">
                 <button
                   onClick={() => setShowAll((v) => !v)}
@@ -1010,7 +1022,7 @@ export default function EventsClient({ events = [], settings = {} }) {
                 >
                   {showAllArchive
                     ? 'Show Less'
-                    : `Show All ${archive.length} Events`}
+                    : `Show All ${archiveEvents.length} Events`}
                 </button>
               </div>
             )}

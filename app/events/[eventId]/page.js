@@ -476,12 +476,6 @@ async function EventDetailPage({ params }) {
                   </span>
                 </a>
               )}
-              <a
-                href="#about"
-                className="font-heading hover:border-neon-lime/40 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all hover:text-white sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
-              >
-                View Details
-              </a>
             </div>
             {/* Deadline urgency — shown near CTA so users see it before scrolling away */}
             {isActive &&

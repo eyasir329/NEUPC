@@ -12,6 +12,9 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
 import CTASection from '@/app/_components/ui/CTASection';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -22,30 +25,6 @@ import {
 const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
-
-// ─── Fallback data ───────────────────────────────────────────────────────────
-
-const DEFAULT_ADVISORS = [
-  {
-    id: 'default-advisor',
-    name: 'Dr. Mohammad Rahman',
-    position: 'Associate Professor',
-    designation: 'Faculty Advisor',
-    department: 'Department of CSE',
-    university: 'Netrokona University',
-    image: '',
-    message:
-      'The Programming Club aims to build problem solvers and innovators who can compete globally while contributing locally.',
-    linkedin: '',
-    github: '',
-  },
-];
-
-const HERO_STATS_DEFAULT = [
-  { value: '15+', label: 'Committee Members' },
-  { value: '7', label: 'Departments' },
-  { value: '2025-26', label: 'Current Term' },
-];
 
 // ─── Inline SVG icons ────────────────────────────────────────────────────────
 
@@ -129,27 +108,6 @@ function SocialBtn({ href, icon, label }) {
   );
 }
 
-// ─── Stat tile (exact match to events page) ───────────────────────────────────
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-start gap-0.5">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
-  );
-}
-
 // ─── Section heading (matches events "Featured Event" heading style) ──────────
 
 function SectionLabel({ tag, title, accent, onMount = false }) {
@@ -186,13 +144,7 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
 function Hero({ stats, settings }) {
   return (
     <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-      {/* Ambient background — exact events pattern */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="grid-overlay absolute inset-0 opacity-25" />
-        <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-        <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-      </div>
+      <HeroAmbient />
 
       <motion.div
         variants={stagger}
@@ -215,7 +167,8 @@ function Hero({ stats, settings }) {
             className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
           >
             {(() => {
-              const title = settings?.committee_page_title || 'Meet the Committee';
+              const title =
+                settings?.committee_page_title || 'Meet the Committee';
               if (title.includes(' ')) {
                 return (
                   <>
@@ -276,13 +229,7 @@ function Hero({ stats, settings }) {
         </div>
       </motion.div>
 
-      {/* Scroll cue */}
-      <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-        <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-          Scroll
-        </span>
-        <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-      </div>
+      <ScrollCue />
     </section>
   );
 }
@@ -567,9 +514,8 @@ export default function CommitteeClient({
   heroStats: propHeroStats = [],
   settings = {},
 }) {
-  const advisors = propAdvisors.length > 0 ? propAdvisors : DEFAULT_ADVISORS;
-  const heroStats =
-    propHeroStats.length > 0 ? propHeroStats : HERO_STATS_DEFAULT;
+  const advisors = propAdvisors;
+  const heroStats = propHeroStats;
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
@@ -577,26 +523,32 @@ export default function CommitteeClient({
       <Hero stats={heroStats} settings={settings} />
 
       {/* ── Advisory Board ───────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionLabel
-            tag="Guidance & Mentorship"
-            title="Advisory"
-            accent="Board"
-            onMount
-          />
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-            className="grid gap-4 sm:gap-5 md:grid-cols-2"
-          >
-            {advisors.map((advisor, i) => (
-              <AdvisorCard key={advisor.id || i} advisor={advisor} index={i} />
-            ))}
-          </motion.div>
-        </div>
-      </section>
+      {advisors.length > 0 && (
+        <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionLabel
+              tag="Guidance & Mentorship"
+              title="Advisory"
+              accent="Board"
+              onMount
+            />
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="visible"
+              className="grid gap-4 sm:gap-5 md:grid-cols-2"
+            >
+              {advisors.map((advisor, i) => (
+                <AdvisorCard
+                  key={advisor.id || i}
+                  advisor={advisor}
+                  index={i}
+                />
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       <Divider />
 

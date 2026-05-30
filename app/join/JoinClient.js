@@ -9,9 +9,10 @@ import { signIn } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsMember } from '@/app/_components/ui/UserRoleProvider';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -27,40 +28,6 @@ const cardsStagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
-
-// ─── Default features ────────────────────────────────────────────────────────
-
-const DEFAULT_FEATURES = [
-  {
-    Icon: Zap,
-    title: 'Event Registration',
-    description:
-      'Register for contests, workshops, and hackathons as they go live.',
-    accent: true,
-  },
-  {
-    Icon: Users,
-    title: 'Smart Notifications',
-    description:
-      'Get alerts for events, blogs, roadmaps, and club announcements.',
-    accent: false,
-  },
-  {
-    Icon: BarChart2,
-    title: 'Participation Log',
-    description:
-      'Track your event history and download participation certificates.',
-    accent: true,
-  },
-  {
-    Icon: BadgeCheck,
-    title: 'Membership Apply',
-    description: 'Submit your application to become an official club member.',
-    accent: false,
-  },
-];
-
-const ICON_MAP = { Zap, Users, BarChart2, BadgeCheck };
 
 // ─── Google SVG ───────────────────────────────────────────────────────────────
 
@@ -133,30 +100,18 @@ export default function JoinClient({
   const handleGoogleSignIn = () =>
     signIn('google', { callbackUrl: '/account' });
 
-  const features =
-    propFeatures.length > 0
-      ? propFeatures.map((f, i) => ({
-          Icon:
-            ICON_MAP[DEFAULT_FEATURES[i]?.Icon?.displayName] ||
-            DEFAULT_FEATURES[i]?.Icon ||
-            Zap,
-          title: f.title,
-          description: f.description,
-          accent: i % 2 === 0,
-        }))
-      : DEFAULT_FEATURES;
+  const features = propFeatures.map((f, i) => ({
+    Icon: Icons[f.icon] || Icons.Zap,
+    title: f.title,
+    description: f.description,
+    accent: i % 2 === 0,
+  }));
 
   return (
     <div className="overflow-x-clip">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[85vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background — matches Events page exactly */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-100 w-100 -translate-x-1/2 rounded-full blur-[120px] sm:h-125 sm:w-125" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-75 w-75 rounded-full blur-[120px] sm:h-100 sm:w-100" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+      <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}

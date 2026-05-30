@@ -14,47 +14,135 @@ export async function getAllEvents() {
   return data;
 }
 
+// Statuses shown on public surfaces (everything except draft/cancelled).
+const PUBLISHED_STATUSES = ['upcoming', 'ongoing', 'completed'];
+
+// Resolve eligibility role_ids → display names. Mutates + returns the list.
+async function resolveEventEligibility(events) {
+  const allEligibilities = events.map((e) => e.eligibility).filter(Boolean);
+
+  // Filter only valid UUIDs for roles lookup to avoid PostgREST 400 Bad Request
+  const uuidRoleIds = [
+    ...new Set(
+      allEligibilities.filter(
+        (v) =>
+          v !== 'all' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+      )
+    ),
+  ];
+
+  const roleMap = {};
+  if (uuidRoleIds.length > 0) {
+    const { data: roles } = await supabase
+      .from('roles')
+      .select('id, name')
+      .in('id', uuidRoleIds);
+    (roles || []).forEach((r) => {
+      roleMap[r.id] =
+        r.name.charAt(0).toUpperCase() + r.name.slice(1) + 's Only';
+    });
+  }
+
+  events.forEach((e) => {
+    if (e.eligibility === 'all') {
+      e.eligibility = 'Everyone';
+    } else if (roleMap[e.eligibility]) {
+      e.eligibility = roleMap[e.eligibility];
+    } else if (
+      e.eligibility &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.eligibility)
+    ) {
+      // If it is already a role name (e.g. 'member'), format it nicely
+      e.eligibility =
+        e.eligibility.charAt(0).toUpperCase() + e.eligibility.slice(1) + 's Only';
+    }
+  });
+
+  return events;
+}
+
 // Get published events.
 export async function getPublishedEvents() {
   const { data, error } = await supabase
     .from('events')
     .select('*')
-    .in('status', ['upcoming', 'ongoing', 'completed'])
+    .in('status', PUBLISHED_STATUSES)
     .order('start_date', { ascending: false });
   if (error) throw new Error(error.message);
+  return resolveEventEligibility(data || []);
+}
 
-  // Resolve eligibility role_ids → display names
-  const events = data || [];
-  const roleIds = [
-    ...new Set(
-      events.map((e) => e.eligibility).filter((v) => v && v !== 'all')
-    ),
-  ];
+// Get a page of published events + total count, with status/category/search/sort
+// filters applied at the database level (server-side pagination).
+export async function getPublishedEventsPage({
+  page = 1,
+  pageSize = 6,
+  status = 'all',
+  category = 'all',
+  search = '',
+  sort = 'date_desc',
+} = {}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeSize = Math.max(1, Number(pageSize) || 6);
+  const from = (safePage - 1) * safeSize;
+  const to = from + safeSize - 1;
 
-  if (roleIds.length > 0) {
-    const { data: roles } = await supabase
-      .from('roles')
-      .select('id, name')
-      .in('id', roleIds);
-    const roleMap = {};
-    (roles || []).forEach((r) => {
-      roleMap[r.id] =
-        r.name.charAt(0).toUpperCase() + r.name.slice(1) + 's Only';
-    });
-    events.forEach((e) => {
-      if (e.eligibility === 'all') {
-        e.eligibility = 'Everyone';
-      } else if (roleMap[e.eligibility]) {
-        e.eligibility = roleMap[e.eligibility];
-      }
-    });
+  let query = supabase.from('events').select('*', { count: 'exact' });
+
+  if (status === 'active') {
+    query = query.in('status', ['upcoming', 'ongoing']);
+  } else if (status && status !== 'all') {
+    query = query.eq('status', status);
   } else {
-    events.forEach((e) => {
-      if (e.eligibility === 'all') e.eligibility = 'Everyone';
-    });
+    query = query.in('status', PUBLISHED_STATUSES);
   }
 
-  return events;
+  if (category && category !== 'all') {
+    query = query.eq('category', category);
+  }
+
+  // Strip PostgREST or-filter delimiters so free-text search can't break the query.
+  const q = (search || '').trim().replace(/[,()]/g, ' ').trim();
+  if (q) {
+    query = query.or(
+      `title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`
+    );
+  }
+
+  query = query
+    .order('start_date', { ascending: sort === 'date_asc' })
+    .range(from, to);
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  const items = await resolveEventEligibility(data || []);
+  return { items, total: count || 0 };
+}
+
+// Lightweight facets for the events page: distinct categories + status counts
+// across ALL published events (independent of the current page/filters).
+export async function getEventFacets() {
+  const { data, error } = await supabase
+    .from('events')
+    .select('status, category')
+    .in('status', PUBLISHED_STATUSES);
+  if (error) throw new Error(error.message);
+  const rows = data || [];
+  return {
+    categories: [
+      ...new Set(rows.map((r) => r.category).filter(Boolean)),
+    ].sort(),
+    counts: {
+      all: rows.length,
+      active: rows.filter((r) => ['upcoming', 'ongoing'].includes(r.status))
+        .length,
+      upcoming: rows.filter((r) => r.status === 'upcoming').length,
+      ongoing: rows.filter((r) => r.status === 'ongoing').length,
+      completed: rows.filter((r) => r.status === 'completed').length,
+    },
+  };
 }
 
 // Get upcoming published events.
@@ -125,14 +213,22 @@ export async function getEventById(id) {
   // Resolve eligibility role_id → display name (keep raw value for registration logic)
   data.eligibility_raw = data.eligibility;
   if (data.eligibility && data.eligibility !== 'all') {
-    const { data: role } = await supabase
-      .from('roles')
-      .select('name')
-      .eq('id', data.eligibility)
-      .single();
-    if (role) {
+    const isEligibilityUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.eligibility);
+    if (isEligibilityUUID) {
+      const { data: role } = await supabase
+        .from('roles')
+        .select('name')
+        .eq('id', data.eligibility)
+        .single();
+      if (role) {
+        data.eligibility =
+          role.name.charAt(0).toUpperCase() + role.name.slice(1) + 's Only';
+      }
+    } else {
+      // If it's already a role name string, format it nicely
       data.eligibility =
-        role.name.charAt(0).toUpperCase() + role.name.slice(1) + 's Only';
+        data.eligibility.charAt(0).toUpperCase() + data.eligibility.slice(1) + 's Only';
     }
   } else if (data.eligibility === 'all') {
     data.eligibility = 'Everyone';

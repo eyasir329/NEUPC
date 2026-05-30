@@ -10,6 +10,8 @@
 import { unstable_cache } from 'next/cache';
 import {
   getPublishedEvents,
+  getPublishedEventsPage,
+  getEventFacets,
   getFeaturedEvents,
   getUpcomingEvents,
   getEventBySlug,
@@ -356,6 +358,62 @@ export const getPublicFeaturedEvents = unstable_cache(
   },
   ['public-featured-events'],
   { revalidate: 300, tags: ['events'] }
+);
+
+// Server-side paginated events list. Cached per filter/sort/page combination.
+// The try/catch sits OUTSIDE unstable_cache on purpose: a transient DB error
+// returns an empty page for this request only. If the catch lived inside the
+// cached function, that empty fallback would be cached for the whole revalidate
+// window — blanking the list for ~5 minutes after one hiccup.
+export const getPublicEventsPage = async ({
+  page = 1,
+  pageSize = 6,
+  status = 'all',
+  category = 'all',
+  search = '',
+  sort = 'date_desc',
+} = {}) => {
+  try {
+    return await unstable_cache(
+      () =>
+        getPublishedEventsPage({
+          page,
+          pageSize,
+          status,
+          category,
+          search,
+          sort,
+        }),
+      [
+        'public-events-page',
+        String(page),
+        String(pageSize),
+        status,
+        category,
+        search,
+        sort,
+      ],
+      { revalidate: 300, tags: ['events'] }
+    )();
+  } catch {
+    return { items: [], total: 0 };
+  }
+};
+
+// Distinct categories + status counts for the events filter UI (whole table).
+export const getPublicEventFacets = unstable_cache(
+  async () => {
+    try {
+      return await getEventFacets();
+    } catch {
+      return {
+        categories: [],
+        counts: { all: 0, active: 0, upcoming: 0, ongoing: 0, completed: 0 },
+      };
+    }
+  },
+  ['public-event-facets'],
+  { revalidate: 600, tags: ['events'] }
 );
 
 export const getPublicUpcomingEvents = (limit = 3) =>
