@@ -11,12 +11,12 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { getInitials, driveImageUrl } from '@/app/_lib/utils';
+import { getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   addLessonCommentAction,
   editLessonCommentAction,
   deleteLessonCommentAction,
-} from '@/app/_lib/member-lesson-comments-actions';
+} from '@/app/_lib/actions/member-lesson-comments-actions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -394,7 +394,7 @@ export default function LessonComments({
     <section className="mt-10 border-t border-white/[0.07] pt-8">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+        <h2 className="text-sm font-bold tracking-wider text-white uppercase">
           Discussion
         </h2>
         {comments.length > 0 && (

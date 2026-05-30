@@ -3,10 +3,10 @@
  * @module ExecutiveBootcampsPage
  */
 
-import { getAdminBootcamps } from '@/app/_lib/bootcamp-actions';
+import { getAdminBootcamps } from '@/app/_lib/actions/bootcamp-actions';
 import BootcampErrorState from '@/app/account/_components/bootcamps/BootcampErrorState';
 import { safeFetch } from '@/app/account/_components/bootcamps/bootcampPageHelpers';
-import BootcampManagementClient from '../../admin/bootcamps/_components/BootcampManagementClient';
+import BootcampManagementClient from '@/app/account/admin/bootcamps/_components/BootcampManagementClient';
 
 export const metadata = {
   title: 'Bootcamp Management | Executive',

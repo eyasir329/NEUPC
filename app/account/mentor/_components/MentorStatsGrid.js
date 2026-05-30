@@ -1,7 +1,19 @@
+/**
+ * @file Mentor stats grid component
+ * @module MentorStatsGrid
+ */
+
 'use client';
 
-import { Users, Calendar, CheckCircle, Star, TrendingUp, MessageSquare } from 'lucide-react';
-import { StatCard } from './_ui';
+import {
+  Users,
+  Calendar,
+  CheckCircle,
+  Star,
+  TrendingUp,
+  MessageSquare,
+} from 'lucide-react';
+import { StatCard } from '@/app/account/_components/ui';
 
 export default function MentorStatsGrid({ stats }) {
   const cards = [
@@ -51,7 +63,7 @@ export default function MentorStatsGrid({ stats }) {
   ];
 
   return (
-    <div className="grid gap-3 grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
       {cards.map((c, i) => (
         <StatCard key={c.label} delay={i * 0.06} {...c} />
       ))}

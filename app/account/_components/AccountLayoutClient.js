@@ -12,7 +12,9 @@ import { usePathname } from 'next/navigation';
 import { useRole } from './RoleContext';
 import AccountSidebar from './AccountSidebar';
 import DashboardTopbar from './DashboardTopbar';
-import { getSidebarNavigation } from '@/app/_lib/sidebarConfig';
+import { getSidebarNavigation } from '@/app/_lib/config/sidebarConfig';
+import { cn } from '@/app/_lib/utils/utils';
+
 
 // Valid role segments in the URL
 const VALID_ROLES = [
@@ -84,11 +86,14 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   // Tablet detection: md (768) ≤ width < lg (1024). On tablet sidebar auto-collapses.
   const [isTablet, setIsTablet] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)').matches;
+    return window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)')
+      .matches;
   });
   const collapsed = isTablet ? true : userCollapsed;
   const setCollapsed = (next) => {
-    setUserCollapsed((prev) => (typeof next === 'function' ? next(prev) : next));
+    setUserCollapsed((prev) =>
+      typeof next === 'function' ? next(prev) : next
+    );
   };
   const pathname = usePathname();
 
@@ -101,7 +106,9 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   const { activeRole, setActiveRole } = useRole();
 
   // Mark prefs as loaded post-mount (init was eager via lazy useState)
-  useEffect(() => { setCollapsePrefLoaded(true); }, []);
+  useEffect(() => {
+    setCollapsePrefLoaded(true);
+  }, []);
 
   // Persist collapse preference (only the user-driven one, not the tablet auto-collapse)
   useEffect(() => {
@@ -111,7 +118,9 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
 
   // Track tablet breakpoint to auto-collapse rail
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)');
+    const mql = window.matchMedia(
+      '(min-width: 768px) and (max-width: 1023.98px)'
+    );
     const onChange = (e) => setIsTablet(e.matches);
     setIsTablet(mql.matches);
     mql.addEventListener('change', onChange);
@@ -173,7 +182,7 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   }, [currentRole, session]);
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-[#0B1121]">
+    <div className={cn("relative flex bg-[#0B1121] w-full", hideSidebar ? "min-h-screen overflow-x-hidden" : "h-screen overflow-hidden")}>
       <AccountSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -187,15 +196,18 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
       />
 
       {/* Main Content Area */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className={cn("flex min-w-0 flex-1 flex-col", hideSidebar ? "w-full" : "overflow-hidden")}>
         {!hideSidebar && (
           <DashboardTopbar
             activeRole={currentRole}
             notificationCount={SIDEBAR_STATS.notifications}
           />
         )}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
+        <div className={cn("flex-1", hideSidebar ? "w-full" : "overflow-x-hidden overflow-y-auto")}>
+          {children}
+        </div>
       </main>
     </div>
   );
 }
+

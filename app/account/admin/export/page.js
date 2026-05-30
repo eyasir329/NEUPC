@@ -6,7 +6,7 @@
  * @access admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import ExportClient from './_components/ExportClient';
 
 export const metadata = { title: 'Export | Admin | NEUPC' };

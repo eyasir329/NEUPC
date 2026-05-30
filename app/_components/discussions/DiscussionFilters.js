@@ -25,7 +25,7 @@ import {
   DISCUSSION_STATUS_KEYS,
   DISCUSSION_PRIORITY_KEYS,
   SORT_OPTION_KEYS,
-} from '@/app/_lib/discussion-config';
+} from '@/app/_lib/config/discussion-config';
 import { StatusBadge, TypeBadge, PriorityBadge } from './DiscussionBadges';
 
 /**

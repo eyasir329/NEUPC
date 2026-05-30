@@ -38,24 +38,24 @@ const ICON_TONE = {
 
 export default function QuickActions({ quickActions = [] }) {
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10 gap-3">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-12 h-12 bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 rounded-2xl shrink-0">
-            <Zap className="w-6 h-6" />
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
+            <Zap className="h-6 w-6" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
               Quick Actions
             </h3>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="mt-1 text-xs text-zinc-500">
               Jump into the most-used admin tools
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {quickActions.map((action, idx) => {
           const Icon = ICON_MAP[action.iconName] ?? Settings;
           const tone = ICON_TONE[action.color] ?? 'text-zinc-300';
@@ -66,16 +66,16 @@ export default function QuickActions({ quickActions = [] }) {
               className="group relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-all hover:border-white/20 hover:bg-white/[0.06]"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center rounded-2xl group-hover:scale-105 transition-transform shrink-0">
-                  <Icon className={`w-5 h-5 ${tone}`} />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 transition-transform group-hover:scale-105">
+                  <Icon className={`h-5 w-5 ${tone}`} />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-zinc-600 opacity-0 group-hover:opacity-100 group-hover:text-zinc-300 transition-all" />
+                <ArrowUpRight className="h-4 w-4 text-zinc-600 opacity-0 transition-all group-hover:text-zinc-300 group-hover:opacity-100" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-zinc-100 truncate">
+                <p className="truncate text-sm font-bold text-zinc-100">
                   {action.title}
                 </p>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1 truncate">
+                <p className="mt-1 truncate text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                   {action.count}
                 </p>
               </div>

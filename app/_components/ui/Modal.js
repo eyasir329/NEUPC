@@ -97,9 +97,7 @@ export default function Modal({
         )}
 
         {/* Body */}
-        <div className="overflow-auto px-6 py-4">
-          {children}
-        </div>
+        <div className="overflow-auto px-6 py-4">{children}</div>
       </div>
     </div>
   );

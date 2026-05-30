@@ -9,7 +9,7 @@
 import {
   getEventsWithStats,
   getEligibilityRoles,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import EventManagementClient from './_components/EventManagementClient';
 
 export const metadata = { title: 'Events | Admin | NEUPC' };
@@ -21,10 +21,6 @@ export default async function AdminEventsPage() {
   ]);
 
   return (
-    <EventManagementClient
-      initialEvents={events}
-      stats={stats}
-      roles={roles}
-    />
+    <EventManagementClient initialEvents={events} stats={stats} roles={roles} />
   );
 }

@@ -16,10 +16,10 @@
  * @module AccountMessagesRoute
  */
 
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { auth } from '@/app/_lib/auth';
-import { getUserByEmail, getUserRoles } from '@/app/_lib/data-service';
-import { sanitizeText } from '@/app/_lib/validation';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserByEmail, getUserRoles } from '@/app/_lib/services/data-service';
+import { sanitizeText } from '@/app/_lib/utils/validation';
 import { NextResponse } from 'next/server';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -41,13 +41,19 @@ export async function GET(request) {
   try {
     const caller = await getCallerInfo();
     if (!caller) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      );
     }
 
     // Users may only fetch their own thread; admins can fetch any
@@ -63,13 +69,19 @@ export async function GET(request) {
 
     if (error) {
       console.error('[account/messages] GET db error:', error.message);
-      return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to load messages' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ messages: data ?? [] });
   } catch (err) {
     console.error('[account/messages] GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -79,7 +91,10 @@ export async function POST(request) {
   try {
     const caller = await getCallerInfo();
     if (!caller) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -87,7 +102,10 @@ export async function POST(request) {
     const rawMessage = body.message;
 
     if (!userId || !rawMessage?.trim()) {
-      return NextResponse.json({ error: 'userId and message are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'userId and message are required' },
+        { status: 400 }
+      );
     }
 
     const message = sanitizeText(rawMessage, 1000);
@@ -110,12 +128,18 @@ export async function POST(request) {
 
     if (error) {
       console.error('[account/messages] POST db error:', error.message);
-      return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to send message' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ message: data }, { status: 201 });
   } catch (err) {
     console.error('[account/messages] POST error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

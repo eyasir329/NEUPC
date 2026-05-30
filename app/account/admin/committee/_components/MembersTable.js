@@ -1,5 +1,10 @@
+/**
+ * @file Members table component
+ * @module MembersTable
+ */
+
 import { Edit3, Trash2 } from 'lucide-react';
-import { Avatar } from '../../_components/_ui';
+import { Avatar } from '@/app/account/_components/ui';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -14,10 +19,10 @@ function formatDate(iso) {
 function StatusBadge({ isCurrent }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
         isCurrent
-          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-          : 'bg-white/5 text-gray-400 border-white/8'
+          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+          : 'border-white/8 bg-white/5 text-gray-400'
       }`}
     >
       <span
@@ -34,28 +39,28 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden backdrop-blur-md">
+    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/2 backdrop-blur-md">
       {/* Desktop Table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full text-left border-collapse min-w-[700px]">
+        <table className="w-full min-w-[700px] border-collapse text-left">
           <thead>
             <tr className="border-b border-white/8 bg-white/3">
-              <th className="w-12 px-5 py-4 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider select-none">
+              <th className="w-12 px-5 py-4 text-center text-[10px] font-bold tracking-wider text-gray-500 uppercase select-none">
                 #
               </th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <th className="px-5 py-4 text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
                 Member
               </th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <th className="px-5 py-4 text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
                 Position
               </th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <th className="px-5 py-4 text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
                 Status
               </th>
-              <th className="hidden px-5 py-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider lg:table-cell">
+              <th className="hidden px-5 py-4 text-[11px] font-semibold tracking-wider text-gray-400 uppercase lg:table-cell">
                 Term Period
               </th>
-              <th className="px-5 py-4 text-right text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <th className="px-5 py-4 text-right text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
                 Actions
               </th>
             </tr>
@@ -76,21 +81,36 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={fullName} size="sm" src={member.users?.avatar_url} />
+                      <Avatar
+                        name={fullName}
+                        size="sm"
+                        src={member.users?.avatar_url}
+                      />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white group-hover:text-indigo-400 transition-colors truncate">
+                        <p className="truncate text-sm font-semibold text-white transition-colors group-hover:text-indigo-400">
                           {fullName}
                         </p>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
                           {member.users?.email}
                         </p>
                         {(() => {
                           const profile = member.users?.member_profiles;
-                          const memberProfile = Array.isArray(profile) ? profile[0] : profile;
-                          if (!memberProfile?.department && !memberProfile?.academic_session) return null;
+                          const memberProfile = Array.isArray(profile)
+                            ? profile[0]
+                            : profile;
+                          if (
+                            !memberProfile?.department &&
+                            !memberProfile?.academic_session
+                          )
+                            return null;
                           return (
-                            <p className="text-[10px] text-gray-500 font-mono mt-0.5 truncate">
-                              {[memberProfile.department, memberProfile.academic_session].filter(Boolean).join(' · ')}
+                            <p className="mt-0.5 truncate font-mono text-[10px] text-gray-500">
+                              {[
+                                memberProfile.department,
+                                memberProfile.academic_session,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
                             </p>
                           );
                         })()}
@@ -103,7 +123,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                         {position?.title || '—'}
                       </p>
                       {position && (
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">
+                        <p className="mt-0.5 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
                           {position.category}
                         </p>
                       )}
@@ -113,11 +133,11 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                     <StatusBadge isCurrent={member.is_current} />
                   </td>
                   <td className="hidden px-5 py-4 lg:table-cell">
-                    <span className="text-xs text-gray-400 font-medium">
+                    <span className="text-xs font-medium text-gray-400">
                       {formatDate(member.term_start)}
                       {member.term_end && (
                         <>
-                          <span className="text-gray-600 mx-1.5">→</span>
+                          <span className="mx-1.5 text-gray-600">→</span>
                           {formatDate(member.term_end)}
                         </>
                       )}
@@ -127,14 +147,14 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => onEdit(member)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-indigo-500/10 hover:border-indigo-500/20 hover:text-indigo-400 active:scale-95"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 active:scale-95"
                         title="Edit Member Assignment"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => onDelete(member.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 active:scale-95"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400 active:scale-95"
                         title="Remove Member"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -156,67 +176,90 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
           return (
             <div
               key={member.id}
-              className="p-5 transition-colors hover:bg-white/4 flex flex-col gap-3"
+              className="flex flex-col gap-3 p-5 transition-colors hover:bg-white/4"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
                   <span className="font-mono text-[10px] text-gray-500 select-none">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <Avatar name={fullName} size="sm" src={member.users?.avatar_url} />
+                  <Avatar
+                    name={fullName}
+                    size="sm"
+                    src={member.users?.avatar_url}
+                  />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">
+                    <p className="truncate text-sm font-semibold text-white">
                       {fullName}
                     </p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                    <p className="mt-0.5 truncate text-xs text-gray-500">
                       {member.users?.email}
                     </p>
                     {(() => {
                       const profile = member.users?.member_profiles;
-                      const memberProfile = Array.isArray(profile) ? profile[0] : profile;
-                      if (!memberProfile?.department && !memberProfile?.academic_session) return null;
+                      const memberProfile = Array.isArray(profile)
+                        ? profile[0]
+                        : profile;
+                      if (
+                        !memberProfile?.department &&
+                        !memberProfile?.academic_session
+                      )
+                        return null;
                       return (
-                        <p className="text-[10px] text-gray-500 font-mono mt-0.5 truncate">
-                          {[memberProfile.department, memberProfile.academic_session].filter(Boolean).join(' · ')}
+                        <p className="mt-0.5 truncate font-mono text-[10px] text-gray-500">
+                          {[
+                            memberProfile.department,
+                            memberProfile.academic_session,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
                       );
                     })()}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     onClick={() => onEdit(member)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-indigo-500/10 hover:border-indigo-500/20 hover:text-indigo-400 active:scale-95"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 active:scale-95"
                   >
                     <Edit3 className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => onDelete(member.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 active:scale-95"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400 active:scale-95"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-white/2 border border-white/6 rounded-xl p-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/6 bg-white/2 p-3 text-xs">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Position</span>
-                  <span className="text-gray-200 font-semibold">{position?.title || '—'}</span>
+                  <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                    Position
+                  </span>
+                  <span className="font-semibold text-gray-200">
+                    {position?.title || '—'}
+                  </span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Status</span>
+                  <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                    Status
+                  </span>
                   <StatusBadge isCurrent={member.is_current} />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1 bg-white/2 border border-white/6 rounded-xl p-3 text-xs">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Term Period</span>
-                <span className="text-gray-300 font-medium">
+              <div className="flex flex-col gap-1 rounded-xl border border-white/6 bg-white/2 p-3 text-xs">
+                <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                  Term Period
+                </span>
+                <span className="font-medium text-gray-300">
                   {formatDate(member.term_start)}
                   {member.term_end && (
                     <>
-                      <span className="text-gray-600 mx-1.5">→</span>
+                      <span className="mx-1.5 text-gray-600">→</span>
                       {formatDate(member.term_end)}
                     </>
                   )}
@@ -224,9 +267,13 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
               </div>
 
               {member.bio && (
-                <div className="flex flex-col gap-1 bg-white/2 border border-white/6 rounded-xl p-3 text-xs">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Biography</span>
-                  <p className="text-gray-400 leading-relaxed font-normal">{member.bio}</p>
+                <div className="flex flex-col gap-1 rounded-xl border border-white/6 bg-white/2 p-3 text-xs">
+                  <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                    Biography
+                  </span>
+                  <p className="leading-relaxed font-normal text-gray-400">
+                    {member.bio}
+                  </p>
                 </div>
               )}
             </div>

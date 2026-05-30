@@ -6,9 +6,9 @@
 import {
   getJoinPageData,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import JoinClient from './JoinClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
 export const metadata = buildMetadata({

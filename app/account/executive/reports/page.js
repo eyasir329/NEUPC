@@ -5,7 +5,7 @@
  * @access executive | admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getUserStats,
   getPlatformStatistics,
@@ -17,7 +17,7 @@ import {
   getActivityLogs,
   getRolesWithStats,
   getAllBootcamps,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import ReportsClient from './_components/ReportsClient';
 
 export const metadata = { title: 'Reports & Analytics | Executive | NEUPC' };

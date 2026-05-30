@@ -17,7 +17,7 @@ import {
 import {
   createNoticeAction,
   updateNoticeAction,
-} from '@/app/_lib/notice-actions';
+} from '@/app/_lib/actions/notice-actions';
 
 export default function NoticeFormModal({ notice, onClose }) {
   const isEdit = Boolean(notice);

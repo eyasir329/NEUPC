@@ -10,9 +10,9 @@
  * @module HeartbeatRoute
  */
 
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { auth } from '@/app/_lib/auth';
-import { getUserByEmail } from '@/app/_lib/data-service';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserByEmail } from '@/app/_lib/services/data-service';
 import { NextResponse } from 'next/server';
 
 export async function POST() {

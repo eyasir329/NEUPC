@@ -800,7 +800,9 @@ export default function PlatformAccounts({
                     getDefaultConfig(handle.platform)
                   }
                   onSync={() => onSyncPlatform?.(handle.platform)}
-                  onSyncWithHtml={(manualHtml) => onSyncPlatform?.(handle.platform, manualHtml)}
+                  onSyncWithHtml={(manualHtml) =>
+                    onSyncPlatform?.(handle.platform, manualHtml)
+                  }
                   onDisconnect={() => onDisconnect?.(handle.platform)}
                   isSyncing={syncingPlatform === handle.platform}
                   isAnySyncing={isSyncing}

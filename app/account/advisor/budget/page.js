@@ -6,8 +6,11 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getAllBudgetEntries, getBudgetSummary } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import {
+  getAllBudgetEntries,
+  getBudgetSummary,
+} from '@/app/_lib/services/data-service';
 import AdvisorBudgetClient from './_components/AdvisorBudgetClient';
 
 export const metadata = { title: 'Budget | Advisor | NEUPC' };

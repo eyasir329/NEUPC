@@ -43,7 +43,7 @@ import {
   TabBar,
   EmptyState,
   ActionButton,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -469,10 +469,19 @@ export default function SecurityClient({ data }) {
 
   const tabs = [
     { value: 'overview', label: 'Overview' },
-    { value: 'sessions', label: 'Active Sessions', count: overview.activeSessions },
+    {
+      value: 'sessions',
+      label: 'Active Sessions',
+      count: overview.activeSessions,
+    },
     { value: 'audit', label: 'Audit Log', count: auditLogs.length },
     { value: 'roles', label: 'Role Changes', count: roleChangeLogs.length },
-    { value: 'threats', label: 'Threats', icon: ShieldAlert, count: threats.length },
+    {
+      value: 'threats',
+      label: 'Threats',
+      icon: ShieldAlert,
+      count: threats.length,
+    },
     { value: 'logins', label: 'Login Events', count: loginLogs.length },
   ];
 

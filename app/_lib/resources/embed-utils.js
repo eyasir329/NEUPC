@@ -1,3 +1,8 @@
+/**
+ * @file Embed utils
+ * @module embed-utils
+ */
+
 import { RESOURCE_TYPES } from './constants';
 
 const YOUTUBE_HOSTS = new Set([

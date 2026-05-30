@@ -5,8 +5,8 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getActiveNotices } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getActiveNotices } from '@/app/_lib/services/data-service';
 import MentorNoticesClient from './_components/MentorNoticesClient';
 
 export const metadata = { title: 'Inbox | Mentor | NEUPC' };

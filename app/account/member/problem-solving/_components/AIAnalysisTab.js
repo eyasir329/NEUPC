@@ -1,5 +1,22 @@
+/**
+ * @file Aianalysis tab component
+ * @module AIAnalysisTab
+ */
+
 'use client';
-import { Sparkles, Code2, Lightbulb, Zap, ShieldCheck, Send, Bot, User, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Sparkles,
+  Code2,
+  Lightbulb,
+  Zap,
+  ShieldCheck,
+  Send,
+  Bot,
+  User,
+  Users,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import Markdown from 'react-markdown';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -76,14 +93,48 @@ public:
 };
 
 const SECTION_META = [
-  { key: 'problemAnalysis', icon: Lightbulb, label: 'Solution Blueprint',   accent: 'text-amber-400',   border: 'border-amber-500/20',   bg: 'bg-amber-500/5' },
-  { key: 'myApproach',      icon: ShieldCheck, label: 'Your Implementation', accent: 'text-violet-400', border: 'border-violet-500/20', bg: 'bg-violet-500/5' },
-  { key: 'otherApproaches', icon: Users,     label: 'Alternatives',          accent: 'text-zinc-400',   border: 'border-white/[0.07]',  bg: 'bg-zinc-900/50' },
-  { key: 'bestApproach',    icon: Zap,       label: 'Best Approach',         accent: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+  {
+    key: 'problemAnalysis',
+    icon: Lightbulb,
+    label: 'Solution Blueprint',
+    accent: 'text-amber-400',
+    border: 'border-amber-500/20',
+    bg: 'bg-amber-500/5',
+  },
+  {
+    key: 'myApproach',
+    icon: ShieldCheck,
+    label: 'Your Implementation',
+    accent: 'text-violet-400',
+    border: 'border-violet-500/20',
+    bg: 'bg-violet-500/5',
+  },
+  {
+    key: 'otherApproaches',
+    icon: Users,
+    label: 'Alternatives',
+    accent: 'text-zinc-400',
+    border: 'border-white/[0.07]',
+    bg: 'bg-zinc-900/50',
+  },
+  {
+    key: 'bestApproach',
+    icon: Zap,
+    label: 'Best Approach',
+    accent: 'text-emerald-400',
+    border: 'border-emerald-500/20',
+    bg: 'bg-emerald-500/5',
+  },
 ];
 
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
+};
 
 export default function AIAnalysisTab() {
   const [prompt, setPrompt] = useState('');
@@ -123,13 +174,12 @@ export default function AIAnalysisTab() {
 
   return (
     <div className="flex w-full flex-col gap-6 lg:h-[calc(100vh-220px)] lg:min-h-130 lg:flex-row lg:items-stretch lg:overflow-hidden">
-
       {/* ── Left: Analysis panels (independently scrollable on desktop) ─ */}
       <motion.div
         variants={container}
         initial="hidden"
         animate="show"
-        className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto lg:pr-3 custom-scrollbar"
+        className="custom-scrollbar min-w-0 flex-1 space-y-4 lg:overflow-y-auto lg:pr-3"
       >
         {/* Executive summary */}
         <motion.div
@@ -141,7 +191,7 @@ export default function AIAnalysisTab() {
           </div>
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-white">AI Summary</h2>
-            <div className="prose prose-invert prose-sm max-w-none text-zinc-300 leading-relaxed">
+            <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300">
               <Markdown>{INSIGHTS.overview}</Markdown>
             </div>
           </div>
@@ -150,36 +200,73 @@ export default function AIAnalysisTab() {
         {/* Complexity cards */}
         <motion.div variants={item} className="grid grid-cols-2 gap-3">
           {[
-            { icon: Zap,   label: 'Time Complexity',  value: INSIGHTS.complexities.time,  sub: 'Optimal',   accent: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
-            { icon: Code2, label: 'Space Complexity', value: INSIGHTS.complexities.space, sub: 'Efficient', accent: 'text-sky-400',     border: 'border-sky-500/20',     bg: 'bg-sky-500/5' },
+            {
+              icon: Zap,
+              label: 'Time Complexity',
+              value: INSIGHTS.complexities.time,
+              sub: 'Optimal',
+              accent: 'text-emerald-400',
+              border: 'border-emerald-500/20',
+              bg: 'bg-emerald-500/5',
+            },
+            {
+              icon: Code2,
+              label: 'Space Complexity',
+              value: INSIGHTS.complexities.space,
+              sub: 'Efficient',
+              accent: 'text-sky-400',
+              border: 'border-sky-500/20',
+              bg: 'bg-sky-500/5',
+            },
           ].map(({ icon: Icon, label, value, sub, accent, border, bg }) => (
-            <div key={label} className={`flex flex-col rounded-xl border ${border} ${bg} p-4`}>
+            <div
+              key={label}
+              className={`flex flex-col rounded-xl border ${border} ${bg} p-4`}
+            >
               <div className="mb-3 flex items-center justify-between">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-lg border ${border} bg-zinc-900/60`}>
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-lg border ${border} bg-zinc-900/60`}
+                >
                   <Icon className={`h-3.5 w-3.5 ${accent}`} />
                 </div>
-                <span className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">{sub}</span>
+                <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                  {sub}
+                </span>
               </div>
-              <div className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</div>
-              <p className="mt-1 text-[10px] font-mono tracking-widest text-zinc-500 uppercase">{label}</p>
+              <div className={`text-2xl font-bold tabular-nums ${accent}`}>
+                {value}
+              </div>
+              <p className="mt-1 font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                {label}
+              </p>
             </div>
           ))}
         </motion.div>
 
         {/* Collapsible analysis sections */}
         {SECTION_META.map(({ key, icon: Icon, label, accent, border, bg }) => (
-          <motion.div key={key} variants={item} className={`overflow-hidden rounded-xl border ${border} ${bg}`}>
+          <motion.div
+            key={key}
+            variants={item}
+            className={`overflow-hidden rounded-xl border ${border} ${bg}`}
+          >
             <button
-              onClick={() => setExpandedApproach(expandedApproach === key ? null : key)}
+              onClick={() =>
+                setExpandedApproach(expandedApproach === key ? null : key)
+              }
               className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-white/2"
             >
               <div className="flex items-center gap-2.5">
                 <Icon className={`h-4 w-4 ${accent}`} />
-                <span className="text-sm font-semibold text-white">{label}</span>
+                <span className="text-sm font-semibold text-white">
+                  {label}
+                </span>
               </div>
-              {expandedApproach === key
-                ? <ChevronUp className="h-4 w-4 text-zinc-500" />
-                : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+              {expandedApproach === key ? (
+                <ChevronUp className="h-4 w-4 text-zinc-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-zinc-500" />
+              )}
             </button>
             <AnimatePresence>
               {expandedApproach === key && (
@@ -191,7 +278,7 @@ export default function AIAnalysisTab() {
                   className="overflow-hidden"
                 >
                   <div className="border-t border-white/[0.07] px-5 py-4">
-                    <div className="prose prose-invert prose-sm max-w-none text-zinc-400 leading-relaxed">
+                    <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-400">
                       <Markdown>{INSIGHTS[key]}</Markdown>
                     </div>
                   </div>
@@ -202,14 +289,19 @@ export default function AIAnalysisTab() {
         ))}
 
         {/* Community approaches */}
-        <motion.div variants={item} className="overflow-hidden rounded-xl border border-white/[0.07] bg-zinc-900/50">
+        <motion.div
+          variants={item}
+          className="overflow-hidden rounded-xl border border-white/[0.07] bg-zinc-900/50"
+        >
           <div className="flex items-center gap-2.5 border-b border-white/[0.07] bg-zinc-950/40 px-5 py-4">
             <Users className="h-4 w-4 text-zinc-400" />
-            <h3 className="text-sm font-semibold text-white">Community Approaches</h3>
+            <h3 className="text-sm font-semibold text-white">
+              Community Approaches
+            </h3>
           </div>
           <div className="divide-y divide-white/5">
             {INSIGHTS.uniqueApproaches.map((approach, idx) => (
-              <div key={idx} className="px-5 py-5 space-y-4">
+              <div key={idx} className="space-y-4 px-5 py-5">
                 {/* Author + title */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -217,8 +309,12 @@ export default function AIAnalysisTab() {
                       <User className="h-3.5 w-3.5 text-zinc-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-white">{approach.username}</div>
-                      <div className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">{approach.source}</div>
+                      <div className="text-sm font-semibold text-white">
+                        {approach.username}
+                      </div>
+                      <div className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                        {approach.source}
+                      </div>
                     </div>
                   </div>
                   <span className="rounded-lg border border-white/[0.07] bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
@@ -227,7 +323,7 @@ export default function AIAnalysisTab() {
                 </div>
 
                 {/* Analysis */}
-                <div className="prose prose-invert prose-sm max-w-none text-zinc-400 leading-relaxed">
+                <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-400">
                   <Markdown>{approach.analysis}</Markdown>
                 </div>
 
@@ -236,7 +332,7 @@ export default function AIAnalysisTab() {
                   <div className="border-b border-white/[0.07] px-4 py-2 font-mono text-[10px] tracking-widest text-violet-400 uppercase">
                     Code
                   </div>
-                  <pre className="overflow-x-auto p-4 text-xs leading-relaxed text-zinc-300 font-mono">
+                  <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed text-zinc-300">
                     <code>{approach.code}</code>
                   </pre>
                 </div>
@@ -251,10 +347,9 @@ export default function AIAnalysisTab() {
         initial={{ opacity: 0, x: 16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.25, delay: 0.1 }}
-        className="w-full shrink-0 lg:w-96 lg:h-full"
+        className="w-full shrink-0 lg:h-full lg:w-96"
       >
-        <div className="flex h-full max-h-150 lg:max-h-none flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-zinc-900/60">
-
+        <div className="flex h-full max-h-150 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-zinc-900/60 lg:max-h-none">
           {/* Chat header */}
           <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.07] bg-zinc-950/50 px-4 py-3.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10">
@@ -262,18 +357,20 @@ export default function AIAnalysisTab() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="mt-0.5 flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 </span>
-                <span className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Online</span>
+                <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                  Online
+                </span>
               </div>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-3 p-4 custom-scrollbar">
+          <div className="custom-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             {messages.map((msg, idx) => (
               <motion.div
                 key={idx}
@@ -289,7 +386,11 @@ export default function AIAnalysisTab() {
                       : 'border-violet-500/20 bg-violet-500/10 text-violet-400'
                   }`}
                 >
-                  {msg.role === 'user' ? <User className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                  {msg.role === 'user' ? (
+                    <User className="h-3 w-3" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
                 </div>
                 <div
                   className={`max-w-[84%] rounded-xl px-3.5 py-2.5 text-xs leading-relaxed ${
@@ -321,7 +422,11 @@ export default function AIAnalysisTab() {
                       key={i}
                       className="h-1.5 w-1.5 rounded-full bg-zinc-500"
                       animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
                     />
                   ))}
                 </div>
@@ -339,7 +444,7 @@ export default function AIAnalysisTab() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Ask about approach, complexity, edge cases..."
-                className="flex-1 min-w-0 rounded-xl border border-white/[0.07] bg-zinc-900/80 px-3.5 py-2.5 text-xs text-zinc-200 outline-none transition-colors placeholder:text-zinc-600 focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/10"
+                className="min-w-0 flex-1 rounded-xl border border-white/[0.07] bg-zinc-900/80 px-3.5 py-2.5 text-xs text-zinc-200 transition-colors outline-none placeholder:text-zinc-600 focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/10"
               />
               <button
                 type="submit"

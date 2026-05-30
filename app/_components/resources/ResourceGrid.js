@@ -1,3 +1,8 @@
+/**
+ * @file Resource grid component
+ * @module ResourceGrid
+ */
+
 import ResourceCard from '@/app/_components/resources/ResourceCard';
 import { Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,9 +12,9 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05
-    }
-  }
+      staggerChildren: 0.05,
+    },
+  },
 };
 
 export default function ResourceGrid({
@@ -33,9 +38,12 @@ export default function ResourceGrid({
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[14px] bg-white/[0.03] shadow-inner">
           <Search className="h-6 w-6 text-white/30" />
         </div>
-        <p className="text-[15px] font-semibold text-white/80">No resources found</p>
+        <p className="text-[15px] font-semibold text-white/80">
+          No resources found
+        </p>
         <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-white/40">
-          We couldn't find any resources matching your current filters. Try adjusting your search criteria.
+          We couldn't find any resources matching your current filters. Try
+          adjusting your search criteria.
         </p>
       </motion.div>
     );

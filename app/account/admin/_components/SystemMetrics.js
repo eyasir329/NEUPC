@@ -27,13 +27,12 @@ const BADGE_MAP = {
 function TrendBadge({ trend }) {
   const Icon =
     trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus;
-  const label =
-    trend === 'up' ? 'Up' : trend === 'down' ? 'Down' : 'Stable';
+  const label = trend === 'up' ? 'Up' : trend === 'down' ? 'Down' : 'Stable';
   return (
     <div
-      className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-2xl ${BADGE_MAP[trend] ?? BADGE_MAP.stable}`}
+      className={`flex items-center gap-1 rounded-2xl px-2 py-1 text-[10px] font-bold tracking-widest uppercase ${BADGE_MAP[trend] ?? BADGE_MAP.stable}`}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="h-3 w-3" />
       {label}
     </div>
   );
@@ -41,14 +40,14 @@ function TrendBadge({ trend }) {
 
 export default function SystemMetrics({ systemStats }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-8">
       {systemStats.map((stat, idx) => (
         <div
           key={idx}
-          className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/20 transition-all"
+          className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl transition-all hover:border-white/20"
         >
           <div className="flex items-start justify-between gap-3">
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+            <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
               {stat.label}
             </p>
             <TrendBadge trend={stat.trend} />

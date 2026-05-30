@@ -5,10 +5,16 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getMentorshipsByMentor } from '@/app/_lib/data-service';
-import { getMentorAssignedBootcamps, getEnrollmentsWithProgress } from '@/app/_lib/bootcamp-actions';
-import { getMentorScheduledSessionsAction, getMentorPastScheduledSessionsAction } from '@/app/_lib/mentor-actions';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getMentorshipsByMentor } from '@/app/_lib/services/data-service';
+import {
+  getMentorAssignedBootcamps,
+  getEnrollmentsWithProgress,
+} from '@/app/_lib/actions/bootcamp-actions';
+import {
+  getMentorScheduledSessionsAction,
+  getMentorPastScheduledSessionsAction,
+} from '@/app/_lib/actions/mentor-actions';
 import MentorSessionsClient from './_components/MentorSessionsClient';
 
 export const metadata = { title: 'Sessions | Mentor | NEUPC' };
@@ -16,12 +22,13 @@ export const metadata = { title: 'Sessions | Mentor | NEUPC' };
 export default async function MentorSessionsPage() {
   const { user } = await requireRole('mentor');
 
-  const [mentorships, bootcamps, scheduledResult, pastScheduledResult] = await Promise.all([
-    getMentorshipsByMentor(user.id).catch(() => []),
-    getMentorAssignedBootcamps().catch(() => []),
-    getMentorScheduledSessionsAction().catch(() => ({ sessions: [] })),
-    getMentorPastScheduledSessionsAction().catch(() => ({ sessions: [] })),
-  ]);
+  const [mentorships, bootcamps, scheduledResult, pastScheduledResult] =
+    await Promise.all([
+      getMentorshipsByMentor(user.id).catch(() => []),
+      getMentorAssignedBootcamps().catch(() => []),
+      getMentorScheduledSessionsAction().catch(() => ({ sessions: [] })),
+      getMentorPastScheduledSessionsAction().catch(() => ({ sessions: [] })),
+    ]);
 
   const bootcampStudents = await Promise.all(
     bootcamps.map(async (bc) => {
@@ -48,17 +55,44 @@ export default async function MentorSessionsPage() {
 
   const enrichSessions = (sessions) =>
     (sessions ?? []).map((s) => {
-      const bcStudents = bootcampStudents.find((bc) => bc.id === s.bootcamp_id)?.students ?? allStudents;
-      const bcTitle = bootcampStudents.find((bc) => bc.id === s.bootcamp_id)?.title?.split(':')[0] ?? '';
+      const bcStudents =
+        bootcampStudents.find((bc) => bc.id === s.bootcamp_id)?.students ??
+        allStudents;
+      const bcTitle =
+        bootcampStudents
+          .find((bc) => bc.id === s.bootcamp_id)
+          ?.title?.split(':')[0] ?? '';
       if (s.target_type === 'one-on-one') {
-        const student = bcStudents.find((u) => u.id === (s.target_student_ids ?? [])[0]);
-        return { ...s, targetType: s.target_type, targetStudentName: student?.name ?? '', targetStudentAvatar: student?.avatar_url ?? null, bootcampTitle: bcTitle };
+        const student = bcStudents.find(
+          (u) => u.id === (s.target_student_ids ?? [])[0]
+        );
+        return {
+          ...s,
+          targetType: s.target_type,
+          targetStudentName: student?.name ?? '',
+          targetStudentAvatar: student?.avatar_url ?? null,
+          bootcampTitle: bcTitle,
+        };
       }
       if (s.target_type === 'selected-group') {
-        const matched = (s.target_student_ids ?? []).map((id) => bcStudents.find((u) => u.id === id)).filter(Boolean);
-        return { ...s, targetType: s.target_type, targetStudentNames: matched.map((u) => u.name), targetStudentAvatars: matched.map((u) => u.avatar_url ?? null), bootcampTitle: bcTitle };
+        const matched = (s.target_student_ids ?? [])
+          .map((id) => bcStudents.find((u) => u.id === id))
+          .filter(Boolean);
+        return {
+          ...s,
+          targetType: s.target_type,
+          targetStudentNames: matched.map((u) => u.name),
+          targetStudentAvatars: matched.map((u) => u.avatar_url ?? null),
+          bootcampTitle: bcTitle,
+        };
       }
-      return { ...s, targetType: s.target_type, targetStudentNamesAll: bcStudents.map((u) => u.name), targetStudentAvatars: bcStudents.map((u) => u.avatar_url ?? null), bootcampTitle: bcTitle };
+      return {
+        ...s,
+        targetType: s.target_type,
+        targetStudentNamesAll: bcStudents.map((u) => u.name),
+        targetStudentAvatars: bcStudents.map((u) => u.avatar_url ?? null),
+        bootcampTitle: bcTitle,
+      };
     });
 
   return (

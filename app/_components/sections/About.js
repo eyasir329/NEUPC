@@ -60,7 +60,7 @@ function About({ data = {}, settings = {} }) {
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       {/* Divider top */}
-      <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-neon-violet/20 to-transparent" />
+      <div className="via-neon-violet/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent to-transparent" />
 
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -81,12 +81,12 @@ function About({ data = {}, settings = {} }) {
           <div className="flex items-center justify-center gap-4">
             <span className="bg-neon-violet h-px w-10" />
             <span className="text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
-              Identity / 001
+              {settings?.homepage_about_badge || 'Identity / 001'}
             </span>
             <span className="bg-neon-violet h-px w-10" />
           </div>
           <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-white uppercase">
-            {title}
+            {settings?.homepage_about_title || title}
           </h2>
         </motion.div>
 
@@ -164,7 +164,8 @@ function About({ data = {}, settings = {} }) {
             {/* Active chip */}
             <div className="border-neon-lime/30 bg-neon-lime/10 absolute top-8 -right-3 -rotate-6 rounded-xl border px-3 py-1.5 backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
               <span className="text-neon-lime font-mono text-[9px] font-bold tracking-[0.25em] uppercase sm:text-[10px]">
-                Active · {settings?.member_count || '150+'}
+                Active
+                {settings?.member_count ? ` · ${settings.member_count}` : ''}
               </span>
             </div>
           </motion.div>

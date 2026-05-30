@@ -6,9 +6,9 @@
 import {
   getDevelopersData,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import DevelopersClient from './DevelopersClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
 export const metadata = buildMetadata({

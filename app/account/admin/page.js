@@ -9,8 +9,8 @@
  */
 
 import dynamic from 'next/dynamic';
-import { auth } from '@/app/_lib/auth';
-import AccountLoading from '../_components/AccountLoading';
+import { auth } from '@/app/_lib/auth/auth';
+import AccountLoading from '@/app/account/_components/AccountLoading';
 
 const AdminDashboardClient = dynamic(
   () => import('./_components/AdminDashboardClient'),

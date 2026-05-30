@@ -5,8 +5,8 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getActiveNotices } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getActiveNotices } from '@/app/_lib/services/data-service';
 import GuestNotificationsClient from './_components/GuestNotificationsClient';
 
 export const metadata = { title: 'Notifications | Guest | NEUPC' };

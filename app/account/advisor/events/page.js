@@ -6,8 +6,8 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getEventsWithStats } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getEventsWithStats } from '@/app/_lib/services/data-service';
 import AdvisorEventsClient from './_components/AdvisorEventsClient';
 
 export const metadata = { title: 'Events | Advisor | NEUPC' };

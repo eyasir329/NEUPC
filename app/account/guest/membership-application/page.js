@@ -6,8 +6,8 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getJoinRequestByEmail } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getJoinRequestByEmail } from '@/app/_lib/services/data-service';
 import MembershipApplicationClient from './MembershipApplicationClient';
 
 export const metadata = { title: 'Apply for Membership | Guest | NEUPC' };

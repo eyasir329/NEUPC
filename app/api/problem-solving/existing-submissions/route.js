@@ -7,14 +7,14 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
 import {
   isV2SchemaAvailable,
   V2_TABLES,
   getPlatformId,
-} from '@/app/_lib/problem-solving-v2-helpers';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 // CORS headers for browser extension
 const corsHeaders = {

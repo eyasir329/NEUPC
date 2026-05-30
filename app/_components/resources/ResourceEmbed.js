@@ -1,3 +1,8 @@
+/**
+ * @file Resource embed component
+ * @module ResourceEmbed
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,7 +10,22 @@ import {
   normalizeEmbed,
   safeExternalHref,
 } from '@/app/_lib/resources/embed-utils';
-import { FileDown, Download, ExternalLink, Loader2, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2, AlertCircle, FileSearch, Hash } from 'lucide-react';
+import {
+  FileDown,
+  Download,
+  ExternalLink,
+  Loader2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  AlertCircle,
+  FileSearch,
+  Hash,
+} from 'lucide-react';
 import EventContentRenderer from '@/app/account/_components/events/EventContentRenderer';
 
 // ─── File helpers ─────────────────────────────────────────────────────────────
@@ -139,7 +159,14 @@ const SOCIAL_BRAND_CONFIGS = {
   },
 };
 
-function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, className = '' }) {
+function SocialPostEmbedViewer({
+  href,
+  type,
+  title,
+  iframeSrc,
+  minHeight = 350,
+  className = '',
+}) {
   const [attemptEmbed, setAttemptEmbed] = useState(false);
   const config = SOCIAL_BRAND_CONFIGS[type];
   if (!config) return null;
@@ -150,7 +177,9 @@ function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, 
     return (
       <div className={`space-y-4 ${className}`}>
         <div className="flex justify-center">
-          <div className={`w-full max-w-130 overflow-hidden rounded-2xl border ${config.borderColor} bg-black/40 shadow-2xl`}>
+          <div
+            className={`w-full max-w-130 overflow-hidden rounded-2xl border ${config.borderColor} bg-black/40 shadow-2xl`}
+          >
             <iframe
               src={iframeSrc}
               title={title || `${config.provider} post`}
@@ -163,7 +192,7 @@ function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, 
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 max-w-130 mx-auto">
+        <div className="mx-auto flex max-w-130 flex-wrap items-center justify-between gap-3">
           <a
             href={href}
             target="_blank"
@@ -175,7 +204,7 @@ function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, 
           </a>
           <button
             onClick={() => setAttemptEmbed(false)}
-            className="text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs font-semibold text-gray-500 transition-colors hover:text-gray-300"
           >
             Back to preview card
           </button>
@@ -185,39 +214,47 @@ function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, 
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border ${config.borderColor} ${config.bgColor} backdrop-blur-md shadow-2xl ${className}`}>
-      <div className="relative flex flex-col items-center justify-center p-8 sm:p-12 text-center overflow-hidden">
+    <div
+      className={`overflow-hidden rounded-2xl border ${config.borderColor} ${config.bgColor} shadow-2xl backdrop-blur-md ${className}`}
+    >
+      <div className="relative flex flex-col items-center justify-center overflow-hidden p-8 text-center sm:p-12">
         {/* Background glow */}
-        <div className={`absolute -inset-10 -z-10 bg-gradient-to-br ${config.glowColor} blur-3xl opacity-50`} />
-        
+        <div
+          className={`absolute -inset-10 -z-10 bg-linear-to-br ${config.glowColor} opacity-50 blur-3xl`}
+        />
+
         {/* Icon */}
-        <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border ${config.borderColor} bg-white/5 ${config.accentColor} shadow-lg`}>
+        <div
+          className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border ${config.borderColor} bg-white/5 ${config.accentColor} shadow-lg`}
+        >
           <BrandIcon className="h-8 w-8" />
         </div>
 
         {/* Brand Tag */}
-        <span className={`mb-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-sm ${config.tagColor}`}>
+        <span
+          className={`mb-2 rounded-full border px-3 py-1 text-[10px] font-bold tracking-widest uppercase shadow-sm ${config.tagColor}`}
+        >
           {config.provider} Post
         </span>
-        <h3 className="mb-3 max-w-lg text-lg font-bold text-white sm:text-xl leading-snug tracking-tight">
+        <h3 className="mb-3 max-w-lg text-lg leading-snug font-bold tracking-tight text-white sm:text-xl">
           {title || `View this post on ${config.provider}`}
         </h3>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm justify-center mt-4">
+        <div className="mt-4 flex w-full max-w-sm flex-col items-center justify-center gap-3 sm:flex-row">
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg ${config.buttonColor}`}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold tracking-wider text-white uppercase shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] sm:w-auto ${config.buttonColor}`}
           >
-            <BrandIcon className="h-4 w-4 text-white fill-current" />
+            <BrandIcon className="h-4 w-4 fill-current text-white" />
             Open on {config.provider}
           </a>
           {iframeSrc && (
             <button
               onClick={() => setAttemptEmbed(true)}
-              className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold tracking-wider text-gray-300 uppercase transition-all hover:border-white/15 hover:bg-white/8 hover:text-white sm:w-auto"
             >
               Try In-line Preview
             </button>
@@ -225,8 +262,10 @@ function SocialPostEmbedViewer({ href, type, title, iframeSrc, minHeight = 350, 
         </div>
 
         {/* Security hint */}
-        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed text-gray-500 font-medium">
-          To protect your privacy, Facebook and LinkedIn posts are best viewed directly on their respective platforms. Click <strong>Open on {config.provider}</strong> to view the full post.
+        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed font-medium text-gray-500">
+          To protect your privacy, Facebook and LinkedIn posts are best viewed
+          directly on their respective platforms. Click{' '}
+          <strong>Open on {config.provider}</strong> to view the full post.
         </p>
       </div>
     </div>
@@ -280,7 +319,9 @@ function LinkedInPostEmbed({ embedUrl, title }) {
   if (!href) return null;
 
   const activityUrn = extractLinkedInPostId(embedUrl);
-  const iframeSrc = activityUrn ? `https://www.linkedin.com/embed/feed/update/${activityUrn}` : null;
+  const iframeSrc = activityUrn
+    ? `https://www.linkedin.com/embed/feed/update/${activityUrn}`
+    : null;
 
   return (
     <SocialPostEmbedViewer
@@ -327,7 +368,8 @@ function TextFileReader({ fileUrl, title, className = '' }) {
   const [error, setError] = useState(false);
 
   // Check if it's a Google Drive URL
-  const isDrive = fileUrl?.includes('drive.google.com') || fileUrl?.match(/^\/api\/image\//);
+  const isDrive =
+    fileUrl?.includes('drive.google.com') || fileUrl?.match(/^\/api\/image\//);
 
   useEffect(() => {
     if (!fileUrl || isDrive) {
@@ -337,7 +379,7 @@ function TextFileReader({ fileUrl, title, className = '' }) {
 
     let isMounted = true;
     setLoading(true);
-    
+
     fetch(fileUrl)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch text');
@@ -377,7 +419,9 @@ function TextFileReader({ fileUrl, title, className = '' }) {
 
     return (
       <div className="space-y-3">
-        <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+        <div
+          className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}
+        >
           <iframe
             src={embedSrc}
             title={title || 'Text Document'}
@@ -403,7 +447,9 @@ function TextFileReader({ fileUrl, title, className = '' }) {
 
   return (
     <div className="space-y-3">
-      <div className={`relative flex aspect-[3/4] w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0d1117] md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+      <div
+        className={`relative flex aspect-[3/4] w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0d1117] md:aspect-[4/3] lg:aspect-[16/10] ${className}`}
+      >
         {/* Header bar */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-white/[0.02] px-4 py-2">
           <span className="flex items-center gap-2 text-xs font-medium text-gray-400">
@@ -411,21 +457,21 @@ function TextFileReader({ fileUrl, title, className = '' }) {
             {title || 'text_file.txt'}
           </span>
         </div>
-        
+
         {/* Content area */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 [scrollbar-width:thin]">
+        <div className="flex-1 overflow-auto p-4 [scrollbar-width:thin] sm:p-6">
           {loading ? (
             <div className="flex h-full w-full items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-white/20" />
             </div>
           ) : (
-            <pre className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-gray-300 break-words">
+            <pre className="font-mono text-[13px] leading-relaxed wrap-break-word whitespace-pre-wrap text-gray-300">
               {content}
             </pre>
           )}
         </div>
       </div>
-      
+
       <div className="flex justify-end">
         <a
           href={fileUrl}
@@ -452,8 +498,9 @@ function ImageFileViewer({ fileUrl, title, className = '' }) {
 
   return (
     <div className="space-y-3">
-      <div className={`relative flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-black/50 ${className}`}>
-        
+      <div
+        className={`relative flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-black/50 ${className}`}
+      >
         {/* Floating Toolbar */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 p-1.5 shadow-xl backdrop-blur-md">
           <button
@@ -491,11 +538,11 @@ function ImageFileViewer({ fileUrl, title, className = '' }) {
           <img
             src={fileUrl}
             alt={title || 'Image file'}
-            style={{ 
-              transform: `scale(${scale})`, 
-              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)' 
+            style={{
+              transform: `scale(${scale})`,
+              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
             }}
-            className="max-h-full w-auto max-w-full rounded-lg object-contain shadow-2xl origin-center"
+            className="max-h-full w-auto max-w-full origin-center rounded-lg object-contain shadow-2xl"
             loading="lazy"
             draggable={false}
           />
@@ -531,10 +578,14 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
   // Derive the current iframe src
   const effectiveZoom = fitWidth ? 'FitH' : zoom;
   // Drive embeds don't support hashes
-  const iframeSrc = isDriveEmbed ? fileUrl : buildPdfSrc(fileUrl, currentPage, effectiveZoom);
+  const iframeSrc = isDriveEmbed
+    ? fileUrl
+    : buildPdfSrc(fileUrl, currentPage, effectiveZoom);
 
   // Sync page input with current page
-  useEffect(() => { setPageInput(String(currentPage)); }, [currentPage]);
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   // Fullscreen API
   const [containerEl, setContainerEl] = useState(null);
@@ -569,7 +620,10 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
     setZoom(prev);
   };
 
-  const resetZoom = () => { setFitWidth(false); setZoom(DEFAULT_ZOOM); };
+  const resetZoom = () => {
+    setFitWidth(false);
+    setZoom(DEFAULT_ZOOM);
+  };
   const toggleFitWidth = () => setFitWidth((f) => !f);
 
   const goToPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
@@ -580,7 +634,11 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
   const handlePageInputKeyDown = (e) => {
     if (e.key === 'Enter') {
       const parsed = parseInt(pageInput, 10);
-      if (!isNaN(parsed) && parsed >= 1 && (!totalPages || parsed <= totalPages)) {
+      if (
+        !isNaN(parsed) &&
+        parsed >= 1 &&
+        (!totalPages || parsed <= totalPages)
+      ) {
         setCurrentPage(parsed);
       } else {
         setPageInput(String(currentPage));
@@ -590,7 +648,11 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
 
   const handlePageInputBlur = () => {
     const parsed = parseInt(pageInput, 10);
-    if (!isNaN(parsed) && parsed >= 1 && (!totalPages || parsed <= totalPages)) {
+    if (
+      !isNaN(parsed) &&
+      parsed >= 1 &&
+      (!totalPages || parsed <= totalPages)
+    ) {
       setCurrentPage(parsed);
     } else {
       setPageInput(String(currentPage));
@@ -610,16 +672,15 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
     >
       {/* ── Top Toolbar ── */}
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-white/[0.06] bg-white/[0.025] px-3 py-2">
-
         {/* File label */}
-        <div className="flex min-w-0 items-center gap-2 mr-2">
+        <div className="mr-2 flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500/15">
             <FileSearch className="h-3.5 w-3.5 text-red-400" />
           </div>
-          <span className="truncate text-[12px] font-medium text-white/60 max-w-[140px] sm:max-w-[220px]">
+          <span className="max-w-[140px] truncate text-[12px] font-medium text-white/60 sm:max-w-[220px]">
             {title || 'PDF Document'}
           </span>
-          <span className="shrink-0 rounded-md border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
+          <span className="shrink-0 rounded-md border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-red-400 uppercase">
             PDF
           </span>
         </div>
@@ -644,7 +705,7 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
               <button
                 onClick={toggleFitWidth}
                 title={fitWidth ? 'Exit fit-width' : 'Fit to width'}
-                className={`h-7 px-2 rounded-md text-[11px] font-semibold tabular-nums transition hover:bg-white/10 ${fitWidth ? 'text-indigo-400' : 'text-white/60 hover:text-white'}`}
+                className={`h-7 rounded-md px-2 text-[11px] font-semibold tabular-nums transition hover:bg-white/10 ${fitWidth ? 'text-indigo-400' : 'text-white/60 hover:text-white'}`}
               >
                 {fitWidth ? 'Fit' : `${zoom}%`}
               </button>
@@ -684,19 +745,23 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
               </button>
 
               <div className="flex items-center gap-1 px-1">
-                <Hash className="h-3 w-3 text-white/30 shrink-0" />
+                <Hash className="h-3 w-3 shrink-0 text-white/30" />
                 <input
                   type="text"
                   inputMode="numeric"
                   value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) =>
+                    setPageInput(e.target.value.replace(/\D/g, ''))
+                  }
                   onKeyDown={handlePageInputKeyDown}
                   onBlur={handlePageInputBlur}
                   title="Current page"
                   className="w-[3ch] bg-transparent text-center text-[12px] font-semibold text-white/80 outline-none focus:text-white"
                 />
                 {totalPages && (
-                  <span className="text-[11px] text-white/25 select-none">/ {totalPages}</span>
+                  <span className="text-[11px] text-white/25 select-none">
+                    / {totalPages}
+                  </span>
                 )}
               </div>
 
@@ -740,15 +805,20 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/5 text-white/60 transition hover:bg-white/12 hover:text-white"
           >
-            {isFullscreen
-              ? <Minimize2 className="h-3.5 w-3.5" />
-              : <Maximize2 className="h-3.5 w-3.5" />}
+            {isFullscreen ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
 
       {/* ── PDF Frame ── */}
-      <div className="relative flex-1 bg-[#1a1a2e]" style={{ minHeight: isFullscreen ? 0 : 'max(700px, 82vh)' }}>
+      <div
+        className="relative flex-1 bg-[#1a1a2e]"
+        style={{ minHeight: isFullscreen ? 0 : 'max(700px, 82vh)' }}
+      >
         {/* Loading overlay */}
         {!iframeLoaded && !iframeError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d1117]">
@@ -764,10 +834,14 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
               <AlertCircle className="h-8 w-8 text-red-400/70" />
             </div>
             <div className="text-center">
-              <p className="text-[14px] font-semibold text-white/70">Unable to preview this PDF</p>
-              <p className="mt-1 text-[12px] text-white/30">The file may be restricted or require a login.</p>
+              <p className="text-[14px] font-semibold text-white/70">
+                Unable to preview this PDF
+              </p>
+              <p className="mt-1 text-[12px] text-white/30">
+                The file may be restricted or require a login.
+              </p>
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="mt-1 flex items-center gap-2">
               <a
                 href={effectiveDownloadUrl}
                 download
@@ -794,9 +868,17 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
           src={iframeSrc}
           title={title || 'PDF Document'}
           className="h-full w-full border-0"
-          style={{ minHeight: isFullscreen ? 'calc(100vh - 49px)' : 'max(700px, 82vh)' }}
-          onLoad={() => { setIframeLoaded(true); setIframeError(false); }}
-          onError={() => { setIframeLoaded(true); setIframeError(true); }}
+          style={{
+            minHeight: isFullscreen ? 'calc(100vh - 49px)' : 'max(700px, 82vh)',
+          }}
+          onLoad={() => {
+            setIframeLoaded(true);
+            setIframeError(false);
+          }}
+          onError={() => {
+            setIframeLoaded(true);
+            setIframeError(true);
+          }}
           loading="lazy"
           allowFullScreen
         />
@@ -817,8 +899,9 @@ function PDFViewer({ fileUrl, title, className = '', downloadUrl = null }) {
               <ChevronLeft className="h-3.5 w-3.5" />
               Prev
             </button>
-            <span className="text-[11px] font-mono text-white/30">
-              Page {currentPage}{totalPages ? ` of ${totalPages}` : ''}
+            <span className="font-mono text-[11px] text-white/30">
+              Page {currentPage}
+              {totalPages ? ` of ${totalPages}` : ''}
             </span>
             <button
               onClick={goToNext}
@@ -875,7 +958,7 @@ function ExternalLinkViewer({ href, title, description, className = '' }) {
           </a>
           <button
             onClick={() => setAttemptEmbed(false)}
-            className="text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs font-semibold text-gray-500 transition-colors hover:text-gray-300"
           >
             Back to preview card
           </button>
@@ -885,21 +968,23 @@ function ExternalLinkViewer({ href, title, description, className = '' }) {
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-md shadow-2xl ${className}`}>
-      <div className="relative flex flex-col items-center justify-center p-8 sm:p-12 text-center overflow-hidden">
+    <div
+      className={`overflow-hidden rounded-2xl border border-cyan-500/20 bg-cyan-500/5 shadow-2xl backdrop-blur-md ${className}`}
+    >
+      <div className="relative flex flex-col items-center justify-center overflow-hidden p-8 text-center sm:p-12">
         {/* Background glow */}
-        <div className="absolute -inset-10 -z-10 bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent blur-3xl opacity-50" />
-        
+        <div className="absolute -inset-10 -z-10 bg-linear-to-br from-cyan-500/10 via-teal-500/5 to-transparent opacity-50 blur-3xl" />
+
         {/* Icon */}
         <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10">
           <ExternalLink className="h-8 w-8 stroke-[1.75px]" />
         </div>
 
         {/* Domain and title */}
-        <span className="mb-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cyan-300 shadow-sm">
+        <span className="mb-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold tracking-widest text-cyan-300 uppercase shadow-sm">
           {domain}
         </span>
-        <h3 className="mb-3 max-w-lg text-lg font-bold text-white sm:text-xl leading-snug tracking-tight">
+        <h3 className="mb-3 max-w-lg text-lg leading-snug font-bold tracking-tight text-white sm:text-xl">
           {title || 'External Resource'}
         </h3>
         {description && (
@@ -909,27 +994,29 @@ function ExternalLinkViewer({ href, title, description, className = '' }) {
         )}
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm justify-center">
+        <div className="flex w-full max-w-sm flex-col items-center justify-center gap-3 sm:flex-row">
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 text-xs font-bold uppercase tracking-wider text-black transition-all hover:bg-cyan-400 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cyan-500/25"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 text-xs font-bold tracking-wider text-black uppercase shadow-lg shadow-cyan-500/25 transition-all hover:scale-[1.02] hover:bg-cyan-400 active:scale-[0.98] sm:w-auto"
           >
             <ExternalLink className="h-4 w-4 stroke-[2.2px]" />
             Open Website
           </a>
           <button
             onClick={() => setAttemptEmbed(true)}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 px-6 py-3 text-xs font-bold tracking-wider text-gray-300 uppercase transition-all hover:border-white/15 hover:bg-white/8 hover:text-white sm:w-auto"
           >
             Try In-line Preview
           </button>
         </div>
 
         {/* Security hint */}
-        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed text-gray-500 font-medium">
-          To protect your security, some external websites cannot be viewed directly inside this dashboard. Click <strong>Open Website</strong> to safely open it in a new window.
+        <p className="mt-8 max-w-md text-[10.5px] leading-relaxed font-medium text-gray-500">
+          To protect your security, some external websites cannot be viewed
+          directly inside this dashboard. Click <strong>Open Website</strong> to
+          safely open it in a new window.
         </p>
       </div>
     </div>
@@ -949,7 +1036,11 @@ export default function ResourceEmbed({ resource, className = '' }) {
     if (!src) return null;
 
     return (
-      <ImageFileViewer fileUrl={src} title={resource?.title} className={className} />
+      <ImageFileViewer
+        fileUrl={src}
+        title={resource?.title}
+        className={className}
+      />
     );
   }
 
@@ -1101,7 +1192,9 @@ export default function ResourceEmbed({ resource, className = '' }) {
       const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
       return (
         <div className="space-y-3">
-          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+          <div
+            className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}
+          >
             <iframe
               src={previewUrl}
               title={resource?.title || 'Google Drive Document'}
@@ -1128,20 +1221,34 @@ export default function ResourceEmbed({ resource, className = '' }) {
     // 2. Handle Text files
     if (ext === 'txt') {
       return (
-        <TextFileReader fileUrl={fileUrl} title={resource?.title} className={className} />
+        <TextFileReader
+          fileUrl={fileUrl}
+          title={resource?.title}
+          className={className}
+        />
       );
     }
 
     // 3. Handle PDF files
     if (ext === 'pdf') {
-      return <PDFViewer fileUrl={fileUrl} title={resource?.title} className={className} />;
+      return (
+        <PDFViewer
+          fileUrl={fileUrl}
+          title={resource?.title}
+          className={className}
+        />
+      );
     }
 
     // 4. Handle Images natively with Zoom
     const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
     if (imageExts.includes(ext)) {
       return (
-        <ImageFileViewer fileUrl={fileUrl} title={resource?.title} className={className} />
+        <ImageFileViewer
+          fileUrl={fileUrl}
+          title={resource?.title}
+          className={className}
+        />
       );
     }
 
@@ -1150,9 +1257,14 @@ export default function ResourceEmbed({ resource, className = '' }) {
     if (videoExts.includes(ext)) {
       return (
         <div className="space-y-3">
-          <div className={`aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-lg shadow-black/30 ${className}`}>
+          <div
+            className={`aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-lg shadow-black/30 ${className}`}
+          >
             <video controls className="h-full w-full object-contain">
-              <source src={fileUrl} type={`video/${ext === 'mov' ? 'mp4' : ext}`} />
+              <source
+                src={fileUrl}
+                type={`video/${ext === 'mov' ? 'mp4' : ext}`}
+              />
               Your browser does not support the video element.
             </video>
           </div>
@@ -1164,21 +1276,30 @@ export default function ResourceEmbed({ resource, className = '' }) {
     const audioExts = ['mp3', 'wav', 'ogg', 'm4a'];
     if (audioExts.includes(ext)) {
       return (
-        <div className={`flex flex-col gap-5 rounded-xl border border-white/10 bg-[#0d1117] p-5 shadow-lg ${className}`}>
+        <div
+          className={`flex flex-col gap-5 rounded-xl border border-white/10 bg-[#0d1117] p-5 shadow-lg ${className}`}
+        >
           <div className="flex items-center gap-3 text-gray-300">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
               <FileDown className="h-5 w-5" />
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-[14px] font-medium text-white">{resource?.title || 'Audio File'}</p>
-              <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{ext} AUDIO</p>
+              <p className="truncate text-[14px] font-medium text-white">
+                {resource?.title || 'Audio File'}
+              </p>
+              <p className="text-[11px] font-medium tracking-wider text-gray-500 uppercase">
+                {ext} AUDIO
+              </p>
             </div>
           </div>
-          <audio controls className="w-full h-10 outline-none">
-            <source src={fileUrl} type={`audio/${ext === 'm4a' ? 'mp4' : ext}`} />
+          <audio controls className="h-10 w-full outline-none">
+            <source
+              src={fileUrl}
+              type={`audio/${ext === 'm4a' ? 'mp4' : ext}`}
+            />
             Your browser does not support the audio element.
           </audio>
-          <div className="flex justify-end pt-2 border-t border-white/5">
+          <div className="flex justify-end border-t border-white/5 pt-2">
             <a
               href={fileUrl}
               target="_blank"
@@ -1200,7 +1321,9 @@ export default function ResourceEmbed({ resource, className = '' }) {
       const gdocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
       return (
         <div className="space-y-3">
-          <div className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}>
+          <div
+            className={`aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-black md:aspect-[4/3] lg:aspect-[16/10] ${className}`}
+          >
             <iframe
               src={gdocsUrl}
               title={resource?.title || 'Office Document'}

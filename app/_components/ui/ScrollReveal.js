@@ -7,8 +7,8 @@
 
 'use client';
 
-import { useScrollReveal } from '@/app/_lib/hooks';
-import { cn } from '@/app/_lib/utils';
+import { useScrollReveal } from '@/app/_lib/utils/hooks';
+import { cn } from '@/app/_lib/utils/utils';
 
 // ─── Animation variant classes ──────────────────────────────────────────────
 const HIDDEN = {

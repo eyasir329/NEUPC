@@ -18,7 +18,7 @@ import {
 import {
   deleteNoticeAction,
   toggleNoticePinAction,
-} from '@/app/_lib/notice-actions';
+} from '@/app/_lib/actions/notice-actions';
 
 export default function NoticeRow({ notice, onEdit }) {
   const [confirmDelete, setConfirmDelete] = useState(false);

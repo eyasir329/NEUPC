@@ -11,9 +11,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
-import { scrapeUserData } from '@/app/_lib/codeforces-scraper';
+import { auth } from '@/app/_lib/auth/auth';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
+import { scrapeUserData } from '@/app/_lib/integrations/codeforces-scraper';
 
 export async function POST(request) {
   try {

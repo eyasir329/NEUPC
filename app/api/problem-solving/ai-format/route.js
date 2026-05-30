@@ -8,9 +8,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { generateCompletion, isLLMAvailable } from '@/app/_lib/llm';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import {
+  generateCompletion,
+  isLLMAvailable,
+} from '@/app/_lib/integrations/llm';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

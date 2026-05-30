@@ -18,7 +18,7 @@ import {
   connectHandleAction,
   disconnectHandleAction,
   cleanupLeetCodeDataAction,
-} from '@/app/_lib/problem-solving-actions';
+} from '@/app/_lib/actions/problem-solving-actions';
 
 import { dummyData } from './useProblemSolving.mock';
 

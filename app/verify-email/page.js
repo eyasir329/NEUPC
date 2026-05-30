@@ -3,7 +3,7 @@
  * @module VerifyEmailPage
  */
 
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import VerifyEmailClient from './VerifyEmailClient';
 
 export const metadata = {
@@ -17,7 +17,7 @@ async function checkTokenValidity(token) {
     .select('id, full_name, email_verified, account_status')
     .eq('verification_token', token)
     .single();
-    
+
   return { valid: !!user, user };
 }
 
@@ -79,7 +79,7 @@ export default async function VerifyEmailPage({ searchParams }) {
         <div className="grid-overlay absolute inset-0 opacity-25" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(124,92,255,0.07),transparent)]" />
         <div className="bg-neon-violet/10 absolute -top-40 -left-32 h-125 w-125 rounded-full blur-[140px]" />
-        <div className="bg-neon-lime/8 absolute -bottom-40 -right-32 h-100 w-100 rounded-full blur-[120px]" />
+        <div className="bg-neon-lime/8 absolute -right-32 -bottom-40 h-100 w-100 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">

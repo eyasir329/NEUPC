@@ -8,10 +8,9 @@
  * @module AccountLayout
  */
 
-import { auth } from '@/app/_lib/auth';
+import { auth } from '@/app/_lib/auth/auth';
 import { redirect } from 'next/navigation';
-import { getCachedUserRoles } from '@/app/_lib/auth-guard';
-import { getUserByEmail } from '@/app/_lib/data-service';
+import { getCachedUserRoles, getCachedUserByEmail } from '@/app/_lib/auth/auth-guard';
 import AccountLayoutClient from './_components/AccountLayoutClient';
 import { RoleProvider } from './_components/RoleContext';
 import ChatFAB from '@/app/_components/chat/ChatFAB';
@@ -28,7 +27,7 @@ export default async function AccountLayout({ children }) {
 
   const [userRoles, dbUser] = await Promise.all([
     getCachedUserRoles(session.user.email).catch(() => []),
-    getUserByEmail(session.user.email).catch(() => null),
+    getCachedUserByEmail(session.user.email).catch(() => null),
   ]);
 
   // Serialize only the fields the client needs

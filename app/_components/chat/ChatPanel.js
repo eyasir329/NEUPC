@@ -14,13 +14,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import { Search } from 'lucide-react';
 import {
   getConversationsAction,
   getSupportInboxAction,
   syncGroupMembershipsAction,
-} from '@/app/_lib/chat-actions';
+} from '@/app/_lib/actions/chat-actions';
 import ChatPanelHeader from './ChatPanelHeader';
 import ConversationList from './ConversationList';
 import MessageThread from './MessageThread';

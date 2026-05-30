@@ -1,5 +1,10 @@
+/**
+ * @file Execute API route handler
+ * @module ExecuteRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { requireApiSession, isAuthError } from '@/app/_lib/api-guard';
+import { requireApiSession, isAuthError } from '@/app/_lib/auth/api-guard';
 
 export const dynamic = 'force-dynamic';
 

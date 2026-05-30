@@ -1,3 +1,8 @@
+/**
+ * @file Index
+ * @module index
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -11,7 +16,9 @@ export function PageHead({ eyebrow, title, sub, actions }) {
         <h1 className="gp-title">{title}</h1>
         {sub && <p className="gp-sub">{sub}</p>}
       </div>
-      {actions && <div className="flex shrink-0 gap-2 flex-wrap">{actions}</div>}
+      {actions && (
+        <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
+      )}
     </div>
   );
 }
@@ -53,25 +60,48 @@ export function Stat({ icon: Icon, label, value, unit, trend }) {
 
 export function StatRow({ cols = 4, children }) {
   const colClass =
-    cols === 2 ? 'grid-cols-1 sm:grid-cols-2'
-    : cols === 3 ? 'grid-cols-2 sm:grid-cols-3'
-    : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
+    cols === 2
+      ? 'grid-cols-1 sm:grid-cols-2'
+      : cols === 3
+        ? 'grid-cols-2 sm:grid-cols-3'
+        : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
   return (
-    <div className={`grid gap-3 sm:gap-4 mb-5 ${colClass}`}>
-      {children}
-    </div>
+    <div className={`mb-5 grid gap-3 sm:gap-4 ${colClass}`}>{children}</div>
   );
 }
 
-export function Badge({ variant = '', mono = false, className = '', children }) {
-  const cls = ['gp-badge', variant ? `gp-badge-${variant}` : '', mono ? 'gp-badge-mono' : '', className]
+export function Badge({
+  variant = '',
+  mono = false,
+  className = '',
+  children,
+}) {
+  const cls = [
+    'gp-badge',
+    variant ? `gp-badge-${variant}` : '',
+    mono ? 'gp-badge-mono' : '',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
   return <span className={cls}>{children}</span>;
 }
 
-export function Btn({ variant, size, as: As = 'button', href, className = '', children, ...rest }) {
-  const cls = ['gp-btn', variant ? `gp-btn-${variant}` : '', size ? `gp-btn-${size}` : '', className]
+export function Btn({
+  variant,
+  size,
+  as: As = 'button',
+  href,
+  className = '',
+  children,
+  ...rest
+}) {
+  const cls = [
+    'gp-btn',
+    variant ? `gp-btn-${variant}` : '',
+    size ? `gp-btn-${size}` : '',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
   if (href) {
@@ -101,12 +131,19 @@ export function Locked({ feature, children }) {
   );
 }
 
-export function LockedRow({ label, reason, applyHref = '/account/guest/membership-application' }) {
+export function LockedRow({
+  label,
+  reason,
+  applyHref = '/account/guest/membership-application',
+}) {
   return (
     <div className="gp-locked-row">
       <Lock size={13} style={{ color: 'var(--gp-text-4)' }} />
       <span style={{ flex: 1 }}>{label}</span>
-      <span className="gp-badge gp-badge-mono" style={{ fontSize: 9.5, padding: '1px 6px' }}>
+      <span
+        className="gp-badge gp-badge-mono"
+        style={{ fontSize: 9.5, padding: '1px 6px' }}
+      >
         MEMBERS
       </span>
       <span className="gp-lock-tip">
@@ -149,7 +186,13 @@ export function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export function UpgradeBanner({ icon: Icon, title, desc, ctaLabel = 'Apply for membership', ctaHref = '/account/guest/membership-application' }) {
+export function UpgradeBanner({
+  icon: Icon,
+  title,
+  desc,
+  ctaLabel = 'Apply for membership',
+  ctaHref = '/account/guest/membership-application',
+}) {
   return (
     <div className="gp-upgrade">
       {Icon && (
@@ -158,7 +201,9 @@ export function UpgradeBanner({ icon: Icon, title, desc, ctaLabel = 'Apply for m
         </div>
       )}
       <div style={{ flex: 1, minWidth: 200 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
+          {title}
+        </div>
         <div style={{ fontSize: 12.5, color: 'var(--gp-text-3)' }}>{desc}</div>
       </div>
       <Btn href={ctaHref} variant="primary">

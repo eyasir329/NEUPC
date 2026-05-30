@@ -1,3 +1,8 @@
+/**
+ * @file Resource viewer component
+ * @module ResourceViewer
+ */
+
 import ResourceEmbed from '@/app/_components/resources/ResourceEmbed';
 import Image from 'next/image';
 import {
@@ -108,11 +113,12 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
 
   return (
     <section className="space-y-4" aria-label="Resource details">
-
       {/* ── Meta row: type + category + date + tags ── */}
       {!hideHeader && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-[11px] font-semibold ${cfg.color}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-lg border ${cfg.border} ${cfg.bg} px-2 py-1 text-[11px] font-semibold ${cfg.color}`}
+          >
             <TypeIcon className="h-3 w-3" />
             {typeLabel}
           </span>
@@ -131,13 +137,16 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
           )}
 
           {resource.status === 'draft' && (
-            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] text-amber-300/80 font-bold uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[11px] font-bold tracking-wider text-amber-300/80 uppercase">
               Pending Admin Review
             </span>
           )}
 
           {date && (
-            <time dateTime={resource.published_at || resource.created_at} className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25">
+            <time
+              dateTime={resource.published_at || resource.created_at}
+              className="ml-auto flex items-center gap-1.5 text-[11px] text-white/25"
+            >
               <Calendar className="h-3 w-3" />
               {date}
             </time>
@@ -147,7 +156,7 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
 
       {/* ── Title ── */}
       {!hideHeader && (
-        <h1 className="text-[18px] font-bold leading-snug tracking-tight text-white sm:text-[22px]">
+        <h1 className="text-[18px] leading-snug font-bold tracking-tight text-white sm:text-[22px]">
           {resource.title}
         </h1>
       )}
@@ -155,10 +164,10 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
       {/* ── Description ── */}
       {!hideHeader && resource.description && (
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
-          <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
+          <p className="mb-2 text-[10.5px] font-semibold tracking-widest text-white/20 uppercase">
             Description
           </p>
-          <p className="text-[13.5px] leading-relaxed text-white/55 whitespace-pre-line">
+          <p className="text-[13.5px] leading-relaxed whitespace-pre-line text-white/55">
             {resource.description}
           </p>
         </div>
@@ -184,7 +193,7 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
 
       {/* ── Rich Content Blocks ── */}
       {!hideHeader && type !== 'rich_text' && resource.content && (
-        <div className="w-full mt-4">
+        <div className="mt-4 w-full">
           <EventContentRenderer content={resource.content} />
         </div>
       )}
@@ -207,11 +216,11 @@ export default function ResourceViewer({ resource, hideHeader = false }) {
       {/* ── Attachment ── */}
       {resource.file_url && !['file', 'image', 'video'].includes(type) && (
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
-          <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-widest text-white/20">
+          <p className="mb-3 text-[10.5px] font-semibold tracking-widest text-white/20 uppercase">
             Attachment
           </p>
           <a
-            href={safeExternalHref(resource.file_url) || "#"}
+            href={safeExternalHref(resource.file_url) || '#'}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-[13px] font-medium text-white/70 transition-all hover:border-white/15 hover:bg-white/10 hover:text-white"

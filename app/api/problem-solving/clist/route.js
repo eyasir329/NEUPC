@@ -14,11 +14,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
-import { verifyExtensionToken } from '@/app/_lib/extension-auth';
-import { ClistService } from '@/app/_lib/problem-solving-services';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
+import { verifyExtensionToken } from '@/app/_lib/auth/extension-auth';
+import { ClistService } from '@/app/_lib/services/problem-solving-services';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

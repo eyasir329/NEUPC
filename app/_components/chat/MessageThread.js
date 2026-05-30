@@ -16,11 +16,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import {
   getMessagesAction,
   markConversationReadAction,
-} from '@/app/_lib/chat-actions';
+} from '@/app/_lib/actions/chat-actions';
 import MessageBubble from './MessageBubble';
 import MessageComposer from './MessageComposer';
 import { Loader2, ChevronDown } from 'lucide-react';

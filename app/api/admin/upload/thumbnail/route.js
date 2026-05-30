@@ -20,13 +20,13 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
 import {
   uploadThumbnail,
   isValidThumbnailType,
   isValidFileSize,
-} from '@/app/_lib/bootcamp-upload';
+} from '@/app/_lib/services/bootcamp-upload';
 
 const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024; // 5MB
 

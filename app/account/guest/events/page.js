@@ -5,8 +5,8 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getPublishedEvents } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getPublishedEvents } from '@/app/_lib/services/data-service';
 import GuestEventsClient from './_components/GuestEventsClient';
 
 export const metadata = { title: 'Events | Guest | NEUPC' };

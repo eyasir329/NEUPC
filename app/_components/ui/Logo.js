@@ -17,10 +17,10 @@ function Logo() {
       {/* Left: Logo Icon Block */}
       <div className="relative flex shrink-0 items-center justify-center">
         {/* Ambient glow — sits outside the container via negative inset so it isn't clipped */}
-        <div className="pointer-events-none absolute -inset-2 z-0 rounded-full opacity-0 blur-xl transition-all duration-500 ease-out group-hover:opacity-100 bg-primary-500/25" />
+        <div className="bg-primary-500/25 pointer-events-none absolute -inset-2 z-0 rounded-full opacity-0 blur-xl transition-all duration-500 ease-out group-hover:opacity-100" />
 
         {/* Logo container */}
-        <div className="relative z-10 flex h-11 w-11 overflow-hidden rounded-xl bg-surface-2/70 shadow-sm backdrop-blur-md transition-all duration-300 ease-out group-hover:scale-[1.07] group-hover:bg-surface-2 group-hover:shadow-[0_0_16px_rgba(8,131,149,0.3)] sm:h-12 sm:w-12">
+        <div className="bg-surface-2/70 group-hover:bg-surface-2 relative z-10 flex h-11 w-11 overflow-hidden rounded-xl shadow-sm backdrop-blur-md transition-all duration-300 ease-out group-hover:scale-[1.07] group-hover:shadow-[0_0_16px_rgba(8,131,149,0.3)] sm:h-12 sm:w-12">
           <Image
             src="/logo.png"
             alt="NEUPC Logo"
@@ -33,7 +33,7 @@ function Logo() {
 
       {/* Brand name */}
       <div className="flex flex-col justify-center">
-        <span className="font-heading text-[1.1rem] leading-none font-bold tracking-tight text-white transition-colors duration-300 ease-out group-hover:text-primary-400 sm:text-xl">
+        <span className="font-heading group-hover:text-primary-400 text-[1.1rem] leading-none font-bold tracking-tight text-white transition-colors duration-300 ease-out sm:text-xl">
           NEUPC
         </span>
         <span className="mt-0.5 hidden text-[0.6875rem] font-medium tracking-widest text-slate-400 transition-colors duration-300 ease-out group-hover:text-slate-300 md:block">
@@ -45,7 +45,7 @@ function Logo() {
       <div className="hidden items-center gap-3 pl-2 opacity-40 transition-all duration-300 ease-out group-hover:opacity-100 lg:flex">
         <div className="h-6 w-px rounded-full bg-white/10" />
         <CodeXml
-          className="h-4 w-4 text-primary-400 transition-transform duration-300 ease-out group-hover:scale-110"
+          className="text-primary-400 h-4 w-4 transition-transform duration-300 ease-out group-hover:scale-110"
           strokeWidth={2.5}
           aria-hidden
         />

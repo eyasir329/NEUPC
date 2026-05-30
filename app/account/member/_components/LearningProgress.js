@@ -1,3 +1,8 @@
+/**
+ * @file Learning progress component
+ * @module LearningProgress
+ */
+
 'use client';
 
 import { BookOpen, ArrowRight } from 'lucide-react';
@@ -16,38 +21,49 @@ const TONE_CLASSES = {
 
 export default function LearningProgress({ roadmaps }) {
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-center justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 rounded-2xl shrink-0">
-            <BookOpen className="w-6 h-6" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
+            <BookOpen className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Learning Progress</h3>
-            <p className="text-xs text-zinc-500 mt-1">Roadmaps and bootcamp tracks you've started</p>
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
+              Learning Progress
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              Roadmaps and bootcamp tracks you've started
+            </p>
           </div>
         </div>
-        <Link 
+        <Link
           href="/account/member/bootcamps"
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 transition-colors shrink-0"
+          className="flex shrink-0 items-center gap-2 text-xs font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-100"
         >
-          All Tracks <ArrowRight className="w-4 h-4" />
+          All Tracks <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {roadmaps.map((track) => {
           const classes = TONE_CLASSES[track.tone] || TONE_CLASSES.blue;
           return (
             <div key={track.name} className="group cursor-pointer">
-              <div className="flex items-center justify-between text-xs font-bold mb-2">
-                <span className="text-zinc-100 group-hover:text-indigo-400 transition-colors">{track.name}</span>
+              <div className="mb-2 flex items-center justify-between text-xs font-bold">
+                <span className="text-zinc-100 transition-colors group-hover:text-indigo-400">
+                  {track.name}
+                </span>
                 <span className={classes.text}>{track.progress}%</span>
               </div>
-              <div className="h-1.5 w-full bg-white/10 rounded-lg overflow-hidden mb-2">
-                <div className={`h-full ${classes.bg} rounded-lg transition-all duration-1000`} style={{ width: `${track.progress}%` }}></div>
+              <div className="mb-2 h-1.5 w-full overflow-hidden rounded-lg bg-white/10">
+                <div
+                  className={`h-full ${classes.bg} rounded-lg transition-all duration-1000`}
+                  style={{ width: `${track.progress}%` }}
+                ></div>
               </div>
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{track.completed} of {track.total} lessons</div>
+              <div className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                {track.completed} of {track.total} lessons
+              </div>
             </div>
           );
         })}

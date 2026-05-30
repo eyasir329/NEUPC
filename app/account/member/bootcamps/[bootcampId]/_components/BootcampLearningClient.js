@@ -1,3 +1,8 @@
+/**
+ * @file Bootcamp learning client component
+ * @module BootcampLearningClient
+ */
+
 'use client';
 
 import { marked } from 'marked';
@@ -6,7 +11,12 @@ import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/5" /> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/5" />
+    ),
+  }
 );
 
 import {
@@ -91,15 +101,18 @@ import {
   submitExamSubmission,
   getExamSubmission,
   checkEnrollment,
-} from '@/app/_lib/bootcamp-actions';
-import VideoPlayer from '../[lessonId]/_components/VideoPlayer';
+} from '@/app/_lib/actions/bootcamp-actions';
+import VideoPlayer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/VideoPlayer';
 import ExtensionGuide from '@/app/account/member/problem-solving/_components/ExtensionGuide';
 
 const parseExamQuestions = (questions, lesson = null) => {
   let list = [];
   if (lesson) {
     try {
-      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+      const parsed =
+        typeof lesson.content === 'string'
+          ? JSON.parse(lesson.content)
+          : lesson.content;
       const examBlock = parsed?.find((b) => b.type === 'exam');
       list = examBlock?.questions || [];
     } catch {}
@@ -161,13 +174,19 @@ function buildDescRenderer() {
     const tag = token.ordered ? 'ol' : 'ul';
     let body = '';
     for (const item of token.items) {
-      const inner = this.parser.parse(item.tokens).replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
+      const inner = this.parser
+        .parse(item.tokens)
+        .replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
       body += `<li class="md-li">${inner}</li>\n`;
     }
     return `<${tag} class="md-${tag}">${body}</${tag}>\n`;
   };
-  r.strong = function ({ tokens }) { return `<strong class="md-strong">${this.parser.parseInline(tokens)}</strong>`; };
-  r.em = function ({ tokens }) { return `<em class="md-em">${this.parser.parseInline(tokens)}</em>`; };
+  r.strong = function ({ tokens }) {
+    return `<strong class="md-strong">${this.parser.parseInline(tokens)}</strong>`;
+  };
+  r.em = function ({ tokens }) {
+    return `<em class="md-em">${this.parser.parseInline(tokens)}</em>`;
+  };
   r.codespan = ({ text }) => `<code class="md-inline-code">${text}</code>`;
   r.link = function ({ href, title, tokens }) {
     return `<a href="${href}" class="md-a"${title ? ` title="${title}"` : ''} target="_blank" rel="noopener">${this.parser.parseInline(tokens)}</a>`;
@@ -181,11 +200,22 @@ const DESC_RENDERER = buildDescRenderer();
 function MarkdownDesc({ text, className = '' }) {
   if (!text) return null;
   let html = '';
-  try { html = marked.parse(text, { gfm: true, breaks: true, renderer: DESC_RENDERER }); } catch { html = `<p>${text}</p>`; }
+  try {
+    html = marked.parse(text, {
+      gfm: true,
+      breaks: true,
+      renderer: DESC_RENDERER,
+    });
+  } catch {
+    html = `<p>${text}</p>`;
+  }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: MD_DESC_STYLES }} />
-      <div className={`md-desc ${className}`} dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className={`md-desc ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </>
   );
 }
@@ -197,17 +227,23 @@ function TaskDescriptionRenderer({ content }) {
   try {
     const blocks = typeof content === 'string' ? JSON.parse(content) : content;
     if (Array.isArray(blocks)) {
-      html = blocks.map(b => {
-        if (!b) return '';
-        const type = b.type || 'richText';
-        const text = b.content || '';
-        if (type === 'markdown') {
-          try { return marked(text); } catch { return `<pre>${text}</pre>`; }
-        }
-        // richText, html — already HTML; skip structural/media blocks
-        if (type === 'richText' || type === 'html') return text;
-        return '';
-      }).join('');
+      html = blocks
+        .map((b) => {
+          if (!b) return '';
+          const type = b.type || 'richText';
+          const text = b.content || '';
+          if (type === 'markdown') {
+            try {
+              return marked(text);
+            } catch {
+              return `<pre>${text}</pre>`;
+            }
+          }
+          // richText, html — already HTML; skip structural/media blocks
+          if (type === 'richText' || type === 'html') return text;
+          return '';
+        })
+        .join('');
     } else {
       html = content;
     }
@@ -216,23 +252,28 @@ function TaskDescriptionRenderer({ content }) {
   }
   if (!html || !html.trim()) return null;
   return (
-    <div className="tiptap-viewer-content" dangerouslySetInnerHTML={{ __html: html }} />
+    <div
+      className="tiptap-viewer-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
 // Heavy chunk: lazy-load only the markdown/code-highlight renderer
 const LessonContentRenderer = lazy(
-  () => import('../[lessonId]/_components/LessonContentRenderer')
+  () =>
+    import('@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer')
 );
 import LessonComments from '@/app/_components/ui/LessonComments';
-import { getLessonCommentsAction } from '@/app/_lib/member-lesson-comments-actions';
+import { getLessonCommentsAction } from '@/app/_lib/actions/member-lesson-comments-actions';
 
 // Native History API cache to bypass Next.js monkey-patched router and prevent reloads
 let nativePushState = null;
 let nativeReplaceState = null;
 
 function getNativeHistory() {
-  if (typeof window === 'undefined') return { pushState: null, replaceState: null };
+  if (typeof window === 'undefined')
+    return { pushState: null, replaceState: null };
   if (nativePushState && nativeReplaceState) {
     return { pushState: nativePushState, replaceState: nativeReplaceState };
   }
@@ -356,18 +397,18 @@ const LessonRow = memo(function LessonRow({
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         ) : isActive ? (
           lesson.type === 'practice' ? (
-            <CheckSquare className="h-4 w-4 text-teal-400 animate-pulse" />
+            <CheckSquare className="h-4 w-4 animate-pulse text-teal-400" />
           ) : lesson.type === 'exam' ? (
-            <HelpCircle className="h-4 w-4 text-violet-400 animate-pulse" />
+            <HelpCircle className="h-4 w-4 animate-pulse text-violet-400" />
           ) : (
             <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40">
               <Play className="h-2 w-2 fill-emerald-400 text-emerald-400" />
             </div>
           )
         ) : lesson.type === 'practice' ? (
-          <CheckSquare className="h-4 w-4 text-teal-500/60 group-hover:text-teal-400 transition-colors" />
+          <CheckSquare className="h-4 w-4 text-teal-500/60 transition-colors group-hover:text-teal-400" />
         ) : lesson.type === 'exam' ? (
-          <HelpCircle className="h-4 w-4 text-violet-500/60 group-hover:text-violet-400 transition-colors" />
+          <HelpCircle className="h-4 w-4 text-violet-500/60 transition-colors group-hover:text-violet-400" />
         ) : (
           <div className="flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[8px] font-medium text-gray-600 transition-colors group-hover:border-violet-500/40 group-hover:text-violet-400">
             {index + 1}
@@ -414,7 +455,9 @@ const LessonRow = memo(function LessonRow({
             </>
           )}
           {effectiveLocked && (
-            <span className="ml-auto text-[10px] text-amber-600/80">Locked</span>
+            <span className="ml-auto text-[10px] text-amber-600/80">
+              Locked
+            </span>
           )}
         </div>
       </div>
@@ -556,7 +599,9 @@ function CourseGroup({
           className={`h-3.5 w-3.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-[13px] font-semibold transition-colors group-hover:text-violet-300 ${course.is_locked ? 'text-gray-500' : 'text-white'}`}>
+          <div
+            className={`truncate text-[13px] font-semibold transition-colors group-hover:text-violet-300 ${course.is_locked ? 'text-gray-500' : 'text-white'}`}
+          >
             {course.title}
           </div>
           {course.is_locked ? (
@@ -720,7 +765,9 @@ function CurriculumRail({
       {/* Bottom padding clears ChatFAB, mobile CTA bar, and iOS safe-area. */}
       <div
         className="spa-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12rem)' }}
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12rem)',
+        }}
       >
         {filtered.length > 0 ? (
           filtered.map((course, ci) => (
@@ -821,8 +868,8 @@ function NotesPanel({ lessonId, initialNotes, onSave, isArchived = false }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
-            title={isExpanded ? "Collapse Notes" : "Expand Notes"}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10"
+            title={isExpanded ? 'Collapse Notes' : 'Expand Notes'}
           >
             {isExpanded ? (
               <>
@@ -837,31 +884,32 @@ function NotesPanel({ lessonId, initialNotes, onSave, isArchived = false }) {
             )}
           </button>
 
-          {!isArchived && (isEditing ? (
-            <button
-              onClick={() => setIsEditing(false)}
-              className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
-              title="Preview Notes"
-            >
-              <Eye className="h-3.5 w-3.5 text-blue-400" />
-              Preview
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all cursor-pointer"
-              title="Edit Notes"
-            >
-              <Pencil className="h-3.5 w-3.5 text-yellow-400" />
-              Edit
-            </button>
-          ))}
+          {!isArchived &&
+            (isEditing ? (
+              <button
+                onClick={() => setIsEditing(false)}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10"
+                title="Preview Notes"
+              >
+                <Eye className="h-3.5 w-3.5 text-blue-400" />
+                Preview
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:bg-white/10"
+                title="Edit Notes"
+              >
+                <Pencil className="h-3.5 w-3.5 text-yellow-400" />
+                Edit
+              </button>
+            ))}
 
           {!isArchived && (
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-lg bg-[#8083ff]/10 hover:bg-[#8083ff]/20 px-3 py-1.5 text-[11px] font-medium text-[#c0c1ff] transition-all disabled:opacity-50 cursor-pointer"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#8083ff]/10 px-3 py-1.5 text-[11px] font-medium text-[#c0c1ff] transition-all hover:bg-[#8083ff]/20 disabled:opacity-50"
             >
               {saving ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -879,13 +927,23 @@ function NotesPanel({ lessonId, initialNotes, onSave, isArchived = false }) {
 
       {/* Body Content Mode */}
       {!isEditing ? (
-        <div className={`px-4 py-3 text-sm text-gray-300 spa-scroll transition-all duration-300 ${
-          isExpanded ? 'min-h-[400px] h-auto overflow-y-visible' : 'min-h-[116px] max-h-[300px] overflow-y-auto'
-        }`}>
+        <div
+          className={`spa-scroll px-4 py-3 text-sm text-gray-300 transition-all duration-300 ${
+            isExpanded
+              ? 'h-auto min-h-[400px] overflow-y-visible'
+              : 'max-h-[300px] min-h-[116px] overflow-y-auto'
+          }`}
+        >
           {notes ? (
-            <MarkdownDesc text={notes} className="[&_p]:text-gray-300 [&_p]:text-[13px] [&_p]:leading-relaxed" />
+            <MarkdownDesc
+              text={notes}
+              className="[&_p]:text-[13px] [&_p]:leading-relaxed [&_p]:text-gray-300"
+            />
           ) : (
-            <p className="text-gray-500 italic text-[13px]">No notes taken yet. Click the edit icon to write notes in Markdown format...</p>
+            <p className="text-[13px] text-gray-500 italic">
+              No notes taken yet. Click the edit icon to write notes in Markdown
+              format...
+            </p>
           )}
         </div>
       ) : (
@@ -893,8 +951,8 @@ function NotesPanel({ lessonId, initialNotes, onSave, isArchived = false }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Take notes while watching (supports Markdown)…"
-          className={`spa-scroll w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none border-t border-white/5 transition-all duration-300 ${
-            isExpanded ? 'min-h-[650px] h-auto' : 'min-h-[116px]'
+          className={`spa-scroll w-full resize-none border-t border-white/5 bg-transparent px-4 py-3 text-sm text-white placeholder-gray-600 transition-all duration-300 focus:outline-none ${
+            isExpanded ? 'h-auto min-h-[650px]' : 'min-h-[116px]'
           }`}
           rows={isExpanded ? 25 : 4}
           autoFocus
@@ -995,9 +1053,9 @@ function TableOfContents({ contentRef }) {
 // ─── Overview tabs: Tasks, Sessions, Help Desk ────────────────────────────────
 
 const DIFF_COLOR = {
-  easy:   'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  easy: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
   medium: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
-  hard:   'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+  hard: 'text-rose-400 bg-rose-500/10 ring-rose-500/20',
 };
 
 function PanelLoader() {
@@ -1024,12 +1082,12 @@ function PanelEmpty({ message }) {
 }
 
 const STATUS_STYLE = {
-  pending:               'text-amber-400 bg-amber-500/10 ring-amber-500/20',
-  completed:             'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
-  accepted:              'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
-  late:                  'text-rose-400 bg-rose-500/10 ring-rose-500/20',
-  'redo action required':'text-orange-400 bg-orange-500/10 ring-orange-500/20',
-  'bonus deserved':      'text-violet-400 bg-violet-500/10 ring-violet-500/20',
+  pending: 'text-amber-400 bg-amber-500/10 ring-amber-500/20',
+  completed: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  accepted: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20',
+  late: 'text-rose-400 bg-rose-500/10 ring-rose-500/20',
+  'redo action required': 'text-orange-400 bg-orange-500/10 ring-orange-500/20',
+  'bonus deserved': 'text-violet-400 bg-violet-500/10 ring-violet-500/20',
 };
 
 function formatBytes(b) {
@@ -1051,15 +1109,30 @@ function AttachmentList({ files, onRemove }) {
   return (
     <ul className="space-y-1.5">
       {files.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5">
+        <li
+          key={i}
+          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5"
+        >
           <Paperclip className="h-3 w-3 shrink-0 text-violet-400" />
-          <a href={resolveAttachmentUrl(f.url)} target="_blank" rel="noopener noreferrer"
-            className="flex-1 truncate text-[12px] text-violet-300 hover:underline">
+          <a
+            href={resolveAttachmentUrl(f.url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 truncate text-[12px] text-violet-300 hover:underline"
+          >
             {f.name || `Attachment ${i + 1}`}
           </a>
-          {f.size && <span className="text-[10px] text-gray-500 tabular-nums">{formatBytes(f.size)}</span>}
+          {f.size && (
+            <span className="text-[10px] text-gray-500 tabular-nums">
+              {formatBytes(f.size)}
+            </span>
+          )}
           {onRemove && (
-            <button type="button" onClick={() => onRemove(i)} className="rounded p-0.5 text-gray-500 hover:bg-white/5 hover:text-rose-400">
+            <button
+              type="button"
+              onClick={() => onRemove(i)}
+              className="rounded p-0.5 text-gray-500 hover:bg-white/5 hover:text-rose-400"
+            >
               <Trash2 className="h-3 w-3" />
             </button>
           )}
@@ -1071,11 +1144,16 @@ function AttachmentList({ files, onRemove }) {
 
 function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
   const [content, setContent] = useState(
-    () => task.mySubmission?.notes
-      || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
+    () =>
+      task.mySubmission?.notes ||
+      JSON.stringify([
+        { id: crypto.randomUUID(), type: 'richText', content: '' },
+      ])
   );
-  const [attachments, setAttachments] = useState(
-    () => Array.isArray(task.mySubmission?.attachments) ? task.mySubmission.attachments : []
+  const [attachments, setAttachments] = useState(() =>
+    Array.isArray(task.mySubmission?.attachments)
+      ? task.mySubmission.attachments
+      : []
   );
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1094,10 +1172,18 @@ function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
       const fd = new FormData();
       fd.append('file', file);
       const res = await uploadTaskAttachmentAction(fd);
-      if (res.error) { setError(res.error); continue; }
-      uploaded.push({ url: res.url, name: res.name, size: res.size, type: res.type });
+      if (res.error) {
+        setError(res.error);
+        continue;
+      }
+      uploaded.push({
+        url: res.url,
+        name: res.name,
+        size: res.size,
+        type: res.type,
+      });
     }
-    setAttachments(prev => [...prev, ...uploaded]);
+    setAttachments((prev) => [...prev, ...uploaded]);
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -1113,7 +1199,10 @@ function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
     fd.set('attachments', JSON.stringify(attachments));
     const result = await submitTaskAction(fd);
     setLoading(false);
-    if (result.error) { setError(result.error); return; }
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
     onSubmitted(task.id, result.data);
   };
 
@@ -1122,14 +1211,23 @@ function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
   return (
     <form onSubmit={handleSubmit} className="mt-3 space-y-3">
       <div>
-        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</label>
-        <div className="rounded-xl overflow-hidden border border-white/10">
+        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+          Your Submission
+        </label>
+        <div className="overflow-hidden rounded-xl border border-white/10">
           <MultiBlockEditor value={content} onChange={setContent} />
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500">Attachments</label>
-        <AttachmentList files={attachments} onRemove={(i) => setAttachments(prev => prev.filter((_, j) => j !== i))} />
+        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+          Attachments
+        </label>
+        <AttachmentList
+          files={attachments}
+          onRemove={(i) =>
+            setAttachments((prev) => prev.filter((_, j) => j !== i))
+          }
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -1143,7 +1241,11 @@ function TaskSubmitForm({ task, onSubmitted, isArchived = false }) {
           disabled={uploading}
           className="mt-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
         >
-          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {uploading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Upload className="h-3 w-3" />
+          )}
           {uploading ? 'Uploading…' : 'Add files'}
         </button>
       </div>
@@ -1166,22 +1268,32 @@ function MemberTasksPanel({ bootcampId, isArchived = false }) {
 
   useEffect(() => {
     if (!bootcampId) return;
-    getMemberBootcampTasks(bootcampId).then(setTasks).catch(() => setTasks([]));
+    getMemberBootcampTasks(bootcampId)
+      .then(setTasks)
+      .catch(() => setTasks([]));
   }, [bootcampId]);
 
   const handleSubmitted = useCallback((taskId, submissionData) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, mySubmission: submissionData } : t));
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId ? { ...t, mySubmission: submissionData } : t
+      )
+    );
   }, []);
 
   if (tasks === null) return <PanelLoader />;
-  if (tasks.length === 0) return <PanelEmpty message="No tasks assigned yet." />;
+  if (tasks.length === 0)
+    return <PanelEmpty message="No tasks assigned yet." />;
 
   return (
     <div className="space-y-2">
       {isArchived && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-amber-300 text-[12.5px] font-medium leading-normal mb-3 shadow-sm">
+        <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-[12.5px] leading-normal font-medium text-amber-300 shadow-sm">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-          <span>This bootcamp is archived. Task submissions and modifications are disabled.</span>
+          <span>
+            This bootcamp is archived. Task submissions and modifications are
+            disabled.
+          </span>
         </div>
       )}
       {tasks.map((task) => {
@@ -1190,25 +1302,41 @@ function MemberTasksPanel({ bootcampId, isArchived = false }) {
         const isPastDue = task.deadline && new Date(task.deadline) < new Date();
 
         return (
-          <div key={task.id} className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20">
+          <div
+            key={task.id}
+            className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20"
+          >
             <button
               className="flex w-full items-center gap-3 p-4 text-left"
               onClick={() => setExpanded(isExpanded ? null : task.id)}
             >
-              <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+              <span
+                className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ${DIFF_COLOR[task.difficulty] ?? 'bg-white/5 text-gray-400 ring-white/10'}`}
+              >
                 {task.difficulty}
               </span>
-              <span className="flex-1 truncate text-[13px] font-medium text-white">{task.title}</span>
+              <span className="flex-1 truncate text-[13px] font-medium text-white">
+                {task.title}
+              </span>
               {task.points != null && (
-                <span className="shrink-0 text-[10px] font-bold text-amber-400">{task.points} pts</span>
+                <span className="shrink-0 text-[10px] font-bold text-amber-400">
+                  {task.points} pts
+                </span>
               )}
               {task.deadline && (
-                <span className={`shrink-0 text-[11px] ${isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'}`}>
-                  {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                <span
+                  className={`shrink-0 text-[11px] ${isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'}`}
+                >
+                  {new Date(task.deadline).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </span>
               )}
               {sub ? (
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ${STATUS_STYLE[sub.status] ?? 'text-gray-400 bg-white/5 ring-white/10'}`}>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ring-1 ${STATUS_STYLE[sub.status] ?? 'bg-white/5 text-gray-400 ring-white/10'}`}
+                >
                   {sub.status}
                 </span>
               ) : (
@@ -1216,57 +1344,87 @@ function MemberTasksPanel({ bootcampId, isArchived = false }) {
                   not submitted
                 </span>
               )}
-              {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
+              )}
             </button>
 
             {isExpanded && (
-              <div className="border-t border-white/10 px-4 pb-4 pt-3 space-y-3">
+              <div className="space-y-3 border-t border-white/10 px-4 pt-3 pb-4">
                 {task.description && (
                   <TaskDescriptionRenderer content={task.description} />
                 )}
-                {Array.isArray(task.problem_links) && task.problem_links.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {task.problem_links.map((link, i) => (
-                      <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20">
-                        <Download className="h-3 w-3" />Problem {i + 1}
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {Array.isArray(task.problem_links) &&
+                  task.problem_links.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {task.problem_links.map((link, i) => (
+                        <a
+                          key={i}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[11px] text-violet-400 hover:bg-violet-500/20"
+                        >
+                          <Download className="h-3 w-3" />
+                          Problem {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  )}
 
                 {/* Existing submission status */}
                 {sub && (
-                  <div className="rounded-lg border border-white/10 bg-white/2 p-3 space-y-1.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Submission</p>
-                    {sub.notes && <TaskDescriptionRenderer content={sub.notes} />}
-                    {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
-                      <AttachmentList files={sub.attachments} />
+                  <div className="space-y-1.5 rounded-lg border border-white/10 bg-white/2 p-3">
+                    <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                      Your Submission
+                    </p>
+                    {sub.notes && (
+                      <TaskDescriptionRenderer content={sub.notes} />
                     )}
+                    {Array.isArray(sub.attachments) &&
+                      sub.attachments.length > 0 && (
+                        <AttachmentList files={sub.attachments} />
+                      )}
                     {sub.points_earned != null && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Points:</span>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold tracking-wider text-amber-400 uppercase">
+                          Points:
+                        </span>
                         <span className="text-[12px] font-bold text-amber-300 tabular-nums">
-                          {sub.points_earned}{task.points != null ? ` / ${task.points}` : ''}
+                          {sub.points_earned}
+                          {task.points != null ? ` / ${task.points}` : ''}
                         </span>
                       </div>
                     )}
                     {sub.feedback && (
                       <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Mentor Feedback</p>
-                        <p className="text-[12px] text-gray-300">{sub.feedback}</p>
+                        <p className="mb-0.5 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                          Mentor Feedback
+                        </p>
+                        <p className="text-[12px] text-gray-300">
+                          {sub.feedback}
+                        </p>
                       </div>
                     )}
                   </div>
                 )}
 
                 {isArchived ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 text-amber-300 text-[12px] font-medium leading-relaxed">
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 text-[12px] leading-relaxed font-medium text-amber-300">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                    <span>This bootcamp is archived. Task submissions and edits are disabled.</span>
+                    <span>
+                      This bootcamp is archived. Task submissions and edits are
+                      disabled.
+                    </span>
                   </div>
                 ) : (
-                  <TaskSubmitForm task={task} onSubmitted={handleSubmitted} isArchived={isArchived} />
+                  <TaskSubmitForm
+                    task={task}
+                    onSubmitted={handleSubmitted}
+                    isArchived={isArchived}
+                  />
                 )}
               </div>
             )}
@@ -1277,36 +1435,59 @@ function MemberTasksPanel({ bootcampId, isArchived = false }) {
   );
 }
 
-const TARGET_LABEL = { 'one-on-one': '1:1', 'selected-group': 'Group', 'all-bootcamp': 'Broadcast' };
+const TARGET_LABEL = {
+  'one-on-one': '1:1',
+  'selected-group': 'Group',
+  'all-bootcamp': 'Broadcast',
+};
 
 function MemberSessionRow({ s, isArchived = false }) {
   const [open, setOpen] = useState(false);
   const mentorName = s.mentor?.full_name || '—';
   const dt = new Date(s.scheduled_at || s.session_date);
   const isUpcoming = s.status === 'scheduled' && dt >= new Date();
-  const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = dt.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const timeStr = dt.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-xl transition-all ${isUpcoming ? 'border-violet-500/30 bg-violet-500/[0.05]' : 'border-white/10 bg-zinc-900/50 hover:border-white/20'}`}>
+    <div
+      className={`group relative overflow-hidden rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-xl transition-all ${isUpcoming ? 'border-violet-500/30 bg-violet-500/[0.05]' : 'border-white/10 bg-zinc-900/50 hover:border-white/20'}`}
+    >
       {isUpcoming && (
         <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/10 blur-[60px]" />
       )}
       {/* Row header */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="relative z-10 flex w-full items-center gap-3 px-4 py-3 text-left"
       >
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${isUpcoming ? 'bg-violet-500/15 ring-violet-500/30' : 'bg-white/5 ring-white/10'}`}>
-          <Video className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`} />
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${isUpcoming ? 'bg-violet-500/15 ring-violet-500/30' : 'bg-white/5 ring-white/10'}`}
+        >
+          <Video
+            className={`h-3.5 w-3.5 ${isUpcoming ? 'text-violet-400' : 'text-emerald-400'}`}
+          />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-white truncate">{s.topic || 'Session'}</p>
-          <p className="text-[11px] text-gray-500">{dateStr}{isUpcoming ? ` · ${timeStr}` : ''} · {s.duration ?? '—'}min · {mentorName}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold text-white">
+            {s.topic || 'Session'}
+          </p>
+          <p className="text-[11px] text-gray-500">
+            {dateStr}
+            {isUpcoming ? ` · ${timeStr}` : ''} · {s.duration ?? '—'}min ·{' '}
+            {mentorName}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {s.target_type && (
-            <span className="hidden sm:inline-block rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10">
+            <span className="hidden rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-white/10 sm:inline-block">
               {TARGET_LABEL[s.target_type] ?? s.target_type}
             </span>
           )}
@@ -1316,36 +1497,50 @@ function MemberSessionRow({ s, isArchived = false }) {
               upcoming
             </span>
           ) : s.attended === true ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">attended</span>
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">
+              attended
+            </span>
           ) : s.attended === false ? (
-            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">missed</span>
+            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400 ring-1 ring-rose-500/20">
+              missed
+            </span>
           ) : (
-            <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">done</span>
+            <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold text-gray-400 ring-1 ring-gray-500/20">
+              done
+            </span>
           )}
-          <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
         </div>
       </button>
 
       {/* Expanded detail */}
       {open && (
-        <div className="relative z-10 border-t border-white/5 bg-black/20 px-4 pb-4 pt-3 space-y-3">
-          {s.description && (
-            <TaskDescriptionRenderer content={s.description} />
-          )}
+        <div className="relative z-10 space-y-3 border-t border-white/5 bg-black/20 px-4 pt-3 pb-4">
+          {s.description && <TaskDescriptionRenderer content={s.description} />}
           {s.notes && (
             <div className="rounded-lg border border-white/10 bg-white/2 px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Mentor notes</p>
-              <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{s.notes}</p>
+              <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                Mentor notes
+              </p>
+              <p className="text-[12px] whitespace-pre-wrap text-gray-300">
+                {s.notes}
+              </p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             {s.location ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300" title={s.location}>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300"
+                title={s.location}
+              >
                 <MapPin className="h-3 w-3" />
                 {s.location}
               </span>
-            ) : s.meet_link && (
-              isArchived ? (
+            ) : (
+              s.meet_link &&
+              (isArchived ? (
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-gray-500 ring-1 ring-white/10">
                   <Video className="h-3.5 w-3.5 text-gray-600" />
                   Session Concluded
@@ -1355,20 +1550,20 @@ function MemberSessionRow({ s, isArchived = false }) {
                   href={s.meet_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-500"
                 >
                   <Video className="h-3 w-3" />
                   {isUpcoming ? 'Join Meet' : 'Open Meet'}
                   <ChevronRight className="h-3 w-3 opacity-70" />
                 </a>
-              )
+              ))
             )}
             {s.recording_url && (
               <a
                 href={s.recording_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 text-[11px] font-semibold text-violet-300 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-[11px] font-semibold text-violet-300 transition-colors hover:bg-violet-500/20"
               >
                 <CircleDot className="h-3 w-3" />
                 Watch recording
@@ -1388,47 +1583,79 @@ function MemberSessionsPanel({ bootcampId, isArchived = false }) {
 
   useEffect(() => {
     if (!bootcampId) return;
-    getMemberBootcampSessions(bootcampId).then(setSessions).catch(() => setSessions([]));
+    getMemberBootcampSessions(bootcampId)
+      .then(setSessions)
+      .catch(() => setSessions([]));
   }, [bootcampId]);
 
   if (sessions === null) return <PanelLoader />;
-  if (sessions.length === 0) return <PanelEmpty message="No sessions scheduled yet." />;
+  if (sessions.length === 0)
+    return <PanelEmpty message="No sessions scheduled yet." />;
 
   const now = new Date();
-  const upcoming = sessions.filter(s => s.status === 'scheduled' && new Date(s.scheduled_at || s.session_date) >= now);
-  const past     = sessions.filter(s => s.status !== 'scheduled' || new Date(s.scheduled_at || s.session_date) < now);
+  const upcoming = sessions.filter(
+    (s) =>
+      s.status === 'scheduled' &&
+      new Date(s.scheduled_at || s.session_date) >= now
+  );
+  const past = sessions.filter(
+    (s) =>
+      s.status !== 'scheduled' ||
+      new Date(s.scheduled_at || s.session_date) < now
+  );
 
-  const visible = filter === 'upcoming' ? upcoming : filter === 'past' ? past : sessions;
+  const visible =
+    filter === 'upcoming' ? upcoming : filter === 'past' ? past : sessions;
 
   return (
     <div className="space-y-4">
       {isArchived && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-[12.5px] leading-normal font-medium text-amber-300 shadow-sm">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-          <span>This bootcamp is archived. Join links for scheduled live sessions are concluded.</span>
+          <span>
+            This bootcamp is archived. Join links for scheduled live sessions
+            are concluded.
+          </span>
         </div>
       )}
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: 'Total', value: sessions.length, color: 'text-white' },
-          { label: 'Upcoming', value: upcoming.length, color: 'text-violet-400' },
-          { label: 'Attended', value: sessions.filter(s => s.attended).length, color: 'text-emerald-400' },
+          {
+            label: 'Upcoming',
+            value: upcoming.length,
+            color: 'text-violet-400',
+          },
+          {
+            label: 'Attended',
+            value: sessions.filter((s) => s.attended).length,
+            color: 'text-emerald-400',
+          },
         ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-xl border border-white/10 bg-zinc-900/50 px-3 py-2.5 text-center shadow-lg shadow-black/20 backdrop-blur-xl">
+          <div
+            key={label}
+            className="rounded-xl border border-white/10 bg-zinc-900/50 px-3 py-2.5 text-center shadow-lg shadow-black/20 backdrop-blur-xl"
+          >
             <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
-            <p className="mt-0.5 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">{label}</p>
+            <p className="mt-0.5 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
+              {label}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1.5">
-        {[['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, label]) => (
+        {[
+          ['all', 'All'],
+          ['upcoming', 'Upcoming'],
+          ['past', 'Past'],
+        ].map(([v, label]) => (
           <button
             key={v}
             onClick={() => setFilter(v)}
-            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${filter === v ? 'bg-violet-500/15 text-violet-200 shadow-[0_0_12px_rgba(139,92,246,0.15)] ring-1 ring-violet-500/30' : 'bg-white/5 text-gray-400 hover:text-white ring-1 ring-white/10 hover:ring-white/20'}`}
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${filter === v ? 'bg-violet-500/15 text-violet-200 shadow-[0_0_12px_rgba(139,92,246,0.15)] ring-1 ring-violet-500/30' : 'bg-white/5 text-gray-400 ring-1 ring-white/10 hover:text-white hover:ring-white/20'}`}
           >
             {label}
           </button>
@@ -1440,7 +1667,9 @@ function MemberSessionsPanel({ bootcampId, isArchived = false }) {
         <PanelEmpty message={`No ${filter} sessions.`} />
       ) : (
         <div className="space-y-2">
-          {visible.map(s => <MemberSessionRow key={s.id} s={s} isArchived={isArchived} />)}
+          {visible.map((s) => (
+            <MemberSessionRow key={s.id} s={s} isArchived={isArchived} />
+          ))}
         </div>
       )}
     </div>
@@ -1455,7 +1684,9 @@ function MemberHelpDeskPanel({ bootcampId, isArchived = false }) {
 
   useEffect(() => {
     if (!bootcampId) return;
-    getMemberHelpTickets(bootcampId).then(setTickets).catch(() => setTickets([]));
+    getMemberHelpTickets(bootcampId)
+      .then(setTickets)
+      .catch(() => setTickets([]));
   }, [bootcampId]);
 
   const handleSubmit = async (e) => {
@@ -1469,7 +1700,16 @@ function MemberHelpDeskPanel({ bootcampId, isArchived = false }) {
     fd.set('body', body);
     const result = await submitHelpTicketAction(fd);
     if (!result.error) {
-      setTickets(prev => [{ id: `h${Date.now()}`, subject, body, status: 'open', created_at: new Date().toISOString() }, ...(prev || [])]);
+      setTickets((prev) => [
+        {
+          id: `h${Date.now()}`,
+          subject,
+          body,
+          status: 'open',
+          created_at: new Date().toISOString(),
+        },
+        ...(prev || []),
+      ]);
       setSubject('');
       setBody('');
     }
@@ -1479,18 +1719,47 @@ function MemberHelpDeskPanel({ bootcampId, isArchived = false }) {
   return (
     <div className="space-y-6">
       {isArchived ? (
-        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-[12.5px] leading-normal font-medium text-amber-300 shadow-sm">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-          <span>This bootcamp is archived. The Help Desk is in read-only mode, and submitting new support tickets is disabled.</span>
+          <span>
+            This bootcamp is archived. The Help Desk is in read-only mode, and
+            submitting new support tickets is disabled.
+          </span>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 space-y-3 shadow-lg shadow-black/20 backdrop-blur-xl">
+        <form
+          onSubmit={handleSubmit}
+          className="relative space-y-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/20 backdrop-blur-xl"
+        >
           <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.08] blur-[60px]" />
-          <p className="relative z-10 text-[11px] font-bold tracking-widest text-violet-300 uppercase">Ask for help</p>
-          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" required className="relative z-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
-          <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Describe your issue or question…" rows={3} required className="relative z-10 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none" />
-          <button type="submit" disabled={sending} className="relative z-10 flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/15 px-4 py-2 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-50">
-            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          <p className="relative z-10 text-[11px] font-bold tracking-widest text-violet-300 uppercase">
+            Ask for help
+          </p>
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Subject"
+            required
+            className="relative z-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Describe your issue or question…"
+            rows={3}
+            required
+            className="relative z-10 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[13px] text-white placeholder-gray-600 transition-all focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={sending}
+            className="relative z-10 flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/15 px-4 py-2 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-50"
+          >
+            {sending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
             {sending ? 'Sending…' : 'Submit'}
           </button>
         </form>
@@ -1502,21 +1771,42 @@ function MemberHelpDeskPanel({ bootcampId, isArchived = false }) {
         <PanelEmpty message="No help requests yet." />
       ) : (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Your tickets</p>
-          {tickets.map(t => (
-            <div key={t.id} className="rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20">
+          <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+            Your tickets
+          </p>
+          {tickets.map((t) => (
+            <div
+              key={t.id}
+              className="rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:border-white/20"
+            >
               <div className="flex items-center gap-2">
-                <span className="flex-1 text-[13px] font-medium text-white truncate">{t.subject}</span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.status === 'open' ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'}`}>{t.status}</span>
+                <span className="flex-1 truncate text-[13px] font-medium text-white">
+                  {t.subject}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.status === 'open' ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'}`}
+                >
+                  {t.status}
+                </span>
               </div>
-              <p className="mt-1 text-[12px] text-gray-500 line-clamp-2">{t.body}</p>
+              <p className="mt-1 line-clamp-2 text-[12px] text-gray-500">
+                {t.body}
+              </p>
               {t.reply && (
                 <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-                  <p className="text-[10px] font-semibold text-emerald-400 uppercase mb-1">Mentor reply</p>
+                  <p className="mb-1 text-[10px] font-semibold text-emerald-400 uppercase">
+                    Mentor reply
+                  </p>
                   <p className="text-[12px] text-gray-300">{t.reply}</p>
                 </div>
               )}
-              <p className="mt-1 text-[10px] text-gray-600">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              <p className="mt-1 text-[10px] text-gray-600">
+                {new Date(t.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </p>
             </div>
           ))}
         </div>
@@ -1555,8 +1845,12 @@ const OverviewPanel = memo(function OverviewPanel({
 
   useEffect(() => {
     if (!bootcamp?.id) return;
-    getMemberBootcampTasks(bootcamp.id).then(setTasks).catch(() => {});
-    getMemberBootcampSessions(bootcamp.id).then(setSessions).catch(() => {});
+    getMemberBootcampTasks(bootcamp.id)
+      .then(setTasks)
+      .catch(() => {});
+    getMemberBootcampSessions(bootcamp.id)
+      .then(setSessions)
+      .catch(() => {});
   }, [bootcamp?.id]);
 
   const taskEarned = useMemo(() => {
@@ -1575,13 +1869,19 @@ const OverviewPanel = memo(function OverviewPanel({
 
   const sessionEarned = useMemo(() => {
     return sessions.reduce((sum, s) => {
-      const myAtt = s.attendance_data?.find(a => a.user_id === enrollment?.user_id);
+      const myAtt = s.attendance_data?.find(
+        (a) => a.user_id === enrollment?.user_id
+      );
       return sum + (myAtt?.points || 0);
     }, 0);
   }, [sessions, enrollment?.user_id]);
 
   const sessionCount = useMemo(() => {
-    return sessions.filter(s => s.attendance_data?.some(a => a.user_id === enrollment?.user_id && a.attended)).length;
+    return sessions.filter((s) =>
+      s.attendance_data?.some(
+        (a) => a.user_id === enrollment?.user_id && a.attended
+      )
+    ).length;
   }, [sessions, enrollment?.user_id]);
 
   const totalPoints = useMemo(() => {
@@ -1630,7 +1930,7 @@ const OverviewPanel = memo(function OverviewPanel({
       {/* Continue card */}
       {resumeLesson && (
         <div
-          className={`mt-7 rounded-2xl border ${isComplete ? 'border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] to-transparent' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-transparent'} p-5 sm:p-6`}
+          className={`mt-7 rounded-2xl border ${isComplete ? 'border-amber-500/20 bg-linear-to-br from-amber-500/[0.06] to-transparent' : 'border-emerald-500/20 bg-linear-to-br from-emerald-500/[0.06] to-transparent'} p-5 sm:p-6`}
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
             <div className="min-w-0 flex-1">
@@ -1672,8 +1972,8 @@ const OverviewPanel = memo(function OverviewPanel({
               onClick={() => onSelectLesson(resumeLesson)}
               className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-[0.99] ${
                 isComplete
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
+                  ? 'bg-linear-to-r from-amber-500 to-amber-600 shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500'
+                  : 'bg-linear-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
               }`}
             >
               <Play className="h-4 w-4 fill-current" />
@@ -1717,17 +2017,21 @@ const OverviewPanel = memo(function OverviewPanel({
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#161b22] p-4 ring-1 ring-violet-500/20">
-            <div className="text-[10.5px] font-bold tracking-wider text-violet-400 uppercase flex items-center gap-1">
+            <div className="flex items-center gap-1 text-[10.5px] font-bold tracking-wider text-violet-400 uppercase">
               <Trophy className="h-3 w-3 text-amber-400" /> Score
             </div>
             <div className="mt-1 text-2xl font-black text-white tabular-nums">
               {enrollment?.score || 0}
-              <span className="text-[11px] font-semibold text-gray-500 ml-1">/{totalMaxPoints} pts</span>
+              <span className="ml-1 text-[11px] font-semibold text-gray-500">
+                /{totalMaxPoints} pts
+              </span>
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
               <div
-                className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-500"
-                style={{ width: `${totalMaxPoints > 0 ? Math.min(100, Math.round(((enrollment?.score || 0) / totalMaxPoints) * 100)) : 0}%` }}
+                className="h-full bg-linear-to-r from-violet-500 to-pink-500 transition-all duration-500"
+                style={{
+                  width: `${totalMaxPoints > 0 ? Math.min(100, Math.round(((enrollment?.score || 0) / totalMaxPoints) * 100)) : 0}%`,
+                }}
               />
             </div>
           </div>
@@ -1738,7 +2042,7 @@ const OverviewPanel = memo(function OverviewPanel({
             <div className="mt-1 text-2xl font-bold text-white tabular-nums">
               {formatDurationSecs(totalWatchedSecs) || '0m'}
             </div>
-            <div className="mt-2 text-[11px] text-gray-500 truncate">
+            <div className="mt-2 truncate text-[11px] text-gray-500">
               of {formatDurationSecs(totalDurationSecs) || '—'}
             </div>
           </div>
@@ -1752,63 +2056,85 @@ const OverviewPanel = memo(function OverviewPanel({
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {/* Curriculum Points */}
-          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+          <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/2 p-4.5 transition-all duration-300 hover:border-white/20">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-violet-400 uppercase">
                 <BookOpen className="h-3.5 w-3.5" /> Curriculum
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
-                Points from video lessons, interactive practice exercises, and curriculum exams.
+                Points from video lessons, interactive practice exercises, and
+                curriculum exams.
               </p>
             </div>
             <div className="mt-5 flex items-baseline justify-between">
               <span className="text-xl font-extrabold text-white tabular-nums">
-                {Math.max(0, (enrollment?.score || 0) - taskEarned - sessionEarned)}
-                <span className="text-xs font-semibold text-gray-500 ml-1">/{totalPoints} pts</span>
+                {Math.max(
+                  0,
+                  (enrollment?.score || 0) - taskEarned - sessionEarned
+                )}
+                <span className="ml-1 text-xs font-semibold text-gray-500">
+                  /{totalPoints} pts
+                </span>
               </span>
-              <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-violet-500/20">
-                {totalPoints > 0 ? Math.round((Math.max(0, (enrollment?.score || 0) - taskEarned - sessionEarned) / totalPoints) * 100) : 0}%
+              <span className="rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-bold text-violet-400 ring-1 ring-violet-500/20">
+                {totalPoints > 0
+                  ? Math.round(
+                      (Math.max(
+                        0,
+                        (enrollment?.score || 0) - taskEarned - sessionEarned
+                      ) /
+                        totalPoints) *
+                        100
+                    )
+                  : 0}
+                %
               </span>
             </div>
           </div>
 
           {/* Graded Task Points */}
-          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+          <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/2 p-4.5 transition-all duration-300 hover:border-white/20">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-amber-400 uppercase">
                 <CheckSquare className="h-3.5 w-3.5" /> Weekly Tasks
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
-                Points earned from milestone homework assignments and reviewed programming tasks.
+                Points earned from milestone homework assignments and reviewed
+                programming tasks.
               </p>
             </div>
             <div className="mt-5 flex items-baseline justify-between">
               <span className="text-xl font-extrabold text-white tabular-nums">
                 {taskEarned}
-                <span className="text-xs font-semibold text-gray-500 ml-1">/{taskMax} pts</span>
+                <span className="ml-1 text-xs font-semibold text-gray-500">
+                  /{taskMax} pts
+                </span>
               </span>
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-amber-500/20">
+              <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 ring-1 ring-amber-500/20">
                 {taskMax > 0 ? Math.round((taskEarned / taskMax) * 100) : 0}%
               </span>
             </div>
           </div>
 
           {/* Sessions Attendance Points */}
-          <div className="rounded-xl border border-white/10 bg-white/2 p-4.5 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
+          <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/2 p-4.5 transition-all duration-300 hover:border-white/20">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
                 <Users className="h-3.5 w-3.5" /> Live Sessions
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
-                Bonus attendance points earned from attending live mentorship and cohort group sessions.
+                Bonus attendance points earned from attending live mentorship
+                and cohort group sessions.
               </p>
             </div>
             <div className="mt-5 flex items-baseline justify-between">
               <span className="text-xl font-extrabold text-white tabular-nums">
                 {sessionEarned}
-                <span className="text-xs font-semibold text-gray-500 ml-1">pts</span>
+                <span className="ml-1 text-xs font-semibold text-gray-500">
+                  pts
+                </span>
               </span>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full ring-1 ring-emerald-500/20">
+              <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-500/20">
                 {sessionCount} attended
               </span>
             </div>
@@ -1897,23 +2223,35 @@ const LessonPanel = memo(function LessonPanel({
         setCommentsLoading(false);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [lesson?.id]);
 
   const contentHasPractice = useMemo(() => {
     if (!lesson.content) return false;
     try {
-      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
-      return Array.isArray(parsed) && parsed.some(b => b.type === 'practice');
-    } catch { return false; }
+      const parsed =
+        typeof lesson.content === 'string'
+          ? JSON.parse(lesson.content)
+          : lesson.content;
+      return Array.isArray(parsed) && parsed.some((b) => b.type === 'practice');
+    } catch {
+      return false;
+    }
   }, [lesson.content]);
 
   const contentHasExam = useMemo(() => {
     if (!lesson.content) return false;
     try {
-      const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
-      return Array.isArray(parsed) && parsed.some(b => b.type === 'exam');
-    } catch { return false; }
+      const parsed =
+        typeof lesson.content === 'string'
+          ? JSON.parse(lesson.content)
+          : lesson.content;
+      return Array.isArray(parsed) && parsed.some((b) => b.type === 'exam');
+    } catch {
+      return false;
+    }
   }, [lesson.content]);
 
   const [examSub, setExamSub] = useState(null);
@@ -1940,7 +2278,10 @@ const LessonPanel = memo(function LessonPanel({
     } else if (lesson.type === 'practice') {
       let problems = [];
       try {
-        const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+        const parsed =
+          typeof lesson.content === 'string'
+            ? JSON.parse(lesson.content)
+            : lesson.content;
         const practiceBlock = parsed?.find((b) => b.type === 'practice');
         problems = practiceBlock?.problems || [];
       } catch {}
@@ -1951,7 +2292,7 @@ const LessonPanel = memo(function LessonPanel({
       let solvedPoints = 0;
       let totalPoints = 0;
       const solvedIndices = lessonProgress[lesson.id]?.solved_problems || [];
-      
+
       if (Array.isArray(problems)) {
         problems.forEach((p, idx) => {
           const pts = p.points ?? 5;
@@ -1961,7 +2302,7 @@ const LessonPanel = memo(function LessonPanel({
           }
         });
       }
-      
+
       if (totalPoints > 0) {
         const ratio = solvedPoints / totalPoints;
         return { earned: Math.floor(ratio * weight), total: weight };
@@ -1971,14 +2312,20 @@ const LessonPanel = memo(function LessonPanel({
     } else if (lesson.type === 'exam') {
       let questions = [];
       try {
-        const parsed = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content;
+        const parsed =
+          typeof lesson.content === 'string'
+            ? JSON.parse(lesson.content)
+            : lesson.content;
         const examBlock = parsed?.find((b) => b.type === 'exam');
         questions = examBlock?.questions || [];
       } catch {}
       if (!questions || questions.length === 0) {
-        questions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
-          ? selectedQuestions
-          : (lesson.exam_questions || []);
+        questions =
+          lesson.random_question_count > 0 &&
+          selectedQuestions &&
+          selectedQuestions.length > 0
+            ? selectedQuestions
+            : lesson.exam_questions || [];
       }
 
       let examMaxScore = 0;
@@ -2010,16 +2357,18 @@ const LessonPanel = memo(function LessonPanel({
 
   const safeParseNotes = (val) => {
     if (!val) {
-      return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]);
+      return JSON.stringify([
+        { id: crypto.randomUUID(), type: 'richText', content: '' },
+      ]);
     }
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed)) return val;
     } catch {}
-    return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: val }]);
+    return JSON.stringify([
+      { id: crypto.randomUUID(), type: 'richText', content: val },
+    ]);
   };
-
-
 
   const handleCqFiles = async (files) => {
     if (!files?.length) return;
@@ -2033,7 +2382,12 @@ const LessonPanel = memo(function LessonPanel({
         toast.error(res.error);
         continue;
       }
-      uploaded.push({ url: res.url, name: res.name, size: res.size, type: res.type });
+      uploaded.push({
+        url: res.url,
+        name: res.name,
+        size: res.size,
+        type: res.type,
+      });
     }
     setCqAttachments((prev) => [...prev, ...uploaded]);
     setCqUploading(false);
@@ -2092,23 +2446,24 @@ const LessonPanel = memo(function LessonPanel({
       cq: {
         answer: cqAnswerText,
         answers_by_question: cqAnswersByQuestion,
-        attachments: cqAttachments
+        attachments: cqAttachments,
       },
       score: examSub?.score,
       status: examSub?.status,
       graded_at: examSub?.graded_at,
       graded_by: examSub?.graded_by,
       mentor_remarks: examSub?.mentor_remarks || examSub?.mentor_feedback,
-      created_at: examSub?.created_at || new Date().toISOString()
+      created_at: examSub?.created_at || new Date().toISOString(),
     };
     const updatedHistory = [...history, currentAttempt];
 
     const randomCount = lesson.random_question_count;
     const resolvedQs = parseExamQuestions(lesson.exam_questions, lesson);
-    const qs = randomCount > 0 
-      ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
-      : resolvedQs;
-    
+    const qs =
+      randomCount > 0
+        ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
+        : resolvedQs;
+
     setSelectedQuestions(qs);
     setMcqAnswers({});
     setIsMcqRetaking(true);
@@ -2129,25 +2484,30 @@ const LessonPanel = memo(function LessonPanel({
       cq: {
         answer: cqAnswerText,
         answers_by_question: cqAnswersByQuestion,
-        attachments: cqAttachments
+        attachments: cqAttachments,
       },
       score: examSub?.score,
       status: examSub?.status,
       graded_at: examSub?.graded_at,
       graded_by: examSub?.graded_by,
       mentor_remarks: examSub?.mentor_remarks || examSub?.mentor_feedback,
-      created_at: examSub?.created_at || new Date().toISOString()
+      created_at: examSub?.created_at || new Date().toISOString(),
     };
     const updatedHistory = [...history, currentAttempt];
 
     const randomCount = lesson.random_question_count;
     const resolvedQs = parseExamQuestions(lesson.exam_questions, lesson);
-    const qs = randomCount > 0 
-      ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
-      : resolvedQs;
+    const qs =
+      randomCount > 0
+        ? selectNovelQuestions(resolvedQs, updatedHistory, randomCount)
+        : resolvedQs;
 
     setSelectedQuestions(qs);
-    setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setCqAnswerText(
+      JSON.stringify([
+        { id: crypto.randomUUID(), type: 'richText', content: '' },
+      ])
+    );
     setCqAnswersByQuestion({});
     setCqAttachments([]);
     setIsRetaking(true);
@@ -2160,27 +2520,39 @@ const LessonPanel = memo(function LessonPanel({
       toast.error('This bootcamp is archived. Exam submissions are disabled.');
       return;
     }
-    const allQuestions = (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
-      ? selectedQuestions
-      : parseExamQuestions(lesson.exam_questions, lesson);
-    const activeQuestions = allQuestions.filter(q => Array.isArray(q.options) && q.options.length > 0);
+    const allQuestions =
+      lesson.random_question_count > 0 &&
+      selectedQuestions &&
+      selectedQuestions.length > 0
+        ? selectedQuestions
+        : parseExamQuestions(lesson.exam_questions, lesson);
+    const activeQuestions = allQuestions.filter(
+      (q) => Array.isArray(q.options) && q.options.length > 0
+    );
 
-    const unanswered = activeQuestions.filter((q) => mcqAnswers[q.id] === undefined);
+    const unanswered = activeQuestions.filter(
+      (q) => mcqAnswers[q.id] === undefined
+    );
     if (unanswered.length > 0) {
-      toast.error(`Please answer all MCQ questions before submitting. (${unanswered.length} remaining)`);
+      toast.error(
+        `Please answer all MCQ questions before submitting. (${unanswered.length} remaining)`
+      );
       return;
     }
 
     let mcqScore = 0;
     activeQuestions.forEach((q) => {
       if (mcqAnswers[q.id] === q.correct_option) {
-        mcqScore += (q.points || 5);
+        mcqScore += q.points || 5;
       }
     });
 
     const history = examSub?.submitted_answers?.attempts_history || [];
     let updatedHistory = history;
-    if ((isMcqRetaking || examSub?.submitted_answers?.mcq_submitted) && examSub) {
+    if (
+      (isMcqRetaking || examSub?.submitted_answers?.mcq_submitted) &&
+      examSub
+    ) {
       const lastAttemptNum = history.length + 1;
       const previousAttempt = {
         attempt_number: lastAttemptNum,
@@ -2188,15 +2560,18 @@ const LessonPanel = memo(function LessonPanel({
         mcq: examSub.submitted_answers?.mcq || {},
         cq: {
           answer: examSub.submitted_answers?.cq?.answer || '',
-          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || {},
-          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments) ? examSub.submitted_answers.cq.attachments : []
+          answers_by_question:
+            examSub.submitted_answers?.cq?.answers_by_question || {},
+          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments)
+            ? examSub.submitted_answers.cq.attachments
+            : [],
         },
         score: examSub.score,
         status: examSub.status,
         graded_at: examSub.graded_at,
         graded_by: examSub.graded_by,
         mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
-        created_at: examSub.created_at || new Date().toISOString()
+        created_at: examSub.created_at || new Date().toISOString(),
       };
       updatedHistory = [...history, previousAttempt];
     }
@@ -2209,21 +2584,32 @@ const LessonPanel = memo(function LessonPanel({
       mcq_score: mcqScore,
       mcq_submitted_at: new Date().toISOString(),
       attempt_number: updatedHistory.length + 1,
-      attempts_history: updatedHistory
+      attempts_history: updatedHistory,
     };
 
     const isMcqOnly = lesson.exam_type === 'mcq';
-    const maxPoints = activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
-    const finalScore = isMcqOnly ? mcqScore : (examSub?.score || mcqScore);
-    const finalStatus = isMcqOnly ? 'reviewed' : (examSub?.status || 'submitted');
+    const maxPoints = activeQuestions.reduce(
+      (acc, q) => acc + (q.points || 5),
+      0
+    );
+    const finalScore = isMcqOnly ? mcqScore : examSub?.score || mcqScore;
+    const finalStatus = isMcqOnly ? 'reviewed' : examSub?.status || 'submitted';
 
     setSubmittingExam(true);
     try {
-      const res = await submitExamSubmission(lesson.id, bootcampId, answersPayload, finalScore, finalStatus);
+      const res = await submitExamSubmission(
+        lesson.id,
+        bootcampId,
+        answersPayload,
+        finalScore,
+        finalStatus
+      );
       setExamSub(res);
       setIsMcqRetaking(false);
       setSelectedAttemptIndex(-1);
-      toast.success(`MCQ section graded! You scored ${mcqScore} / ${maxPoints} points.`);
+      toast.success(
+        `MCQ section graded! You scored ${mcqScore} / ${maxPoints} points.`
+      );
       if (isMcqOnly) {
         onMarkComplete(lesson.id);
       }
@@ -2243,16 +2629,23 @@ const LessonPanel = memo(function LessonPanel({
       return;
     }
     // Validate: at least one question answer must have content, or there's an attachment
-    const hasAnyAnswer = Object.values(cqAnswersByQuestion).some(val => {
+    const hasAnyAnswer = Object.values(cqAnswersByQuestion).some((val) => {
       if (!val) return false;
       try {
         const blocks = JSON.parse(val);
-        return Array.isArray(blocks) && blocks.some(b => b.content && b.content.trim() !== '');
-      } catch { return String(val).trim() !== ''; }
+        return (
+          Array.isArray(blocks) &&
+          blocks.some((b) => b.content && b.content.trim() !== '')
+        );
+      } catch {
+        return String(val).trim() !== '';
+      }
     });
 
     if (!hasAnyAnswer && cqAttachments.length === 0) {
-      toast.error('Please answer at least one question or upload an attachment before submitting.');
+      toast.error(
+        'Please answer at least one question or upload an attachment before submitting.'
+      );
       return;
     }
 
@@ -2265,20 +2658,24 @@ const LessonPanel = memo(function LessonPanel({
         selected_questions: selectedQuestions,
         mcq: examSub.submitted_answers?.mcq || {},
         cq: {
-          answer: examSub.submitted_answers?.cq?.answer || examSub.submitted_answers?.answer || '',
-          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || {},
-          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments) 
-            ? examSub.submitted_answers.cq.attachments 
+          answer:
+            examSub.submitted_answers?.cq?.answer ||
+            examSub.submitted_answers?.answer ||
+            '',
+          answers_by_question:
+            examSub.submitted_answers?.cq?.answers_by_question || {},
+          attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments)
+            ? examSub.submitted_answers.cq.attachments
             : Array.isArray(examSub.submitted_answers?.attachments)
               ? examSub.submitted_answers.attachments
-              : []
+              : [],
         },
         score: examSub.score,
         status: examSub.status,
         graded_at: examSub.graded_at,
         graded_by: examSub.graded_by,
         mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
-        created_at: examSub.created_at || new Date().toISOString()
+        created_at: examSub.created_at || new Date().toISOString(),
       };
       updatedHistory = [...history, previousAttempt];
     }
@@ -2289,12 +2686,12 @@ const LessonPanel = memo(function LessonPanel({
       cq: {
         answer: cqAnswerText,
         answers_by_question: cqAnswersByQuestion,
-        attachments: cqAttachments
+        attachments: cqAttachments,
       },
       cq_submitted: true,
       cq_submitted_at: new Date().toISOString(),
       attempt_number: updatedHistory.length + 1,
-      attempts_history: updatedHistory
+      attempts_history: updatedHistory,
     };
 
     const finalStatus = 'pending_review';
@@ -2302,10 +2699,18 @@ const LessonPanel = memo(function LessonPanel({
 
     setSubmittingExam(true);
     try {
-      const res = await submitExamSubmission(lesson.id, bootcampId, answersPayload, finalScore, finalStatus);
+      const res = await submitExamSubmission(
+        lesson.id,
+        bootcampId,
+        answersPayload,
+        finalScore,
+        finalStatus
+      );
       setExamSub(res);
       setIsRetaking(false);
-      toast.success('Subjective solution successfully submitted to your mentor!');
+      toast.success(
+        'Subjective solution successfully submitted to your mentor!'
+      );
       if (onRefreshEnrollment) {
         onRefreshEnrollment();
       }
@@ -2327,7 +2732,10 @@ const LessonPanel = memo(function LessonPanel({
       getExamSubmission(lesson.id)
         .then((res) => {
           setExamSub(res);
-          const allQuestions = parseExamQuestions(lesson.exam_questions, lesson);
+          const allQuestions = parseExamQuestions(
+            lesson.exam_questions,
+            lesson
+          );
           if (res) {
             const attemptAnswers = res.submitted_answers;
             if (attemptAnswers?.selected_questions) {
@@ -2339,24 +2747,48 @@ const LessonPanel = memo(function LessonPanel({
             if (lesson.exam_type === 'mcq') {
               setMcqAnswers(attemptAnswers?.mcq || attemptAnswers || {});
             } else if (lesson.exam_type === 'cq') {
-              setCqAnswerText(safeParseNotes(attemptAnswers?.cq?.answer || attemptAnswers?.answer));
-              setCqAnswersByQuestion(attemptAnswers?.cq?.answers_by_question || {});
-              setCqAttachments(Array.isArray(attemptAnswers?.cq?.attachments) ? attemptAnswers.cq.attachments : []);
+              setCqAnswerText(
+                safeParseNotes(
+                  attemptAnswers?.cq?.answer || attemptAnswers?.answer
+                )
+              );
+              setCqAnswersByQuestion(
+                attemptAnswers?.cq?.answers_by_question || {}
+              );
+              setCqAttachments(
+                Array.isArray(attemptAnswers?.cq?.attachments)
+                  ? attemptAnswers.cq.attachments
+                  : []
+              );
             } else if (lesson.exam_type === 'hybrid') {
               setMcqAnswers(attemptAnswers?.mcq || {});
               setCqAnswerText(safeParseNotes(attemptAnswers?.cq?.answer));
-              setCqAnswersByQuestion(attemptAnswers?.cq?.answers_by_question || {});
-              setCqAttachments(Array.isArray(attemptAnswers?.cq?.attachments) ? attemptAnswers.cq.attachments : []);
+              setCqAnswersByQuestion(
+                attemptAnswers?.cq?.answers_by_question || {}
+              );
+              setCqAttachments(
+                Array.isArray(attemptAnswers?.cq?.attachments)
+                  ? attemptAnswers.cq.attachments
+                  : []
+              );
             }
           } else {
             if (lesson.random_question_count > 0) {
-              const qs = selectNovelQuestions(allQuestions, [], lesson.random_question_count);
+              const qs = selectNovelQuestions(
+                allQuestions,
+                [],
+                lesson.random_question_count
+              );
               setSelectedQuestions(qs);
             } else {
               setSelectedQuestions(allQuestions);
             }
             setMcqAnswers({});
-            setCqAnswerText(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+            setCqAnswerText(
+              JSON.stringify([
+                { id: crypto.randomUUID(), type: 'richText', content: '' },
+              ])
+            );
             setCqAnswersByQuestion({});
             setCqAttachments([]);
           }
@@ -2364,7 +2796,7 @@ const LessonPanel = memo(function LessonPanel({
         .catch((e) => console.error(e))
         .finally(() => setLoadingExamSub(false));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.id]);
 
   useEffect(() => {
@@ -2414,11 +2846,19 @@ const LessonPanel = memo(function LessonPanel({
             await Promise.all([
               updateWatchTimeDelta(lessonId, delta, pos, bId),
               delta > 0 && bId
-                ? recordLearningActivity({ bootcampId: bId, lessonId, deltaSeconds: delta, activityDate })
+                ? recordLearningActivity({
+                    bootcampId: bId,
+                    lessonId,
+                    deltaSeconds: delta,
+                    activityDate,
+                  })
                 : null,
             ]);
           } catch (err) {
-            console.error('[Progress Tracking Error]: Failed to update user watch time:', err);
+            console.error(
+              '[Progress Tracking Error]: Failed to update user watch time:',
+              err
+            );
           }
         });
       pendingSaveRef.current = next;
@@ -2451,18 +2891,22 @@ const LessonPanel = memo(function LessonPanel({
 
     if (loadingExamSub) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 py-20">
           <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-          <p className="text-sm text-gray-500 font-medium">Loading exam details...</p>
+          <p className="text-sm font-medium text-gray-500">
+            Loading exam details...
+          </p>
         </div>
       );
     }
 
-    const activeQuestions = overrideQuestions || (
-      (lesson.random_question_count > 0 && selectedQuestions && selectedQuestions.length > 0)
+    const activeQuestions =
+      overrideQuestions ||
+      (lesson.random_question_count > 0 &&
+      selectedQuestions &&
+      selectedQuestions.length > 0
         ? selectedQuestions
-        : parseExamQuestions(lesson.exam_questions, lesson)
-    );
+        : parseExamQuestions(lesson.exam_questions, lesson));
 
     // Derive displayed attempt values if viewing a completed submission
     const history = examSub?.submitted_answers?.attempts_history || [];
@@ -2472,28 +2916,41 @@ const LessonPanel = memo(function LessonPanel({
         return history[selectedAttemptIndex];
       }
       return {
-        attempt_number: examSub.submitted_answers?.attempt_number || (history.length + 1),
-        selected_questions: examSub.submitted_answers?.selected_questions || selectedQuestions,
-        mcq: examSub.submitted_answers?.mcq || (lesson.exam_type === 'mcq' ? (examSub.submitted_answers?.mcq || examSub.submitted_answers) : {}),
+        attempt_number:
+          examSub.submitted_answers?.attempt_number || history.length + 1,
+        selected_questions:
+          examSub.submitted_answers?.selected_questions || selectedQuestions,
+        mcq:
+          examSub.submitted_answers?.mcq ||
+          (lesson.exam_type === 'mcq'
+            ? examSub.submitted_answers?.mcq || examSub.submitted_answers
+            : {}),
         cq: {
-          answer: safeParseNotes(examSub.submitted_answers?.cq?.answer || examSub.submitted_answers?.answer),
-          answers_by_question: examSub.submitted_answers?.cq?.answers_by_question || examSub.submitted_answers?.answers_by_question || {},
+          answer: safeParseNotes(
+            examSub.submitted_answers?.cq?.answer ||
+              examSub.submitted_answers?.answer
+          ),
+          answers_by_question:
+            examSub.submitted_answers?.cq?.answers_by_question ||
+            examSub.submitted_answers?.answers_by_question ||
+            {},
           attachments: Array.isArray(examSub.submitted_answers?.cq?.attachments)
             ? examSub.submitted_answers.cq.attachments
             : Array.isArray(examSub.submitted_answers?.attachments)
               ? examSub.submitted_answers.attachments
-              : []
+              : [],
         },
         score: examSub.score,
         status: examSub.status,
         graded_at: examSub.graded_at,
         graded_by: examSub.graded_by,
         mentor_remarks: examSub.mentor_remarks || examSub.mentor_feedback,
-        created_at: examSub.created_at
+        created_at: examSub.created_at,
       };
     })();
 
-    const displayedQuestions = displayedAttempt?.selected_questions || activeQuestions || [];
+    const displayedQuestions =
+      displayedAttempt?.selected_questions || activeQuestions || [];
     const displayedMcqAnswers = displayedAttempt?.mcq || {};
     const displayedCqAnswerText = displayedAttempt?.cq?.answer || '';
     const displayedCqAttachments = displayedAttempt?.cq?.attachments || [];
@@ -2501,12 +2958,15 @@ const LessonPanel = memo(function LessonPanel({
     const displayedStatus = displayedAttempt?.status;
     const displayedMentorRemarks = displayedAttempt?.mentor_remarks;
 
-    const maxPoints = (examSub && !isRetaking)
-      ? displayedQuestions.reduce((acc, q) => acc + (q.points || 5), 0)
-      : activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
+    const maxPoints =
+      examSub && !isRetaking
+        ? displayedQuestions.reduce((acc, q) => acc + (q.points || 5), 0)
+        : activeQuestions.reduce((acc, q) => acc + (q.points || 5), 0);
 
-    const mcqMaxPoints = ((examSub && !isRetaking) ? displayedQuestions : activeQuestions)
-      .filter(q => Array.isArray(q.options) && q.options.length > 0)
+    const mcqMaxPoints = (
+      examSub && !isRetaking ? displayedQuestions : activeQuestions
+    )
+      .filter((q) => Array.isArray(q.options) && q.options.length > 0)
       .reduce((acc, q) => acc + (q.points || 5), 0);
 
     const isMcq = lesson.exam_type === 'mcq';
@@ -2514,52 +2974,84 @@ const LessonPanel = memo(function LessonPanel({
     const isHybrid = lesson.exam_type === 'hybrid';
 
     // Track submission status per section
-    const isMcqSubmitted = !!(examSub?.submitted_answers?.mcq_submitted || (isMcq && examSub));
-    const isCqSubmitted = !!(examSub?.submitted_answers?.cq_submitted || (isCq && examSub));
+    const isMcqSubmitted = !!(
+      examSub?.submitted_answers?.mcq_submitted ||
+      (isMcq && examSub)
+    );
+    const isCqSubmitted = !!(
+      examSub?.submitted_answers?.cq_submitted ||
+      (isCq && examSub)
+    );
 
     // Fully completed state for the whole exam lesson
-    const isFullySubmitted = isMcq ? isMcqSubmitted : isCq ? isCqSubmitted : (isMcqSubmitted && isCqSubmitted);
+    const isFullySubmitted = isMcq
+      ? isMcqSubmitted
+      : isCq
+        ? isCqSubmitted
+        : isMcqSubmitted && isCqSubmitted;
 
     // Graded/Submitted status card and reviews when fully complete
     if (isFullySubmitted && !isRetaking && !isMcqRetaking) {
       return (
         <div className="space-y-6">
           {/* Graded/Submitted status card */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-600/[0.08] to-transparent p-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-violet-600/[0.08] to-transparent p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-400 border border-violet-500/20">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-400">
                   <Trophy className="h-3.5 w-3.5" />
-                  {isHybrid ? 'Hybrid MCQ & CQ Exam' : isMcq ? 'Auto-Graded MCQ Exam' : 'Subjective CQ Exam'}
+                  {isHybrid
+                    ? 'Hybrid MCQ & CQ Exam'
+                    : isMcq
+                      ? 'Auto-Graded MCQ Exam'
+                      : 'Subjective CQ Exam'}
                 </span>
                 <h3 className="mt-2 text-lg font-bold text-white">
-                  {isMcq ? 'Exam Finished' : displayedStatus === 'reviewed' ? 'Solution Reviewed' : 'Solution Submitted'}
+                  {isMcq
+                    ? 'Exam Finished'
+                    : displayedStatus === 'reviewed'
+                      ? 'Solution Reviewed'
+                      : 'Solution Submitted'}
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Submitted on {new Date(displayedAttempt?.created_at || examSub.created_at).toLocaleDateString()}
+                <p className="mt-1 text-xs text-gray-500">
+                  Submitted on{' '}
+                  {new Date(
+                    displayedAttempt?.created_at || examSub.created_at
+                  ).toLocaleDateString()}
                 </p>
               </div>
 
-              <div className="flex flex-col items-center gap-3 shrink-0">
-                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center shrink-0 w-full sm:w-36">
-                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Score / Grade</p>
+              <div className="flex shrink-0 flex-col items-center gap-3">
+                <div className="w-full shrink-0 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center sm:w-36">
+                  <p className="text-[10px] font-bold tracking-wider text-gray-600 uppercase">
+                    Score / Grade
+                  </p>
                   <p className="mt-1 text-2xl font-extrabold text-white">
                     {displayedStatus === 'reviewed' || isMcq ? (
                       <>
-                        <span className="text-emerald-400">{displayedScore}</span>
-                        <span className="text-gray-600 text-sm"> / {maxPoints || 100} pts</span>
+                        <span className="text-emerald-400">
+                          {displayedScore}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {' '}
+                          / {maxPoints || 100} pts
+                        </span>
                       </>
                     ) : (
-                      <span className="text-amber-400 text-sm">Pending Review</span>
+                      <span className="text-sm text-amber-400">
+                        Pending Review
+                      </span>
                     )}
                   </p>
                 </div>
-                
+
                 {!isCq && !isArchived && (
                   <button
                     type="button"
-                    onClick={(isMcq || isHybrid) ? handleRetakeMcq : handleRetakeCq}
-                    className="w-full px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={
+                      isMcq || isHybrid ? handleRetakeMcq : handleRetakeCq
+                    }
+                    className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500 active:scale-95"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Retake Exam
@@ -2572,9 +3064,11 @@ const LessonPanel = memo(function LessonPanel({
               <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Mentor Feedback</h4>
+                  <h4 className="text-xs font-bold tracking-wider text-emerald-300 uppercase">
+                    Mentor Feedback
+                  </h4>
                 </div>
-                <p className="mt-1.5 text-xs text-gray-300 leading-relaxed italic">
+                <p className="mt-1.5 text-xs leading-relaxed text-gray-300 italic">
                   &ldquo;{displayedMentorRemarks}&rdquo;
                 </p>
               </div>
@@ -2586,38 +3080,50 @@ const LessonPanel = memo(function LessonPanel({
 
           {/* Attempt Selector Pill Row */}
           {history.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-5 space-y-3">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Attempt History</h4>
+            <div className="space-y-3 rounded-2xl border border-white/10 bg-linear-to-br from-white/[0.02] to-transparent p-5">
+              <h4 className="text-xs font-bold tracking-wider text-gray-400 uppercase">
+                Attempt History
+              </h4>
               <div className="flex flex-wrap gap-2">
                 {history.map((att, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedAttemptIndex(idx)}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-xs font-semibold transition-all active:scale-95 ${
                       selectedAttemptIndex === idx
-                        ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-md shadow-violet-500/10'
-                        : 'bg-zinc-900/60 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                        ? 'border-violet-500/40 bg-violet-500/20 text-violet-300 shadow-md shadow-violet-500/10'
+                        : 'border-white/5 bg-zinc-900/60 text-gray-400 hover:border-white/10 hover:text-white'
                     }`}
                   >
                     <span>Attempt {idx + 1}</span>
-                    <span className="text-[10px] opacity-75 font-normal">
-                      ({att.score != null ? `${att.score} pts` : att.status === 'reviewed' ? `${att.score || 0} pts` : 'Pending'})
+                    <span className="text-[10px] font-normal opacity-75">
+                      (
+                      {att.score != null
+                        ? `${att.score} pts`
+                        : att.status === 'reviewed'
+                          ? `${att.score || 0} pts`
+                          : 'Pending'}
+                      )
                     </span>
                   </button>
                 ))}
                 <button
                   type="button"
                   onClick={() => setSelectedAttemptIndex(-1)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
                     selectedAttemptIndex === -1
-                      ? 'bg-violet-600/30 border-violet-500/50 text-white shadow-md shadow-violet-500/10'
-                      : 'bg-zinc-900/60 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                      ? 'border-violet-500/50 bg-violet-600/30 text-white shadow-md shadow-violet-500/10'
+                      : 'border-white/5 bg-zinc-900/60 text-gray-400 hover:border-white/10 hover:text-white'
                   }`}
                 >
                   <span>Latest (Attempt {history.length + 1})</span>
-                  <span className="text-[10px] opacity-75 font-normal">
-                    ({examSub.status === 'reviewed' || isMcq ? `${examSub.score || 0} pts` : 'Pending'})
+                  <span className="text-[10px] font-normal opacity-75">
+                    (
+                    {examSub.status === 'reviewed' || isMcq
+                      ? `${examSub.score || 0} pts`
+                      : 'Pending'}
+                    )
                   </span>
                 </button>
               </div>
@@ -2628,27 +3134,43 @@ const LessonPanel = memo(function LessonPanel({
           <div className="space-y-6">
             {(isMcq || isHybrid) && (
               <div className="space-y-6">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Question Review</h4>
+                <h4 className="text-sm font-bold tracking-wider text-white uppercase">
+                  Question Review
+                </h4>
                 {displayedQuestions.map((q, qIdx) => {
                   const selectedOpt = displayedMcqAnswers[q.id];
                   const isCorrect = selectedOpt === q.correct_option;
 
                   return (
-                    <div key={q.id || qIdx} className={`rounded-xl border p-5 space-y-4 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}>
+                    <div
+                      key={q.id || qIdx}
+                      className={`space-y-4 rounded-xl border p-5 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-2.5">
-                          <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border border-red-500/20 bg-red-500/10 text-red-400'}`}
+                          >
                             {qIdx + 1}
                           </span>
-                          <span className="text-xs font-bold text-gray-500">Question {qIdx + 1}</span>
+                          <span className="text-xs font-bold text-gray-500">
+                            Question {qIdx + 1}
+                          </span>
                         </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {isCorrect ? `+${q.points || 5} Points` : `0 / ${q.points || 5} Points`}
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-semibold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}
+                        >
+                          {isCorrect
+                            ? `+${q.points || 5} Points`
+                            : `0 / ${q.points || 5} Points`}
                         </span>
                       </div>
 
                       <div className="text-sm font-semibold text-white">
-                        <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                        <MarkdownDesc
+                          text={q.question}
+                          className="text-white [&_p]:text-sm [&_p]:font-semibold [&_p]:text-white"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -2662,17 +3184,19 @@ const LessonPanel = memo(function LessonPanel({
                               key={optIdx}
                               className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs ${
                                 isCorrectAnswer
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold'
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-300'
                                   : isStudentSelect
                                     ? 'border-red-500/30 bg-red-500/10 text-red-300'
                                     : 'border-white/5 bg-white/[0.02] text-gray-400'
                               }`}
                             >
-                              <span>{optLabels[optIdx]}. {opt}</span>
+                              <span>
+                                {optLabels[optIdx]}. {opt}
+                              </span>
                               {isCorrectAnswer ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                               ) : isStudentSelect ? (
-                                <X className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                                <X className="h-3.5 w-3.5 shrink-0 text-red-400" />
                               ) : null}
                             </div>
                           );
@@ -2684,66 +3208,94 @@ const LessonPanel = memo(function LessonPanel({
               </div>
             )}
 
-            {(isCq || isHybrid) && (() => {
-              const cqQs = displayedQuestions.filter(
-                q => !Array.isArray(q.options) || q.options.length === 0
-              );
-              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || {};
-              return (
-                <div className="space-y-5">
-                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Your Submitted Solution</h4>
+            {(isCq || isHybrid) &&
+              (() => {
+                const cqQs = displayedQuestions.filter(
+                  (q) => !Array.isArray(q.options) || q.options.length === 0
+                );
+                const submittedByQuestion =
+                  displayedAttempt?.cq?.answers_by_question || {};
+                return (
+                  <div className="space-y-5">
+                    <h4 className="text-sm font-bold tracking-wider text-white uppercase">
+                      Your Submitted Solution
+                    </h4>
 
-                  {/* Per-question submitted answers */}
-                  {cqQs.length > 0 ? (
-                    <div className="space-y-4">
-                      {cqQs.map((q, idx) => {
-                        const qId = q.id || String(idx);
-                        const answerText = submittedByQuestion[qId] || (cqQs.length === 1 ? displayedCqAnswerText : '') || '';
-                        return (
-                          <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
-                            <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.01]">
-                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
-                                {idx + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <MarkdownDesc text={q.question} className="text-slate-200 [&_p]:text-slate-200 [&_p]:font-semibold [&_p]:text-xs" />
-                                {q.points != null && (
-                                  <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                                    {q.points} pts
-                                  </span>
+                    {/* Per-question submitted answers */}
+                    {cqQs.length > 0 ? (
+                      <div className="space-y-4">
+                        {cqQs.map((q, idx) => {
+                          const qId = q.id || String(idx);
+                          const answerText =
+                            submittedByQuestion[qId] ||
+                            (cqQs.length === 1 ? displayedCqAnswerText : '') ||
+                            '';
+                          return (
+                            <div
+                              key={qId}
+                              className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
+                            >
+                              <div className="flex items-start gap-3 border-b border-white/5 bg-white/[0.01] px-4 py-3">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <MarkdownDesc
+                                    text={q.question}
+                                    className="text-slate-200 [&_p]:text-xs [&_p]:font-semibold [&_p]:text-slate-200"
+                                  />
+                                  {q.points != null && (
+                                    <span className="mt-1 inline-block rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                                      {q.points} pts
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="px-4 py-3">
+                                <span className="mb-2 block text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                                  Your Answer
+                                </span>
+                                {answerText ? (
+                                  <TaskDescriptionRenderer
+                                    content={answerText}
+                                  />
+                                ) : (
+                                  <p className="text-xs text-gray-600 italic">
+                                    No answer provided for this question.
+                                  </p>
                                 )}
                               </div>
                             </div>
-                            <div className="px-4 py-3">
-                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Your Answer</span>
-                              {answerText ? (
-                                <TaskDescriptionRenderer content={answerText} />
-                              ) : (
-                                <p className="text-xs text-gray-600 italic">No answer provided for this question.</p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : displayedCqAnswerText ? (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Written Answer</h5>
-                      <TaskDescriptionRenderer content={displayedCqAnswerText} />
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-500 italic">No subjective answers were submitted.</p>
-                  )}
+                          );
+                        })}
+                      </div>
+                    ) : displayedCqAnswerText ? (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                        <h5 className="mb-2 text-xs font-bold tracking-wider text-gray-500 uppercase">
+                          Written Answer
+                        </h5>
+                        <TaskDescriptionRenderer
+                          content={displayedCqAnswerText}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">
+                        No subjective answers were submitted.
+                      </p>
+                    )}
 
-                  {displayedCqAttachments && displayedCqAttachments.length > 0 && (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                      <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 font-sans">Attachments</h5>
-                      <AttachmentList files={displayedCqAttachments} />
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+                    {displayedCqAttachments &&
+                      displayedCqAttachments.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                          <h5 className="mb-2 font-sans text-xs font-bold tracking-wider text-gray-500 uppercase">
+                            Attachments
+                          </h5>
+                          <AttachmentList files={displayedCqAttachments} />
+                        </div>
+                      )}
+                  </div>
+                );
+              })()}
           </div>
         </div>
       );
@@ -2753,24 +3305,27 @@ const LessonPanel = memo(function LessonPanel({
     return (
       <div className="space-y-6">
         {/* Upper card */}
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-5">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/[0.02] to-transparent p-5">
+          <h3 className="flex items-center gap-2 text-base font-bold text-white">
             <GraduationCap className="h-5 w-5 text-violet-400" />
             Interactive Exam Player
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            {isHybrid 
+          <p className="mt-1 text-xs text-gray-500">
+            {isHybrid
               ? 'This is a Hybrid Exam. Step 1 (MCQ Assessment) is evaluated automatically. Step 2 (CQ Solution) is graded manually by your mentor.'
-              : isMcq 
-                ? `Answer all ${activeQuestions.length} questions to complete the exam. Auto-graded instantly.` 
+              : isMcq
+                ? `Answer all ${activeQuestions.length} questions to complete the exam. Auto-graded instantly.`
                 : 'Review the task description, guidelines, and submit your written explanation or code repository below for review.'}
           </p>
         </div>
 
         {isArchived && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+          <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-[12.5px] leading-normal font-medium text-amber-300 shadow-sm">
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-            <span>This bootcamp is archived. The exam player is in read-only mode, and retakes/submissions are disabled.</span>
+            <span>
+              This bootcamp is archived. The exam player is in read-only mode,
+              and retakes/submissions are disabled.
+            </span>
           </div>
         )}
 
@@ -2779,20 +3334,20 @@ const LessonPanel = memo(function LessonPanel({
 
         {/* Tab switcher for Hybrid */}
         {isHybrid && (
-          <div className="flex border-b border-white/10 bg-white/[0.01] rounded-xl p-1 gap-1">
+          <div className="flex gap-1 rounded-xl border-b border-white/10 bg-white/[0.01] p-1">
             <button
               type="button"
               onClick={() => setActiveTab('mcq')}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold tracking-wider uppercase transition-all ${
                 activeTab === 'mcq'
-                  ? 'bg-violet-600/20 border border-violet-500/30 text-violet-300'
-                  : 'bg-transparent text-gray-500 hover:text-white border border-transparent'
+                  ? 'border border-violet-500/30 bg-violet-600/20 text-violet-300'
+                  : 'border border-transparent bg-transparent text-gray-500 hover:text-white'
               }`}
             >
               <CheckSquare className="h-3.5 w-3.5" />
               Step 1: MCQ Assessment
               {isMcqSubmitted && !isMcqRetaking && (
-                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/20">
+                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
                   Graded
                 </span>
               )}
@@ -2800,16 +3355,16 @@ const LessonPanel = memo(function LessonPanel({
             <button
               type="button"
               onClick={() => setActiveTab('cq')}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold tracking-wider uppercase transition-all ${
                 activeTab === 'cq'
-                  ? 'bg-violet-600/20 border border-violet-500/30 text-violet-300'
-                  : 'bg-transparent text-gray-500 hover:text-white border border-transparent'
+                  ? 'border border-violet-500/30 bg-violet-600/20 text-violet-300'
+                  : 'border border-transparent bg-transparent text-gray-500 hover:text-white'
               }`}
             >
               <BookOpen className="h-3.5 w-3.5" />
               Step 2: Subjective Task (CQ)
               {isCqSubmitted && (
-                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/20">
+                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
                   Submitted
                 </span>
               )}
@@ -2823,18 +3378,26 @@ const LessonPanel = memo(function LessonPanel({
             {/* If MCQ is already submitted and we are NOT retaking, show evaluated reviews + a retake button! */}
             {isMcqSubmitted && !isMcqRetaking ? (
               <div className="space-y-6">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h4 className="text-sm font-bold text-white">MCQ Section Graded</h4>
-                    <p className="text-xs text-gray-400 mt-1">
-                      You scored <span className="text-emerald-400 font-bold">{examSub?.submitted_answers?.mcq_score || examSub?.score || 0}</span> out of {mcqMaxPoints} points on your latest MCQ attempt.
+                    <h4 className="text-sm font-bold text-white">
+                      MCQ Section Graded
+                    </h4>
+                    <p className="mt-1 text-xs text-gray-400">
+                      You scored{' '}
+                      <span className="font-bold text-emerald-400">
+                        {examSub?.submitted_answers?.mcq_score ||
+                          examSub?.score ||
+                          0}
+                      </span>{' '}
+                      out of {mcqMaxPoints} points on your latest MCQ attempt.
                     </p>
                   </div>
                   {!isArchived && (
                     <button
                       type="button"
                       onClick={handleRetakeMcq}
-                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                      className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500 active:scale-95"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
                       Retake MCQ Section
@@ -2843,55 +3406,76 @@ const LessonPanel = memo(function LessonPanel({
                 </div>
 
                 <div className="space-y-6">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Question Evaluation Review</h4>
+                  <h4 className="text-xs font-bold tracking-wider text-gray-400 uppercase">
+                    Question Evaluation Review
+                  </h4>
                   {activeQuestions.map((q, qIdx) => {
                     const selectedOpt = mcqAnswers[q.id];
                     const isCorrect = selectedOpt === q.correct_option;
 
                     return (
-                      <div key={q.id || qIdx} className={`rounded-xl border p-5 space-y-4 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}>
+                      <div
+                        key={q.id || qIdx}
+                        className={`space-y-4 rounded-xl border p-5 ${isCorrect ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'}`}
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-center gap-2.5">
-                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCorrect ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border border-red-500/20 bg-red-500/10 text-red-400'}`}
+                            >
                               {qIdx + 1}
                             </span>
-                            <span className="text-xs font-bold text-gray-500">Question {qIdx + 1}</span>
+                            <span className="text-xs font-bold text-gray-500">
+                              Question {qIdx + 1}
+                            </span>
                           </div>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                            {isCorrect ? `+${q.points || 5} Points` : `0 / ${q.points || 5} Points`}
+                          <span
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold ${isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}
+                          >
+                            {isCorrect
+                              ? `+${q.points || 5} Points`
+                              : `0 / ${q.points || 5} Points`}
                           </span>
                         </div>
 
                         <div className="text-sm font-semibold text-white">
-                          <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                          <MarkdownDesc
+                            text={q.question}
+                            className="text-white [&_p]:text-sm [&_p]:font-semibold [&_p]:text-white"
+                          />
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {(q.options || ['', '', '', '']).map((opt, optIdx) => {
-                            const optLabels = ['A', 'B', 'C', 'D'];
-                            const isStudentSelect = selectedOpt === optIdx;
-                            const isCorrectAnswer = q.correct_option === optIdx;
+                          {(q.options || ['', '', '', '']).map(
+                            (opt, optIdx) => {
+                              const optLabels = ['A', 'B', 'C', 'D'];
+                              const isStudentSelect = selectedOpt === optIdx;
+                              const isCorrectAnswer =
+                                q.correct_option === optIdx;
 
-                            return (
-                              <div
-                                key={optIdx}
-                                className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs ${
-                                  isCorrectAnswer
-                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold'
-                                    : isStudentSelect
-                                      ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                                      : 'border-white/5 bg-white/[0.02] text-gray-400'
-                                }`}
-                              >
-                                <span>{optLabels[optIdx]}. {opt}</span>
-                                {isCorrectAnswer ? (
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                                ) : isStudentSelect ? (
-                                  <X className="h-3.5 w-3.5 text-red-400 shrink-0" />
-                                ) : null}
-                              </div>
-                            );
-                          })}
+                              return (
+                                <div
+                                  key={optIdx}
+                                  className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs ${
+                                    isCorrectAnswer
+                                      ? 'border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-300'
+                                      : isStudentSelect
+                                        ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                                        : 'border-white/5 bg-white/[0.02] text-gray-400'
+                                  }`}
+                                >
+                                  <span>
+                                    {optLabels[optIdx]}. {opt}
+                                  </span>
+                                  {isCorrectAnswer ? (
+                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                                  ) : isStudentSelect ? (
+                                    <X className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                                  ) : null}
+                                </div>
+                              );
+                            }
+                          )}
                         </div>
                       </div>
                     );
@@ -2902,16 +3486,24 @@ const LessonPanel = memo(function LessonPanel({
               // Interactive MCQ taker cards
               <div className="space-y-6">
                 {activeQuestions.map((q, qIdx) => (
-                  <div key={q.id || qIdx} className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+                  <div
+                    key={q.id || qIdx}
+                    className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-5"
+                  >
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-bold text-violet-400 border border-violet-500/20">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
                         {qIdx + 1}
                       </span>
-                      <span className="text-xs font-bold text-gray-500">Question {qIdx + 1} of {activeQuestions.length}</span>
+                      <span className="text-xs font-bold text-gray-500">
+                        Question {qIdx + 1} of {activeQuestions.length}
+                      </span>
                     </div>
 
                     <div className="text-sm font-semibold text-white">
-                      <MarkdownDesc text={q.question} className="text-white [&_p]:text-white [&_p]:font-semibold [&_p]:text-sm" />
+                      <MarkdownDesc
+                        text={q.question}
+                        className="text-white [&_p]:text-sm [&_p]:font-semibold [&_p]:text-white"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -2929,16 +3521,22 @@ const LessonPanel = memo(function LessonPanel({
                             }}
                             disabled={isArchived}
                             className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-xs transition-all ${
-                              isArchived ? 'cursor-not-allowed border-white/5 opacity-60' : 'cursor-pointer'
+                              isArchived
+                                ? 'cursor-not-allowed border-white/5 opacity-60'
+                                : 'cursor-pointer'
                             } ${
                               isSelected
-                                ? 'border-violet-500 bg-violet-500/10 text-white font-semibold'
+                                ? 'border-violet-500 bg-violet-500/10 font-semibold text-white'
                                 : 'border-white/5 bg-white/[0.01] text-gray-400 hover:border-white/15 hover:bg-white/5'
                             }`}
                           >
-                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${
-                              isSelected ? 'bg-violet-500 text-white animate-pulse' : 'bg-white/10 text-gray-400'
-                            }`}>
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${
+                                isSelected
+                                  ? 'animate-pulse bg-violet-500 text-white'
+                                  : 'bg-white/10 text-gray-400'
+                              }`}
+                            >
                               {optLabels[optIdx]}
                             </span>
                             <span>{opt}</span>
@@ -2955,9 +3553,13 @@ const LessonPanel = memo(function LessonPanel({
                       type="button"
                       disabled={submittingExam}
                       onClick={handleMcqSubmit}
-                      className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-violet-600 px-6 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500 active:scale-95 disabled:opacity-50"
                     >
-                      {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {submittingExam ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
                       Submit & Grade MCQ Answers
                     </button>
                   </div>
@@ -2972,22 +3574,26 @@ const LessonPanel = memo(function LessonPanel({
             {(() => {
               // Only subjective questions (no options array = CQ question)
               const cqQuestions = displayedQuestions.filter(
-                q => !Array.isArray(q.options) || q.options.length === 0
+                (q) => !Array.isArray(q.options) || q.options.length === 0
               );
               // Per-question submitted answers from the current displayed attempt
-              const submittedByQuestion = displayedAttempt?.cq?.answers_by_question || displayedAttempt?.answers_by_question || {};
+              const submittedByQuestion =
+                displayedAttempt?.cq?.answers_by_question ||
+                displayedAttempt?.answers_by_question ||
+                {};
 
               if (isCqSubmitted) {
                 return (
                   // ── Read-only submitted view ──────────────────────────────
                   <div className="space-y-5">
                     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-5">
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <h4 className="flex items-center gap-2 text-sm font-bold text-white">
                         <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                         Subjective Answers Submitted
                       </h4>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Your subjective CQ answers have been submitted to your mentor for manual grading.
+                      <p className="mt-1 text-xs text-gray-400">
+                        Your subjective CQ answers have been submitted to your
+                        mentor for manual grading.
                       </p>
                     </div>
 
@@ -2996,20 +3602,29 @@ const LessonPanel = memo(function LessonPanel({
                       <div className="space-y-4">
                         {cqQuestions.map((q, idx) => {
                           const qId = q.id || String(idx);
-                          const answerText = submittedByQuestion[qId] || displayedCqAnswerText || '';
+                          const answerText =
+                            submittedByQuestion[qId] ||
+                            displayedCqAnswerText ||
+                            '';
                           return (
-                            <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                            <div
+                              key={qId}
+                              className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
+                            >
                               {/* Question */}
-                              <div className="flex items-start gap-3 px-4 py-3 border-b border-white/5 bg-white/[0.01]">
-                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                              <div className="flex items-start gap-3 border-b border-white/5 bg-white/[0.01] px-4 py-3">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
                                   {idx + 1}
                                 </span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold text-slate-200 leading-relaxed">
-                                    <MarkdownDesc text={q.question} className="text-slate-200 [&_p]:text-slate-200 [&_p]:font-semibold [&_p]:text-xs" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs leading-relaxed font-semibold text-slate-200">
+                                    <MarkdownDesc
+                                      text={q.question}
+                                      className="text-slate-200 [&_p]:text-xs [&_p]:font-semibold [&_p]:text-slate-200"
+                                    />
                                   </div>
                                   {q.points != null && (
-                                    <span className="mt-1 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                    <span className="mt-1 inline-block rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400">
                                       {q.points} pts
                                     </span>
                                   )}
@@ -3017,11 +3632,17 @@ const LessonPanel = memo(function LessonPanel({
                               </div>
                               {/* Answer */}
                               <div className="px-4 py-3">
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Your Answer</span>
+                                <span className="mb-2 block text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                                  Your Answer
+                                </span>
                                 {answerText ? (
-                                  <TaskDescriptionRenderer content={answerText} />
+                                  <TaskDescriptionRenderer
+                                    content={answerText}
+                                  />
                                 ) : (
-                                  <p className="text-xs text-gray-600 italic">No answer provided for this question.</p>
+                                  <p className="text-xs text-gray-600 italic">
+                                    No answer provided for this question.
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -3033,14 +3654,20 @@ const LessonPanel = memo(function LessonPanel({
                     {/* Legacy general answer fallback if no per-question */}
                     {cqQuestions.length === 0 && displayedCqAnswerText && (
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
-                        <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Your Explanation</h5>
-                        <TaskDescriptionRenderer content={displayedCqAnswerText} />
+                        <h5 className="mb-2 text-xs font-bold tracking-wider text-gray-500 uppercase">
+                          Your Explanation
+                        </h5>
+                        <TaskDescriptionRenderer
+                          content={displayedCqAnswerText}
+                        />
                       </div>
                     )}
 
                     {displayedCqAttachments?.length > 0 && (
-                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
-                        <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider font-sans">Attachments</h5>
+                      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                        <h5 className="font-sans text-xs font-bold tracking-wider text-gray-500 uppercase">
+                          Attachments
+                        </h5>
                         <AttachmentList files={displayedCqAttachments} />
                       </div>
                     )}
@@ -3053,10 +3680,13 @@ const LessonPanel = memo(function LessonPanel({
                 <div className="space-y-5">
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-violet-400" />
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans">
+                    <h4 className="font-sans text-xs font-bold tracking-wider text-white uppercase">
                       Answer Each Question
                     </h4>
-                    <span className="ml-auto text-[10px] text-gray-500 font-mono">{cqQuestions.length} question{cqQuestions.length !== 1 ? 's' : ''}</span>
+                    <span className="ml-auto font-mono text-[10px] text-gray-500">
+                      {cqQuestions.length} question
+                      {cqQuestions.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
 
                   {/* Per-question answer editors */}
@@ -3066,18 +3696,24 @@ const LessonPanel = memo(function LessonPanel({
                         const qId = q.id || String(idx);
                         const answerVal = cqAnswersByQuestion[qId] || '';
                         return (
-                          <div key={qId} className="rounded-xl border border-white/10 bg-white/[0.015] overflow-hidden">
+                          <div
+                            key={qId}
+                            className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.015]"
+                          >
                             {/* Question header */}
-                            <div className="flex items-start gap-3 px-4 py-3 bg-white/[0.02] border-b border-white/5">
-                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold text-violet-400">
+                            <div className="flex items-start gap-3 border-b border-white/5 bg-white/[0.02] px-4 py-3">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px] font-bold text-violet-400">
                                 {idx + 1}
                               </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-semibold text-slate-100 leading-relaxed">
-                                  <MarkdownDesc text={q.question} className="text-slate-100 [&_p]:text-slate-100 [&_p]:font-semibold [&_p]:text-xs" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs leading-relaxed font-semibold text-slate-100">
+                                  <MarkdownDesc
+                                    text={q.question}
+                                    className="text-slate-100 [&_p]:text-xs [&_p]:font-semibold [&_p]:text-slate-100"
+                                  />
                                 </div>
                                 {q.points != null && (
-                                  <span className="mt-1.5 inline-block text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                  <span className="mt-1.5 inline-block rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400">
                                     {q.points} pts
                                   </span>
                                 )}
@@ -3085,11 +3721,18 @@ const LessonPanel = memo(function LessonPanel({
                             </div>
                             {/* Answer editor */}
                             <div className="p-3">
-                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2 font-sans">Your Answer</span>
-                              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/10">
+                              <span className="mb-2 block font-sans text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                                Your Answer
+                              </span>
+                              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/10">
                                 <MultiBlockEditor
                                   value={answerVal}
-                                  onChange={(val) => setCqAnswersByQuestion(prev => ({ ...prev, [qId]: val }))}
+                                  onChange={(val) =>
+                                    setCqAnswersByQuestion((prev) => ({
+                                      ...prev,
+                                      [qId]: val,
+                                    }))
+                                  }
                                   readOnly={isArchived}
                                 />
                               </div>
@@ -3101,32 +3744,58 @@ const LessonPanel = memo(function LessonPanel({
                   ) : (
                     // Fallback: no structured questions — show single editor
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Explanation / Remarks (Required)</label>
-                      <div className="rounded-xl overflow-hidden border border-white/10 bg-black/10">
-                        <MultiBlockEditor value={cqAnswerText} onChange={setCqAnswerText} readOnly={isArchived} />
+                      <label className="block font-sans text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                        Explanation / Remarks (Required)
+                      </label>
+                      <div className="overflow-hidden rounded-xl border border-white/10 bg-black/10">
+                        <MultiBlockEditor
+                          value={cqAnswerText}
+                          onChange={setCqAnswerText}
+                          readOnly={isArchived}
+                        />
                       </div>
                     </div>
                   )}
 
                   {/* Attachments */}
-                  <div className="space-y-2 pt-2 border-t border-white/5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block font-sans">Attachments (Optional)</label>
-                    <AttachmentList files={cqAttachments} onRemove={isArchived ? undefined : (i) => setCqAttachments(prev => prev.filter((_, j) => j !== i))} />
+                  <div className="space-y-2 border-t border-white/5 pt-2">
+                    <label className="block font-sans text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                      Attachments (Optional)
+                    </label>
+                    <AttachmentList
+                      files={cqAttachments}
+                      onRemove={
+                        isArchived
+                          ? undefined
+                          : (i) =>
+                              setCqAttachments((prev) =>
+                                prev.filter((_, j) => j !== i)
+                              )
+                      }
+                    />
                     <input
                       type="file"
                       multiple
-                      onChange={(e) => handleCqFiles(Array.from(e.target.files || []))}
+                      onChange={(e) =>
+                        handleCqFiles(Array.from(e.target.files || []))
+                      }
                       className="hidden"
                       id="cq-file-input"
                     />
                     {!isArchived && (
                       <button
                         type="button"
-                        onClick={() => document.getElementById('cq-file-input')?.click()}
+                        onClick={() =>
+                          document.getElementById('cq-file-input')?.click()
+                        }
                         disabled={cqUploading}
                         className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition hover:bg-white/10 disabled:opacity-40"
                       >
-                        {cqUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                        {cqUploading ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Upload className="h-3 w-3" />
+                        )}
                         {cqUploading ? 'Uploading…' : 'Add files'}
                       </button>
                     )}
@@ -3138,9 +3807,13 @@ const LessonPanel = memo(function LessonPanel({
                         type="button"
                         disabled={submittingExam || cqUploading}
                         onClick={handleCqSubmit}
-                        className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-violet-600 px-6 py-3 font-sans text-xs font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500 active:scale-95 disabled:opacity-50"
                       >
-                        {submittingExam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {submittingExam ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
                         Submit CQ Solution to Mentor
                       </button>
                     </div>
@@ -3171,17 +3844,18 @@ const LessonPanel = memo(function LessonPanel({
         >
           <div className="mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
             {/* Lesson title */}
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
               <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
                 {lesson.title}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1 rounded bg-zinc-800 text-[10px] font-bold text-gray-400 px-1.5 py-0.5 uppercase">
+                <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-gray-400 uppercase">
                   {lesson.type || 'lesson'}
                 </span>
-                <span className="flex items-center gap-1 text-[11px] font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                <span className="flex items-center gap-1 rounded border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[11px] font-bold text-violet-400">
                   <Award className="h-3 w-3 text-amber-400" />
-                  Score: {lessonScoreDetails.earned} / {lessonScoreDetails.total} pts
+                  Score: {lessonScoreDetails.earned} /{' '}
+                  {lessonScoreDetails.total} pts
                 </span>
                 {lesson.duration > 0 && (
                   <span className="flex items-center gap-1.5 text-[12px] text-gray-500">
@@ -3202,139 +3876,137 @@ const LessonPanel = memo(function LessonPanel({
               </div>
             </div>
 
-              <>
-                {/* Video — keyed so it remounts cleanly between lessons */}
-                {hasVideo && (
-                  <VideoPlayer
-                    key={lesson.id}
-                    lesson={lesson}
-                    initialPosition={initialPosition}
-                    onProgress={handleProgress}
-                    onComplete={handleVideoComplete}
-                  />
-                )}
+            <>
+              {/* Video — keyed so it remounts cleanly between lessons */}
+              {hasVideo && (
+                <VideoPlayer
+                  key={lesson.id}
+                  lesson={lesson}
+                  initialPosition={initialPosition}
+                  onProgress={handleProgress}
+                  onComplete={handleVideoComplete}
+                />
+              )}
 
-                {/* Completion toggle */}
-                <div
-                  className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
+              {/* Completion toggle */}
+              <div
+                className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
+                  localCompleted
+                    ? 'border-emerald-500/20 bg-emerald-500/5'
+                    : 'border-white/10 bg-white/2'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {localCompleted ? (
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                  ) : (
+                    <Circle className="h-5 w-5 shrink-0 text-gray-600" />
+                  )}
+                  <div>
+                    <p
+                      className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}
+                    >
+                      {localCompleted ? 'Completed!' : 'Mark as complete'}
+                    </p>
+                    <p className="text-[11px] text-gray-600">
+                      {localCompleted
+                        ? 'Great work — keep going!'
+                        : 'Mark done when finished'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleToggle}
+                  disabled={completing || isArchived}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
                     localCompleted
-                      ? 'border-emerald-500/20 bg-emerald-500/5'
-                      : 'border-white/10 bg-white/2'
+                      ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
+                      : 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    {localCompleted ? (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
-                    ) : (
-                      <Circle className="h-5 w-5 shrink-0 text-gray-600" />
+                  {completing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {localCompleted ? '✓ Done' : 'Complete Curriculum Item'}
+                </button>
+              </div>
+
+              {/* Rich content */}
+              {lesson.content ? (
+                <Suspense fallback={<ChunkFallback label="Loading content…" />}>
+                  <LessonContentRenderer
+                    key={lesson.id}
+                    content={lesson.content}
+                    lessonId={lesson.id}
+                    onProgress={handleProgress}
+                    onComplete={handleVideoComplete}
+                    initialPosition={initialPosition}
+                    practiceProblemsComponent={(problems) => (
+                      <PracticeProblemsCockpit
+                        lesson={{
+                          ...lesson,
+                          practice_problems: problems,
+                        }}
+                        lessonProgress={lessonProgress}
+                        onProgressUpdate={onProgressUpdate}
+                        bootcampId={bootcampId}
+                        onRefreshEnrollment={onRefreshEnrollment}
+                        isArchived={isArchived}
+                      />
                     )}
-                    <div>
-                      <p
-                        className={`text-sm font-semibold ${localCompleted ? 'text-emerald-300' : 'text-white'}`}
-                      >
-                        {localCompleted ? 'Completed!' : 'Mark as complete'}
-                      </p>
-                      <p className="text-[11px] text-gray-600">
-                        {localCompleted
-                          ? 'Great work — keep going!'
-                          : 'Mark done when finished'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleToggle}
-                    disabled={completing || isArchived}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
-                      localCompleted
-                        ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
-                        : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
-                    }`}
-                  >
-                    {completing && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {localCompleted ? '✓ Done' : 'Complete Curriculum Item'}
-                  </button>
-                </div>
-
-
-
-                {/* Rich content */}
-                {lesson.content ? (
-                  <Suspense fallback={<ChunkFallback label="Loading content…" />}>
-                    <LessonContentRenderer
-                      key={lesson.id}
-                      content={lesson.content}
-                      lessonId={lesson.id}
-                      onProgress={handleProgress}
-                      onComplete={handleVideoComplete}
-                      initialPosition={initialPosition}
-                      practiceProblemsComponent={(problems) => (
-                        <PracticeProblemsCockpit
-                          lesson={{
-                            ...lesson,
-                            practice_problems: problems
-                          }}
-                          lessonProgress={lessonProgress}
-                          onProgressUpdate={onProgressUpdate}
-                          bootcampId={bootcampId}
-                          onRefreshEnrollment={onRefreshEnrollment}
-                          isArchived={isArchived}
-                        />
-                      )}
-                      examComponent={(questions) => getExamPlayer(questions)}
-                    />
-                  </Suspense>
-                ) : lesson._pendingContent ? (
-                  <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
-                    <div className="spa-skeleton h-3 w-full rounded" />
-                    <div className="spa-skeleton h-3 w-11/12 rounded" />
-                    <div className="spa-skeleton h-3 w-9/12 rounded" />
-                    <div className="spa-skeleton h-3 w-10/12 rounded" />
-                  </div>
-                ) : null}
-
-                {/* Dedicated Exam renderer for standalone exam items without an inline exam block */}
-                {lesson.type === 'exam' && !contentHasExam && examPlayer}
-
-                {/* Dedicated Practice Problems renderer for standalone practice items without an inline practice block */}
-                {lesson.type === 'practice' && !contentHasPractice && (
-                  <PracticeProblemsCockpit
-                    lesson={lesson}
-                    lessonProgress={lessonProgress}
-                    onProgressUpdate={onProgressUpdate}
-                    bootcampId={bootcampId}
-                    onRefreshEnrollment={onRefreshEnrollment}
-                    isArchived={isArchived}
+                    examComponent={(questions) => getExamPlayer(questions)}
                   />
-                )}
+                </Suspense>
+              ) : lesson._pendingContent ? (
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/2 p-5">
+                  <div className="spa-skeleton h-3 w-full rounded" />
+                  <div className="spa-skeleton h-3 w-11/12 rounded" />
+                  <div className="spa-skeleton h-3 w-9/12 rounded" />
+                  <div className="spa-skeleton h-3 w-10/12 rounded" />
+                </div>
+              ) : null}
 
-                {/* Attachments */}
-                {lesson.attachments?.length > 0 && (
-                  <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
-                    <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-                      <Download className="h-4 w-4 text-purple-400" />
-                      <h3 className="text-[13px] font-semibold text-white">
-                        Attachments
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {lesson.attachments.map((att, i) => (
-                        <a
-                          key={i}
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/2 px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
-                        >
-                          <FileText className="h-4 w-4 shrink-0 text-gray-500" />
-                          <span className="truncate">
-                            {att.name || `Attachment ${i + 1}`}
-                          </span>
-                        </a>
-                      ))}
-                    </div>
+              {/* Dedicated Exam renderer for standalone exam items without an inline exam block */}
+              {lesson.type === 'exam' && !contentHasExam && examPlayer}
+
+              {/* Dedicated Practice Problems renderer for standalone practice items without an inline practice block */}
+              {lesson.type === 'practice' && !contentHasPractice && (
+                <PracticeProblemsCockpit
+                  lesson={lesson}
+                  lessonProgress={lessonProgress}
+                  onProgressUpdate={onProgressUpdate}
+                  bootcampId={bootcampId}
+                  onRefreshEnrollment={onRefreshEnrollment}
+                  isArchived={isArchived}
+                />
+              )}
+
+              {/* Attachments */}
+              {lesson.attachments?.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-white/2">
+                  <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+                    <Download className="h-4 w-4 text-purple-400" />
+                    <h3 className="text-[13px] font-semibold text-white">
+                      Attachments
+                    </h3>
                   </div>
-                )}
-              </>
+                  <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {lesson.attachments.map((att, i) => (
+                      <a
+                        key={i}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/2 px-3 py-2.5 text-xs text-gray-300 transition-all hover:border-white/10 hover:bg-white/5"
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                        <span className="truncate">
+                          {att.name || `Attachment ${i + 1}`}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
 
             {/* Notes */}
             <NotesPanel
@@ -3348,7 +4020,9 @@ const LessonPanel = memo(function LessonPanel({
             {commentsLoading ? (
               <div className="mt-8 flex items-center justify-center gap-2 border-t border-white/[0.07] pt-8">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-violet-400" />
-                <span className="text-xs text-gray-600">Loading discussion…</span>
+                <span className="text-xs text-gray-600">
+                  Loading discussion…
+                </span>
               </div>
             ) : (
               <LessonComments
@@ -3391,7 +4065,7 @@ const LessonPanel = memo(function LessonPanel({
           {nextLesson ? (
             <button
               onClick={() => onSelectLesson(nextLesson)}
-              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:from-violet-500 hover:to-violet-600 sm:px-5 sm:text-[13px]"
+              className="group flex items-center gap-2 rounded-xl bg-linear-to-r from-violet-600 to-violet-700 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:from-violet-500 hover:to-violet-600 sm:px-5 sm:text-[13px]"
             >
               <span className="hidden max-w-[200px] truncate sm:inline md:max-w-[300px]">
                 {nextLesson.title}
@@ -3402,7 +4076,7 @@ const LessonPanel = memo(function LessonPanel({
           ) : (
             <button
               onClick={() => onSelectLesson(null)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500 sm:px-5 sm:text-[13px]"
+              className="flex items-center gap-2 rounded-xl bg-linear-to-r from-emerald-500 to-emerald-600 px-3 py-2.5 text-[12px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500 sm:px-5 sm:text-[13px]"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span className="hidden sm:inline">Finish Course</span>
@@ -3420,7 +4094,7 @@ const LessonPanel = memo(function LessonPanel({
 function LessonSkeleton({ title, hasVideo }) {
   return (
     <div className="spa-fade-in mx-auto max-w-5xl space-y-5 p-4 pb-8 sm:p-6 lg:p-8 2xl:max-w-6xl">
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
+      <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/[0.04] to-transparent p-4 sm:p-5">
         {title ? (
           <h1 className="text-lg leading-tight font-extrabold tracking-tight text-white sm:text-xl lg:text-2xl">
             {title}
@@ -3455,7 +4129,14 @@ function getLessonIdFromUrl() {
   return m ? m[1] : null;
 }
 
-function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, bootcampId, onRefreshEnrollment, isArchived = false }) {
+function PracticeProblemsCockpit({
+  lesson,
+  lessonProgress,
+  onProgressUpdate,
+  bootcampId,
+  onRefreshEnrollment,
+  isArchived = false,
+}) {
   const [selectedProblem, setSelectedProblem] = useState(null); // { problem, pIdx }
   const [modalTab, setModalTab] = useState('editorial'); // 'editorial' | 'solution' | 'ai'
   const [copiedIdx, setCopiedIdx] = useState(null);
@@ -3470,7 +4151,9 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   const [bookmarkedProblems, setBookmarkedProblems] = useState(() => {
     if (typeof window === 'undefined') return [];
     try {
-      const saved = localStorage.getItem(`bookmarks_${bootcampId}_${lesson.id}`);
+      const saved = localStorage.getItem(
+        `bookmarks_${bootcampId}_${lesson.id}`
+      );
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -3478,12 +4161,15 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   });
 
   const handleToggleBookmark = (pIdx) => {
-    setBookmarkedProblems(prev => {
-      const next = prev.includes(pIdx) 
-        ? prev.filter(idx => idx !== pIdx) 
+    setBookmarkedProblems((prev) => {
+      const next = prev.includes(pIdx)
+        ? prev.filter((idx) => idx !== pIdx)
         : [...prev, pIdx];
       try {
-        localStorage.setItem(`bookmarks_${bootcampId}_${lesson.id}`, JSON.stringify(next));
+        localStorage.setItem(
+          `bookmarks_${bootcampId}_${lesson.id}`,
+          JSON.stringify(next)
+        );
       } catch (e) {
         console.error(e);
       }
@@ -3511,28 +4197,32 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
 
   const handleToggleSolved = async (pIdx, name) => {
     if (isArchived) {
-      toast.error('This bootcamp is archived. Toggling problem solve status is disabled.');
+      toast.error(
+        'This bootcamp is archived. Toggling problem solve status is disabled.'
+      );
       return;
     }
     if (toggling[pIdx]) return;
-    setToggling(prev => ({ ...prev, [pIdx]: true }));
+    setToggling((prev) => ({ ...prev, [pIdx]: true }));
 
     const isSolved = solvedList.includes(pIdx);
-    
+
     // Optimistic UI update
-    const nextSolved = isSolved 
-      ? solvedList.filter(idx => idx !== pIdx) 
+    const nextSolved = isSolved
+      ? solvedList.filter((idx) => idx !== pIdx)
       : [...solvedList, pIdx];
 
-    const allSolved = problems.length > 0 && problems.every((_, idx) => nextSolved.includes(idx));
+    const allSolved =
+      problems.length > 0 &&
+      problems.every((_, idx) => nextSolved.includes(idx));
 
-    onProgressUpdate(prev => ({
+    onProgressUpdate((prev) => ({
       ...prev,
       [lesson.id]: {
         ...prev[lesson.id],
         solved_problems: nextSolved,
         is_completed: allSolved,
-      }
+      },
     }));
 
     try {
@@ -3549,16 +4239,18 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
       console.error('Failed to toggle problem solve status:', err);
       toast.error('Failed to update progress.');
       // Rollback on error
-      onProgressUpdate(prev => ({
+      onProgressUpdate((prev) => ({
         ...prev,
         [lesson.id]: {
           ...prev[lesson.id],
           solved_problems: solvedList,
-          is_completed: solvedList.length > 0 && problems.every((_, idx) => solvedList.includes(idx)),
-        }
+          is_completed:
+            solvedList.length > 0 &&
+            problems.every((_, idx) => solvedList.includes(idx)),
+        },
       }));
     } finally {
-      setToggling(prev => ({ ...prev, [pIdx]: false }));
+      setToggling((prev) => ({ ...prev, [pIdx]: false }));
     }
   };
 
@@ -3570,11 +4262,13 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   };
 
   const handleAskAI = async (pIdx, p) => {
-    const question = aiQuestion[pIdx]?.trim() || `Help me understand how to approach this problem: ${p.name}. What is the correct logic?`;
+    const question =
+      aiQuestion[pIdx]?.trim() ||
+      `Help me understand how to approach this problem: ${p.name}. What is the correct logic?`;
     if (!question) return;
 
-    setAiLoading(prev => ({ ...prev, [pIdx]: true }));
-    setAiError(prev => ({ ...prev, [pIdx]: null }));
+    setAiLoading((prev) => ({ ...prev, [pIdx]: true }));
+    setAiError((prev) => ({ ...prev, [pIdx]: null }));
 
     try {
       const res = await fetch('/api/code/explain', {
@@ -3584,21 +4278,27 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
           code: p.solution_code || '// No code solved yet.',
           language: 'cpp',
           question: question,
-          history: []
-        })
+          history: [],
+        }),
       });
 
       const data = await res.json();
       if (res.ok && data.explanation) {
-        setAiResponses(prev => ({ ...prev, [pIdx]: data.explanation }));
+        setAiResponses((prev) => ({ ...prev, [pIdx]: data.explanation }));
       } else {
-        setAiError(prev => ({ ...prev, [pIdx]: data.error || 'Failed to get AI response. Please try again.' }));
+        setAiError((prev) => ({
+          ...prev,
+          [pIdx]: data.error || 'Failed to get AI response. Please try again.',
+        }));
       }
     } catch (err) {
       console.error('AI tutor query error:', err);
-      setAiError(prev => ({ ...prev, [pIdx]: 'Network error. Please try again.' }));
+      setAiError((prev) => ({
+        ...prev,
+        [pIdx]: 'Network error. Please try again.',
+      }));
     } finally {
-      setAiLoading(prev => ({ ...prev, [pIdx]: false }));
+      setAiLoading((prev) => ({ ...prev, [pIdx]: false }));
     }
   };
 
@@ -3609,117 +4309,161 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
   const totalCount = problems.length;
   const percent = Math.round((solvedCount / totalCount) * 100);
   const totalPoints = problems.reduce((acc, p) => acc + (p.points ?? 5), 0);
-  const earnedPoints = problems.reduce((acc, p, idx) => acc + (solvedList.includes(idx) ? (p.points ?? 5) : 0), 0);
+  const earnedPoints = problems.reduce(
+    (acc, p, idx) => acc + (solvedList.includes(idx) ? (p.points ?? 5) : 0),
+    0
+  );
 
   return (
-    <div className="flex flex-col gap-6 mt-6">
+    <div className="mt-6 flex flex-col gap-6">
       {isArchived && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-amber-300 text-[12.5px] font-medium leading-normal shadow-sm">
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3.5 text-[12.5px] leading-normal font-medium text-amber-300 shadow-sm">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-          <span>This bootcamp is archived. Toggling problem solve status is disabled.</span>
+          <span>
+            This bootcamp is archived. Toggling problem solve status is
+            disabled.
+          </span>
         </div>
       )}
       {/* Cockpit Card Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-gradient-to-br from-teal-500/[0.03] to-transparent p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 border-b border-white/5 pb-5">
+      <div className="relative overflow-hidden rounded-2xl border border-teal-500/10 bg-linear-to-br from-teal-500/[0.03] to-transparent p-5">
+        <div className="mb-5 flex flex-col gap-4 border-b border-white/5 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <span className="text-[10px] font-extrabold text-teal-400 tracking-wider uppercase bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-full">
+            <span className="rounded-full border border-teal-500/20 bg-teal-500/10 px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-teal-400 uppercase">
               Practice Cockpit
             </span>
-            <h3 className="text-lg font-bold text-white mt-2 flex items-center gap-2">
+            <h3 className="mt-2 flex items-center gap-2 text-lg font-bold text-white">
               {lesson.title}
             </h3>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-full shrink-0">
+            <span className="shrink-0 rounded-full border border-teal-500/20 bg-teal-500/10 px-3 py-1.5 text-xs font-bold text-teal-300">
               {solvedCount} / {totalCount} Solved ({percent}%)
             </span>
-            <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full shrink-0">
+            <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-300">
               {earnedPoints} / {totalPoints} pts
             </span>
           </div>
         </div>
 
-        <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden mb-3">
-          <div 
-            className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500" 
+        <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className="h-full rounded-full bg-linear-to-r from-teal-500 to-emerald-500 transition-all duration-500"
             style={{ width: `${percent}%` }}
           />
         </div>
         {percent === 100 ? (
-          <p className="text-xs font-medium text-emerald-400 flex items-center gap-1.5 animate-bounce">
+          <p className="flex animate-bounce items-center gap-1.5 text-xs font-medium text-emerald-400">
             🎉 All practice problems solved! Outstanding job!
           </p>
         ) : (
           <p className="text-xs text-gray-500">
-            Complete all problems to finish this practice module and advance your ranking.
+            Complete all problems to finish this practice module and advance
+            your ranking.
           </p>
         )}
       </div>
 
       {/* Arena view: Table of problems directly rendered */}
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/20 custom-scrollbar animate-in fade-in duration-200">
-        <table className="w-full text-left border-collapse min-w-[900px]">
+      <div className="custom-scrollbar animate-in fade-in overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/20 duration-200">
+        <table className="w-full min-w-[900px] border-collapse text-left">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.02]">
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-16 text-center">Status</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-24">Star</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Problem</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Points</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Workspace</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Editorial</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Video</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Code</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">Ask AI</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-24">AC</th>
-              <th className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center w-28">Source</th>
+              <th className="w-16 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Status
+              </th>
+              <th className="w-24 p-4 text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Star
+              </th>
+              <th className="p-4 text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Problem
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Points
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Workspace
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Editorial
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Video
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Code
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Ask AI
+              </th>
+              <th className="w-24 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                AC
+              </th>
+              <th className="w-28 p-4 text-center text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+                Source
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {problems.map((p, pIdx) => {
               const isSolved = solvedList.includes(pIdx);
 
-              const workspaceUrl = p.url 
-                ? p.url 
-                : (p.source?.startsWith('http') 
-                  ? p.source 
-                  : `https://vjudge.net/problem/${encodeURIComponent(p.source || p.name)}`);
+              const workspaceUrl = p.url
+                ? p.url
+                : p.source?.startsWith('http')
+                  ? p.source
+                  : `https://vjudge.net/problem/${encodeURIComponent(p.source || p.name)}`;
 
-              const videoUrl = p.video_url 
-                ? p.video_url 
+              const videoUrl = p.video_url
+                ? p.video_url
                 : `https://www.youtube.com/results?search_query=${encodeURIComponent(p.name + ' ' + (p.source || '') + ' solution')}`;
 
               return (
                 <Fragment key={p.id || pIdx}>
-                  <tr className={`hover:bg-white/[0.01] transition-colors ${isSolved ? 'bg-emerald-500/[0.01]' : ''}`}>
+                  <tr
+                    className={`transition-colors hover:bg-white/[0.01] ${isSolved ? 'bg-emerald-500/[0.01]' : ''}`}
+                  >
                     {/* Status */}
                     <td className="p-4 text-center">
                       <button
                         type="button"
-                        onClick={() => handleToggleSolved(pIdx, p.name || `Problem ${pIdx + 1}`)}
+                        onClick={() =>
+                          handleToggleSolved(
+                            pIdx,
+                            p.name || `Problem ${pIdx + 1}`
+                          )
+                        }
                         disabled={toggling[pIdx] || isArchived}
-                        className={`flex mx-auto h-5 w-5 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
-                          isArchived ? 'cursor-not-allowed border-gray-600' : 'cursor-pointer hover:scale-110 active:scale-95'
+                        className={`mx-auto flex h-5 w-5 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
+                          isArchived
+                            ? 'cursor-not-allowed border-gray-600'
+                            : 'cursor-pointer hover:scale-110 active:scale-95'
                         }`}
                         style={{
                           borderColor: isSolved ? '#10b981' : '#464554',
-                          backgroundColor: isSolved ? 'rgba(16, 185, 129, 0.1)' : 'transparent'
+                          backgroundColor: isSolved
+                            ? 'rgba(16, 185, 129, 0.1)'
+                            : 'transparent',
                         }}
                       >
                         {toggling[pIdx] ? (
                           <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
                         ) : isSolved ? (
-                          <motion.svg 
-                            initial={{ scale: 0 }} 
-                            animate={{ scale: 1 }} 
-                            className="h-3 w-3 text-emerald-400" 
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor" 
+                          <motion.svg
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="h-3 w-3 text-emerald-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                             strokeWidth="3"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
                           </motion.svg>
                         ) : null}
                       </button>
@@ -3730,13 +4474,17 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                       <button
                         type="button"
                         onClick={() => handleToggleBookmark(pIdx)}
-                        className="group flex items-center justify-center transition-transform hover:scale-110 active:scale-90 cursor-pointer w-8 h-8 mx-auto"
-                        title={bookmarkedProblems.includes(pIdx) ? "Remove Bookmark" : "Bookmark Problem"}
+                        className="group mx-auto flex h-8 w-8 cursor-pointer items-center justify-center transition-transform hover:scale-110 active:scale-90"
+                        title={
+                          bookmarkedProblems.includes(pIdx)
+                            ? 'Remove Bookmark'
+                            : 'Bookmark Problem'
+                        }
                       >
-                        <Star 
+                        <Star
                           className={`h-4.5 w-4.5 transition-colors ${
-                            bookmarkedProblems.includes(pIdx) 
-                              ? 'fill-amber-400 text-amber-400 filter drop-shadow-[0_0_2px_rgba(251,191,36,0.4)]' 
+                            bookmarkedProblems.includes(pIdx)
+                              ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_2px_rgba(251,191,36,0.4)] filter'
                               : 'text-zinc-600 group-hover:text-zinc-400'
                           }`}
                         />
@@ -3749,8 +4497,10 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                         href={workspaceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`text-sm font-semibold hover:text-teal-400 hover:underline transition-colors ${
-                          isSolved ? 'text-emerald-300/80 line-through decoration-white/10' : 'text-white'
+                        className={`text-sm font-semibold transition-colors hover:text-teal-400 hover:underline ${
+                          isSolved
+                            ? 'text-emerald-300/80 line-through decoration-white/10'
+                            : 'text-white'
                         }`}
                       >
                         {p.name || `Problem ${pIdx + 1}`}
@@ -3770,7 +4520,7 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                         href={workspaceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center p-2 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/10 hover:border-teal-500/30 transition-all w-8 h-8 mx-auto"
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg border border-teal-500/10 bg-teal-500/10 p-2 text-teal-300 transition-all hover:border-teal-500/30 hover:bg-teal-500/20"
                         title="Open Solve Workspace"
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -3786,12 +4536,12 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                           setSelectedProblem({ problem: p, pIdx });
                           setModalTab('editorial');
                         }}
-                        className={`flex items-center justify-center p-2 rounded-lg border transition-all w-8 h-8 mx-auto cursor-pointer ${
-                          !p.editorial 
-                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
-                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        className={`mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border p-2 transition-all ${
+                          !p.editorial
+                            ? 'cursor-not-allowed border-white/5 bg-zinc-800/20 text-gray-600 opacity-20'
+                            : 'border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] hover:text-white'
                         }`}
-                        title={p.editorial ? "View Editorial" : "No Editorial"}
+                        title={p.editorial ? 'View Editorial' : 'No Editorial'}
                       >
                         <BookOpen className="h-4 w-4" />
                       </button>
@@ -3803,8 +4553,12 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                         href={videoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/10 hover:border-red-500/30 transition-all w-8 h-8 mx-auto"
-                        title={p.video_url ? "Watch Video Solution" : "Search Video Solution on YouTube"}
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/10 bg-red-500/10 p-2 text-red-300 transition-all hover:border-red-500/30 hover:bg-red-500/20"
+                        title={
+                          p.video_url
+                            ? 'Watch Video Solution'
+                            : 'Search Video Solution on YouTube'
+                        }
                       >
                         <Video className="h-4 w-4" />
                       </a>
@@ -3819,12 +4573,14 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                           setSelectedProblem({ problem: p, pIdx });
                           setModalTab('solution');
                         }}
-                        className={`flex items-center justify-center p-2 rounded-lg border transition-all w-8 h-8 mx-auto cursor-pointer ${
-                          !p.solution_code 
-                            ? 'opacity-20 cursor-not-allowed bg-zinc-800/20 border-white/5 text-gray-600' 
-                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300 hover:text-white'
+                        className={`mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border p-2 transition-all ${
+                          !p.solution_code
+                            ? 'cursor-not-allowed border-white/5 bg-zinc-800/20 text-gray-600 opacity-20'
+                            : 'border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] hover:text-white'
                         }`}
-                        title={p.solution_code ? "View Solution Code" : "No Code"}
+                        title={
+                          p.solution_code ? 'View Solution Code' : 'No Code'
+                        }
                       >
                         <Code className="h-4 w-4" />
                       </button>
@@ -3838,10 +4594,13 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
                           setSelectedProblem({ problem: p, pIdx });
                           setModalTab('ai');
                           if (!aiQuestion[pIdx]) {
-                            setAiQuestion(prev => ({ ...prev, [pIdx]: `Explain the logic and mathematical intuition behind: ${p.name}` }));
+                            setAiQuestion((prev) => ({
+                              ...prev,
+                              [pIdx]: `Explain the logic and mathematical intuition behind: ${p.name}`,
+                            }));
                           }
                         }}
-                        className="flex items-center justify-center p-2 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 hover:text-white transition-all w-8 h-8 mx-auto cursor-pointer"
+                        className="mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] p-2 text-gray-300 transition-all hover:bg-white/[0.08] hover:text-white"
                         title="Ask AI Coding Tutor"
                       >
                         <Brain className="h-4 w-4" />
@@ -3850,19 +4609,21 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
 
                     {/* AC Count */}
                     <td className="p-4 text-center">
-                      <div className="text-center text-[10px] font-bold text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded inline-block">
+                      <div className="inline-block rounded border border-emerald-500/10 bg-emerald-500/5 px-2 py-0.5 text-center text-[10px] font-bold text-emerald-400">
                         {p.accepted_count ? `${p.accepted_count} AC` : '—'}
                       </div>
                     </td>
 
                     {/* Source badge */}
                     <td className="p-4 text-center">
-                      <div className="text-center text-[9px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2 py-0.5 rounded truncate uppercase tracking-widest inline-block max-w-[100px]" title={p.source}>
+                      <div
+                        className="inline-block max-w-[100px] truncate rounded border border-teal-500/10 bg-[#16222f] px-2 py-0.5 text-center text-[9px] font-extrabold tracking-widest text-teal-300 uppercase"
+                        title={p.source}
+                      >
                         {getPlatformName(p.source)}
                       </div>
                     </td>
                   </tr>
-
                 </Fragment>
               );
             })}
@@ -3871,186 +4632,208 @@ function PracticeProblemsCockpit({ lesson, lessonProgress, onProgressUpdate, boo
       </div>
 
       {/* Practice Problem Solution & AI Tutor Hub Modal */}
-      {selectedProblem && (() => {
-        const p = selectedProblem.problem;
-        const pIdx = selectedProblem.pIdx;
-        
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="bg-[#05111d] border border-teal-500/25 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#010f1f]">
-                <div className="flex items-center gap-3">
-                  <div className="text-[10px] font-extrabold text-teal-300 bg-[#16222f] border border-teal-500/10 px-2.5 py-1 rounded truncate uppercase tracking-widest">
-                    {getPlatformName(p.source)}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      {p.name || `Problem ${pIdx + 1}`}
-                      {solvedList.includes(pIdx) && (
-                        <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-wider">
-                          Solved
-                        </span>
-                      )}
-                    </h3>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedProblem(null)}
-                  className="text-gray-400 hover:text-white transition-colors cursor-pointer bg-white/5 p-1.5 rounded-lg border border-white/10"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+      {selectedProblem &&
+        (() => {
+          const p = selectedProblem.problem;
+          const pIdx = selectedProblem.pIdx;
 
-              {/* Tab Selector Bar */}
-              <div className="flex items-center border-b border-white/5 bg-[#020b15] px-6 py-1 gap-2">
-                {p.editorial && (
-                  <button
-                    type="button"
-                    onClick={() => setModalTab('editorial')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'editorial'
-                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    Editorial / Explanation
-                  </button>
-                )}
-                {p.solution_code && (
-                  <button
-                    type="button"
-                    onClick={() => setModalTab('solution')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'solution'
-                        ? 'border-teal-400 text-teal-300 bg-teal-500/5'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <Code className="h-4 w-4" />
-                    Solution Code
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setModalTab('ai')}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                    modalTab === 'ai'
-                      ? 'border-violet-400 text-violet-300 bg-violet-500/5'
-                      : 'border-transparent text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <Brain className="h-4 w-4 text-violet-400" />
-                  AI Coding Tutor
-                </button>
-              </div>
-
-              {/* Modal Content Body */}
-              <div className="p-6 overflow-y-auto flex-1 text-left bg-zinc-950/20">
-                {modalTab === 'editorial' && p.editorial && (
-                  <div className="flex flex-col gap-2">
-                    <div className="bg-zinc-950/30 rounded-xl p-5 border border-white/5 leading-relaxed">
-                      <MarkdownDesc text={p.editorial} className="text-gray-300" />
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-4 backdrop-blur-md">
+              <div className="animate-in fade-in zoom-in-95 flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-teal-500/25 bg-[#05111d] shadow-2xl duration-200">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between border-b border-white/5 bg-[#010f1f] px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="truncate rounded border border-teal-500/10 bg-[#16222f] px-2.5 py-1 text-[10px] font-extrabold tracking-widest text-teal-300 uppercase">
+                      {getPlatformName(p.source)}
                     </div>
-                  </div>
-                )}
-
-                {modalTab === 'solution' && p.solution_code && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest">
-                        Clean Code Solution
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCode(p.solution_code, pIdx)}
-                        className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-gray-300 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-                      >
-                        {copiedIdx === pIdx ? (
-                          <>
-                            <CheckSquare className="h-4 w-4 text-emerald-400" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4" />
-                            Copy Code
-                          </>
+                    <div>
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                        {p.name || `Problem ${pIdx + 1}`}
+                        {solvedList.includes(pIdx) && (
+                          <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-extrabold tracking-wider text-emerald-400 uppercase">
+                            Solved
+                          </span>
                         )}
-                      </button>
+                      </h3>
                     </div>
-                    <pre className="overflow-x-auto text-xs font-mono text-emerald-300 bg-zinc-950 rounded-xl p-5 border border-white/5 custom-scrollbar">
-                      <code>{p.solution_code}</code>
-                    </pre>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProblem(null)}
+                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-1.5 text-gray-400 transition-colors hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-                {modalTab === 'ai' && (
-                  <div className="flex flex-col gap-4">
-                    <div className="bg-zinc-950/40 rounded-xl border border-white/5 p-5 flex flex-col gap-4">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={aiQuestion[pIdx] || ''}
-                          onChange={(e) => setAiQuestion(prev => ({ ...prev, [pIdx]: e.target.value }))}
-                          placeholder="Ask a question about this problem..."
-                          className="flex-1 bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:border-violet-500 outline-none"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAskAI(pIdx, p);
-                          }}
+                {/* Tab Selector Bar */}
+                <div className="flex items-center gap-2 border-b border-white/5 bg-[#020b15] px-6 py-1">
+                  {p.editorial && (
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('editorial')}
+                      className={`flex cursor-pointer items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-semibold transition-all ${
+                        modalTab === 'editorial'
+                          ? 'border-teal-400 bg-teal-500/5 text-teal-300'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Editorial / Explanation
+                    </button>
+                  )}
+                  {p.solution_code && (
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('solution')}
+                      className={`flex cursor-pointer items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-semibold transition-all ${
+                        modalTab === 'solution'
+                          ? 'border-teal-400 bg-teal-500/5 text-teal-300'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Code className="h-4 w-4" />
+                      Solution Code
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('ai')}
+                    className={`flex cursor-pointer items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-semibold transition-all ${
+                      modalTab === 'ai'
+                        ? 'border-violet-400 bg-violet-500/5 text-violet-300'
+                        : 'border-transparent text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Brain className="h-4 w-4 text-violet-400" />
+                    AI Coding Tutor
+                  </button>
+                </div>
+
+                {/* Modal Content Body */}
+                <div className="flex-1 overflow-y-auto bg-zinc-950/20 p-6 text-left">
+                  {modalTab === 'editorial' && p.editorial && (
+                    <div className="flex flex-col gap-2">
+                      <div className="rounded-xl border border-white/5 bg-zinc-950/30 p-5 leading-relaxed">
+                        <MarkdownDesc
+                          text={p.editorial}
+                          className="text-gray-300"
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {modalTab === 'solution' && p.solution_code && (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold tracking-widest text-teal-400 uppercase">
+                          Clean Code Solution
+                        </span>
                         <button
                           type="button"
-                          onClick={() => handleAskAI(pIdx, p)}
-                          disabled={aiLoading[pIdx] || !aiQuestion[pIdx]?.trim()}
-                          className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          onClick={() => handleCopyCode(p.solution_code, pIdx)}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/10 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-all hover:bg-zinc-800 hover:text-white active:scale-95"
                         >
-                          {aiLoading[pIdx] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                          Ask Tutor
+                          {copiedIdx === pIdx ? (
+                            <>
+                              <CheckSquare className="h-4 w-4 text-emerald-400" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" />
+                              Copy Code
+                            </>
+                          )}
                         </button>
                       </div>
-
-                      {aiError[pIdx] && (
-                        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-                          {aiError[pIdx]}
-                        </div>
-                      )}
-
-                      {aiLoading[pIdx] && (
-                        <div className="flex flex-col items-center justify-center py-6 gap-2">
-                          <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
-                          <span className="text-[11px] text-gray-500 italic">AI Tutor is parsing problem parameters & creating guidelines...</span>
-                        </div>
-                      )}
-
-                      {aiResponses[pIdx] && !aiLoading[pIdx] && (
-                        <div className="border-t border-white/5 pt-4">
-                          <div 
-                            className="md-desc overflow-hidden prose prose-invert max-w-none text-xs text-gray-300 bg-black/10 rounded-xl p-5 border border-white/5"
-                            dangerouslySetInnerHTML={{ __html: (() => {
-                              let html = '';
-                              try {
-                                html = marked.parse(aiResponses[pIdx], { gfm: true, breaks: true });
-                              } catch {
-                                html = `<p>${aiResponses[pIdx]}</p>`;
-                              }
-                              return html;
-                            })() }}
-                          />
-                        </div>
-                      )}
+                      <pre className="custom-scrollbar overflow-x-auto rounded-xl border border-white/5 bg-zinc-950 p-5 font-mono text-xs text-emerald-300">
+                        <code>{p.solution_code}</code>
+                      </pre>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {modalTab === 'ai' && (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-4 rounded-xl border border-white/5 bg-zinc-950/40 p-5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={aiQuestion[pIdx] || ''}
+                            onChange={(e) =>
+                              setAiQuestion((prev) => ({
+                                ...prev,
+                                [pIdx]: e.target.value,
+                              }))
+                            }
+                            placeholder="Ask a question about this problem..."
+                            className="flex-1 rounded-xl border border-white/10 bg-zinc-950 px-4 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAskAI(pIdx, p);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAskAI(pIdx, p)}
+                            disabled={
+                              aiLoading[pIdx] || !aiQuestion[pIdx]?.trim()
+                            }
+                            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {aiLoading[pIdx] ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
+                            Ask Tutor
+                          </button>
+                        </div>
+
+                        {aiError[pIdx] && (
+                          <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                            {aiError[pIdx]}
+                          </div>
+                        )}
+
+                        {aiLoading[pIdx] && (
+                          <div className="flex flex-col items-center justify-center gap-2 py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
+                            <span className="text-[11px] text-gray-500 italic">
+                              AI Tutor is parsing problem parameters & creating
+                              guidelines...
+                            </span>
+                          </div>
+                        )}
+
+                        {aiResponses[pIdx] && !aiLoading[pIdx] && (
+                          <div className="border-t border-white/5 pt-4">
+                            <div
+                              className="md-desc prose prose-invert max-w-none overflow-hidden rounded-xl border border-white/5 bg-black/10 p-5 text-xs text-gray-300"
+                              dangerouslySetInnerHTML={{
+                                __html: (() => {
+                                  let html = '';
+                                  try {
+                                    html = marked.parse(aiResponses[pIdx], {
+                                      gfm: true,
+                                      breaks: true,
+                                    });
+                                  } catch {
+                                    html = `<p>${aiResponses[pIdx]}</p>`;
+                                  }
+                                  return html;
+                                })(),
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }
@@ -4139,7 +4922,10 @@ export default function BootcampLearningClient({
     }
     if (lastAccessedLesson) return lastAccessedLesson;
     // No history: return first uncompleted lesson or first lesson
-    return allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) || allLessons[0];
+    return (
+      allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) ||
+      allLessons[0]
+    );
   }, [allLessons, lessonProgress]);
   const resumeIndex = useMemo(
     () =>
@@ -4196,13 +4982,18 @@ export default function BootcampLearningClient({
     if (lessonCacheRef.current[lesson.id]?.content !== undefined) return;
     if (prefetchInflightRef.current.has(lesson.id)) return;
     prefetchInflightRef.current.add(lesson.id);
-    const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+    const stub =
+      allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
     getLessonContent(lesson.id)
       .then((content) => {
-        lessonCacheRef.current[lesson.id] = content ? { ...stub, ...content } : stub;
+        lessonCacheRef.current[lesson.id] = content
+          ? { ...stub, ...content }
+          : stub;
       })
       .catch(() => {})
-      .finally(() => { prefetchInflightRef.current.delete(lesson.id); });
+      .finally(() => {
+        prefetchInflightRef.current.delete(lesson.id);
+      });
   }, []); // stable — only reads refs
 
   // Core navigation. `mode`: 'push' (default — entering from overview / new entry),
@@ -4213,8 +5004,12 @@ export default function BootcampLearningClient({
       const token = ++navTokenRef.current;
       const bootcampId = bootcampRef.current?.id;
       const nativeHistory = getNativeHistory();
-      const pushState = nativeHistory.pushState ? nativeHistory.pushState.bind(window.history) : window.history.pushState.bind(window.history);
-      const replaceState = nativeHistory.replaceState ? nativeHistory.replaceState.bind(window.history) : window.history.replaceState.bind(window.history);
+      const pushState = nativeHistory.pushState
+        ? nativeHistory.pushState.bind(window.history)
+        : window.history.pushState.bind(window.history);
+      const replaceState = nativeHistory.replaceState
+        ? nativeHistory.replaceState.bind(window.history)
+        : window.history.replaceState.bind(window.history);
 
       if (!lesson) {
         setActiveLessonId(null);
@@ -4241,7 +5036,10 @@ export default function BootcampLearningClient({
       // Optimistically update updated_at so resumeLesson re-computes in this session
       setLessonProgress((prev) => ({
         ...prev,
-        [lesson.id]: { ...prev[lesson.id], updated_at: new Date().toISOString() },
+        [lesson.id]: {
+          ...prev[lesson.id],
+          updated_at: new Date().toISOString(),
+        },
       }));
 
       // Fast path: already have full content in cache
@@ -4260,15 +5058,23 @@ export default function BootcampLearningClient({
       // Instant render: show stub immediately (title, video metadata available from
       // curriculum) so the header and video mount with zero wait. Content body
       // (markdown, attachments) streams in when the small content fetch resolves.
-      const stub = allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
-      const optimisticLesson = { ...stub, content: undefined, _pendingContent: true };
+      const stub =
+        allLessonsRef.current.find((l) => l.id === lesson.id) || lesson;
+      const optimisticLesson = {
+        ...stub,
+        content: undefined,
+        _pendingContent: true,
+      };
       setLoadedLesson(optimisticLesson);
 
       startLoading(async () => {
         try {
           const full = await loadFullLesson(lesson.id);
           if (navTokenRef.current !== token) return;
-          if (!full) { setLoadError('Lesson not found.'); return; }
+          if (!full) {
+            setLoadError('Lesson not found.');
+            return;
+          }
           setLoadedLesson(full);
         } catch {
           if (navTokenRef.current !== token) return;
@@ -4292,11 +5098,13 @@ export default function BootcampLearningClient({
       if (lesson.is_locked) return;
       const bc = bootcampRef.current;
       const parentCourse = bc?.courses?.find((c) =>
-        (c.modules || []).some((m) => (m.lessons || []).some((l) => l.id === lesson.id))
+        (c.modules || []).some((m) =>
+          (m.lessons || []).some((l) => l.id === lesson.id)
+        )
       );
       if (parentCourse?.is_locked) return;
-      const parentModule = (parentCourse?.modules || []).find(
-        (m) => (m.lessons || []).some((l) => l.id === lesson.id)
+      const parentModule = (parentCourse?.modules || []).find((m) =>
+        (m.lessons || []).some((l) => l.id === lesson.id)
       );
       if (parentModule?.is_locked) return;
       const mode = current ? 'replace' : 'push';
@@ -4329,7 +5137,11 @@ export default function BootcampLearningClient({
         setTimeout(cb, 300);
       }
     };
-    const neighbors = [lessons[idx - 1], lessons[idx + 1], lessons[idx + 2]].filter(Boolean);
+    const neighbors = [
+      lessons[idx - 1],
+      lessons[idx + 1],
+      lessons[idx + 2],
+    ].filter(Boolean);
     neighbors.forEach((l) => schedule(() => prefetchLesson(l)));
   }, [loadedLesson?.id, prefetchLesson]);
 
@@ -4399,26 +5211,32 @@ export default function BootcampLearningClient({
     [bootcamp, moduleIndex, lessonProgress, refreshEnrollment, isArchived]
   );
 
-  const handleMarkIncomplete = useCallback((lessonId) => {
-    if (isArchived) return;
-    startCompleting(async () => {
-      await markLessonIncomplete(lessonId, bootcamp?.id);
+  const handleMarkIncomplete = useCallback(
+    (lessonId) => {
+      if (isArchived) return;
+      startCompleting(async () => {
+        await markLessonIncomplete(lessonId, bootcamp?.id);
+        setLessonProgress((prev) => ({
+          ...prev,
+          [lessonId]: { ...prev[lessonId], is_completed: false },
+        }));
+        refreshEnrollment();
+      });
+    },
+    [bootcamp?.id, refreshEnrollment, isArchived]
+  );
+
+  const handleSaveNotes = useCallback(
+    async (lessonId, notes) => {
+      if (isArchived) return;
+      await saveLessonNotes(lessonId, notes);
       setLessonProgress((prev) => ({
         ...prev,
-        [lessonId]: { ...prev[lessonId], is_completed: false },
+        [lessonId]: { ...prev[lessonId], notes },
       }));
-      refreshEnrollment();
-    });
-  }, [bootcamp?.id, refreshEnrollment, isArchived]);
-
-  const handleSaveNotes = useCallback(async (lessonId, notes) => {
-    if (isArchived) return;
-    await saveLessonNotes(lessonId, notes);
-    setLessonProgress((prev) => ({
-      ...prev,
-      [lessonId]: { ...prev[lessonId], notes },
-    }));
-  }, [isArchived]);
+    },
+    [isArchived]
+  );
 
   const ctaLabel = isComplete
     ? 'Review'
@@ -4509,9 +5327,7 @@ export default function BootcampLearningClient({
           <div className="flex min-w-0 flex-1 items-center gap-2 truncate text-[13px] font-semibold text-white/90">
             <span className="truncate">
               {isLessonView
-                ? pendingLessonStub?.title ||
-                  loadedLesson?.title ||
-                  'Loading…'
+                ? pendingLessonStub?.title || loadedLesson?.title || 'Loading…'
                 : bootcamp?.title}
             </span>
             {isSwitching && (
@@ -4520,11 +5336,13 @@ export default function BootcampLearningClient({
           </div>
 
           {/* Points display */}
-          <div className="flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500/10 to-pink-500/10 px-3 py-1 text-[11px] font-bold text-white ring-1 ring-white/10 shrink-0">
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-linear-to-r from-violet-500/10 to-pink-500/10 px-3 py-1 text-[11px] font-bold text-white ring-1 ring-white/10">
             <Trophy className="h-3.5 w-3.5 text-amber-400" />
-            <span className="hidden sm:inline text-gray-400 font-medium mr-0.5">Points:</span>
+            <span className="mr-0.5 hidden font-medium text-gray-400 sm:inline">
+              Points:
+            </span>
             <span className="text-white">{enrollment.score || 0}</span>
-            <span className="text-gray-500 font-medium">/{totalPoints}</span>
+            <span className="font-medium text-gray-500">/{totalPoints}</span>
           </div>
 
           {/* Mobile: open curriculum drawer */}
@@ -4556,9 +5374,7 @@ export default function BootcampLearningClient({
         style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
       >
         {/* Desktop sidebar */}
-        <aside
-          className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-zinc-900 lg:flex xl:w-[360px]"
-        >
+        <aside className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-zinc-900 lg:flex xl:w-[360px]">
           <CurriculumRail
             bootcamp={bootcamp}
             lessonProgress={lessonProgress}

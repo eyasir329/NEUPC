@@ -1,3 +1,8 @@
+/**
+ * @file Guest sidebar component
+ * @module GuestSidebar
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -17,10 +22,23 @@ const NAV = [
   {
     group: 'Main',
     items: [
-      { label: 'Dashboard', href: '/account/guest', icon: LayoutDashboard, exact: true },
+      {
+        label: 'Dashboard',
+        href: '/account/guest',
+        icon: LayoutDashboard,
+        exact: true,
+      },
       { label: 'Events', href: '/account/guest/events', icon: Calendar },
-      { label: 'Participation', href: '/account/guest/participation', icon: Trophy },
-      { label: 'Notifications', href: '/account/guest/notifications', icon: Bell },
+      {
+        label: 'Participation',
+        href: '/account/guest/participation',
+        icon: Trophy,
+      },
+      {
+        label: 'Notifications',
+        href: '/account/guest/notifications',
+        icon: Bell,
+      },
     ],
   },
   {
@@ -28,7 +46,12 @@ const NAV = [
     items: [
       { label: 'Profile', href: '/account/guest/profile', icon: User },
       { label: 'Settings', href: '/account/guest/settings', icon: Settings },
-      { label: 'Apply for Membership', href: '/account/guest/membership-application', icon: Sparkles, accent: true },
+      {
+        label: 'Apply for Membership',
+        href: '/account/guest/membership-application',
+        icon: Sparkles,
+        accent: true,
+      },
     ],
   },
 ];
@@ -37,13 +60,17 @@ export default function GuestSidebar() {
   const pathname = usePathname();
 
   function isActive(href, exact) {
-    return exact ? pathname === href : pathname === href || pathname.startsWith(href + '/');
+    return exact
+      ? pathname === href
+      : pathname === href || pathname.startsWith(href + '/');
   }
 
   return (
     <aside className="gp-sidebar">
       <div className="gp-sidebar-logo">
-        <span className="gp-sidebar-logo-mark">NEU<b>PC</b></span>
+        <span className="gp-sidebar-logo-mark">
+          NEU<b>PC</b>
+        </span>
         <span className="gp-sidebar-role">Guest</span>
       </div>
 

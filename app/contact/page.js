@@ -10,14 +10,14 @@ import {
   getFaqsData,
   getAllPublicSettings,
   getPublicCommittee,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import {
   FAQJsonLd,
   ContactPageJsonLd,
   BreadcrumbJsonLd,
 } from '@/app/_components/ui/JsonLd';
 import ContactClient from './ContactClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 
 export const metadata = buildMetadata({
   title: 'Contact',

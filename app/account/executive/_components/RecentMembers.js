@@ -1,7 +1,18 @@
+/**
+ * @file Recent members component
+ * @module RecentMembers
+ */
+
 'use client';
 
 import { Users, ArrowRight } from 'lucide-react';
-import { GlassCard, SectionHeader, ActionButton, Avatar, Pill } from './_ui';
+import {
+  GlassCard,
+  SectionHeader,
+  ActionButton,
+  Avatar,
+  Pill,
+} from '@/app/account/_components/ui';
 
 const activityTone = { High: 'emerald', Medium: 'amber', Low: 'rose' };
 
@@ -14,7 +25,11 @@ export default function RecentMembers({ recentMembers }) {
         subtitle="Last 7 days"
         accent="emerald"
         action={
-          <ActionButton tone="emerald" href="/account/executive/users" icon={ArrowRight}>
+          <ActionButton
+            tone="emerald"
+            href="/account/executive/users"
+            icon={ArrowRight}
+          >
             Manage
           </ActionButton>
         }
@@ -28,7 +43,9 @@ export default function RecentMembers({ recentMembers }) {
             <div className="flex items-center gap-3">
               <Avatar name={member.name} size="sm" />
               <div>
-                <p className="text-sm font-semibold text-gray-200">{member.name}</p>
+                <p className="text-sm font-semibold text-gray-200">
+                  {member.name}
+                </p>
                 <p className="text-xs text-gray-500">{member.joinDate}</p>
               </div>
             </div>

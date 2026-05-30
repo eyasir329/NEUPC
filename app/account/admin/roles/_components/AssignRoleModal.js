@@ -20,7 +20,7 @@ import {
 import {
   assignRoleToUserAction,
   removeRoleFromUserAction,
-} from '@/app/_lib/role-actions';
+} from '@/app/_lib/actions/role-actions';
 import { getRoleConfig } from './roleConfig';
 
 const MANAGED_ROLES = ['member', 'advisor', 'admin', 'mentor', 'executive'];
@@ -47,7 +47,7 @@ function buildEmptyDraft(roleName) {
   return {};
 }
 
-import { Avatar } from '../../_components/_ui';
+import { Avatar } from '@/app/account/_components/ui';
 
 export default function AssignRoleModal({
   role,

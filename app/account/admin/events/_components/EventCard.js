@@ -8,7 +8,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   Calendar,
   MapPin,
@@ -34,7 +34,7 @@ import {
   updateEventStatusAction,
   toggleEventFeaturedAction,
   deleteEventAction,
-} from '@/app/_lib/event-actions';
+} from '@/app/_lib/actions/event-actions';
 
 const ORDERED_STATUSES = [
   'draft',

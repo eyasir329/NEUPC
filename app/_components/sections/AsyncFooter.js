@@ -1,10 +1,15 @@
-import { auth } from '@/app/_lib/auth';
+/**
+ * @file Async footer component
+ * @module AsyncFooter
+ */
+
+import { auth } from '@/app/_lib/auth/auth';
 import {
   getSocialLinks,
   getContactInfo,
   getFooterData,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import Footer from './Footer';
 import { ReadySignal } from '@/app/_components/ui/AppShell';
 

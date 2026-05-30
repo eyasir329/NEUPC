@@ -4,8 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
-import { updateUser } from '@/app/_lib/data-service';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
+import { updateUser } from '@/app/_lib/services/data-service';
 
 export async function PUT(request, { params }) {
   try {

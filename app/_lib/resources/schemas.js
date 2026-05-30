@@ -1,3 +1,8 @@
+/**
+ * @file Schemas
+ * @module schemas
+ */
+
 import { z } from 'zod';
 import {
   RESOURCE_TYPES,

@@ -19,20 +19,20 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import {
   generateCompletion,
   isLLMAvailable,
   getLLMProviderInfo,
-} from '@/app/_lib/llm';
+} from '@/app/_lib/integrations/llm';
 import {
   isV2SchemaAvailable,
   V2_TABLES,
   getPlatformId,
   getLanguageId,
   recordSubmissionV2,
-} from '@/app/_lib/problem-solving-v2-helpers';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 // CORS headers for browser extension
 const corsHeaders = {

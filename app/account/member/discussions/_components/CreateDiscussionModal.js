@@ -10,17 +10,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Send, AlertCircle, ChevronDown } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 import {
   DISCUSSION_TYPES,
   DISCUSSION_TYPE_KEYS,
   DISCUSSION_PLATFORMS,
   requiresLMSContext,
-} from '@/app/_lib/discussion-config';
+} from '@/app/_lib/config/discussion-config';
 import {
   createDiscussionAction,
   fetchUserBootcampsAction,
-} from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/actions/discussion-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import { TypeBadge } from '@/app/_components/discussions';
 

@@ -1,6 +1,11 @@
+/**
+ * @file Categories API route handler
+ * @module CategoriesRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { getUserRoles } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserRoles } from '@/app/_lib/services/data-service';
 import { getResourceCategories } from '@/app/_lib/resources/queries';
 
 export async function GET() {

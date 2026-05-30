@@ -1,7 +1,17 @@
+/**
+ * @file Mentor recent activity component
+ * @module MentorRecentActivity
+ */
+
 'use client';
 
 import { CheckCircle, UserPlus, BookOpen, Star, Zap } from 'lucide-react';
-import { GlassCard, SectionHeader, Avatar, StaggerList } from './_ui';
+import {
+  GlassCard,
+  SectionHeader,
+  Avatar,
+  StaggerList,
+} from '@/app/account/_components/ui';
 
 const iconMap = { CheckCircle, UserPlus, BookOpen, Star };
 
@@ -31,11 +41,15 @@ export default function MentorRecentActivity({ recentActivities }) {
               key={idx}
               className="flex items-start gap-3 rounded-xl border border-white/6 bg-white/2 p-3 transition-all hover:border-white/10 hover:bg-white/4"
             >
-              <div className={`inline-flex shrink-0 rounded-lg border p-1.5 ${chip}`}>
+              <div
+                className={`inline-flex shrink-0 rounded-lg border p-1.5 ${chip}`}
+              >
                 <Icon className="h-3.5 w-3.5" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white leading-snug">{activity.action}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-snug text-white">
+                  {activity.action}
+                </p>
                 <p className="mt-0.5 text-xs text-gray-500">{activity.time}</p>
               </div>
             </div>

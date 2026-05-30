@@ -1,3 +1,8 @@
+/**
+ * @file Achievements section component
+ * @module AchievementsSection
+ */
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -5,49 +10,64 @@ import { Trophy, ArrowRight, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AchievementsSection({ achievements }) {
-  const earnedCount = achievements.filter(a => a.earned).length;
-  const inProgressCount = achievements.filter(a => !a.earned).length;
+  const earnedCount = achievements.filter((a) => a.earned).length;
+  const inProgressCount = achievements.filter((a) => !a.earned).length;
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-center justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 rounded-2xl shrink-0">
-            <Trophy className="w-6 h-6" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <Trophy className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Achievements</h3>
-            <p className="text-xs text-zinc-500 mt-1">{earnedCount} earned &middot; {inProgressCount} in progress</p>
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
+              Achievements
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              {earnedCount} earned &middot; {inProgressCount} in progress
+            </p>
           </div>
         </div>
-        <Link 
+        <Link
           href="/account/member/achievements"
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors shrink-0"
+          className="flex shrink-0 items-center gap-2 text-xs font-bold tracking-widest text-amber-400 uppercase transition-colors hover:text-amber-300"
         >
-          View All <ArrowRight className="w-4 h-4" />
+          View All <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-6">
+      <div className="grid grid-cols-2 gap-6 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8">
         {achievements.map((acc, i) => (
-          <motion.div 
-            key={acc.title} 
+          <motion.div
+            key={acc.title}
             whileHover={!acc.earned ? {} : { y: -5, scale: 1.02 }}
-            className={`relative flex flex-col items-center text-center p-6 border rounded-2xl transition-colors ${!acc.earned ? 'bg-white/5 border-white/10 opacity-60' : 'bg-zinc-900/50 backdrop-blur-xl border-white/10 hover:border-amber-500/30 hover:bg-zinc-900 hover:shadow-xl hover:shadow-amber-500/10 cursor-pointer'}`}
+            className={`relative flex flex-col items-center rounded-2xl border p-6 text-center transition-colors ${!acc.earned ? 'border-white/10 bg-white/5 opacity-60' : 'cursor-pointer border-white/10 bg-zinc-900/50 backdrop-blur-xl hover:border-amber-500/30 hover:bg-zinc-900 hover:shadow-xl hover:shadow-amber-500/10'}`}
           >
-            <div className={`text-4xl mb-4 ${!acc.earned ? 'grayscale opacity-75' : ''}`}>{acc.icon}</div>
-            <h4 className="text-xs font-bold text-zinc-100 mb-2 leading-tight">{acc.title}</h4>
+            <div
+              className={`mb-4 text-4xl ${!acc.earned ? 'opacity-75 grayscale' : ''}`}
+            >
+              {acc.icon}
+            </div>
+            <h4 className="mb-2 text-xs leading-tight font-bold text-zinc-100">
+              {acc.title}
+            </h4>
             {!acc.earned ? (
-              <div className="flex flex-col items-center gap-1.5 w-full">
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500/50 rounded-full" style={{ width: `${acc.progress}%` }} />
+              <div className="flex w-full flex-col items-center gap-1.5">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-amber-500/50"
+                    style={{ width: `${acc.progress}%` }}
+                  />
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-mono font-medium mt-1">
-                  <Lock className="w-3 h-3" /> {acc.progress}%
+                <div className="mt-1 flex items-center gap-1 font-mono text-[10px] font-medium text-zinc-500">
+                  <Lock className="h-3 w-3" /> {acc.progress}%
                 </div>
               </div>
             ) : (
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{acc.date}</div>
+              <div className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                {acc.date}
+              </div>
             )}
           </motion.div>
         ))}

@@ -1,3 +1,8 @@
+/**
+ * @file Recommended problems component
+ * @module RecommendedProblems
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

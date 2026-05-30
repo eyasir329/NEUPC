@@ -1,3 +1,8 @@
+/**
+ * @file Hero3 dcanvas component
+ * @module Hero3DCanvas
+ */
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -258,8 +263,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       if (!ctx) return null;
 
       const themeColor = isCyan
-        ? 'rgba(182, 243, 107, 1)'    // neon-lime
-        : 'rgba(124, 92, 255, 1)';    // neon-violet
+        ? 'rgba(182, 243, 107, 1)' // neon-lime
+        : 'rgba(124, 92, 255, 1)'; // neon-violet
       const darkColor = isCyan
         ? 'rgba(182, 243, 107, 0.18)'
         : 'rgba(124, 92, 255, 0.18)';
@@ -377,7 +382,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       nodeSprites.push(sprite);
     });
 
-    const colorLime = new THREE.Color(0xb6f36b);   // neon-lime
+    const colorLime = new THREE.Color(0xb6f36b); // neon-lime
     const colorPurple = new THREE.Color(0x7c5cff); // neon-violet
 
     const networkGeo = new THREE.BufferGeometry();
@@ -392,8 +397,16 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           const pj = nodeSprites[j].position;
           networkPos.push(pi.x, pi.y, pi.z, pj.x, pj.y, pj.z);
           // Color each endpoint by its X position (lime on left, violet on right)
-          const ti = THREE.MathUtils.clamp((pi.x + coreRadius) / (coreRadius * 2), 0, 1);
-          const tj = THREE.MathUtils.clamp((pj.x + coreRadius) / (coreRadius * 2), 0, 1);
+          const ti = THREE.MathUtils.clamp(
+            (pi.x + coreRadius) / (coreRadius * 2),
+            0,
+            1
+          );
+          const tj = THREE.MathUtils.clamp(
+            (pj.x + coreRadius) / (coreRadius * 2),
+            0,
+            1
+          );
           _nc.copy(colorLime).lerp(colorPurple, ti);
           networkColors.push(_nc.r, _nc.g, _nc.b);
           _nc.copy(colorLime).lerp(colorPurple, tj);
@@ -401,8 +414,14 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         }
       }
     }
-    networkGeo.setAttribute('position', new THREE.Float32BufferAttribute(networkPos, 3));
-    networkGeo.setAttribute('color', new THREE.Float32BufferAttribute(networkColors, 3));
+    networkGeo.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(networkPos, 3)
+    );
+    networkGeo.setAttribute(
+      'color',
+      new THREE.Float32BufferAttribute(networkColors, 3)
+    );
     const networkMat = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,

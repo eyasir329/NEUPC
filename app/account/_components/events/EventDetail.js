@@ -1,7 +1,12 @@
+/**
+ * @file Event detail component
+ * @module EventDetail
+ */
+
 'use client';
 
 import { Calendar, Clock, MapPin, FileText, ChevronLeft } from 'lucide-react';
-import { GlassCard } from '@/app/account/member/_components/_ui';
+import { GlassCard } from '@/app/account/_components/ui';
 
 /**
  * Shared event detail view used by all role views.
@@ -13,7 +18,13 @@ import { GlassCard } from '@/app/account/member/_components/_ui';
  *   ctaSlot     — React node rendered in the hero (e.g. Register button) — optional
  *   sidebarSlot — React node rendered below the details card — optional
  */
-export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, sidebarSlot }) {
+export default function EventDetail({
+  event,
+  onBack,
+  detailRows = [],
+  ctaSlot,
+  sidebarSlot,
+}) {
   return (
     <div className="flex flex-col gap-6 pb-12 lg:gap-8">
       <button
@@ -26,7 +37,11 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
       {/* Banner image */}
       {event.banner_image && (
         <div className="overflow-hidden rounded-2xl border border-white/8">
-          <img src={event.banner_image} alt={event.title} className="h-48 w-full object-cover opacity-80 sm:h-64" />
+          <img
+            src={event.banner_image}
+            alt={event.title}
+            className="h-48 w-full object-cover opacity-80 sm:h-64"
+          />
         </div>
       )}
 
@@ -45,14 +60,17 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
               )}
               {event._bucket === 'ongoing' && (
                 <span className="flex items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-blue-400 uppercase">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" /> Live Now
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />{' '}
+                  Live Now
                 </span>
               )}
-              {(event._bucket === 'upcoming' || event._isUpcoming) && event._bucket !== 'ongoing' && (
-                <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Upcoming
-                </span>
-              )}
+              {(event._bucket === 'upcoming' || event._isUpcoming) &&
+                event._bucket !== 'ongoing' && (
+                  <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />{' '}
+                    Upcoming
+                  </span>
+                )}
             </div>
             <h1 className="mb-4 text-3xl leading-snug font-bold tracking-tight text-white lg:text-4xl">
               {event.title}
@@ -66,7 +84,8 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
               </div>
               {event._location && (
                 <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-gray-500" /> {event._location}
+                  <MapPin size={16} className="text-gray-500" />{' '}
+                  {event._location}
                 </div>
               )}
             </div>
@@ -102,7 +121,9 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
 
         <div className="flex flex-col gap-6">
           <GlassCard>
-            <h3 className="mb-4 text-sm font-bold text-gray-200">Event Details</h3>
+            <h3 className="mb-4 text-sm font-bold text-gray-200">
+              Event Details
+            </h3>
             <div className="flex flex-col gap-0 text-sm">
               {detailRows.map(({ label, value, accent }, i) => (
                 <div
@@ -110,7 +131,11 @@ export default function EventDetail({ event, onBack, detailRows = [], ctaSlot, s
                   className={`flex items-center justify-between py-2 ${i < detailRows.length - 1 ? 'border-b border-white/6' : ''}`}
                 >
                   <span className="font-medium text-gray-500">{label}</span>
-                  <span className={`font-semibold ${accent ?? 'text-gray-200'}`}>{value}</span>
+                  <span
+                    className={`font-semibold ${accent ?? 'text-gray-200'}`}
+                  >
+                    {value}
+                  </span>
                 </div>
               ))}
             </div>

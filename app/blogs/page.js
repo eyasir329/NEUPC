@@ -6,9 +6,9 @@
 import {
   getPublicBlogs,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import BlogsClient from './BlogsClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import {
   CollectionPageJsonLd,
   BreadcrumbJsonLd,

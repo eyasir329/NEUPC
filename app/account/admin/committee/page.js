@@ -8,7 +8,7 @@ import {
   getAllCommitteeMembers,
   getCommitteePositions,
   getUsersBasic,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import CommitteeManagementClient from './_components/CommitteeManagementClient';
 
 export const metadata = { title: 'Committee | Admin | NEUPC' };

@@ -19,8 +19,8 @@ import {
   ExternalLink,
   Shield,
 } from 'lucide-react';
-import ActivityHeatmap from '../../_components/ActivityHeatmap';
-import BadgesDisplay from '../../_components/BadgesDisplay';
+import ActivityHeatmap from '@/app/account/member/problem-solving/_components/ActivityHeatmap';
+import BadgesDisplay from '@/app/account/member/problem-solving/_components/BadgesDisplay';
 
 const PLATFORM_CONFIG = {
   codeforces: {

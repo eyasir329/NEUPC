@@ -1,8 +1,13 @@
+/**
+ * @file Recommendations API route handler
+ * @module RecommendationsRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { createClient } from '@/app/_lib/supabase';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { V2_TABLES } from '@/app/_lib/problem-solving-v2-helpers';
+import { auth } from '@/app/_lib/auth/auth';
+import { createClient } from '@/app/_lib/integrations/supabase';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { V2_TABLES } from '@/app/_lib/services/problem-solving-v2-helpers';
 
 /**
  * GET /api/problem-solving/recommendations?user_id=xxx&limit=10&type=next_challenge

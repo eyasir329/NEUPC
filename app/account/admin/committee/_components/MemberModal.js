@@ -1,9 +1,25 @@
+/**
+ * @file Member modal component
+ * @module MemberModal
+ */
+
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { X, Loader, Search, Calendar, FileText, BookOpen, Award, Github, Linkedin, Camera } from 'lucide-react';
+import {
+  X,
+  Loader,
+  Search,
+  Calendar,
+  FileText,
+  BookOpen,
+  Award,
+  Github,
+  Linkedin,
+  Camera,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { uploadUserImageAction } from '@/app/_lib/user-actions';
-import { Avatar } from '../../_components/_ui';
+import { uploadUserImageAction } from '@/app/_lib/actions/user-actions';
+import { Avatar } from '@/app/account/_components/ui';
 
 function formatDateForInput(iso) {
   if (!iso) return '';
@@ -43,8 +59,8 @@ export default function MemberModal({
         ? 'true'
         : 'false'
       : defaultIsCurrent
-      ? 'true'
-      : 'false',
+        ? 'true'
+        : 'false',
     bio: member?.bio || '',
     academic_session: profile?.academic_session || '',
     department: profile?.department || '',
@@ -200,15 +216,15 @@ export default function MemberModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+      <div className="animate-in fade-in zoom-in-95 max-h-[90vh] w-full max-w-md overflow-hidden overflow-y-auto rounded-2xl border border-white/8 bg-gray-900/90 shadow-2xl backdrop-blur-lg duration-200">
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between border-b border-white/8 bg-gray-900/95 px-6 py-4 backdrop-blur-md z-10">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/8 bg-gray-900/95 px-6 py-4 backdrop-blur-md">
           <div>
             <h2 className="text-base font-bold text-white">
               {isCreate ? 'Assign Committee Member' : 'Edit Member Assignment'}
             </h2>
-            <p className="mt-1 text-[11px] text-indigo-400 font-mono">
+            <p className="mt-1 font-mono text-[11px] text-indigo-400">
               {isCreate
                 ? '// Appoint a user to a position'
                 : `// Editing member: ${member?.users?.full_name}`}
@@ -227,11 +243,11 @@ export default function MemberModal({
           {/* User Selection */}
           {isCreate && (
             <div ref={userPickerRef} className="relative">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+              <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 Select User <span className="text-rose-400">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                   <Search className="h-4 w-4 text-gray-500" />
                 </div>
                 <input
@@ -248,19 +264,19 @@ export default function MemberModal({
                   }}
                   onFocus={() => setShowUserDropdown(true)}
                   required={!formData.user_id}
-                  className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                  className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-3.5 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                 />
               </div>
 
               {/* Dropdown Results */}
               {showUserDropdown && filteredUsers.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-20 rounded-xl border border-white/8 bg-gray-950/95 backdrop-blur-md shadow-2xl max-h-48 overflow-y-auto divide-y divide-white/6">
+                <div className="absolute top-full right-0 left-0 z-20 mt-1.5 max-h-48 divide-y divide-white/6 overflow-y-auto rounded-xl border border-white/8 bg-gray-950/95 shadow-2xl backdrop-blur-md">
                   {filteredUsers.map((user) => (
                     <button
                       key={user.id}
                       type="button"
                       onClick={() => handleSelectUser(user.id)}
-                      className="w-full px-4 py-3 text-left transition-all hover:bg-white/5 flex flex-col gap-0.5"
+                      className="flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-all hover:bg-white/5"
                     >
                       <span className="text-xs font-semibold text-white">
                         {user.full_name}
@@ -274,7 +290,7 @@ export default function MemberModal({
               )}
 
               {showUserDropdown && filteredUsers.length === 0 && searchUser && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-20 rounded-xl border border-white/8 bg-gray-950/95 p-3.5 text-xs text-gray-500">
+                <div className="absolute top-full right-0 left-0 z-20 mt-1.5 rounded-xl border border-white/8 bg-gray-950/95 p-3.5 text-xs text-gray-500">
                   No users matched search criteria
                 </div>
               )}
@@ -283,11 +299,11 @@ export default function MemberModal({
 
           {/* Appointed User Display Card */}
           {appointedUser && (
-            <div className="rounded-xl border border-white/8 bg-white/3 p-3.5 flex items-center gap-3.5 relative">
+            <div className="relative flex items-center gap-3.5 rounded-xl border border-white/8 bg-white/3 p-3.5">
               {/* Interactive Avatar Container */}
               <div
                 onClick={handleAvatarClick}
-                className="relative h-11 w-11 rounded-full border border-white/10 overflow-hidden cursor-pointer group shrink-0 shadow-lg"
+                className="group relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-full border border-white/10 shadow-lg"
               >
                 {/* Hidden input */}
                 <input
@@ -300,14 +316,14 @@ export default function MemberModal({
 
                 {/* Hover Camera Overlay */}
                 {!isUploading && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10 duration-200">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                     <Camera className="h-4 w-4 text-indigo-400" />
                   </div>
                 )}
 
                 {/* Upload spinner */}
                 {isUploading && (
-                  <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-white rounded-full z-10">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/75 text-white">
                     <Loader className="h-4 w-4 animate-spin text-indigo-400" />
                   </div>
                 )}
@@ -321,16 +337,18 @@ export default function MemberModal({
               </div>
 
               <div className="min-w-0 flex-1">
-                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">
-                  {isCreate ? 'Selected Member Candidate' : 'Currently Appointed Member'}
+                <span className="block text-[9px] font-bold tracking-wider text-gray-500 uppercase">
+                  {isCreate
+                    ? 'Selected Member Candidate'
+                    : 'Currently Appointed Member'}
                 </span>
-                <p className="text-sm font-semibold text-white truncate mt-0.5">
+                <p className="mt-0.5 truncate text-sm font-semibold text-white">
                   {appointedUser?.full_name}
                 </p>
-                <p className="text-xs text-gray-400 truncate mt-0.5">
+                <p className="mt-0.5 truncate text-xs text-gray-400">
                   {appointedUser?.email}
                 </p>
-                <span className="text-[8px] font-bold text-indigo-400/80 uppercase tracking-widest mt-1 block">
+                <span className="mt-1 block text-[8px] font-bold tracking-widest text-indigo-400/80 uppercase">
                   Click avatar to change picture
                 </span>
               </div>
@@ -339,7 +357,7 @@ export default function MemberModal({
 
           {/* Position */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase">
               Assign Committee Role <span className="text-rose-400">*</span>
             </label>
             <select
@@ -347,7 +365,7 @@ export default function MemberModal({
               value={formData.position_id}
               onChange={handleChange}
               required
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
+              className="w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white transition-all outline-none focus:border-indigo-500/50"
               style={{ colorScheme: 'dark' }}
             >
               <option value="" disabled>
@@ -364,7 +382,7 @@ export default function MemberModal({
           {/* Term Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <Calendar className="h-3.5 w-3.5 text-gray-500" />
                 Term Start <span className="text-rose-400">*</span>
               </label>
@@ -374,13 +392,13 @@ export default function MemberModal({
                 value={formData.term_start}
                 onChange={handleChange}
                 required
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <Calendar className="h-3.5 w-3.5 text-gray-500" />
                 Term End
               </label>
@@ -389,7 +407,7 @@ export default function MemberModal({
                 name="term_end"
                 value={formData.term_end}
                 onChange={handleChange}
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -397,14 +415,14 @@ export default function MemberModal({
 
           {/* Status */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+            <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400 uppercase">
               Appointment Status
             </label>
             <select
               name="is_current"
               value={formData.is_current}
               onChange={handleChange}
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
+              className="w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white transition-all outline-none focus:border-indigo-500/50"
               style={{ colorScheme: 'dark' }}
             >
               <option value="true">Current Term (Active)</option>
@@ -415,7 +433,7 @@ export default function MemberModal({
           {/* Academic Info */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <BookOpen className="h-3.5 w-3.5 text-gray-500" />
                 Academic Session
               </label>
@@ -425,12 +443,12 @@ export default function MemberModal({
                 value={formData.academic_session}
                 onChange={handleChange}
                 placeholder="e.g. 2021-22"
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <Award className="h-3.5 w-3.5 text-gray-500" />
                 Department
               </label>
@@ -440,7 +458,7 @@ export default function MemberModal({
                 value={formData.department}
                 onChange={handleChange}
                 placeholder="e.g. Department of CSE"
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
           </div>
@@ -448,7 +466,7 @@ export default function MemberModal({
           {/* Social Profiles */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <Github className="h-3.5 w-3.5 text-gray-500" />
                 GitHub Link
               </label>
@@ -458,12 +476,12 @@ export default function MemberModal({
                 value={formData.github}
                 onChange={handleChange}
                 placeholder="github.com/username"
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                 <Linkedin className="h-3.5 w-3.5 text-gray-500" />
                 LinkedIn Link
               </label>
@@ -473,14 +491,14 @@ export default function MemberModal({
                 value={formData.linkedin}
                 onChange={handleChange}
                 placeholder="linkedin.com/in/username"
-                className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="mb-1.5 block flex items-center gap-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
               <FileText className="h-3.5 w-3.5 text-gray-500" />
               Member Bio / Profile
             </label>
@@ -490,23 +508,23 @@ export default function MemberModal({
               onChange={handleChange}
               rows={3}
               placeholder="Provide a short biography or description for this committee member..."
-              className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 px-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none"
+              className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 border-t border-white/8 pt-5 mt-2">
+          <div className="mt-2 flex gap-3 border-t border-white/8 pt-5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl bg-white/5 border border-white/8 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+              className="flex-1 rounded-xl border border-white/8 bg-white/5 py-2.5 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || (isCreate && !formData.user_id)}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-indigo-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.35)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-indigo-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
             >
               {isLoading && <Loader className="h-3.5 w-3.5 animate-spin" />}
               {isCreate ? 'Assign Member' : 'Save Changes'}

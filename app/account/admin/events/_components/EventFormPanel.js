@@ -53,10 +53,13 @@ import {
   deleteEventImageAction,
   generateEventImageAction,
   generateEventTextAction,
-} from '@/app/_lib/event-actions';
-import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/image-gen';
-import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
-import { driveImageUrl } from '@/app/_lib/utils';
+} from '@/app/_lib/actions/event-actions';
+import { IMAGE_MODELS, DEFAULT_MODEL } from '@/app/_lib/integrations/image-gen';
+import {
+  TEXT_MODELS,
+  DEFAULT_TEXT_MODEL,
+} from '@/app/_lib/integrations/text-gen';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

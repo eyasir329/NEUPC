@@ -1,7 +1,12 @@
+/**
+ * @file Featured carousel component
+ * @module FeaturedCarousel
+ */
+
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { cn } from '../../_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 const USER_PAUSE_MS = 8000;
 const SCROLL_IDLE_MS = 180;
@@ -35,16 +40,19 @@ export default function FeaturedCarousel({
     return () => m.removeEventListener('change', update);
   }, []);
 
-  const scrollToIndex = useCallback((idx, opts = {}) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const child = track.children[idx];
-    if (!child) return;
-    track.scrollTo({
-      left: child.offsetLeft,
-      behavior: opts.instant || reduced ? 'auto' : 'smooth',
-    });
-  }, [reduced]);
+  const scrollToIndex = useCallback(
+    (idx, opts = {}) => {
+      const track = trackRef.current;
+      if (!track) return;
+      const child = track.children[idx];
+      if (!child) return;
+      track.scrollTo({
+        left: child.offsetLeft,
+        behavior: opts.instant || reduced ? 'auto' : 'smooth',
+      });
+    },
+    [reduced]
+  );
 
   const bumpUserPause = useCallback(() => {
     userPauseUntil.current = Date.now() + USER_PAUSE_MS;
@@ -60,10 +68,13 @@ export default function FeaturedCarousel({
     scrollToIndex((active - 1 + count) % count);
   }, [active, count, scrollToIndex, bumpUserPause]);
 
-  const goTo = useCallback((idx) => {
-    bumpUserPause();
-    scrollToIndex(idx);
-  }, [scrollToIndex, bumpUserPause]);
+  const goTo = useCallback(
+    (idx) => {
+      bumpUserPause();
+      scrollToIndex(idx);
+    },
+    [scrollToIndex, bumpUserPause]
+  );
 
   // Track which slide is centered + scroll-idle flag
   useEffect(() => {
@@ -73,7 +84,9 @@ export default function FeaturedCarousel({
     const onScroll = () => {
       isScrolling.current = true;
       if (scrollIdleTimer.current) clearTimeout(scrollIdleTimer.current);
-      scrollIdleTimer.current = setTimeout(() => { isScrolling.current = false; }, SCROLL_IDLE_MS);
+      scrollIdleTimer.current = setTimeout(() => {
+        isScrolling.current = false;
+      }, SCROLL_IDLE_MS);
 
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
@@ -84,7 +97,10 @@ export default function FeaturedCarousel({
           const c = track.children[i];
           const ccenter = c.offsetLeft + c.clientWidth / 2;
           const d = Math.abs(ccenter - center);
-          if (d < bestDist) { bestDist = d; bestIdx = i; }
+          if (d < bestDist) {
+            bestDist = d;
+            bestIdx = i;
+          }
         }
         setActive(bestIdx);
       });
@@ -134,11 +150,25 @@ export default function FeaturedCarousel({
       scrollToIndex(nextIdx, { instant });
     }, interval);
     return () => clearInterval(id);
-  }, [autoPlay, count, reduced, hovered, inView, active, interval, scrollToIndex]);
+  }, [
+    autoPlay,
+    count,
+    reduced,
+    hovered,
+    inView,
+    active,
+    interval,
+    scrollToIndex,
+  ]);
 
   const onKeyDown = (e) => {
-    if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      next();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prev();
+    }
   };
 
   if (count === 0) return null;
@@ -156,11 +186,13 @@ export default function FeaturedCarousel({
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      onPointerDown={(e) => { if (e.pointerType !== 'mouse') bumpUserPause(); }}
+      onPointerDown={(e) => {
+        if (e.pointerType !== 'mouse') bumpUserPause();
+      }}
     >
       <div
         ref={trackRef}
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((item, i) => (
           <div
@@ -182,13 +214,23 @@ export default function FeaturedCarousel({
             onClick={prev}
             aria-label="Previous slide"
             className={cn(
-              'absolute left-2 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md transition-all',
+              'absolute top-1/2 left-2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md transition-all sm:flex',
               'hover:border-neon-lime/40 hover:text-neon-lime hover:scale-105',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f]',
+              'focus-visible:ring-neon-lime focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] focus-visible:outline-none'
             )}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
           <button
@@ -196,13 +238,23 @@ export default function FeaturedCarousel({
             onClick={next}
             aria-label="Next slide"
             className={cn(
-              'absolute right-2 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md transition-all',
+              'absolute top-1/2 right-2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md transition-all sm:flex',
               'hover:border-neon-lime/40 hover:text-neon-lime hover:scale-105',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f]',
+              'focus-visible:ring-neon-lime focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] focus-visible:outline-none'
             )}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
 
@@ -216,8 +268,10 @@ export default function FeaturedCarousel({
                 aria-current={i === active}
                 className={cn(
                   'h-1.5 rounded-full transition-all duration-300',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b]',
-                  i === active ? 'w-6 bg-neon-lime' : 'w-1.5 bg-white/20 hover:bg-white/40',
+                  'focus-visible:ring-neon-lime focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none',
+                  i === active
+                    ? 'bg-neon-lime w-6'
+                    : 'w-1.5 bg-white/20 hover:bg-white/40'
                 )}
               />
             ))}

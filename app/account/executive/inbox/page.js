@@ -5,8 +5,8 @@
  * @access executive
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getActiveNotices } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getActiveNotices } from '@/app/_lib/services/data-service';
 import ExecutiveNoticesClient from './_components/ExecutiveNoticesClient';
 
 export const metadata = { title: 'Inbox | Executive | NEUPC' };

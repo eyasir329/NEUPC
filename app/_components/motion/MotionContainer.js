@@ -9,7 +9,7 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { staggerContainer, viewportConfig } from './motion';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 /**
  * MotionContainer — Animated stagger container with layout.

@@ -1,3 +1,8 @@
+/**
+ * @file Resource form component
+ * @module ResourceForm
+ */
+
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -19,8 +24,11 @@ import {
   deleteResourceMediaAction,
   generateResourceTextAction,
   createResourceCategoryAction,
-} from '@/app/_lib/resource-actions';
-import { TEXT_MODELS, DEFAULT_TEXT_MODEL } from '@/app/_lib/text-gen';
+} from '@/app/_lib/actions/resource-actions';
+import {
+  TEXT_MODELS,
+  DEFAULT_TEXT_MODEL,
+} from '@/app/_lib/integrations/text-gen';
 import {
   RESOURCE_TYPES,
   RESOURCE_TYPE_LABELS,
@@ -232,8 +240,8 @@ function defaultValue(initialData) {
       typeof initial.content === 'string'
         ? initial.content
         : Array.isArray(initial.content)
-        ? JSON.stringify(initial.content)
-        : initial.content?.html || '',
+          ? JSON.stringify(initial.content)
+          : initial.content?.html || '',
     embed_url: initial.embed_url || '',
     file_url: initial.file_url || '',
     thumbnail: initial.thumbnail || '',
@@ -823,8 +831,6 @@ export default function ResourceForm({
         />
       </FormSection>
 
-
-
       {/* Organization */}
       <FormSection
         icon={Zap}
@@ -840,7 +846,7 @@ export default function ResourceForm({
                 setShowAddCategory(!showAddCategory);
                 setCatError('');
               }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 transition-colors hover:text-blue-300"
             >
               {showAddCategory ? 'Cancel' : '+ New Category'}
             </button>
@@ -888,9 +894,9 @@ export default function ResourceForm({
               </p>
             </>
           ) : (
-            <div className="space-y-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+            <div className="animate-in fade-in slide-in-from-top-2 space-y-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 duration-200">
+              <div className="mb-1 flex items-center justify-between">
+                <h4 className="text-xs font-bold tracking-wider text-blue-400 uppercase">
                   Create New Category
                 </h4>
               </div>
@@ -910,7 +916,7 @@ export default function ResourceForm({
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
                   placeholder="e.g., Next.js, Data Science"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-blue-500/40"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/40"
                   disabled={catPending}
                 />
               </div>
@@ -924,7 +930,7 @@ export default function ResourceForm({
                   onChange={(e) => setNewCatDesc(e.target.value)}
                   placeholder="Add a brief category description..."
                   rows={2}
-                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-blue-500/40"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-gray-600 transition-all outline-none focus:border-blue-500/40"
                   disabled={catPending}
                 />
               </div>

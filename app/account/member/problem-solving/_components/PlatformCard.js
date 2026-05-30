@@ -220,7 +220,7 @@ export default function PlatformCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900 to-zinc-900/50 transition-all duration-300 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20"
+      className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-linear-to-br from-zinc-900 to-zinc-900/50 transition-all duration-300 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20"
     >
       {/* Accent gradient based on platform color */}
       <div
@@ -318,7 +318,7 @@ export default function PlatformCard({
               </span>
             </ActionButton>
           </div>
-          
+
           {/* Manual HTML Sync Area for SPOJ */}
           {handle.platform === 'spoj' && showManualSync && (
             <motion.div
@@ -329,7 +329,18 @@ export default function PlatformCard({
             >
               <div className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3 shadow-inner">
                 <label className="mb-2 block text-xs text-zinc-400">
-                  Because SPOJ natively blocks automated syncing, you may optionally visit <a href={`https://www.spoj.com/users/${handle.handle}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">your profile</a>, press <strong>Ctrl+A</strong> then <strong>Ctrl+C</strong> to copy the entire page content, and paste it here:
+                  Because SPOJ natively blocks automated syncing, you may
+                  optionally visit{' '}
+                  <a
+                    href={`https://www.spoj.com/users/${handle.handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    your profile
+                  </a>
+                  , press <strong>Ctrl+A</strong> then <strong>Ctrl+C</strong>{' '}
+                  to copy the entire page content, and paste it here:
                 </label>
                 <textarea
                   className="h-24 w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -339,18 +350,20 @@ export default function PlatformCard({
                 />
                 <div className="mt-2 flex justify-end">
                   <ActionButton
-                     onClick={() => {
-                        if (manualHtml.trim()) {
-                            onSync(handle.platform, true, manualHtml);
-                            setManualHtml('');
-                            setShowManualSync(false);
-                        }
-                     }}
-                     disabled={!manualHtml.trim() || isSyncing}
-                     variant="primary"
+                    onClick={() => {
+                      if (manualHtml.trim()) {
+                        onSync(handle.platform, true, manualHtml);
+                        setManualHtml('');
+                        setShowManualSync(false);
+                      }
+                    }}
+                    disabled={!manualHtml.trim() || isSyncing}
+                    variant="primary"
                   >
-                     <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                     Run Import
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`}
+                    />
+                    Run Import
                   </ActionButton>
                 </div>
               </div>

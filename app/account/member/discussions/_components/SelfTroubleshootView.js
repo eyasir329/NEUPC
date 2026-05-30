@@ -32,7 +32,7 @@ import {
 import {
   fetchFAQsAction,
   searchFAQsAction,
-} from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/actions/discussion-actions';
 
 // Category icons mapping
 const CATEGORY_ICONS = {

@@ -1,12 +1,19 @@
+/**
+ * @file Todays plan component
+ * @module TodaysPlan
+ */
+
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Target, CheckCircle2, Circle } from 'lucide-react';
 
 export default function TodaysPlan({ items = [] }) {
+  const router = useRouter();
   const [checked, setChecked] = useState(new Set());
-  
+
   const toggle = (id, e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -21,23 +28,28 @@ export default function TodaysPlan({ items = [] }) {
 
   const handleContainerClick = (href) => {
     if (href) {
-      window.location.href = href;
+      router.push(href);
     }
   };
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-start justify-between mb-8 pb-4 border-b border-white/10">
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-start justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 rounded-2xl shrink-0">
-             <Target className="w-6 h-6" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+            <Target className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Today's Plan</h3>
-            <p className="text-xs text-zinc-500 mt-1">{completedCount} of {items.length} done &middot; resets at midnight</p>
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
+              Today's Plan
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              {completedCount} of {items.length} done &middot; resets at
+              midnight
+            </p>
           </div>
         </div>
-        <span className="px-2 py-1 rounded-lg text-[9px] font-bold bg-white/5 border border-white/10 text-zinc-500 uppercase tracking-widest mt-1 shrink-0">
+        <span className="mt-1 shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
           {items.length} tasks
         </span>
       </div>
@@ -46,27 +58,35 @@ export default function TodaysPlan({ items = [] }) {
         {items.map((task, i) => {
           const isDone = checked.has(task.id);
           return (
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02 }}
-              key={task.id} 
+              key={task.id}
               onClick={() => handleContainerClick(task.href)}
-              className={`group flex items-start gap-3 p-4 rounded-2xl transition-colors cursor-pointer border ${
-                isDone 
-                  ? 'bg-emerald-500/10 border-emerald-500/30' 
-                  : 'bg-white/5 border-white/10 hover:border-emerald-500/30 hover:bg-emerald-500/5'
+              className={`group flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors ${
+                isDone
+                  ? 'border-emerald-500/30 bg-emerald-500/10'
+                  : 'border-white/10 bg-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5'
               }`}
             >
-              <button 
+              <button
                 onClick={(e) => toggle(task.id, e)}
-                className={`mt-0.5 transition-colors shrink-0 ${isDone ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-emerald-400'}`}
+                className={`mt-0.5 shrink-0 transition-colors ${isDone ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-emerald-400'}`}
               >
-                {isDone ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                {isDone ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : (
+                  <Circle className="h-5 w-5" />
+                )}
               </button>
               <div>
-                <h4 className={`text-sm font-bold mb-1 transition-colors leading-tight ${isDone ? 'text-zinc-400 line-through' : 'text-zinc-100 group-hover:text-emerald-400'}`}>
+                <h4
+                  className={`mb-1 text-sm leading-tight font-bold transition-colors ${isDone ? 'text-zinc-400 line-through' : 'text-zinc-100 group-hover:text-emerald-400'}`}
+                >
                   {task.title}
                 </h4>
-                <p className="text-xs text-zinc-500 font-medium leading-tight">{task.subtitle}</p>
+                <p className="text-xs leading-tight font-medium text-zinc-500">
+                  {task.subtitle}
+                </p>
               </div>
             </motion.div>
           );

@@ -53,7 +53,7 @@ export default function EmptyState() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700/50 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30"
+      className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700/50 bg-linear-to-br from-zinc-900/50 to-zinc-900/30"
     >
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
@@ -67,7 +67,7 @@ export default function EmptyState() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-blue-500/20"
+          className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-blue-500/20"
         >
           <Link2 className="h-8 w-8 text-blue-400" />
         </motion.div>

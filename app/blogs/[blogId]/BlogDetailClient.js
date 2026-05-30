@@ -16,8 +16,11 @@ import {
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import CodePlayground from '@/app/_components/ui/CodePlayground';
-import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils';
-import { getCategoryConfig, getCategoryLabel } from '@/app/_lib/blog-config';
+import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
+import {
+  getCategoryConfig,
+  getCategoryLabel,
+} from '@/app/_lib/config/blog-config';
 import { createLowlight, common } from 'lowlight';
 import { toHtml } from 'hast-util-to-html';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
@@ -56,24 +59,58 @@ const PLAY_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.98-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>';
 
 const EXECUTABLE_LANGUAGES = new Set([
-  'c', 'cpp', 'csharp', 'go', 'java', 'javascript',
-  'php', 'python', 'ruby', 'rust', 'typescript',
+  'c',
+  'cpp',
+  'csharp',
+  'go',
+  'java',
+  'javascript',
+  'php',
+  'python',
+  'ruby',
+  'rust',
+  'typescript',
 ]);
 
 const LANGUAGE_LABELS = {
-  c: 'C', cpp: 'C++', csharp: 'C#', go: 'Go', java: 'Java',
-  javascript: 'JavaScript', php: 'PHP', python: 'Python',
-  ruby: 'Ruby', rust: 'Rust', typescript: 'TypeScript',
+  c: 'C',
+  cpp: 'C++',
+  csharp: 'C#',
+  go: 'Go',
+  java: 'Java',
+  javascript: 'JavaScript',
+  php: 'PHP',
+  python: 'Python',
+  ruby: 'Ruby',
+  rust: 'Rust',
+  typescript: 'TypeScript',
 };
 
 function normalizeCodeLanguage(language) {
-  const normalized = String(language || '').trim().toLowerCase();
+  const normalized = String(language || '')
+    .trim()
+    .toLowerCase();
   const aliases = {
-    c: 'c', cpp: 'cpp', 'c++': 'cpp', cplusplus: 'cpp',
-    csharp: 'csharp', cs: 'csharp', go: 'go', golang: 'go',
-    java: 'java', javascript: 'javascript', js: 'javascript', php: 'php',
-    py: 'python', python: 'python', rb: 'ruby', ruby: 'ruby',
-    rs: 'rust', rust: 'rust', ts: 'typescript', typescript: 'typescript',
+    c: 'c',
+    cpp: 'cpp',
+    'c++': 'cpp',
+    cplusplus: 'cpp',
+    csharp: 'csharp',
+    cs: 'csharp',
+    go: 'go',
+    golang: 'go',
+    java: 'java',
+    javascript: 'javascript',
+    js: 'javascript',
+    php: 'php',
+    py: 'python',
+    python: 'python',
+    rb: 'ruby',
+    ruby: 'ruby',
+    rs: 'rust',
+    rust: 'rust',
+    ts: 'typescript',
+    typescript: 'typescript',
   };
   return aliases[normalized] || normalized;
 }
@@ -96,12 +133,13 @@ function injectHeadingIds(htmlString) {
     (match, openTag, level, attrs, inner, closeTag) => {
       if (/\bid=["']/.test(attrs)) return match;
       const text = inner.replace(/<[^>]+>/g, '').trim();
-      let slug = text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '') || `heading-${level}`;
+      let slug =
+        text
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || `heading-${level}`;
       if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
       else seen[slug] = 1;
       return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
@@ -118,8 +156,12 @@ function highlightCodeBlocks(htmlString) {
     (_match, openTag, attrs, gt, codeContent, _closeTag) => {
       blockIndex++;
       const decoded = codeContent
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&#x27;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
       const langMatch = attrs.match(/class="[^"]*language-(\w+)/);
       let lang = langMatch ? langMatch[1] : null;
       let highlighted;
@@ -158,8 +200,11 @@ function highlightCodeBlocks(htmlString) {
 import BlogComments from '@/app/_components/ui/BlogComments';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import JoinButton from '@/app/_components/ui/JoinButton';
-import { incrementViewAction, likePostAction } from '@/app/_lib/blog-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+import {
+  incrementViewAction,
+  likePostAction,
+} from '@/app/_lib/actions/blog-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -174,7 +219,11 @@ const FONT_SIZES = [
 const FONT_FAMILIES = [
   { id: 'sans', label: 'Sans', style: '"Inter", system-ui, sans-serif' },
   { id: 'serif', label: 'Serif', style: 'Georgia, "Times New Roman", serif' },
-  { id: 'novel', label: 'Novel', style: '"Palatino Linotype", Palatino, Georgia, serif' },
+  {
+    id: 'novel',
+    label: 'Novel',
+    style: '"Palatino Linotype", Palatino, Georgia, serif',
+  },
   { id: 'mono', label: 'Mono', style: '"JetBrains Mono", Consolas, monospace' },
 ];
 
@@ -200,21 +249,27 @@ const CONTENT_WIDTHS = {
 
 const SHARE_PLATFORMS = [
   {
-    key: 'twitter', label: 'Twitter / X',
+    key: 'twitter',
+    label: 'Twitter / X',
     icon: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
   },
   {
-    key: 'linkedin', label: 'LinkedIn',
+    key: 'linkedin',
+    label: 'LinkedIn',
     icon: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
   },
   {
-    key: 'facebook', label: 'Facebook',
+    key: 'facebook',
+    label: 'Facebook',
     icon: 'M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z',
   },
 ];
 
 function stripHtml(value) {
-  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function getExcerptFromContent(content, maxLen = 180) {
@@ -225,15 +280,22 @@ function getExcerptFromContent(content, maxLen = 180) {
 }
 
 function normalizeTags(value) {
-  if (Array.isArray(value)) return value.map((tag) => String(tag).trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value.map((tag) => String(tag).trim()).filter(Boolean);
   if (typeof value !== 'string') return [];
   const raw = value.trim();
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.map((tag) => String(tag).trim()).filter(Boolean);
-  } catch { /* fall through */ }
-  return raw.split(',').map((tag) => tag.trim()).filter(Boolean);
+    if (Array.isArray(parsed))
+      return parsed.map((tag) => String(tag).trim()).filter(Boolean);
+  } catch {
+    /* fall through */
+  }
+  return raw
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function getReadTimeLabel(blog, contentSource) {
@@ -255,7 +317,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       data-section-id={section.id}
       onClick={onClick}
       className={cn(
-        'group relative flex w-full items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 touch-manipulation active:bg-white/5',
+        'group relative flex w-full touch-manipulation items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
           ? 'text-neon-emerald'
@@ -267,33 +329,59 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       {isActive && (
         <span className="bg-neon-emerald absolute inset-y-1 left-0 w-0.5 rounded-full" />
       )}
-      <span className="flex items-center gap-2 min-w-0">
+      <span className="flex min-w-0 items-center gap-2">
         {level === 2 && sectionNum != null && (
-          <span className={cn(
-            'shrink-0 font-mono text-[9px] font-bold tabular-nums',
-            isActive ? 'text-neon-emerald/70' : isPast ? 'text-zinc-600' : 'text-zinc-700'
-          )}>
+          <span
+            className={cn(
+              'shrink-0 font-mono text-[9px] font-bold tabular-nums',
+              isActive
+                ? 'text-neon-emerald/70'
+                : isPast
+                  ? 'text-zinc-600'
+                  : 'text-zinc-700'
+            )}
+          >
             {String(sectionNum).padStart(2, '0')}
           </span>
         )}
         {level === 3 && (
-          <span className={cn(
-            'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-            isActive ? 'bg-neon-emerald' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
-          )} />
+          <span
+            className={cn(
+              'mt-0.5 h-1 w-1 shrink-0 rounded-full',
+              isActive
+                ? 'bg-neon-emerald'
+                : isPast
+                  ? 'bg-zinc-600'
+                  : 'bg-zinc-700'
+            )}
+          />
         )}
-        <span className={cn('line-clamp-2 leading-snug font-heading text-[10px] font-bold uppercase tracking-widest', isActive && 'font-black')}>
+        <span
+          className={cn(
+            'font-heading line-clamp-2 text-[10px] leading-snug font-bold tracking-widest uppercase',
+            isActive && 'font-black'
+          )}
+        >
           {section.title}
         </span>
       </span>
       <svg
         className={cn(
           'h-3.5 w-3.5 shrink-0 transition-transform',
-          isActive ? 'text-neon-emerald translate-x-0.5' : 'text-zinc-700 hidden group-hover:block group-hover:text-zinc-500'
+          isActive
+            ? 'text-neon-emerald translate-x-0.5'
+            : 'hidden text-zinc-700 group-hover:block group-hover:text-zinc-500'
         )}
-        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5l7 7-7 7"
+        />
       </svg>
     </button>
   );
@@ -307,19 +395,19 @@ function RelatedBlogCard({ blog }) {
   return (
     <Link
       href={`/blogs/${blog.slug || blog.id}`}
-      className="holographic-card group block p-6 rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-emerald hover:border-neon-emerald/40"
+      className="holographic-card group focus-visible:ring-neon-emerald hover:border-neon-emerald/40 block rounded-2xl p-6 transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none"
     >
-      <div className="font-mono text-neon-emerald text-[9px] mb-4 font-bold tracking-widest uppercase">
+      <div className="text-neon-emerald mb-4 font-mono text-[9px] font-bold tracking-widest uppercase">
         {getCategoryLabel(blog.category) || 'Article'}
       </div>
-      <h4 className="text-xl font-heading font-black text-white group-hover:text-neon-emerald transition-colors uppercase tracking-tighter line-clamp-2">
+      <h4 className="font-heading group-hover:text-neon-emerald line-clamp-2 text-xl font-black tracking-tighter text-white uppercase transition-colors">
         {blog.title}
       </h4>
-      <div className="mt-6 flex items-center gap-4 text-[9px] text-zinc-600 font-mono tracking-widest uppercase">
+      <div className="mt-6 flex items-center gap-4 font-mono text-[9px] tracking-widest text-zinc-600 uppercase">
         <span>{blog.read_time || blog.readTime || '5'} min</span>
         {(blog.views ?? 0) > 0 && (
           <>
-            <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+            <span className="h-1 w-1 rounded-full bg-zinc-800" />
             <span>{blog.views.toLocaleString()} views</span>
           </>
         )}
@@ -358,8 +446,12 @@ export default function BlogDetailClient({
   const [copied, setCopied] = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
   const [runnerState, setRunnerState] = useState({
-    isOpen: false, blockIndex: null, language: '',
-    originalCode: '', draftCode: '', stdin: '',
+    isOpen: false,
+    blockIndex: null,
+    language: '',
+    originalCode: '',
+    draftCode: '',
+    stdin: '',
   });
   const [runnerResult, setRunnerResult] = useState(null);
   const [runnerError, setRunnerError] = useState('');
@@ -372,13 +464,29 @@ export default function BlogDetailClient({
 
   const meta = useMemo(() => {
     const authorName =
-      blog.users?.full_name || blog.author?.full_name ||
-      blog.author?.name || blog.author_name || 'NEUPC Team';
-    const contentSource = blog.content || blog.body || blog.description || blog.summary || '';
-    const excerpt = blog.excerpt || blog.summary || blog.description || getExcerptFromContent(contentSource);
-    const category = blog.category?.name || blog.category_label || blog.category || 'Article';
-    const publishedDate = blog.published_at || blog.publish_date || blog.created_at;
-    const thumbnail = blog.thumbnail || blog.cover_image || blog.featured_image || blog.image || blog.banner || null;
+      blog.users?.full_name ||
+      blog.author?.full_name ||
+      blog.author?.name ||
+      blog.author_name ||
+      'NEUPC Team';
+    const contentSource =
+      blog.content || blog.body || blog.description || blog.summary || '';
+    const excerpt =
+      blog.excerpt ||
+      blog.summary ||
+      blog.description ||
+      getExcerptFromContent(contentSource);
+    const category =
+      blog.category?.name || blog.category_label || blog.category || 'Article';
+    const publishedDate =
+      blog.published_at || blog.publish_date || blog.created_at;
+    const thumbnail =
+      blog.thumbnail ||
+      blog.cover_image ||
+      blog.featured_image ||
+      blog.image ||
+      blog.banner ||
+      null;
 
     return {
       title: blog.title || blog.name || 'Untitled',
@@ -386,9 +494,17 @@ export default function BlogDetailClient({
       category,
       authorName,
       authorInitials: getInitials(authorName),
-      authorAvatar: blog.users?.avatar_url || blog.author?.avatar_url || blog.author_avatar || null,
+      authorAvatar:
+        blog.users?.avatar_url ||
+        blog.author?.avatar_url ||
+        blog.author_avatar ||
+        null,
       blogDate: publishedDate
-        ? new Date(publishedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        ? new Date(publishedDate).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
         : '',
       readTimeLabel: getReadTimeLabel(blog, contentSource),
       tags: normalizeTags(blog.tags),
@@ -417,7 +533,8 @@ export default function BlogDetailClient({
   }, [meta.content]);
 
   const enhancedContent = useMemo(
-    () => (isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content))),
+    () =>
+      isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content)),
     [meta.content, isJsonContent]
   );
 
@@ -445,7 +562,9 @@ export default function BlogDetailClient({
   const handleRunnerExecute = useCallback(async () => {
     const language = normalizeCodeLanguage(runnerState.language);
     if (!canExecuteLanguage(language)) {
-      setRunnerError('This code block language is not supported by the online runner.');
+      setRunnerError(
+        'This code block language is not supported by the online runner.'
+      );
       return;
     }
     if (!runnerState.draftCode.trim()) {
@@ -459,10 +578,15 @@ export default function BlogDetailClient({
       const response = await fetch('/api/code/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language, code: runnerState.draftCode, stdin: runnerState.stdin }),
+        body: JSON.stringify({
+          language,
+          code: runnerState.draftCode,
+          stdin: runnerState.stdin,
+        }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || 'Failed to execute code.');
+      if (!response.ok)
+        throw new Error(data?.error || 'Failed to execute code.');
       setRunnerResult(data?.result || null);
     } catch (error) {
       setRunnerError(error?.message || 'Failed to execute code.');
@@ -479,7 +603,10 @@ export default function BlogDetailClient({
       const res = await fetch('/api/code/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: runnerState.draftCode, language: runnerState.language }),
+        body: JSON.stringify({
+          code: runnerState.draftCode,
+          language: runnerState.language,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Format failed.');
@@ -518,8 +645,14 @@ export default function BlogDetailClient({
         const code = pre.querySelector('code');
         if (!code) return;
         const toolbar = runBtn.closest('.code-block-toolbar');
-        const blockIndex = toolbar ? Number(toolbar.dataset.blockIndex) || 1 : 1;
-        openCodeRunner({ blockIndex, language: runBtn.dataset.lang || '', code: code.textContent || '' });
+        const blockIndex = toolbar
+          ? Number(toolbar.dataset.blockIndex) || 1
+          : 1;
+        openCodeRunner({
+          blockIndex,
+          language: runBtn.dataset.lang || '',
+          code: code.textContent || '',
+        });
       }
     };
     container.addEventListener('click', handleClick);
@@ -535,12 +668,13 @@ export default function BlogDetailClient({
     headings.forEach((h) => {
       if (!h.id) {
         const text = h.textContent.trim();
-        let slug = text
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+        let slug =
+          text
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
         if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
         else seen[slug] = 1;
         h.id = slug;
@@ -564,7 +698,9 @@ export default function BlogDetailClient({
 
   useEffect(() => {
     const onScroll = () => {
-      const total = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const total =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
       if (tableOfContents.length) {
         const stickyNav = document.querySelector('[data-sticky-nav]');
@@ -586,8 +722,13 @@ export default function BlogDetailClient({
   useEffect(() => {
     if (!tocNavRef.current || !activeSection) return;
     // Skip the very first set (on mount) to avoid jarring scroll on load.
-    if (!tocInitRef.current) { tocInitRef.current = true; return; }
-    const el = tocNavRef.current.querySelector(`[data-section-id="${activeSection}"]`);
+    if (!tocInitRef.current) {
+      tocInitRef.current = true;
+      return;
+    }
+    const el = tocNavRef.current.querySelector(
+      `[data-section-id="${activeSection}"]`
+    );
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeSection]);
 
@@ -605,37 +746,69 @@ export default function BlogDetailClient({
       if (p.textAlign) setTextAlign(p.textAlign);
       if (p.contentWidth) setContentWidth(p.contentWidth);
       if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem('neupc-reading-prefs', JSON.stringify({
-        fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed,
-      }));
-    } catch { /* ignore */ }
-  }, [fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed]);
+      localStorage.setItem(
+        'neupc-reading-prefs',
+        JSON.stringify({
+          fontSize,
+          fontFamily,
+          bgTheme,
+          lineHeight,
+          letterSpacing,
+          paraSpacing,
+          textAlign,
+          contentWidth,
+          tocCollapsed,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [
+    fontSize,
+    fontFamily,
+    bgTheme,
+    lineHeight,
+    letterSpacing,
+    paraSpacing,
+    textAlign,
+    contentWidth,
+    tocCollapsed,
+  ]);
 
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
     if (el) {
       const stickyNav = document.querySelector('[data-sticky-nav]');
       const offset = (stickyNav?.offsetHeight ?? 60) + 16;
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - offset,
+        behavior: 'smooth',
+      });
     }
     setShowMobileTOC(false);
   }, []);
 
-  const handleShare = useCallback((platform) => {
-    if (typeof window === 'undefined') return;
-    const url = window.location.href;
-    const map = {
-      twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(meta.title)}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    };
-    if (map[platform]) window.open(map[platform], '_blank', 'width=600,height=400');
-  }, [meta.title]);
+  const handleShare = useCallback(
+    (platform) => {
+      if (typeof window === 'undefined') return;
+      const url = window.location.href;
+      const map = {
+        twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(meta.title)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      };
+      if (map[platform])
+        window.open(map[platform], '_blank', 'width=600,height=400');
+    },
+    [meta.title]
+  );
 
   const handleCopy = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -654,7 +827,11 @@ export default function BlogDetailClient({
       if (res?.likes) {
         setLikeCount(res.likes);
         setLiked(true);
-        try { localStorage.setItem(`neupc-liked-blog-${blog.id}`, '1'); } catch { /* ignore */ }
+        try {
+          localStorage.setItem(`neupc-liked-blog-${blog.id}`, '1');
+        } catch {
+          /* ignore */
+        }
       }
     });
   }, [liked, liking, blog.id]);
@@ -663,8 +840,10 @@ export default function BlogDetailClient({
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0A0A0B] text-white">
         <div className="text-center">
-          <div className="mb-6 font-mono text-[10px] tracking-[0.4em] text-neon-emerald uppercase">ERROR_404</div>
-          <h1 className="mb-3 font-heading text-5xl font-black uppercase text-white tracking-tighter">
+          <div className="text-neon-emerald mb-6 font-mono text-[10px] tracking-[0.4em] uppercase">
+            ERROR_404
+          </div>
+          <h1 className="font-heading mb-3 text-5xl font-black tracking-tighter text-white uppercase">
             Log Not Found
           </h1>
           <p className="mb-8 font-mono text-sm tracking-wider text-zinc-500">
@@ -672,7 +851,7 @@ export default function BlogDetailClient({
           </p>
           <Link
             href="/blogs"
-            className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-8 py-3 font-heading text-[10px] font-black tracking-widest text-black uppercase transition-all shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)]"
+            className="bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-8 py-3 text-[10px] font-black tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)]"
           >
             ← Back to Archives
           </Link>
@@ -687,20 +866,27 @@ export default function BlogDetailClient({
   let h2Count = 0;
   const tocItems = tableOfContents.map((s, i) => {
     if (s.level === 2) h2Count++;
-    return { ...s, isPast: i < activeIdx, sectionNum: s.level === 2 ? h2Count : null };
+    return {
+      ...s,
+      isPast: i < activeIdx,
+      sectionNum: s.level === 2 ? h2Count : null,
+    };
   });
 
   return (
     <>
-      <main className="relative min-h-screen text-white transition-colors duration-500" style={{ background: currentBg }}>
-
+      <main
+        className="relative min-h-screen text-white transition-colors duration-500"
+        style={{ background: currentBg }}
+      >
         {/* ── Reading Progress Bar ─────────────────────────────────────────── */}
         <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
           <div
             className="h-full transition-all duration-150"
             style={{
               width: `${scrollProgress}%`,
-              background: 'linear-gradient(to right, #10B981, #10B981cc, #B6F36B)',
+              background:
+                'linear-gradient(to right, #10B981, #10B981cc, #B6F36B)',
               boxShadow: '0 0 8px rgba(16,185,129,0.6)',
             }}
           />
@@ -717,22 +903,32 @@ export default function BlogDetailClient({
               <div className="flex items-center gap-3">
                 <Link
                   href="/blogs"
-                  className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 font-heading text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
+                  className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all"
                 >
-                  <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  <svg
+                    className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                   All Blogs
                 </Link>
                 <span className="hidden text-zinc-700 sm:block">/</span>
                 {meta.category && (
-                  <span className="hidden rounded-full border border-neon-emerald/25 bg-neon-emerald/8 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-emerald uppercase sm:block">
+                  <span className="border-neon-emerald/25 bg-neon-emerald/8 text-neon-emerald hidden rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:block">
                     {getCategoryLabel(meta.category)}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 tabular-nums uppercase md:block">
+                <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
                   {Math.round(scrollProgress)}% · {meta.readTimeLabel}
                 </span>
                 {hasTOC && (
@@ -740,10 +936,20 @@ export default function BlogDetailClient({
                     onClick={() => setShowMobileTOC(!showMobileTOC)}
                     aria-label="Open table of contents"
                     aria-expanded={showMobileTOC}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-emerald/30 hover:text-neon-emerald active:bg-white/10 xl:hidden"
+                    className="hover:border-neon-emerald/30 hover:text-neon-emerald flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all active:bg-white/10 xl:hidden"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h7"
+                      />
                     </svg>
                   </button>
                 )}
@@ -755,26 +961,48 @@ export default function BlogDetailClient({
         {/* ── Mobile TOC Overlay ────────────────────────────────────────────── */}
         {showMobileTOC && hasTOC && (
           <div className="fixed inset-0 z-50 xl:hidden">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setShowMobileTOC(false)}
+            />
             <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-                <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-emerald uppercase">Protocol_Overview</h3>
+                <h3 className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.6em] uppercase">
+                  Protocol_Overview
+                </h3>
                 <button
                   onClick={() => setShowMobileTOC(false)}
                   aria-label="Close table of contents"
-                  className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition-colors touch-manipulation hover:text-white active:bg-white/10"
+                  className="flex h-9 w-9 touch-manipulation items-center justify-center rounded-md text-zinc-500 transition-colors hover:text-white active:bg-white/10"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <nav
+                className="flex-1 overflow-y-auto overscroll-contain px-3 py-3"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 {tocItems.map((s) => (
                   <TOCItem
-                    key={s.id} section={s} level={s.level}
-                    isActive={activeSection === s.id} isPast={s.isPast}
-                    sectionNum={s.sectionNum} onClick={() => scrollToSection(s.id)}
+                    key={s.id}
+                    section={s}
+                    level={s.level}
+                    isActive={activeSection === s.id}
+                    isPast={s.isPast}
+                    sectionNum={s.sectionNum}
+                    onClick={() => scrollToSection(s.id)}
                   />
                 ))}
               </nav>
@@ -784,7 +1012,6 @@ export default function BlogDetailClient({
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
-
           {/* Background cover image */}
           {meta.thumbnail && (
             <div className="absolute inset-0 z-0">
@@ -795,7 +1022,7 @@ export default function BlogDetailClient({
                 aria-hidden
                 className="h-full w-full object-cover opacity-10 grayscale"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
+              <div className="absolute inset-0 bg-linear-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
             </div>
           )}
 
@@ -807,15 +1034,24 @@ export default function BlogDetailClient({
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-
             {/* Back link */}
             <nav className="mb-6 sm:mb-8">
               <Link
                 href="/blogs"
-                className="group inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
+                className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
               >
-                <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                <svg
+                  className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
                 All Blogs
               </Link>
@@ -823,14 +1059,23 @@ export default function BlogDetailClient({
 
             {/* Category + featured eyebrow */}
             <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-5">
-              <span className={cn(
-                'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
-                meta.featured
-                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-                  : 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
-              )}>
-                <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse', meta.featured ? 'bg-neon-lime' : 'bg-neon-emerald')} />
-                {meta.featured ? 'Featured' : getCategoryLabel(meta.category) || 'Blog'}
+              <span
+                className={cn(
+                  'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
+                  meta.featured
+                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                    : 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 animate-pulse rounded-full',
+                    meta.featured ? 'bg-neon-lime' : 'bg-neon-emerald'
+                  )}
+                />
+                {meta.featured
+                  ? 'Featured'
+                  : getCategoryLabel(meta.category) || 'Blog'}
               </span>
               {meta.category && !meta.featured && (
                 <span className="inline-flex min-h-[28px] items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
@@ -840,14 +1085,14 @@ export default function BlogDetailClient({
             </div>
 
             {/* Title */}
-            <h1 className="kinetic-headline max-w-4xl font-heading text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] font-black text-white uppercase [line-height:1.05] sm:[line-height:0.95]">
+            <h1 className="kinetic-headline font-heading max-w-4xl text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] [line-height:1.05] font-black text-white uppercase sm:[line-height:0.95]">
               {meta.title}
             </h1>
 
             {/* Author + meta chips */}
             <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
               <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-                <div className="h-8 w-8 shrink-0 rounded-full border border-neon-emerald/30 p-0.5">
+                <div className="border-neon-emerald/30 h-8 w-8 shrink-0 rounded-full border p-0.5">
                   {meta.authorAvatar ? (
                     <SafeImg
                       src={driveImageUrl(meta.authorAvatar)}
@@ -856,30 +1101,46 @@ export default function BlogDetailClient({
                       fallback=""
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-neon-emerald/20 font-heading text-[10px] font-black text-neon-emerald">
+                    <div className="bg-neon-emerald/20 font-heading text-neon-emerald flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
                       {meta.authorInitials}
                     </div>
                   )}
                 </div>
                 <div>
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Author</span>
-                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.authorName}</span>
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                    Author
+                  </span>
+                  <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                    {meta.authorName}
+                  </span>
                 </div>
               </div>
               {meta.blogDate && (
                 <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Published</span>
-                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.blogDate}</span>
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                    Published
+                  </span>
+                  <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                    {meta.blogDate}
+                  </span>
                 </div>
               )}
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Read Time</span>
-                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.readTimeLabel}</span>
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  Read Time
+                </span>
+                <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
+                  {meta.readTimeLabel}
+                </span>
               </div>
               {meta.views > 0 && (
-                <div className="rounded-xl border border-neon-lime/15 bg-neon-lime/5 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Views</span>
-                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-neon-lime sm:text-sm">{meta.views.toLocaleString()}</span>
+                <div className="border-neon-lime/15 bg-neon-lime/5 rounded-xl border px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                    Views
+                  </span>
+                  <span className="font-heading text-neon-lime mt-0.5 block text-[13px] font-bold sm:text-sm">
+                    {meta.views.toLocaleString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -895,7 +1156,10 @@ export default function BlogDetailClient({
             {meta.tags.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
                 {meta.tags.map((tag) => (
-                  <span key={tag} className="inline-block rounded-full border border-neon-emerald/20 bg-neon-emerald/10 px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-neon-emerald uppercase">
+                  <span
+                    key={tag}
+                    className="border-neon-emerald/20 bg-neon-emerald/10 text-neon-emerald inline-block rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase"
+                  >
                     #{tag}
                   </span>
                 ))}
@@ -905,36 +1169,56 @@ export default function BlogDetailClient({
         </section>
 
         {/* ── Section separator ────────────────────────────────────────────── */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+        <div className="h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
         {/* ── Main Reading Layout ───────────────────────────────────────────── */}
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className={cn(
-            'flex transition-[gap] duration-300',
-            !hasTOC && 'justify-center',
-            hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
-          )}>
-
+          <div
+            className={cn(
+              'flex transition-[gap] duration-300',
+              !hasTOC && 'justify-center',
+              hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
+            )}
+          >
             {/* ── Article Column ────────────────────────────────────────────── */}
-            <article className={cn(
-              'w-full min-w-0 transition-all duration-300',
-              hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3')
-            )}>
-
+            <article
+              className={cn(
+                'w-full min-w-0 transition-all duration-300',
+                hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3')
+              )}
+            >
               {/* Reading controls */}
               <div className="mb-6 space-y-3">
                 <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
                   <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
-                    <svg className="text-neon-emerald h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    <svg
+                      className="text-neon-emerald h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Reading_Config</span>
                     <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 tabular-nums sm:flex">
-                      <span style={{ fontFamily: FONT_FAMILIES.find((f) => f.id === fontFamily)?.style }}>
+                      <span
+                        style={{
+                          fontFamily: FONT_FAMILIES.find(
+                            (f) => f.id === fontFamily
+                          )?.style,
+                        }}
+                      >
                         {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
                       </span>
                       <span className="text-zinc-700">·</span>
-                      <span>{FONT_SIZES.find((f) => f.id === fontSize)?.label}</span>
+                      <span>
+                        {FONT_SIZES.find((f) => f.id === fontSize)?.label}
+                      </span>
                     </span>
                   </span>
                   <div className="flex items-center gap-2">
@@ -945,7 +1229,9 @@ export default function BlogDetailClient({
                           onClick={() => setFontSize(fs.id)}
                           className={cn(
                             'rounded px-2 py-0.5 text-xs font-semibold transition-all',
-                            fontSize === fs.id ? 'bg-neon-emerald/20 text-neon-emerald' : 'text-zinc-500 hover:text-zinc-300'
+                            fontSize === fs.id
+                              ? 'bg-neon-emerald/20 text-neon-emerald'
+                              : 'text-zinc-500 hover:text-zinc-300'
                           )}
                         >
                           {fs.label}
@@ -962,9 +1248,24 @@ export default function BlogDetailClient({
                           : 'border-[#3F3F46] bg-white/5 text-zinc-500 hover:text-zinc-300'
                       )}
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
                       <span className="hidden sm:inline">Customize</span>
                     </button>
@@ -976,7 +1277,9 @@ export default function BlogDetailClient({
                   <div className="holographic-card no-lift rounded-xl p-5 shadow-2xl">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                       <div className="space-y-2.5">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Typeface</p>
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                          Typeface
+                        </p>
                         <div className="grid grid-cols-2 gap-1.5">
                           {FONT_FAMILIES.map((f) => (
                             <button
@@ -996,7 +1299,9 @@ export default function BlogDetailClient({
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Size & Align</p>
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                          Size & Align
+                        </p>
                         <div className="flex gap-1">
                           {FONT_SIZES.map((fs) => (
                             <button
@@ -1015,8 +1320,16 @@ export default function BlogDetailClient({
                         </div>
                         <div className="flex gap-1.5">
                           {[
-                            { id: 'left', label: 'Left', d: 'M3 6h18M3 12h12M3 18h15' },
-                            { id: 'justify', label: 'Justify', d: 'M3 6h18M3 12h18M3 18h18' },
+                            {
+                              id: 'left',
+                              label: 'Left',
+                              d: 'M3 6h18M3 12h12M3 18h15',
+                            },
+                            {
+                              id: 'justify',
+                              label: 'Justify',
+                              d: 'M3 6h18M3 12h18M3 18h18',
+                            },
                           ].map((a) => (
                             <button
                               key={a.id}
@@ -1028,8 +1341,18 @@ export default function BlogDetailClient({
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                             >
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d={a.d} />
+                              <svg
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d={a.d}
+                                />
                               </svg>
                               {a.label}
                             </button>
@@ -1037,14 +1360,33 @@ export default function BlogDetailClient({
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Spacing</p>
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                          Spacing
+                        </p>
                         {[
-                          { label: 'Line height', state: lineHeight, set: setLineHeight, keys: Object.keys(LINE_HEIGHTS) },
-                          { label: 'Letter spacing', state: letterSpacing, set: setLetterSpacing, keys: Object.keys(LETTER_SPACINGS) },
-                          { label: 'Paragraph gap', state: paraSpacing, set: setParaSpacing, keys: Object.keys(PARA_SPACINGS) },
+                          {
+                            label: 'Line height',
+                            state: lineHeight,
+                            set: setLineHeight,
+                            keys: Object.keys(LINE_HEIGHTS),
+                          },
+                          {
+                            label: 'Letter spacing',
+                            state: letterSpacing,
+                            set: setLetterSpacing,
+                            keys: Object.keys(LETTER_SPACINGS),
+                          },
+                          {
+                            label: 'Paragraph gap',
+                            state: paraSpacing,
+                            set: setParaSpacing,
+                            keys: Object.keys(PARA_SPACINGS),
+                          },
                         ].map(({ label, state, set, keys }) => (
                           <div key={label}>
-                            <p className="mb-1.5 text-[10px] text-zinc-600">{label}</p>
+                            <p className="mb-1.5 text-[10px] text-zinc-600">
+                              {label}
+                            </p>
                             <div className="flex gap-1">
                               {keys.map((k) => (
                                 <button
@@ -1065,7 +1407,9 @@ export default function BlogDetailClient({
                         ))}
                       </div>
                       <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Theme & Layout</p>
+                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
+                          Theme & Layout
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {BG_THEMES.map((t) => (
                             <button
@@ -1083,7 +1427,9 @@ export default function BlogDetailClient({
                           ))}
                         </div>
                         <div>
-                          <p className="mb-1.5 text-[10px] text-zinc-600">Content width</p>
+                          <p className="mb-1.5 text-[10px] text-zinc-600">
+                            Content width
+                          </p>
                           <div className="grid grid-cols-2 gap-1.5">
                             {Object.keys(CONTENT_WIDTHS).map((id) => (
                               <button
@@ -1111,25 +1457,41 @@ export default function BlogDetailClient({
                           )}
                         >
                           <span>Focus mode</span>
-                          <div className={cn(
-                            'relative flex h-4 w-7 items-center rounded-full border transition-all',
-                            focusMode ? 'border-neon-emerald/50 bg-neon-emerald/30' : 'border-white/15 bg-white/5'
-                          )}>
-                            <div className={cn(
-                              'absolute h-3 w-3 rounded-full transition-all duration-200',
-                              focusMode ? 'bg-neon-emerald left-3.5' : 'left-0.5 bg-gray-600'
-                            )} />
+                          <div
+                            className={cn(
+                              'relative flex h-4 w-7 items-center rounded-full border transition-all',
+                              focusMode
+                                ? 'border-neon-emerald/50 bg-neon-emerald/30'
+                                : 'border-white/15 bg-white/5'
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'absolute h-3 w-3 rounded-full transition-all duration-200',
+                                focusMode
+                                  ? 'bg-neon-emerald left-3.5'
+                                  : 'left-0.5 bg-gray-600'
+                              )}
+                            />
                           </div>
                         </button>
                       </div>
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
-                      <p className="text-[10px] text-zinc-600">Settings saved in your browser</p>
+                      <p className="text-[10px] text-zinc-600">
+                        Settings saved in your browser
+                      </p>
                       <button
                         onClick={() => {
-                          setFontSize('md'); setFontFamily('sans'); setBgTheme('dark');
-                          setLineHeight('relaxed'); setLetterSpacing('normal'); setParaSpacing('normal');
-                          setTextAlign('left'); setContentWidth('wide'); setFocusMode(false);
+                          setFontSize('md');
+                          setFontFamily('sans');
+                          setBgTheme('dark');
+                          setLineHeight('relaxed');
+                          setLetterSpacing('normal');
+                          setParaSpacing('normal');
+                          setTextAlign('left');
+                          setContentWidth('wide');
+                          setFocusMode(false);
                           setTocCollapsed(false);
                         }}
                         className="rounded-lg border border-[#3F3F46] bg-white/4 px-3 py-1.5 text-[11px] text-gray-500 transition-all hover:border-white/20 hover:text-gray-300"
@@ -1150,8 +1512,10 @@ export default function BlogDetailClient({
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
                 style={{
-                  '--blog-fs': FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
-                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)?.style,
+                  '--blog-fs':
+                    FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
+                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)
+                    ?.style,
                   '--blog-ls': LETTER_SPACINGS[letterSpacing],
                   '--blog-ps': PARA_SPACINGS[paraSpacing],
                   '--blog-bg': currentBg,
@@ -1160,7 +1524,10 @@ export default function BlogDetailClient({
                 }}
               >
                 {isJsonContent ? (
-                  <LessonContentRenderer content={meta.content} viewerMode={true} />
+                  <LessonContentRenderer
+                    content={meta.content}
+                    viewerMode={true}
+                  />
                 ) : (
                   <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
                 )}
@@ -1184,31 +1551,67 @@ export default function BlogDetailClient({
                       )}
                     >
                       <svg
-                        className={cn('h-4 w-4 transition-transform duration-200', liking && 'animate-pulse')}
-                        fill={liked ? 'currentColor' : 'none'} viewBox="0 0 24 24"
-                        stroke="currentColor" strokeWidth={2}
+                        className={cn(
+                          'h-4 w-4 transition-transform duration-200',
+                          liking && 'animate-pulse'
+                        )}
+                        fill={liked ? 'currentColor' : 'none'}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
                       </svg>
-                      <span className="tabular-nums">{likeCount.toLocaleString()}</span>
-                      {liked ? <span className="text-xs text-rose-400/70">Liked</span> : <span className="text-xs text-zinc-600">Like</span>}
+                      <span className="tabular-nums">
+                        {likeCount.toLocaleString()}
+                      </span>
+                      {liked ? (
+                        <span className="text-xs text-rose-400/70">Liked</span>
+                      ) : (
+                        <span className="text-xs text-zinc-600">Like</span>
+                      )}
                     </button>
                   </div>
                   <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-600 uppercase">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.75}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
                     </svg>
-                    <span className="tabular-nums">{viewCount.toLocaleString()}</span>
+                    <span className="tabular-nums">
+                      {viewCount.toLocaleString()}
+                    </span>
                     <span>views</span>
                   </span>
                 </div>
 
                 {meta.tags.length > 0 && (
                   <div className="mb-5 flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">Tags:</span>
+                    <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
+                      Tags:
+                    </span>
                     {meta.tags.map((tag) => (
-                      <span key={tag} className="rounded-full border border-[#3F3F46] bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-500 transition-colors hover:text-neon-emerald">
+                      <span
+                        key={tag}
+                        className="hover:text-neon-emerald rounded-full border border-[#3F3F46] bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-500 transition-colors"
+                      >
                         #{tag}
                       </span>
                     ))}
@@ -1216,15 +1619,23 @@ export default function BlogDetailClient({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">Broadcast:</span>
+                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
+                    Broadcast:
+                  </span>
                   {SHARE_PLATFORMS.map((p) => (
                     <button
                       key={p.key}
                       onClick={() => handleShare(p.key)}
                       title={`Share on ${p.label}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-neon-emerald/40 hover:text-neon-emerald"
+                      className="hover:border-neon-emerald/40 hover:text-neon-emerald flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all"
                     >
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d={p.icon} /></svg>
+                      <svg
+                        className="h-4 w-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d={p.icon} />
+                      </svg>
                     </button>
                   ))}
                   <button
@@ -1233,27 +1644,59 @@ export default function BlogDetailClient({
                       'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                       copied
                         ? 'border-neon-emerald/40 bg-neon-emerald/10 text-neon-emerald'
-                        : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-neon-emerald/30 hover:text-neon-emerald'
+                        : 'hover:border-neon-emerald/30 hover:text-neon-emerald border-[#3F3F46] bg-white/5 text-zinc-400'
                     )}
                   >
                     {copied ? (
-                      <><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Copied!</>
+                      <>
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Copied!
+                      </>
                     ) : (
-                      <><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>Copy link</>
+                      <>
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                          />
+                        </svg>
+                        Copy link
+                      </>
                     )}
                   </button>
                 </div>
               </div>
 
               {/* ── Discussion Terminal ────────────────────────────────────── */}
-              <div className="mt-10 bg-[#050505] border border-neon-emerald/20 shadow-2xl overflow-hidden rounded-[2rem]">
-                <div className="bg-[#0A0A0B] p-3 border-b border-[#27272A] flex items-center justify-between px-6">
+              <div className="border-neon-emerald/20 mt-10 overflow-hidden rounded-[2rem] border bg-[#050505] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#27272A] bg-[#0A0A0B] p-3 px-6">
                   <div className="flex space-x-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-neon-emerald" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/50" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/50" />
+                    <div className="bg-neon-emerald h-2.5 w-2.5 rounded-full" />
                   </div>
-                  <span className="font-mono text-[9px] text-neon-emerald tracking-[0.4em] font-bold uppercase">Discussion_Gateway</span>
+                  <span className="text-neon-emerald font-mono text-[9px] font-bold tracking-[0.4em] uppercase">
+                    Discussion_Gateway
+                  </span>
                   <div />
                 </div>
                 <div className="p-6 md:p-10">
@@ -1274,10 +1717,12 @@ export default function BlogDetailClient({
                   tocCollapsed ? 'xl:w-12' : 'xl:w-1/3'
                 )}
               >
-                <div className={cn(
-                  'sticky top-20 space-y-6 transition-opacity duration-300',
-                  focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
-                )}>
+                <div
+                  className={cn(
+                    'sticky top-20 space-y-6 transition-opacity duration-300',
+                    focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
+                  )}
+                >
                   {/* TOC Glass Panel */}
                   {tocCollapsed ? (
                     <div className="holographic-card no-lift flex flex-col items-center gap-3 rounded-2xl px-1 py-4">
@@ -1285,10 +1730,20 @@ export default function BlogDetailClient({
                         onClick={() => setTocCollapsed(false)}
                         title="Expand contents"
                         aria-label="Expand table of contents"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-neon-emerald/10 hover:text-neon-emerald"
+                        className="hover:bg-neon-emerald/10 hover:text-neon-emerald flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all"
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 6h16M4 12h16M4 18h7"
+                          />
                         </svg>
                       </button>
                       <div className="h-px w-6 bg-white/10" />
@@ -1301,20 +1756,25 @@ export default function BlogDetailClient({
                           style={{ height: `${scrollProgress}%` }}
                         />
                       </div>
-                      <span className="font-mono text-[9px] text-zinc-500 tabular-nums">{Math.round(scrollProgress)}%</span>
+                      <span className="font-mono text-[9px] text-zinc-500 tabular-nums">
+                        {Math.round(scrollProgress)}%
+                      </span>
                       <div className="h-px w-6 bg-white/10" />
                       <span
-                        className="font-mono text-[9px] font-bold tracking-widest text-neon-emerald/70 tabular-nums"
+                        className="text-neon-emerald/70 font-mono text-[9px] font-bold tracking-widest tabular-nums"
                         title={`Section ${activeIdx >= 0 ? activeIdx + 1 : 0} of ${tableOfContents.length}`}
                       >
-                        {String(activeIdx >= 0 ? activeIdx + 1 : 0).padStart(2, '0')}
+                        {String(activeIdx >= 0 ? activeIdx + 1 : 0).padStart(
+                          2,
+                          '0'
+                        )}
                         <span className="text-zinc-700">/</span>
                         {String(tableOfContents.length).padStart(2, '0')}
                       </span>
                     </div>
                   ) : (
                     <div
-                      className="overflow-hidden rounded-[2rem] border border-neon-emerald/10"
+                      className="border-neon-emerald/10 overflow-hidden rounded-[2rem] border"
                       style={{
                         background: 'rgba(20, 20, 22, 0.7)',
                         backdropFilter: 'blur(40px)',
@@ -1322,7 +1782,7 @@ export default function BlogDetailClient({
                       }}
                     >
                       <div className="flex items-center justify-between border-b border-[#27272A]/50 px-8 py-5">
-                        <h3 className="font-mono text-[10px] text-neon-emerald uppercase tracking-[0.6em] font-bold">
+                        <h3 className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.6em] uppercase">
                           Protocol_Overview
                         </h3>
                         <div className="flex items-center gap-3">
@@ -1332,10 +1792,20 @@ export default function BlogDetailClient({
                           <button
                             onClick={() => setTocCollapsed(true)}
                             title="Collapse"
-                            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-neon-emerald"
+                            className="hover:text-neon-emerald flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8"
                           >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            <svg
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 19l-7-7 7-7"
+                              />
                             </svg>
                           </button>
                         </div>
@@ -1344,29 +1814,46 @@ export default function BlogDetailClient({
                       <nav
                         ref={tocNavRef}
                         className="max-h-[calc(100dvh-280px)] space-y-1 overflow-y-auto px-4 py-4"
-                        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
+                        style={{
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: 'rgba(255,255,255,0.1) transparent',
+                        }}
                       >
                         {tocItems.map((s) => (
                           <TOCItem
-                            key={s.id} section={s} level={s.level}
-                            isActive={activeSection === s.id} isPast={s.isPast}
-                            sectionNum={s.sectionNum} onClick={() => scrollToSection(s.id)}
+                            key={s.id}
+                            section={s}
+                            level={s.level}
+                            isActive={activeSection === s.id}
+                            isPast={s.isPast}
+                            sectionNum={s.sectionNum}
+                            onClick={() => scrollToSection(s.id)}
                           />
                         ))}
                       </nav>
 
                       <div className="border-t border-[#27272A]/50 px-8 py-5">
                         <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-600">
-                          <span>{activeIdx >= 0 ? activeIdx + 1 : 0} / {tableOfContents.length} sections</span>
-                          <span className="text-neon-emerald tabular-nums font-bold">{Math.round(scrollProgress)}%</span>
+                          <span>
+                            {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
+                            {tableOfContents.length} sections
+                          </span>
+                          <span className="text-neon-emerald font-bold tabular-nums">
+                            {Math.round(scrollProgress)}%
+                          </span>
                         </div>
                         <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
-                          <div className="bg-neon-emerald h-full rounded-full transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
+                          <div
+                            className="bg-neon-emerald h-full rounded-full transition-all duration-300"
+                            style={{ width: `${scrollProgress}%` }}
+                          />
                         </div>
 
                         {/* Broadcast Signal */}
                         <div className="mt-8 space-y-4">
-                          <h4 className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Broadcast_Signal</h4>
+                          <h4 className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                            Broadcast_Signal
+                          </h4>
                           <div className="flex gap-3">
                             {[
                               {
@@ -1378,11 +1865,22 @@ export default function BlogDetailClient({
                                 icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
                                 tip: 'Scroll to first code block',
                                 action: () => {
-                                  const firstPre = contentRef.current?.querySelector('pre');
+                                  const firstPre =
+                                    contentRef.current?.querySelector('pre');
                                   if (firstPre) {
-                                    const stickyNav = document.querySelector('[data-sticky-nav]');
-                                    const offset = (stickyNav?.offsetHeight ?? 60) + 16;
-                                    window.scrollTo({ top: firstPre.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+                                    const stickyNav =
+                                      document.querySelector(
+                                        '[data-sticky-nav]'
+                                      );
+                                    const offset =
+                                      (stickyNav?.offsetHeight ?? 60) + 16;
+                                    window.scrollTo({
+                                      top:
+                                        firstPre.getBoundingClientRect().top +
+                                        window.scrollY -
+                                        offset,
+                                      behavior: 'smooth',
+                                    });
                                   }
                                 },
                               },
@@ -1396,10 +1894,20 @@ export default function BlogDetailClient({
                                 key={tip}
                                 title={tip}
                                 onClick={action}
-                                className="w-10 h-10 rounded-lg bg-white/3 border border-white/10 flex items-center justify-center hover:border-neon-emerald/50 hover:bg-neon-emerald/8 transition-all group"
+                                className="hover:border-neon-emerald/50 hover:bg-neon-emerald/8 group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all"
                               >
-                                <svg className="h-4 w-4 text-zinc-400 group-hover:text-neon-emerald transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                                <svg
+                                  className="group-hover:text-neon-emerald h-4 w-4 text-zinc-400 transition-colors"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={1.75}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d={icon}
+                                  />
                                 </svg>
                               </button>
                             ))}
@@ -1412,7 +1920,7 @@ export default function BlogDetailClient({
                   {/* Related Logs — hidden when sidebar collapsed */}
                   {!tocCollapsed && relatedBlogs.length > 0 && (
                     <div className="space-y-4 pt-4">
-                      <h3 className="font-mono text-[10px] text-neon-emerald uppercase tracking-[0.4em] font-bold px-2">
+                      <h3 className="text-neon-emerald px-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
                         Related Articles
                       </h3>
                       <div className="space-y-3">
@@ -1431,7 +1939,7 @@ export default function BlogDetailClient({
         {/* ── Related Articles (mobile / no TOC fallback) ───────────────────── */}
         {relatedBlogs.length > 0 && !hasTOC && (
           <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
-            <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+            <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
             <div className="pointer-events-none absolute inset-0 z-0">
               <div className="bg-neon-emerald/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
             </div>
@@ -1440,21 +1948,25 @@ export default function BlogDetailClient({
                 <div>
                   <div className="flex items-center gap-3">
                     <span className="bg-neon-lime h-px w-6 shrink-0" />
-                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] text-neon-lime">Keep Reading</span>
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
+                      Keep Reading
+                    </span>
                   </div>
-                  <h2 className="kinetic-headline mt-3 font-heading text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
+                  <h2 className="kinetic-headline font-heading mt-3 text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
                     Related Articles
                   </h2>
                 </div>
                 <Link
                   href={`/blogs?category=${encodeURIComponent(meta.category)}`}
-                  className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-emerald/40 hover:text-neon-emerald sm:px-7 sm:py-3 sm:text-[11px]"
+                  className="font-heading hover:border-neon-emerald/40 hover:text-neon-emerald w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors sm:px-7 sm:py-3 sm:text-[11px]"
                 >
                   More {getCategoryLabel(meta.category)} →
                 </Link>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {relatedBlogs.map((b) => <RelatedBlogCard key={b.id} blog={b} />)}
+                {relatedBlogs.map((b) => (
+                  <RelatedBlogCard key={b.id} blog={b} />
+                ))}
               </div>
             </div>
           </section>
@@ -1466,29 +1978,36 @@ export default function BlogDetailClient({
             <div className="grid-overlay absolute inset-0 opacity-15" />
             <div className="bg-neon-lime/4 absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
           </div>
-          <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-emerald/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+            <div className="border-neon-lime/15 from-neon-lime/5 to-neon-emerald/5 rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 lg:p-14">
               <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
                 <div className="md:col-span-2">
-                  <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
+                  <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
                     /// Stay Connected
                   </p>
-                  <h2 className="font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
+                  <h2 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl lg:text-4xl">
                     Never miss an article
                   </h2>
                   <p className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-400 sm:mt-4">
-                    Join NEUPC to get early access to engineering blogs, workshops, and contests — and be part of a thriving community of programmers.
+                    Join NEUPC to get early access to engineering blogs,
+                    workshops, and contests — and be part of a thriving
+                    community of programmers.
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:flex-col md:items-end">
                   <JoinButton
                     href="/join"
-                    className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
+                    className="group bg-neon-lime font-heading inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
                   >
                     Join the Club
-                    <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                    <span
+                      aria-hidden
+                      className="transition-transform group-hover:translate-x-0.5"
+                    >
+                      →
+                    </span>
                   </JoinButton>
                   <Link
                     href="/blogs"
@@ -1515,10 +2034,22 @@ export default function BlogDetailClient({
         onClose={closeCodeRunner}
         onRun={handleRunnerExecute}
         onFormat={handleFormat}
-        onDraftChange={(value) => setRunnerState((prev) => ({ ...prev, draftCode: value }))}
-        onStdinChange={(value) => setRunnerState((prev) => ({ ...prev, stdin: value }))}
-        onReset={() => setRunnerState((prev) => ({ ...prev, draftCode: prev.originalCode, stdin: '' }))}
-        onLanguageChange={(lang) => setRunnerState((prev) => ({ ...prev, language: lang }))}
+        onDraftChange={(value) =>
+          setRunnerState((prev) => ({ ...prev, draftCode: value }))
+        }
+        onStdinChange={(value) =>
+          setRunnerState((prev) => ({ ...prev, stdin: value }))
+        }
+        onReset={() =>
+          setRunnerState((prev) => ({
+            ...prev,
+            draftCode: prev.originalCode,
+            stdin: '',
+          }))
+        }
+        onLanguageChange={(lang) =>
+          setRunnerState((prev) => ({ ...prev, language: lang }))
+        }
         getLanguageLabel={getCodeLanguageLabel}
       />
     </>

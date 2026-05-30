@@ -4,12 +4,12 @@
  * @access mentor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getDiscussions,
   getUserDiscussionStats,
   getUserBootcampEnrollments,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import { DiscussionErrorBoundary } from '@/app/_components/discussions';
 import MemberHelpDeskClient from '@/app/account/member/discussions/_components/MemberHelpDeskClient';
 
@@ -19,7 +19,10 @@ export default async function MentorDiscussionsPage() {
   const { session, user } = await requireRole('mentor');
 
   const [discussionsResult, stats, bootcamps] = await Promise.all([
-    getDiscussions({ userId: user.id, limit: 50 }).catch(() => ({ data: [], total: 0 })),
+    getDiscussions({ userId: user.id, limit: 50 }).catch(() => ({
+      data: [],
+      total: 0,
+    })),
     getUserDiscussionStats(user.id).catch(() => ({})),
     getUserBootcampEnrollments(user.id).catch(() => []),
   ]);

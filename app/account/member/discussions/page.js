@@ -7,12 +7,12 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getDiscussions,
   getUserDiscussionStats,
   getUserBootcampEnrollments,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import { DiscussionErrorBoundary } from '@/app/_components/discussions';
 import MemberHelpDeskClient from './_components/MemberHelpDeskClient';
 

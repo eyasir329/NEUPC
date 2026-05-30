@@ -1,10 +1,15 @@
+/**
+ * @file Dashboard topbar component
+ * @module DashboardTopbar
+ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bell, ChevronRight, Search } from 'lucide-react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import { buildBreadcrumbs } from './breadcrumbConfig';
 import { getRoleTheme } from './roleTheme';
 
@@ -21,7 +26,9 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const notifHref = activeRole ? `/account/${activeRole}/notifications` : '/account';
+  const notifHref = activeRole
+    ? `/account/${activeRole}/notifications`
+    : '/account';
 
   return (
     <header
@@ -30,25 +37,43 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
         scrolled
           ? 'border-[#1E293B] bg-[#0B1121]/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]'
           : 'border-[#1E293B] bg-[#0B1121]/80',
-        'pl-14 pr-3 sm:pl-16 sm:pr-4 md:pl-5 md:pr-5 lg:pl-6 lg:pr-6 xl:pl-8 xl:pr-8 2xl:pl-10 2xl:pr-10',
+        'pr-3 pl-14 sm:pr-4 sm:pl-16 md:pr-5 md:pl-5 lg:pr-6 lg:pl-6 xl:pr-8 xl:pl-8 2xl:pr-10 2xl:pl-10',
         'sm:gap-3'
       )}
     >
       {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 items-center gap-1.5 text-[12.5px]"
+      >
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
           const hideOnMobile = !isLast && i < crumbs.length - 2;
           return (
             <span
               key={c.href}
-              className={cn('flex shrink-0 items-center gap-1.5', hideOnMobile && 'hidden sm:flex')}
+              className={cn(
+                'flex shrink-0 items-center gap-1.5',
+                hideOnMobile && 'hidden sm:flex'
+              )}
             >
-              {i > 0 && <ChevronRight className="h-3 w-3 text-slate-600" strokeWidth={2} />}
+              {i > 0 && (
+                <ChevronRight
+                  className="h-3 w-3 text-slate-600"
+                  strokeWidth={2}
+                />
+              )}
               {isLast ? (
-                <span className={cn('truncate font-semibold', theme.accentText)}>{c.label}</span>
+                <span
+                  className={cn('truncate font-semibold', theme.accentText)}
+                >
+                  {c.label}
+                </span>
               ) : (
-                <Link href={c.href} className="truncate text-slate-500 transition-colors hover:text-slate-300">
+                <Link
+                  href={c.href}
+                  className="truncate text-slate-500 transition-colors hover:text-slate-300"
+                >
                   {c.label}
                 </Link>
               )}
@@ -73,15 +98,23 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
         className="hidden h-9 items-center gap-2 rounded-full border border-[#1E293B] bg-[#131B2C] px-3 text-[12.5px] text-slate-500 transition-colors hover:border-[#334155] hover:bg-[#1A233A] hover:text-slate-300 md:flex md:w-52 lg:w-64 xl:w-80"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
-        <span className="flex-1 text-left truncate">Search events, resources…</span>
-        <kbd className="shrink-0 rounded-full border border-[#1E293B] bg-[#0B1121] px-1.5 py-0.5 font-mono text-[10px] text-slate-400">⌘K</kbd>
+        <span className="flex-1 truncate text-left">
+          Search events, resources…
+        </span>
+        <kbd className="shrink-0 rounded-full border border-[#1E293B] bg-[#0B1121] px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+          ⌘K
+        </kbd>
       </button>
 
       {/* Notifications */}
       <Link
         href={notifHref}
-        aria-label={notificationCount > 0 ? `Notifications, ${notificationCount} unread` : 'Notifications'}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#1E293B] bg-[#131B2C] text-slate-400 transition-colors hover:border-[#334155] hover:bg-[#1A233A] hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-white/40 outline-none"
+        aria-label={
+          notificationCount > 0
+            ? `Notifications, ${notificationCount} unread`
+            : 'Notifications'
+        }
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#1E293B] bg-[#131B2C] text-slate-400 transition-colors outline-none hover:border-[#334155] hover:bg-[#1A233A] hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-white/40"
       >
         <Bell className="h-4 w-4" />
         {notificationCount > 0 && (

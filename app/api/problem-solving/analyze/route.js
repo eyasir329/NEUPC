@@ -10,18 +10,18 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { verifyExtensionToken } from '@/app/_lib/extension-auth';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { verifyExtensionToken } from '@/app/_lib/auth/extension-auth';
 import {
   analyzeProblem,
   isLLMAvailable,
   getLLMProviderInfo,
-} from '@/app/_lib/llm';
+} from '@/app/_lib/integrations/llm';
 import {
   isV2SchemaAvailable,
   V2_TABLES,
-} from '@/app/_lib/problem-solving-v2-helpers';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 // CORS headers for browser extension requests
 const corsHeaders = {

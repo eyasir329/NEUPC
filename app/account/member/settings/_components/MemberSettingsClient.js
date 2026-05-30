@@ -1,3 +1,8 @@
+/**
+ * @file Member settings client component
+ * @module MemberSettingsClient
+ */
+
 'use client';
 
 import { useState, useTransition, useRef, useCallback, useEffect } from 'react';
@@ -37,12 +42,12 @@ import {
 } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
-import { updateMemberInfoAction } from '@/app/_lib/member-profile-actions';
+import { updateMemberInfoAction } from '@/app/_lib/actions/member-profile-actions';
 import {
   uploadAvatarAction,
   removeAvatarAction,
-} from '@/app/_lib/avatar-actions';
-import { signOutAction } from '@/app/_lib/actions';
+} from '@/app/_lib/actions/avatar-actions';
+import { signOutAction } from '@/app/_lib/actions/actions';
 import {
   ActionButton,
   GlassCard,
@@ -55,13 +60,12 @@ import {
   PageShell,
   TabBar,
   PageHeader,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
-
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
 const SECTIONS = [
@@ -81,8 +85,6 @@ const STATUS_META = {
   rejected: { label: 'Application Rejected', tone: 'rose' },
 };
 
-
-
 // ─── Field block ───────────────────────────────────────────────────────────────
 function Field({ label, children }) {
   return (
@@ -99,7 +101,7 @@ function Field({ label, children }) {
 function Input({ className = '', ...props }) {
   return (
     <input
-      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] text-white placeholder-white/20 outline-none focus:border-white/20 focus:bg-white/[0.06] transition ${className}`}
+      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] text-white placeholder-white/20 transition outline-none focus:border-white/20 focus:bg-white/[0.06] ${className}`}
       {...props}
     />
   );
@@ -176,7 +178,6 @@ function RadioGroup({ label, value, onChange, options }) {
     </div>
   );
 }
-
 
 // ─── Avatar Crop Modal ────────────────────────────────────────────────────────
 function AvatarCropModal({ src, onApply, onCancel }) {
@@ -442,8 +443,13 @@ function AvatarUploader({ user }) {
 
       <div className="flex flex-col items-center gap-6 sm:flex-row">
         <div className="relative shrink-0">
-          <Avatar user={user} size="xl" src={isImage ? user.avatar_url : null} name={user.full_name} />
-          <label className="absolute -bottom-1 -right-1 flex size-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-gray-900 text-white shadow-xl transition-transform hover:scale-110">
+          <Avatar
+            user={user}
+            size="xl"
+            src={isImage ? user.avatar_url : null}
+            name={user.full_name}
+          />
+          <label className="absolute -right-1 -bottom-1 flex size-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-gray-900 text-white shadow-xl transition-transform hover:scale-110">
             {uploading ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
@@ -466,9 +472,19 @@ function AvatarUploader({ user }) {
           </p>
           <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
             <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-[12px] font-bold text-violet-300 transition hover:bg-violet-500/20">
-              {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              {uploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Upload className="size-3.5" />
+              )}
               {uploading ? 'Uploading...' : 'Upload new'}
-              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleFileChange} />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={handleFileChange}
+              />
             </label>
             {isImage && (
               <ActionButton icon={Move} onClick={handleRelocate} tone="ghost">
@@ -476,13 +492,18 @@ function AvatarUploader({ user }) {
               </ActionButton>
             )}
             {isImage && (
-              <ActionButton icon={Trash2} onClick={handleRemove} tone="danger" disabled={removing}>
+              <ActionButton
+                icon={Trash2}
+                onClick={handleRemove}
+                tone="danger"
+                disabled={removing}
+              >
                 {removing ? 'Removing...' : 'Remove'}
               </ActionButton>
             )}
           </div>
           {error && (
-            <p className="mt-3 text-[11px] text-rose-400 flex items-center gap-1.5">
+            <p className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-400">
               <AlertTriangle className="size-3.5" /> {error}
             </p>
           )}
@@ -531,21 +552,39 @@ function AccountSection({ user }) {
         <div className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Pill tone={meta.tone} icon={Shield}>{meta.label}</Pill>
-              {user.email_verified && <Pill tone="emerald" icon={BadgeCheck}>Verified Email</Pill>}
-              {user.phone_verified && <Pill tone="sky" icon={Phone}>Verified Phone</Pill>}
+              <Pill tone={meta.tone} icon={Shield}>
+                {meta.label}
+              </Pill>
+              {user.email_verified && (
+                <Pill tone="emerald" icon={BadgeCheck}>
+                  Verified Email
+                </Pill>
+              )}
+              {user.phone_verified && (
+                <Pill tone="sky" icon={Phone}>
+                  Verified Phone
+                </Pill>
+              )}
             </div>
-            <div className="text-right text-[11px] text-gray-500 font-medium">
+            <div className="text-right text-[11px] font-medium text-gray-500">
               {user.created_at && (
-                <p>Joined {new Date(user.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+                <p>
+                  Joined{' '}
+                  {new Date(user.created_at).toLocaleDateString(undefined, {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
               )}
               {user.last_login && (
-                <p>Last active {new Date(user.last_login).toLocaleDateString()}</p>
+                <p>
+                  Last active {new Date(user.last_login).toLocaleDateString()}
+                </p>
               )}
             </div>
           </div>
           {user.status_reason && (
-            <div className="mt-4 flex items-start gap-2 rounded-lg bg-white/[0.02] p-3 border border-white/[0.04]">
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-white/[0.04] bg-white/[0.02] p-3">
               <Info className="mt-0.5 size-3.5 shrink-0 text-gray-400" />
               <p className="text-[12px] text-gray-400">{user.status_reason}</p>
             </div>
@@ -576,7 +615,11 @@ function AccountSection({ user }) {
             accent="indigo"
           />
           {!editing && (
-            <ActionButton icon={Pencil} onClick={() => setEditing(true)} tone="ghost">
+            <ActionButton
+              icon={Pencil}
+              onClick={() => setEditing(true)}
+              tone="ghost"
+            >
               Edit
             </ActionButton>
           )}
@@ -586,14 +629,27 @@ function AccountSection({ user }) {
             <form action={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Display Name">
-                  <Input name="full_name" defaultValue={user.full_name} placeholder="e.g. John Doe" />
+                  <Input
+                    name="full_name"
+                    defaultValue={user.full_name}
+                    placeholder="e.g. John Doe"
+                  />
                 </Field>
                 <Field label="Phone Number">
-                  <Input name="phone" defaultValue={user.phone ?? ''} placeholder="+880 1XXX XXXXXX" type="tel" />
+                  <Input
+                    name="phone"
+                    defaultValue={user.phone ?? ''}
+                    placeholder="+880 1XXX XXXXXX"
+                    type="tel"
+                  />
                 </Field>
               </div>
               <Field label="Email Address (Linked via OAuth)">
-                <Input defaultValue={user.email} readOnly className="opacity-60" />
+                <Input
+                  defaultValue={user.email}
+                  readOnly
+                  className="opacity-60"
+                />
               </Field>
 
               {error && (
@@ -608,11 +664,23 @@ function AccountSection({ user }) {
               )}
 
               <div className="flex items-center gap-2">
-                <button type="submit" disabled={isPending} className="flex items-center gap-2 rounded-xl bg-violet-500/20 border border-violet-500/30 px-5 py-2.5 text-[12.5px] font-bold text-violet-300 transition hover:bg-violet-500/30">
-                  {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/20 px-5 py-2.5 text-[12.5px] font-bold text-violet-300 transition hover:bg-violet-500/30"
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
                   Save Changes
                 </button>
-                <ActionButton icon={X} onClick={() => setEditing(false)} tone="ghost">
+                <ActionButton
+                  icon={X}
+                  onClick={() => setEditing(false)}
+                  tone="ghost"
+                >
                   Cancel
                 </ActionButton>
               </div>
@@ -621,8 +689,16 @@ function AccountSection({ user }) {
             <div className="space-y-1">
               <InfoRow icon={User} label="Full Name" value={user.full_name} />
               <InfoRow icon={Mail} label="Email Address" value={user.email} />
-              <InfoRow icon={Phone} label="Phone Number" value={user.phone || "Not set"} />
-              <InfoRow icon={Globe} label="Auth Provider" value={user.provider?.toUpperCase() || "Password"} />
+              <InfoRow
+                icon={Phone}
+                label="Phone Number"
+                value={user.phone || 'Not set'}
+              />
+              <InfoRow
+                icon={Globe}
+                label="Auth Provider"
+                value={user.provider?.toUpperCase() || 'Password'}
+              />
             </div>
           )}
         </div>
@@ -682,10 +758,11 @@ function NotificationsSection() {
             onChange={setWeeklyDigest}
           />
         </div>
-        <div className="flex items-start gap-2 border-t border-white/[0.04] px-5 py-4 bg-white/[0.01]">
+        <div className="flex items-start gap-2 border-t border-white/[0.04] bg-white/[0.01] px-5 py-4">
           <Info className="mt-0.5 size-3.5 shrink-0 text-gray-500" />
           <p className="text-[11px] leading-relaxed text-gray-500">
-            Email delivery is managed at the club level. These preferences are currently saved in your browser session for this visit.
+            Email delivery is managed at the club level. These preferences are
+            currently saved in your browser session for this visit.
           </p>
         </div>
       </GlassCard>
@@ -737,17 +814,19 @@ function AppearanceSection() {
               { value: 'compact', label: 'Compact' },
             ]}
           />
-          
-          <div className="py-4 last:border-0 border-b border-white/[0.04]">
-            <p className="mb-3 text-[13px] font-semibold text-gray-200">Accent Color</p>
+
+          <div className="border-b border-white/[0.04] py-4 last:border-0">
+            <p className="mb-3 text-[13px] font-semibold text-gray-200">
+              Accent Color
+            </p>
             <div className="flex gap-4">
               {ACCENTS.map((a) => (
                 <button
                   key={a.value}
                   onClick={() => setAccent(a.value)}
                   className={`relative flex size-9 items-center justify-center rounded-xl transition-all hover:scale-110 ${
-                    accent === a.value 
-                      ? 'ring-2 ring-white/40 ring-offset-4 ring-offset-gray-950' 
+                    accent === a.value
+                      ? 'ring-2 ring-white/40 ring-offset-4 ring-offset-gray-950'
                       : 'hover:ring-1 hover:ring-white/20'
                   } ${a.color}`}
                 >
@@ -758,7 +837,8 @@ function AppearanceSection() {
               ))}
             </div>
             <p className="mt-4 text-[11px] text-gray-500">
-              Appearance settings are stored locally. Full persistence is coming in a future update.
+              Appearance settings are stored locally. Full persistence is coming
+              in a future update.
             </p>
           </div>
         </div>
@@ -780,14 +860,16 @@ function SecuritySection({ user }) {
             accent="indigo"
           />
         </div>
-        <div className="p-5 space-y-4">
+        <div className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="flex items-center gap-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-indigo-400">
                 <KeyRound className="size-5" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-white">Authentication Method</p>
+                <p className="text-[14px] font-medium text-white">
+                  Authentication Method
+                </p>
                 <p className="text-[12px] text-gray-500">
                   {user.provider
                     ? `Managed by ${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} OAuth`
@@ -796,7 +878,9 @@ function SecuritySection({ user }) {
               </div>
             </div>
             {user.provider && (
-              <Pill tone="blue" icon={Globe}>OAuth Enabled</Pill>
+              <Pill tone="blue" icon={Globe}>
+                OAuth Enabled
+              </Pill>
             )}
           </div>
 
@@ -804,9 +888,12 @@ function SecuritySection({ user }) {
             <div className="flex items-start gap-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-400" />
               <div>
-                <p className="text-[14px] font-bold text-rose-400">Account Restricted</p>
+                <p className="text-[14px] font-bold text-rose-400">
+                  Account Restricted
+                </p>
                 <p className="text-[12px] text-rose-400/70">
-                  Temporary suspension active until {new Date(user.suspension_expires_at).toLocaleDateString()}
+                  Temporary suspension active until{' '}
+                  {new Date(user.suspension_expires_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -834,11 +921,26 @@ function SecuritySection({ user }) {
 // ─── Section: Connected accounts ──────────────────────────────────────────────
 function ConnectedSection({ user }) {
   const platforms = [
-    { label: 'Google', key: 'google', icon: Globe, connected: user.provider === 'google' },
-    { label: 'GitHub', key: 'github', icon: Code2, connected: user.provider === 'github' },
-    { label: 'Facebook', key: 'facebook', icon: Globe, connected: user.provider === 'facebook' },
+    {
+      label: 'Google',
+      key: 'google',
+      icon: Globe,
+      connected: user.provider === 'google',
+    },
+    {
+      label: 'GitHub',
+      key: 'github',
+      icon: Code2,
+      connected: user.provider === 'github',
+    },
+    {
+      label: 'Facebook',
+      key: 'facebook',
+      icon: Globe,
+      connected: user.provider === 'facebook',
+    },
   ];
-  
+
   return (
     <div className="space-y-6">
       <GlassCard padding="p-0">
@@ -852,20 +954,29 @@ function ConnectedSection({ user }) {
         </div>
         <div className="divide-y divide-white/[0.04]">
           {platforms.map((p) => (
-            <div key={p.key} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.01] transition-colors">
+            <div
+              key={p.key}
+              className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-white/[0.01]"
+            >
               <div className="flex items-center gap-4">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-gray-400">
                   <p.icon className="size-5" />
                 </div>
                 <div>
-                  <p className="text-[14px] font-medium text-white">{p.label}</p>
+                  <p className="text-[14px] font-medium text-white">
+                    {p.label}
+                  </p>
                   <p className="text-[12px] text-gray-500">
-                    {p.connected ? 'Currently used for login' : 'Not linked to this account'}
+                    {p.connected
+                      ? 'Currently used for login'
+                      : 'Not linked to this account'}
                   </p>
                 </div>
               </div>
               {p.connected ? (
-                <Pill tone="emerald" icon={Check}>Connected</Pill>
+                <Pill tone="emerald" icon={Check}>
+                  Connected
+                </Pill>
               ) : (
                 <ActionButton tone="ghost">Connect</ActionButton>
               )}
@@ -881,7 +992,10 @@ function ConnectedSection({ user }) {
 function DangerSection() {
   return (
     <div className="space-y-6">
-      <GlassCard padding="p-0" className="border-rose-500/20 bg-rose-500/[0.02]">
+      <GlassCard
+        padding="p-0"
+        className="border-rose-500/20 bg-rose-500/[0.02]"
+      >
         <div className="border-b border-rose-500/10 px-5 py-4">
           <SectionHeader
             icon={AlertTriangle}
@@ -890,25 +1004,34 @@ function DangerSection() {
             accent="rose"
           />
         </div>
-        <div className="p-5 space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+        <div className="space-y-4 p-5">
+          <div className="flex flex-col gap-4 rounded-xl border border-white/[0.04] bg-white/[0.01] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[14px] font-semibold text-white">Sign Out</p>
-              <p className="text-[12px] text-gray-500">End your current session on this device</p>
+              <p className="text-[12px] text-gray-500">
+                End your current session on this device
+              </p>
             </div>
             <form action={signOutAction}>
-              <button type="submit" className="flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white/[0.1]">
+              <button
+                type="submit"
+                className="flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white/[0.1]"
+              >
                 <LogOut className="size-4" /> Sign out
               </button>
             </form>
           </div>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-rose-500/20 bg-rose-500/10">
+          <div className="flex flex-col gap-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[14px] font-bold text-rose-400">Delete Account</p>
-              <p className="text-[12px] text-rose-400/70">Permanently remove all your data and access</p>
+              <p className="text-[14px] font-bold text-rose-400">
+                Delete Account
+              </p>
+              <p className="text-[12px] text-rose-400/70">
+                Permanently remove all your data and access
+              </p>
             </div>
-            <button className="flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[12.5px] font-bold text-white transition hover:bg-rose-600 shadow-lg shadow-rose-500/20">
+            <button className="flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[12.5px] font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-600">
               Delete account
             </button>
           </div>
@@ -917,7 +1040,6 @@ function DangerSection() {
     </div>
   );
 }
-
 
 export default function MemberSettingsClient({ user }) {
   const [active, setActive] = useState(() => {
@@ -946,7 +1068,11 @@ export default function MemberSettingsClient({ user }) {
     danger: <DangerSection />,
   };
 
-  const uiTabs = SECTIONS.map((s) => ({ value: s.id, label: s.label, icon: s.icon }));
+  const uiTabs = SECTIONS.map((s) => ({
+    value: s.id,
+    label: s.label,
+    icon: s.icon,
+  }));
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">

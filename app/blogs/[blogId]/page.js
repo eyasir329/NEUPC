@@ -7,12 +7,15 @@ import { notFound } from 'next/navigation';
 import {
   getPublicBlogBySlug,
   getPublicBlogsByCategory,
-} from '@/app/_lib/public-actions';
-import { getBlogComments, getUserByEmail } from '@/app/_lib/data-service';
-import { auth } from '@/app/_lib/auth';
+} from '@/app/_lib/actions/public-actions';
+import {
+  getBlogComments,
+  getUserByEmail,
+} from '@/app/_lib/services/data-service';
+import { auth } from '@/app/_lib/auth/auth';
 import { ArticleJsonLd, BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 import BlogDetailClient from './BlogDetailClient';
-import { buildArticleMetadata } from '@/app/_lib/seo';
+import { buildArticleMetadata } from '@/app/_lib/config/seo';
 
 export async function generateMetadata({ params }) {
   const { blogId } = await params;

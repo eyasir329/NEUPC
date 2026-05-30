@@ -5,8 +5,8 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getActiveNotices } from '@/app/_lib/data-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getActiveNotices } from '@/app/_lib/services/data-service';
 import AdvisorNoticesClient from './_components/AdvisorNoticesClient';
 
 export const metadata = { title: 'Inbox | Advisor | NEUPC' };

@@ -1,9 +1,14 @@
+/**
+ * @file Handle connection component
+ * @module HandleConnection
+ */
+
 'use client';
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Plus, X, RefreshCw, Loader2 } from 'lucide-react';
-import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/problem-solving-platforms';
+import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
 
 const PLATFORMS = PROBLEM_SOLVING_PLATFORMS.map((p) => ({
   id: p.id,

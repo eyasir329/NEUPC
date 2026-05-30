@@ -1,3 +1,8 @@
+/**
+ * @file Mentor sessions client component
+ * @module MentorSessionsClient
+ */
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -5,13 +10,38 @@ import dynamic from 'next/dynamic';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/2" /> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/2" />
+    ),
+  }
 );
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Video, Plus, Search, X, Calendar, Clock, CheckCircle2, XCircle, Check,
-  MessageSquare, Trash2, Loader2, User, Users, GraduationCap,
-  AlertCircle, BookOpen, Tv, ExternalLink, Upload, Film, Pencil, MapPin,
+  Video,
+  Plus,
+  Search,
+  X,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Check,
+  MessageSquare,
+  Trash2,
+  Loader2,
+  User,
+  Users,
+  GraduationCap,
+  AlertCircle,
+  BookOpen,
+  Tv,
+  ExternalLink,
+  Upload,
+  Film,
+  Pencil,
+  MapPin,
 } from 'lucide-react';
 import {
   updateSessionNotesAction,
@@ -23,11 +53,20 @@ import {
   endSessionAction,
   saveSessionAttendanceAction,
   uploadSessionRecordingAction,
-} from '@/app/_lib/mentor-actions';
-import { useScrollLock } from '@/app/_lib/hooks';
+} from '@/app/_lib/actions/mentor-actions';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 import {
-  PageShell, PageHeader, GlassCard, StatCard, Avatar, Pill, ActionButton, EmptyState, TabBar, StaggerList
-} from '@/app/account/mentor/_components/_ui';
+  PageShell,
+  PageHeader,
+  GlassCard,
+  StatCard,
+  Avatar,
+  Pill,
+  ActionButton,
+  EmptyState,
+  TabBar,
+  StaggerList,
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 function descriptionPreview(desc) {
@@ -35,10 +74,18 @@ function descriptionPreview(desc) {
   try {
     const blocks = JSON.parse(desc);
     if (Array.isArray(blocks)) {
-      return blocks.map(b => b.content || '').join(' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return blocks
+        .map((b) => b.content || '')
+        .join(' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     }
   } catch {}
-  return desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return desc
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function TaskDescriptionRenderer({ content }) {
@@ -47,7 +94,7 @@ function TaskDescriptionRenderer({ content }) {
   try {
     const blocks = typeof content === 'string' ? JSON.parse(content) : content;
     if (Array.isArray(blocks)) {
-      html = blocks.map(b => b.content || '').join('');
+      html = blocks.map((b) => b.content || '').join('');
     } else {
       html = content;
     }
@@ -56,13 +103,27 @@ function TaskDescriptionRenderer({ content }) {
   }
   if (!html) return null;
   return (
-    <div className="tiptap-viewer-content text-[13px] text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: html }} />
+    <div
+      className="tiptap-viewer-content text-[13px] whitespace-pre-wrap text-gray-300"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
-const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const formatDate = (d) =>
+  new Date(d).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 const formatDatetime = (d) =>
-  new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(d).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 export default function MentorSessionsClient({
   mentorships: rawMentorships = [],
@@ -114,11 +175,18 @@ export default function MentorSessionsClient({
       return (m.mentorship_sessions || [])
         .filter((s) => s.status !== 'scheduled' && s.status !== 'cancelled')
         .map((s) => {
-          const ad = s.attendance_data && s.attendance_data.length > 0
-            ? s.attendance_data
-            : mentee?.id
-            ? [{ user_id: mentee.id, attended: s.attended ?? true, points: s.points || 0 }]
-            : [];
+          const ad =
+            s.attendance_data && s.attendance_data.length > 0
+              ? s.attendance_data
+              : mentee?.id
+                ? [
+                    {
+                      user_id: mentee.id,
+                      attended: s.attended ?? true,
+                      points: s.points || 0,
+                    },
+                  ]
+                : [];
           return {
             ...s,
             menteeName: mentee?.full_name || 'Unknown',
@@ -160,21 +228,27 @@ export default function MentorSessionsClient({
         meet_link: null,
         targetType: s.targetType,
         bootcampTitle: (() => {
-          const bc = bootcamps.find(b => b.id === s.bootcamp_id);
+          const bc = bootcamps.find((b) => b.id === s.bootcamp_id);
           const title = s.bootcampTitle || bc?.title || '';
           if (bc && bc.status !== 'published') {
             return `${title} (Archived)`;
           }
           return title;
         })(),
-        menteeName: s.targetType === 'one-on-one'
-          ? (s.targetStudentName || 'Unknown')
-          : s.targetType === 'selected-group'
-          ? (s.targetStudentNames?.join(', ') || 'Group')
-          : (s.bootcampTitle ? `${s.bootcampTitle} — All` : 'All enrolled'),
-        menteeAvatars: s.targetType === 'one-on-one'
-          ? (s.targetStudentAvatar ? [s.targetStudentAvatar] : [])
-          : (s.targetStudentAvatars ?? []),
+        menteeName:
+          s.targetType === 'one-on-one'
+            ? s.targetStudentName || 'Unknown'
+            : s.targetType === 'selected-group'
+              ? s.targetStudentNames?.join(', ') || 'Group'
+              : s.bootcampTitle
+                ? `${s.bootcampTitle} — All`
+                : 'All enrolled',
+        menteeAvatars:
+          s.targetType === 'one-on-one'
+            ? s.targetStudentAvatar
+              ? [s.targetStudentAvatar]
+              : []
+            : (s.targetStudentAvatars ?? []),
         menteeAvatar: s.targetStudentAvatar ?? null,
         mentorship_id: null,
         attendance_data: ad,
@@ -199,21 +273,27 @@ export default function MentorSessionsClient({
       meet_link: null,
       targetType: s.targetType,
       bootcampTitle: (() => {
-        const bc = bootcamps.find(b => b.id === s.bootcamp_id);
+        const bc = bootcamps.find((b) => b.id === s.bootcamp_id);
         const title = s.bootcampTitle || bc?.title || '';
         if (bc && bc.status !== 'published') {
           return `${title} (Archived)`;
         }
         return title;
       })(),
-      menteeName: s.targetType === 'one-on-one'
-        ? (s.targetStudentName || 'Unknown')
-        : s.targetType === 'selected-group'
-        ? (s.targetStudentNames?.join(', ') || 'Group')
-        : (s.bootcampTitle ? `${s.bootcampTitle} — All` : 'All enrolled'),
-      menteeAvatars: s.targetType === 'one-on-one'
-        ? (s.targetStudentAvatar ? [s.targetStudentAvatar] : [])
-        : (s.targetStudentAvatars ?? []),
+      menteeName:
+        s.targetType === 'one-on-one'
+          ? s.targetStudentName || 'Unknown'
+          : s.targetType === 'selected-group'
+            ? s.targetStudentNames?.join(', ') || 'Group'
+            : s.bootcampTitle
+              ? `${s.bootcampTitle} — All`
+              : 'All enrolled',
+      menteeAvatars:
+        s.targetType === 'one-on-one'
+          ? s.targetStudentAvatar
+            ? [s.targetStudentAvatar]
+            : []
+          : (s.targetStudentAvatars ?? []),
       menteeAvatar: s.targetStudentAvatar ?? null,
       mentorship_id: null,
       attendance_data: ad,
@@ -227,7 +307,8 @@ export default function MentorSessionsClient({
       const now = Date.now();
       setScheduled((prev) => {
         const expired = prev.filter((s) => {
-          const endMs = new Date(s.scheduled_at).getTime() + (s.duration || 60) * 60_000;
+          const endMs =
+            new Date(s.scheduled_at).getTime() + (s.duration || 60) * 60_000;
           return endMs <= now;
         });
         if (expired.length === 0) return prev;
@@ -236,7 +317,8 @@ export default function MentorSessionsClient({
           ...prevSessions,
         ]);
         return prev.filter((s) => {
-          const endMs = new Date(s.scheduled_at).getTime() + (s.duration || 60) * 60_000;
+          const endMs =
+            new Date(s.scheduled_at).getTime() + (s.duration || 60) * 60_000;
           return endMs > now;
         });
       });
@@ -248,7 +330,10 @@ export default function MentorSessionsClient({
 
   const handleEndSession = (session, attendanceData) => {
     setScheduled((prev) => prev.filter((s) => s.id !== session.id));
-    setSessions((prev) => [scheduledToPast(session, attendanceData ?? []), ...prev]);
+    setSessions((prev) => [
+      scheduledToPast(session, attendanceData ?? []),
+      ...prev,
+    ]);
   };
 
   const allSessions = sessions;
@@ -257,13 +342,20 @@ export default function MentorSessionsClient({
   const pastStats = {
     total: allSessions.length,
     attended: allSessions.filter((s) =>
-      s.attendance_data?.length > 0 ? s.attendance_data.some((r) => r.attended) : s.attended
+      s.attendance_data?.length > 0
+        ? s.attendance_data.some((r) => r.attended)
+        : s.attended
     ).length,
     thisMonth: allSessions.filter((s) => {
       const d = new Date(s.session_date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      return (
+        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      );
     }).length,
-    totalHours: Math.round((allSessions.reduce((acc, s) => acc + (s.duration || 0), 0) / 60) * 10) / 10,
+    totalHours:
+      Math.round(
+        (allSessions.reduce((acc, s) => acc + (s.duration || 0), 0) / 60) * 10
+      ) / 10,
   };
 
   return (
@@ -276,17 +368,44 @@ export default function MentorSessionsClient({
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={Tv} label="Scheduled" value={scheduled.length} accent="violet" delay={0} sublabel="Upcoming sessions" />
-        <StatCard icon={CheckCircle2} label="Completed" value={pastStats.total} accent="blue" delay={0.05} sublabel="Past sessions" />
+        <StatCard
+          icon={Tv}
+          label="Scheduled"
+          value={scheduled.length}
+          accent="violet"
+          delay={0}
+          sublabel="Upcoming sessions"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Completed"
+          value={pastStats.total}
+          accent="blue"
+          delay={0.05}
+          sublabel="Past sessions"
+        />
         <StatCard
           icon={Users}
           label="Attendance rate"
-          value={pastStats.total ? `${Math.round((pastStats.attended / pastStats.total) * 100)}%` : '0%'}
+          value={
+            pastStats.total
+              ? `${Math.round((pastStats.attended / pastStats.total) * 100)}%`
+              : '0%'
+          }
           accent="emerald"
           delay={0.1}
-          sublabel={pastStats.total ? `${pastStats.attended} present` : 'No data yet'}
+          sublabel={
+            pastStats.total ? `${pastStats.attended} present` : 'No data yet'
+          }
         />
-        <StatCard icon={Clock} label="Hours logged" value={`${pastStats.totalHours}h`} accent="amber" delay={0.15} sublabel="Total session time" />
+        <StatCard
+          icon={Clock}
+          label="Hours logged"
+          value={`${pastStats.totalHours}h`}
+          accent="amber"
+          delay={0.15}
+          sublabel="Total session time"
+        />
       </div>
 
       <div>
@@ -294,8 +413,18 @@ export default function MentorSessionsClient({
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: 'rooms', label: 'Scheduled sessions', icon: Tv, count: scheduled.length },
-            { value: 'past',  label: 'History',            icon: Clock, count: allSessions.length },
+            {
+              value: 'rooms',
+              label: 'Scheduled sessions',
+              icon: Tv,
+              count: scheduled.length,
+            },
+            {
+              value: 'past',
+              label: 'History',
+              icon: Clock,
+              count: allSessions.length,
+            },
           ]}
         />
       </div>
@@ -330,13 +459,25 @@ export default function MentorSessionsClient({
 
 // ─── Scheduled Rooms (Scheduler + List) ───────────────────────────────────────
 
-function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, setScheduled, onEndSession, logMode = false, setLogMode, setSessions }) {
+function ScheduledRoomsView({
+  bootcamps,
+  mentorships: _mentorships,
+  scheduled,
+  setScheduled,
+  onEndSession,
+  logMode = false,
+  setLogMode,
+  setSessions,
+}) {
   const [search, setSearch] = useState('');
 
   // Form state
-  const activeBootcamps = useMemo(() => bootcamps.filter(bc => bc.status === 'published'), [bootcamps]);
+  const activeBootcamps = useMemo(
+    () => bootcamps.filter((bc) => bc.status === 'published'),
+    [bootcamps]
+  );
   const [bootcampId, setBootcampId] = useState(() => {
-    const active = bootcamps.filter(bc => bc.status === 'published');
+    const active = bootcamps.filter((bc) => bc.status === 'published');
     return active[0]?.id ?? '';
   });
   const [topic, setTopic] = useState('');
@@ -346,8 +487,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   const [groupSearch, setGroupSearch] = useState('');
   const [when, setWhen] = useState('');
   const [duration, setDuration] = useState(60);
-  const [description, setDescription] = useState(
-    () => JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
+  const [description, setDescription] = useState(() =>
+    JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }])
   );
   const [submitting, setSubmitting] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
@@ -362,21 +503,29 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
 
   const handleStartEdit = (session) => {
     setEditingSession(session);
-    setBootcampId(session.bootcamp_id || session.bootcampId || bootcamps[0]?.id || '');
+    setBootcampId(
+      session.bootcamp_id || session.bootcampId || bootcamps[0]?.id || ''
+    );
     setTopic(session.topic || '');
     setTargetType(session.target_type || session.targetType || 'all-bootcamp');
-    
+
     const rawIds = session.target_student_ids || session.targetStudentIds || [];
-    const stIds = Array.isArray(rawIds) ? rawIds : (typeof rawIds === 'string' ? rawIds.split(',') : []);
-    
+    const stIds = Array.isArray(rawIds)
+      ? rawIds
+      : typeof rawIds === 'string'
+        ? rawIds.split(',')
+        : [];
+
     setSingleId(session.targetStudentId || stIds[0] || '');
     setGroupIds(stIds);
-    
+
     if (session.scheduled_at) {
       try {
         const d = new Date(session.scheduled_at);
         const tzOffset = d.getTimezoneOffset() * 60000;
-        const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+        const localISOTime = new Date(d.getTime() - tzOffset)
+          .toISOString()
+          .slice(0, 16);
         setWhen(localISOTime);
       } catch (e) {
         setWhen(session.scheduled_at.slice(0, 16));
@@ -384,9 +533,14 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     } else {
       setWhen('');
     }
-    
+
     setDuration(session.duration || 60);
-    setDescription(session.description || JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setDescription(
+      session.description ||
+        JSON.stringify([
+          { id: crypto.randomUUID(), type: 'richText', content: '' },
+        ])
+    );
     setMode(session.location ? 'offline' : 'online');
     setLocation(session.location || '');
   };
@@ -394,7 +548,11 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   const handleCancelEdit = () => {
     setEditingSession(null);
     setTopic('');
-    setDescription(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+    setDescription(
+      JSON.stringify([
+        { id: crypto.randomUUID(), type: 'richText', content: '' },
+      ])
+    );
     setSingleId('');
     setGroupIds([]);
     setWhen('');
@@ -417,7 +575,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
       const s = students.find((s) => s.id === effectiveSingleId);
       if (s?.email) attendeeEmails = [s.email];
     } else if (targetType === 'selected-group') {
-      attendeeEmails = groupIds.map((id) => students.find((s) => s.id === id)?.email).filter(Boolean);
+      attendeeEmails = groupIds
+        .map((id) => students.find((s) => s.id === id)?.email)
+        .filter(Boolean);
     } else {
       attendeeEmails = students.map((s) => s.email).filter(Boolean);
     }
@@ -428,23 +588,30 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
       bootcampTitle = `${bootcampTitle} (Archived)`;
     }
 
-    const targetStudentName = targetType === 'one-on-one'
-      ? students.find((s) => s.id === effectiveSingleId)?.name || ''
-      : '';
-    const targetStudentAvatar = targetType === 'one-on-one'
-      ? students.find((s) => s.id === effectiveSingleId)?.avatar_url || null
-      : null;
-    const targetStudentNames = targetType === 'selected-group'
-      ? groupIds.map((id) => students.find((s) => s.id === id)?.name).filter(Boolean)
-      : [];
-    const targetStudentAvatars = targetType === 'selected-group'
-      ? groupIds.map((id) => students.find((s) => s.id === id)?.avatar_url || null)
-      : targetType === 'all-bootcamp'
-      ? students.map((s) => s.avatar_url || null)
-      : [];
-    const targetStudentNamesAll = targetType === 'all-bootcamp'
-      ? students.map((s) => s.name)
-      : [];
+    const targetStudentName =
+      targetType === 'one-on-one'
+        ? students.find((s) => s.id === effectiveSingleId)?.name || ''
+        : '';
+    const targetStudentAvatar =
+      targetType === 'one-on-one'
+        ? students.find((s) => s.id === effectiveSingleId)?.avatar_url || null
+        : null;
+    const targetStudentNames =
+      targetType === 'selected-group'
+        ? groupIds
+            .map((id) => students.find((s) => s.id === id)?.name)
+            .filter(Boolean)
+        : [];
+    const targetStudentAvatars =
+      targetType === 'selected-group'
+        ? groupIds.map(
+            (id) => students.find((s) => s.id === id)?.avatar_url || null
+          )
+        : targetType === 'all-bootcamp'
+          ? students.map((s) => s.avatar_url || null)
+          : [];
+    const targetStudentNamesAll =
+      targetType === 'all-bootcamp' ? students.map((s) => s.name) : [];
 
     const fd = new FormData();
     fd.set('topic', topic.trim());
@@ -453,7 +620,8 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
     fd.set('duration', String(duration));
     fd.set('bootcamp_id', bootcampId || '');
     fd.set('target_type', targetType);
-    fd.set('target_student_ids',
+    fd.set(
+      'target_student_ids',
       targetType === 'one-on-one' ? effectiveSingleId : groupIds.join(',')
     );
     fd.set('location', mode === 'offline' ? location.trim() : '');
@@ -467,21 +635,28 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
         return;
       }
 
-      const targetIds = targetType === 'one-on-one'
-        ? [effectiveSingleId]
-        : targetType === 'selected-group'
-        ? groupIds
-        : students.map((s) => s.id);
+      const targetIds =
+        targetType === 'one-on-one'
+          ? [effectiveSingleId]
+          : targetType === 'selected-group'
+            ? groupIds
+            : students.map((s) => s.id);
 
-      const menteeName = targetType === 'one-on-one'
-        ? targetStudentName || 'Unknown'
-        : targetType === 'selected-group'
-        ? (targetStudentNames.join(', ') || 'Group')
-        : (bootcampTitle ? `${bootcampTitle} — All` : 'All enrolled');
+      const menteeName =
+        targetType === 'one-on-one'
+          ? targetStudentName || 'Unknown'
+          : targetType === 'selected-group'
+            ? targetStudentNames.join(', ') || 'Group'
+            : bootcampTitle
+              ? `${bootcampTitle} — All`
+              : 'All enrolled';
 
-      const avatars = targetType === 'one-on-one'
-        ? (targetStudentAvatar ? [targetStudentAvatar] : [])
-        : targetStudentAvatars;
+      const avatars =
+        targetType === 'one-on-one'
+          ? targetStudentAvatar
+            ? [targetStudentAvatar]
+            : []
+          : targetStudentAvatars;
 
       setSessions?.((prev) => [
         {
@@ -498,7 +673,11 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
           menteeAvatars: avatars,
           menteeAvatar: targetStudentAvatar ?? null,
           mentorship_id: null,
-          attendance_data: targetIds.map((uid) => ({ user_id: uid, attended, points: 0 })),
+          attendance_data: targetIds.map((uid) => ({
+            user_id: uid,
+            attended,
+            points: 0,
+          })),
           recording_url: null,
           location: mode === 'offline' ? location.trim() : null,
         },
@@ -535,9 +714,19 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 bootcampTitle,
                 target_type: targetType,
                 targetType,
-                target_student_ids: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+                target_student_ids:
+                  targetType === 'one-on-one'
+                    ? [effectiveSingleId]
+                    : targetType === 'selected-group'
+                      ? groupIds
+                      : [],
                 targetStudentId: effectiveSingleId,
-                targetStudentIds: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+                targetStudentIds:
+                  targetType === 'one-on-one'
+                    ? [effectiveSingleId]
+                    : targetType === 'selected-group'
+                      ? groupIds
+                      : [],
                 targetStudentName,
                 targetStudentAvatar,
                 targetStudentNames,
@@ -574,9 +763,19 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
           bootcampTitle,
           target_type: targetType,
           targetType,
-          target_student_ids: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+          target_student_ids:
+            targetType === 'one-on-one'
+              ? [effectiveSingleId]
+              : targetType === 'selected-group'
+                ? groupIds
+                : [],
           targetStudentId: effectiveSingleId,
-          targetStudentIds: targetType === 'one-on-one' ? [effectiveSingleId] : (targetType === 'selected-group' ? groupIds : []),
+          targetStudentIds:
+            targetType === 'one-on-one'
+              ? [effectiveSingleId]
+              : targetType === 'selected-group'
+                ? groupIds
+                : [],
           targetStudentName,
           targetStudentAvatar,
           targetStudentNames,
@@ -592,7 +791,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
       toast.success(
         mode === 'offline'
           ? 'In-person session scheduled'
-          : result.meetLink ? 'Room scheduled — Meet link ready!' : 'Room scheduled (no Meet link)'
+          : result.meetLink
+            ? 'Room scheduled — Meet link ready!'
+            : 'Room scheduled (no Meet link)'
       );
       handleCancelEdit();
     }
@@ -617,7 +818,10 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   const filtered = scheduled.filter((s) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return s.topic.toLowerCase().includes(q) || (s.bootcampTitle || '').toLowerCase().includes(q);
+    return (
+      s.topic.toLowerCase().includes(q) ||
+      (s.bootcampTitle || '').toLowerCase().includes(q)
+    );
   });
 
   const submitDisabled =
@@ -631,41 +835,50 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   const hasScheduledRooms = scheduled.length > 0;
 
   return (
-    <div className={`grid grid-cols-1 gap-6 ${hasScheduledRooms ? 'lg:grid-cols-12' : 'max-w-2xl mx-auto'}`}>
+    <div
+      className={`grid grid-cols-1 gap-6 ${hasScheduledRooms ? 'lg:grid-cols-12' : 'mx-auto max-w-2xl'}`}
+    >
       {/* Scheduler Form */}
       <div className={`${hasScheduledRooms ? 'lg:col-span-5' : 'w-full'}`}>
         <GlassCard padding="p-0" className="overflow-hidden border-white/10">
           <div className="flex items-center justify-between border-b border-white/10 bg-white/2 px-5 py-4">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-400" />
+              <Calendar className="h-4 w-4 text-emerald-400" />
               <h3 className="text-sm font-semibold text-gray-200">
-                {logMode ? 'Log past session' : editingSession ? 'Edit mentorship room' : 'Schedule mentorship room'}
+                {logMode
+                  ? 'Log past session'
+                  : editingSession
+                    ? 'Edit mentorship room'
+                    : 'Schedule mentorship room'}
               </h3>
             </div>
             {logMode ? (
               <button
                 type="button"
-                onClick={() => { handleCancelEdit(); setLogMode?.(false); }}
-                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white transition font-mono font-bold cursor-pointer"
+                onClick={() => {
+                  handleCancelEdit();
+                  setLogMode?.(false);
+                }}
+                className="flex cursor-pointer items-center gap-1 font-mono text-[10px] font-bold text-gray-400 transition hover:text-white"
               >
-                <X className="w-3 h-3" /> Exit log mode
+                <X className="h-3 w-3" /> Exit log mode
               </button>
             ) : editingSession ? (
               <button
                 type="button"
                 onClick={handleCancelEdit}
-                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-white transition font-mono font-bold cursor-pointer"
+                className="flex cursor-pointer items-center gap-1 font-mono text-[10px] font-bold text-gray-400 transition hover:text-white"
               >
-                <X className="w-3 h-3" /> Cancel Edit
+                <X className="h-3 w-3" /> Cancel Edit
               </button>
             ) : (
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+              <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
                 {mode === 'offline' ? 'In-person' : 'Google Meet ready'}
               </span>
             )}
           </div>
 
-          <form onSubmit={handleSchedule} className="p-5 space-y-5 text-sm">
+          <form onSubmit={handleSchedule} className="space-y-5 p-5 text-sm">
             {bootcamps.length === 0 && (
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3.5 text-xs text-amber-200">
                 No bootcamps assigned yet — broadcast targeting is unavailable.
@@ -683,7 +896,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     setGroupSearch('');
                   }}
                   disabled={bootcamps.length === 0}
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-sm text-gray-200 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300 cursor-pointer disabled:opacity-50"
+                  className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-gray-200 transition-all duration-300 outline-none hover:bg-black/30 focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 disabled:opacity-50"
                 >
                   {bootcamps.length === 0 ? (
                     <option>None assigned</option>
@@ -691,9 +904,13 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     (() => {
                       const options = activeBootcamps.slice();
                       if (editingSession && editingSession.bootcamp_id) {
-                        const exists = options.some(o => o.id === editingSession.bootcamp_id);
+                        const exists = options.some(
+                          (o) => o.id === editingSession.bootcamp_id
+                        );
                         if (!exists) {
-                          const originalBc = bootcamps.find(b => b.id === editingSession.bootcamp_id);
+                          const originalBc = bootcamps.find(
+                            (b) => b.id === editingSession.bootcamp_id
+                          );
                           if (originalBc) {
                             options.push(originalBc);
                           }
@@ -701,19 +918,27 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       }
                       return options.map((b) => (
                         <option key={b.id} value={b.id}>
-                          {b.title} {b.status !== 'published' ? '(Archived)' : ''}
+                          {b.title}{' '}
+                          {b.status !== 'published' ? '(Archived)' : ''}
                         </option>
                       ));
                     })()
                   )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                  <svg
+                    className="h-4 w-4 fill-current"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
                 </div>
               </div>
-              <p className="mt-1 text-[11px] text-gray-500 flex items-center gap-1.5 pl-0.5">
+              <p className="mt-1 flex items-center gap-1.5 pl-0.5 text-[11px] text-gray-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {students.length} active candidate{students.length === 1 ? '' : 's'} in this track
+                {students.length} active candidate
+                {students.length === 1 ? '' : 's'} in this track
               </p>
             </Step>
 
@@ -724,16 +949,31 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g. Advanced Segment Trees & Bitmasks"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 px-3.5 py-3 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 transition-all duration-300"
+                className="w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-gray-200 placeholder-gray-600 transition-all duration-300 outline-none hover:bg-black/30 focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40"
               />
             </Step>
 
             <Step n={3} label="Invitation mode">
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'one-on-one',     icon: User,          label: '1:1 Session',       desc: 'Single student' },
-                  { id: 'selected-group', icon: Users,         label: 'Group Room',     desc: 'Select members' },
-                  { id: 'all-bootcamp',   icon: GraduationCap, label: 'Broadcast', desc: 'All enrolled' },
+                  {
+                    id: 'one-on-one',
+                    icon: User,
+                    label: '1:1 Session',
+                    desc: 'Single student',
+                  },
+                  {
+                    id: 'selected-group',
+                    icon: Users,
+                    label: 'Group Room',
+                    desc: 'Select members',
+                  },
+                  {
+                    id: 'all-bootcamp',
+                    icon: GraduationCap,
+                    label: 'Broadcast',
+                    desc: 'All enrolled',
+                  },
                 ].map((opt) => {
                   const Icon = opt.icon;
                   const chosen = targetType === opt.id;
@@ -742,16 +982,22 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       key={opt.id}
                       type="button"
                       onClick={() => setTargetType(opt.id)}
-                      className={`rounded-xl border p-3 text-center transition-all flex flex-col items-center gap-2 ${
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all ${
                         chosen
                           ? 'border-emerald-500/40 bg-emerald-500/[0.06] text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.06)]'
                           : 'border-white/10 bg-black/20 text-gray-400 hover:bg-black/30 hover:text-gray-200'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`} />
+                      <Icon
+                        className={`h-4 w-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`}
+                      />
                       <div>
-                        <div className="text-[11px] font-bold leading-none">{opt.label}</div>
-                        <div className="text-[9px] opacity-70 mt-1">{opt.desc}</div>
+                        <div className="text-[11px] leading-none font-bold">
+                          {opt.label}
+                        </div>
+                        <div className="mt-1 text-[9px] opacity-70">
+                          {opt.desc}
+                        </div>
                       </div>
                     </button>
                   );
@@ -762,7 +1008,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 {targetType === 'one-on-one' && (
                   <motion.div
                     key="one"
-                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
                     className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/2 p-3"
                   >
                     {students.length > 0 ? (
@@ -771,32 +1019,53 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                           <select
                             value={effectiveSingleId}
                             onChange={(e) => setSingleId(e.target.value)}
-                            className="w-full appearance-none rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-gray-200 outline-none cursor-pointer focus:border-emerald-500/40"
+                            className="w-full cursor-pointer appearance-none rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-gray-200 outline-none focus:border-emerald-500/40"
                           >
                             {students.map((s) => (
-                              <option key={s.id} value={s.id}>{s.name}{s.email ? ` · ${s.email}` : ''}</option>
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                                {s.email ? ` · ${s.email}` : ''}
+                              </option>
                             ))}
                           </select>
                           <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-gray-500">
-                            <svg className="fill-current h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            <svg
+                              className="h-3.5 w-3.5 fill-current"
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
                           </div>
                         </div>
                         {(() => {
-                          const m = students.find((s) => s.id === effectiveSingleId);
+                          const m = students.find(
+                            (s) => s.id === effectiveSingleId
+                          );
                           if (!m) return null;
                           return (
                             <div className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/2 p-2.5">
-                              <Avatar name={m.name} src={m.avatar_url} size="sm" />
+                              <Avatar
+                                name={m.name}
+                                src={m.avatar_url}
+                                size="sm"
+                              />
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-gray-200 truncate">{m.name}</p>
-                                <p className="text-[10px] text-gray-500 truncate">{m.email}</p>
+                                <p className="truncate text-xs font-semibold text-gray-200">
+                                  {m.name}
+                                </p>
+                                <p className="truncate text-[10px] text-gray-500">
+                                  {m.email}
+                                </p>
                               </div>
                             </div>
                           );
                         })()}
                       </>
                     ) : (
-                      <p className="text-[11px] text-rose-455 py-1">No active candidates in this track.</p>
+                      <p className="text-rose-455 py-1 text-[11px]">
+                        No active candidates in this track.
+                      </p>
                     )}
                   </motion.div>
                 )}
@@ -804,51 +1073,80 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 {targetType === 'selected-group' && (
                   <motion.div
                     key="group"
-                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
                     className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/2 p-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Assemble Group</span>
+                      <span className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+                        Assemble Group
+                      </span>
                       <Pill tone="emerald">{groupIds.length} chosen</Pill>
                     </div>
                     {students.length > 0 ? (
                       <>
                         <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                          <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
                           <input
                             type="text"
                             value={groupSearch}
                             onChange={(e) => setGroupSearch(e.target.value)}
                             placeholder="Filter members by name..."
-                            className="w-full rounded-lg border border-white/10 bg-black/20 py-2 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+                            className="w-full rounded-lg border border-white/10 bg-black/20 py-2 pr-3 pl-8 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
                           />
                         </div>
-                        <div className="max-h-40 overflow-y-auto space-y-1 pr-1 border border-white/5 rounded-lg p-1.5 bg-black/20">
+                        <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-white/5 bg-black/20 p-1.5 pr-1">
                           {students
-                            .filter((s) => !groupSearch.trim() ||
-                              s.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
-                              s.email.toLowerCase().includes(groupSearch.toLowerCase()))
+                            .filter(
+                              (s) =>
+                                !groupSearch.trim() ||
+                                s.name
+                                  .toLowerCase()
+                                  .includes(groupSearch.toLowerCase()) ||
+                                s.email
+                                  .toLowerCase()
+                                  .includes(groupSearch.toLowerCase())
+                            )
                             .map((s) => {
                               const chosen = groupIds.includes(s.id);
                               return (
                                 <button
                                   type="button"
                                   key={s.id}
-                                  onClick={() => setGroupIds((p) => chosen ? p.filter((x) => x !== s.id) : [...p, s.id])}
-                                  className={`w-full flex items-center justify-between rounded-lg border px-2 py-1.5 text-left transition-all ${
+                                  onClick={() =>
+                                    setGroupIds((p) =>
+                                      chosen
+                                        ? p.filter((x) => x !== s.id)
+                                        : [...p, s.id]
+                                    )
+                                  }
+                                  className={`flex w-full items-center justify-between rounded-lg border px-2 py-1.5 text-left transition-all ${
                                     chosen
                                       ? 'border-emerald-500/20 bg-emerald-500/[0.05]'
                                       : 'border-white/5 bg-black/20 hover:bg-black/30'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <Avatar name={s.name} src={s.avatar_url} size="sm" />
-                                    <span className="text-xs font-medium text-gray-200 truncate">{s.name}</span>
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <Avatar
+                                      name={s.name}
+                                      src={s.avatar_url}
+                                      size="sm"
+                                    />
+                                    <span className="truncate text-xs font-medium text-gray-200">
+                                      {s.name}
+                                    </span>
                                   </div>
-                                  <div className={`h-4 w-4 rounded border flex items-center justify-center ${
-                                    chosen ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-white/15 bg-white/2'
-                                  }`}>
-                                    {chosen && <Check className="h-2.5 w-2.5" />}
+                                  <div
+                                    className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                      chosen
+                                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                                        : 'border-white/15 bg-white/2'
+                                    }`}
+                                  >
+                                    {chosen && (
+                                      <Check className="h-2.5 w-2.5" />
+                                    )}
                                   </div>
                                 </button>
                               );
@@ -856,7 +1154,9 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                         </div>
                       </>
                     ) : (
-                      <p className="text-[11px] text-rose-455 py-1">No active candidates in this track.</p>
+                      <p className="text-rose-455 py-1 text-[11px]">
+                        No active candidates in this track.
+                      </p>
                     )}
                   </motion.div>
                 )}
@@ -864,14 +1164,23 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                 {targetType === 'all-bootcamp' && (
                   <motion.div
                     key="all"
-                    initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
                     className="mt-3 flex gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/10 p-3"
                   >
-                    <AlertCircle className="h-4 w-4 shrink-0 text-blue-300 mt-0.5" />
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
                     <div className="text-xs text-gray-300">
-                      <p className="font-semibold text-gray-100">Broadcast invite list</p>
-                      <p className="mt-0.5 text-[11px] text-gray-400 leading-relaxed">
-                        All <span className="font-semibold text-blue-300">{students.length} candidates</span> currently enrolled in this track will be sent standard Google Calendar invites automatically.
+                      <p className="font-semibold text-gray-100">
+                        Broadcast invite list
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-gray-400">
+                        All{' '}
+                        <span className="font-semibold text-blue-300">
+                          {students.length} candidates
+                        </span>{' '}
+                        currently enrolled in this track will be sent standard
+                        Google Calendar invites automatically.
                       </p>
                     </div>
                   </motion.div>
@@ -882,7 +1191,7 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             <Step n={4} label="Timeline & Duration">
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+                  <Calendar className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
                   <input
                     type="datetime-local"
                     value={when}
@@ -891,22 +1200,30 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                     {...(logMode
                       ? { max: new Date().toISOString().slice(0, 16) }
                       : { min: new Date().toISOString().slice(0, 16) })}
-                    className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 transition-all duration-300"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pr-3 pl-9 text-xs text-gray-200 transition-all duration-300 outline-none focus:border-emerald-500/40"
                   />
                 </div>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+                  <Clock className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
                   <select
                     value={duration}
                     onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 py-3 pl-9 pr-3 text-xs text-gray-200 outline-none focus:border-emerald-500/40 cursor-pointer"
+                    className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-black/20 py-3 pr-3 pl-9 text-xs text-gray-200 outline-none focus:border-emerald-500/40"
                   >
                     {[30, 45, 60, 90, 120].map((m) => (
-                      <option key={m} value={m}>{m} minutes</option>
+                      <option key={m} value={m}>
+                        {m} minutes
+                      </option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
-                    <svg className="fill-current h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    <svg
+                      className="h-3.5 w-3.5 fill-current"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -915,8 +1232,18 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             <Step n={5} label="Session mode">
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'online',  icon: Video,  label: 'Online',  desc: 'Google Meet' },
-                  { id: 'offline', icon: MapPin, label: 'Offline', desc: 'In-person' },
+                  {
+                    id: 'online',
+                    icon: Video,
+                    label: 'Online',
+                    desc: 'Google Meet',
+                  },
+                  {
+                    id: 'offline',
+                    icon: MapPin,
+                    label: 'Offline',
+                    desc: 'In-person',
+                  },
                 ].map((opt) => {
                   const Icon = opt.icon;
                   const chosen = mode === opt.id;
@@ -925,16 +1252,22 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       key={opt.id}
                       type="button"
                       onClick={() => setMode(opt.id)}
-                      className={`rounded-xl border p-3 text-center transition-all flex flex-col items-center gap-2 ${
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all ${
                         chosen
                           ? 'border-emerald-500/40 bg-emerald-500/[0.06] text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.06)]'
                           : 'border-white/10 bg-black/20 text-gray-400 hover:bg-black/30 hover:text-gray-200'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`} />
+                      <Icon
+                        className={`h-4 w-4 ${chosen ? 'text-emerald-400' : 'text-gray-400'}`}
+                      />
                       <div>
-                        <div className="text-[11px] font-bold leading-none">{opt.label}</div>
-                        <div className="text-[9px] opacity-70 mt-1">{opt.desc}</div>
+                        <div className="text-[11px] leading-none font-bold">
+                          {opt.label}
+                        </div>
+                        <div className="mt-1 text-[9px] opacity-70">
+                          {opt.desc}
+                        </div>
                       </div>
                     </button>
                   );
@@ -942,22 +1275,22 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
               </div>
 
               {mode === 'offline' && (
-                <div className="mt-3 relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+                <div className="relative mt-3">
+                  <MapPin className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Venue / address (e.g. NEUPC Lab Room 304, Dhaka University)"
                     required
-                    className="w-full rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 py-3 pl-9 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40 transition-all duration-300"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 py-3 pr-3 pl-9 text-xs text-gray-200 placeholder-gray-600 transition-all duration-300 outline-none hover:bg-black/30 focus:border-emerald-500/40"
                   />
                 </div>
               )}
             </Step>
 
             <Step n={6} label="Session description">
-              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
                 <MultiBlockEditor
                   key={editingSession ? `edit-${editingSession.id}` : 'create'}
                   value={description}
@@ -967,31 +1300,45 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
             </Step>
 
             {logMode && (
-              <label className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 cursor-pointer hover:bg-white/2 select-none">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 select-none hover:bg-white/2">
                 <input
                   type="checkbox"
                   checked={attended}
                   onChange={(e) => setAttended(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/20 bg-transparent text-emerald-500 focus:ring-emerald-500/40 cursor-pointer"
+                  className="h-4 w-4 cursor-pointer rounded border-white/20 bg-transparent text-emerald-500 focus:ring-emerald-500/40"
                 />
-                <span className="text-xs text-gray-300">Candidate(s) reported as present</span>
+                <span className="text-xs text-gray-300">
+                  Candidate(s) reported as present
+                </span>
               </label>
             )}
 
             <button
               type="submit"
               disabled={submitDisabled}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-gray-800 disabled:to-gray-800 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] disabled:cursor-not-allowed disabled:from-gray-800 disabled:to-gray-800 disabled:opacity-40"
             >
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  {logMode ? 'Logging…' : editingSession ? 'Saving changes...' : (mode === 'offline' ? 'Saving session…' : 'Generating Meet link…')}
+                  {logMode
+                    ? 'Logging…'
+                    : editingSession
+                      ? 'Saving changes...'
+                      : mode === 'offline'
+                        ? 'Saving session…'
+                        : 'Generating Meet link…'}
                 </>
               ) : (
                 <>
                   <Video className="h-4 w-4 text-emerald-200" />
-                  {logMode ? 'Log Session' : editingSession ? 'Save Changes' : (mode === 'offline' ? 'Schedule In-Person Session' : 'Schedule Room & Create Meet Link')}
+                  {logMode
+                    ? 'Log Session'
+                    : editingSession
+                      ? 'Save Changes'
+                      : mode === 'offline'
+                        ? 'Schedule In-Person Session'
+                        : 'Schedule Room & Create Meet Link'}
                 </>
               )}
             </button>
@@ -1001,26 +1348,33 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
 
       {/* Scheduled List Panel */}
       {hasScheduledRooms && (
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          <GlassCard padding="p-0" className="overflow-hidden border-white/10 flex flex-col h-full">
+        <div className="flex flex-col gap-4 lg:col-span-7">
+          <GlassCard
+            padding="p-0"
+            className="flex h-full flex-col overflow-hidden border-white/10"
+          >
             <div className="flex flex-col gap-3 border-b border-white/10 bg-white/2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-gray-200">Scheduled rooms</h3>
-                <p className="text-[11px] text-gray-500 mt-0.5">Upcoming interactive mentorship channels</p>
+                <h3 className="text-sm font-semibold text-gray-200">
+                  Scheduled rooms
+                </h3>
+                <p className="mt-0.5 text-[11px] text-gray-500">
+                  Upcoming interactive mentorship channels
+                </p>
               </div>
               <div className="relative sm:w-56">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter by topic or track..."
-                  className="w-full rounded-xl border border-white/10 bg-black/20 py-1.5 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+                  className="w-full rounded-xl border border-white/10 bg-black/20 py-1.5 pr-3 pl-8 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
                 />
               </div>
             </div>
 
-            <div className="p-5 space-y-3 overflow-y-auto max-h-[670px] flex-1">
+            <div className="max-h-[670px] flex-1 space-y-3 overflow-y-auto p-5">
               {filtered.length === 0 ? (
                 <EmptyState
                   icon={Tv}
@@ -1035,10 +1389,16 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
                       session={s}
                       bootcamps={bootcamps}
                       onCancel={() => handleCancel(s.id)}
-                      onEnd={(attendanceData) => onEndSession(s, attendanceData)}
+                      onEnd={(attendanceData) =>
+                        onEndSession(s, attendanceData)
+                      }
                       onEndOnly={() => onEndSession(s, [])}
                       onRecordingUploaded={(id, url) =>
-                        setScheduled((prev) => prev.map((r) => r.id === id ? { ...r, recording_url: url } : r))
+                        setScheduled((prev) =>
+                          prev.map((r) =>
+                            r.id === id ? { ...r, recording_url: url } : r
+                          )
+                        )
                       }
                       onEdit={() => handleStartEdit(s)}
                     />
@@ -1053,7 +1413,15 @@ function ScheduledRoomsView({ bootcamps, mentorships: _mentorships, scheduled, s
   );
 }
 
-function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploaded, bootcamps, onEdit }) {
+function ScheduledRow({
+  session: s,
+  onCancel,
+  onEnd,
+  onEndOnly,
+  onRecordingUploaded,
+  bootcamps,
+  onEdit,
+}) {
   const [now, setNow] = useState(() => Date.now());
   const [showAttendance, setShowAttendance] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
@@ -1063,8 +1431,11 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
     return () => clearInterval(id);
   }, []);
 
-  const scheduledMs = s.scheduled_at ? new Date(s.scheduled_at).getTime() : null;
-  const endMs = scheduledMs !== null ? scheduledMs + (s.duration || 60) * 60_000 : null;
+  const scheduledMs = s.scheduled_at
+    ? new Date(s.scheduled_at).getTime()
+    : null;
+  const endMs =
+    scheduledMs !== null ? scheduledMs + (s.duration || 60) * 60_000 : null;
   const hasStarted = scheduledMs !== null && now >= scheduledMs;
   const hasEnded = endMs !== null && now >= endMs;
 
@@ -1080,15 +1451,15 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
     return `${m}m ${sec}s`;
   }, [now, scheduledMs, hasStarted]);
 
-  const isOneOnOne  = s.targetType === 'one-on-one';
-  const isGroup     = s.targetType === 'selected-group';
+  const isOneOnOne = s.targetType === 'one-on-one';
+  const isGroup = s.targetType === 'selected-group';
   const isBroadcast = s.targetType === 'all-bootcamp';
 
   const target = isOneOnOne
     ? { label: '1:1 Session', icon: User, tone: 'violet' }
     : isGroup
-    ? { label: 'Group Room', icon: Users, tone: 'amber' }
-    : { label: 'Broadcast', icon: GraduationCap, tone: 'sky' };
+      ? { label: 'Group Room', icon: Users, tone: 'amber' }
+      : { label: 'Broadcast', icon: GraduationCap, tone: 'sky' };
 
   const bc = bootcamps?.find((b) => b.id === s.bootcampId);
   const isArchived = bc ? bc.status !== 'published' : false;
@@ -1096,102 +1467,134 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
   const sessionStudents = isOneOnOne
     ? allStudents.filter((u) => u.id === s.targetStudentId)
     : isGroup
-    ? allStudents.filter((u) => (s.targetStudentIds ?? []).includes(u.id))
-    : allStudents;
+      ? allStudents.filter((u) => (s.targetStudentIds ?? []).includes(u.id))
+      : allStudents;
 
   return (
     <>
-      <div className={`rounded-xl border border-white/10 bg-white/2 p-4 transition-all hover:border-white/20 hover:bg-white/2 relative overflow-hidden border-l-4 ${hasStarted ? 'border-l-emerald-500' : 'border-l-violet-500'}`}>
+      <div
+        className={`relative overflow-hidden rounded-xl border border-l-4 border-white/10 bg-white/2 p-4 transition-all hover:border-white/20 hover:bg-white/2 ${hasStarted ? 'border-l-emerald-500' : 'border-l-violet-500'}`}
+      >
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex-1 min-w-0 space-y-2.5">
+          <div className="min-w-0 flex-1 space-y-2.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {s.bootcampTitle && <Pill tone="gray">{s.bootcampTitle}</Pill>}
-              <Pill tone={target.tone} icon={target.icon}>{target.label}</Pill>
+              <Pill tone={target.tone} icon={target.icon}>
+                {target.label}
+              </Pill>
               {hasStarted ? (
                 <Pill tone="emerald" icon={Video}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse mr-1" />
+                  <span className="mr-1 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                   Live Room
                 </Pill>
               ) : (
-                <Pill tone="amber" icon={Clock}>{countdown ?? 'Scheduled'}</Pill>
+                <Pill tone="amber" icon={Clock}>
+                  {countdown ?? 'Scheduled'}
+                </Pill>
               )}
             </div>
 
-            <h4 className="text-sm font-semibold text-white leading-tight">{s.topic}</h4>
+            <h4 className="text-sm leading-tight font-semibold text-white">
+              {s.topic}
+            </h4>
             <p className="flex items-center gap-1.5 text-[11px] text-gray-500">
-              <Calendar className="h-3.5 w-3.5 text-gray-650" />
+              <Calendar className="text-gray-650 h-3.5 w-3.5" />
               {s.scheduled_at ? formatDatetime(s.scheduled_at) : 'TBD'}
               <span className="text-gray-700">·</span>
-              <Clock className="h-3.5 w-3.5 text-gray-650" />
+              <Clock className="text-gray-650 h-3.5 w-3.5" />
               {s.duration || 60} mins
             </p>
 
             {s.description && descriptionPreview(s.description) && (
-              <div className="rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-[11px] text-gray-400 leading-relaxed max-w-xl">
+              <div className="max-w-xl rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-[11px] leading-relaxed text-gray-400">
                 {descriptionPreview(s.description)}
               </div>
             )}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-2">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mr-1">Targeted candidates</span>
+              <span className="mr-1 text-[9px] font-semibold tracking-wider text-gray-500 uppercase">
+                Targeted candidates
+              </span>
               {isOneOnOne && (
                 <div className="flex items-center gap-1.5">
-                  <Avatar name={s.targetStudentName || 'Student'} src={s.targetStudentAvatar} size="sm" />
-                  <span className="text-xs text-gray-300 font-medium">{s.targetStudentName || 'Student'}</span>
+                  <Avatar
+                    name={s.targetStudentName || 'Student'}
+                    src={s.targetStudentAvatar}
+                    size="sm"
+                  />
+                  <span className="text-xs font-medium text-gray-300">
+                    {s.targetStudentName || 'Student'}
+                  </span>
                 </div>
               )}
-              {isGroup && (() => {
-                const names = s.targetStudentNames || [];
-                const avatars = s.targetStudentAvatars || [];
-                const MAX = 4;
-                const overflow = names.length - MAX;
-                return (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex -space-x-1.5">
-                      {names.slice(0, MAX).map((n, i) => (
-                        <div key={i} className="ring-2 ring-gray-950 rounded-full" title={n}>
-                          <Avatar name={n} src={avatars[i]} size="sm" />
-                        </div>
-                      ))}
-                      {overflow > 0 && (
-                        <div className="h-6 w-6 rounded-full ring-2 ring-gray-950 bg-gray-800 flex items-center justify-center text-[9px] font-bold text-gray-300">
-                          +{overflow}
-                        </div>
-                      )}
+              {isGroup &&
+                (() => {
+                  const names = s.targetStudentNames || [];
+                  const avatars = s.targetStudentAvatars || [];
+                  const MAX = 4;
+                  const overflow = names.length - MAX;
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex -space-x-1.5">
+                        {names.slice(0, MAX).map((n, i) => (
+                          <div
+                            key={i}
+                            className="rounded-full ring-2 ring-gray-950"
+                            title={n}
+                          >
+                            <Avatar name={n} src={avatars[i]} size="sm" />
+                          </div>
+                        ))}
+                        {overflow > 0 && (
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-800 text-[9px] font-bold text-gray-300 ring-2 ring-gray-950">
+                            +{overflow}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-gray-400">
+                        ({names.length} candidates)
+                      </span>
                     </div>
-                    <span className="text-[11px] text-gray-400">({names.length} candidates)</span>
-                  </div>
-                );
-              })()}
-              {isBroadcast && (() => {
-                const names = s.targetStudentNamesAll || [];
-                const avatars = s.targetStudentAvatars || [];
-                const MAX = 4;
-                const overflow = names.length - MAX;
-                return names.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex -space-x-1.5">
-                      {names.slice(0, MAX).map((n, i) => (
-                        <div key={i} className="ring-2 ring-gray-950 rounded-full" title={n}>
-                          <Avatar name={n} src={avatars[i]} size="sm" />
-                        </div>
-                      ))}
-                      {overflow > 0 && (
-                        <div className="h-6 w-6 rounded-full ring-2 ring-gray-950 bg-gray-800 flex items-center justify-center text-[9px] font-bold text-gray-300">
-                          +{overflow}
-                        </div>
-                      )}
+                  );
+                })()}
+              {isBroadcast &&
+                (() => {
+                  const names = s.targetStudentNamesAll || [];
+                  const avatars = s.targetStudentAvatars || [];
+                  const MAX = 4;
+                  const overflow = names.length - MAX;
+                  return names.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex -space-x-1.5">
+                        {names.slice(0, MAX).map((n, i) => (
+                          <div
+                            key={i}
+                            className="rounded-full ring-2 ring-gray-950"
+                            title={n}
+                          >
+                            <Avatar name={n} src={avatars[i]} size="sm" />
+                          </div>
+                        ))}
+                        {overflow > 0 && (
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-800 text-[9px] font-bold text-gray-300 ring-2 ring-gray-950">
+                            +{overflow}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-gray-400">
+                        Everyone Enrolled ({names.length})
+                      </span>
                     </div>
-                    <span className="text-[11px] text-gray-400">Everyone Enrolled ({names.length})</span>
-                  </div>
-                ) : (
-                  <Pill tone="sky" icon={Users}>Everyone Enrolled</Pill>
-                );
-              })()}
+                  ) : (
+                    <Pill tone="sky" icon={Users}>
+                      Everyone Enrolled
+                    </Pill>
+                  );
+                })()}
             </div>
 
             {hasStarted && (
-              <div className="border-t border-white/5 pt-2 max-w-md">
+              <div className="max-w-md border-t border-white/5 pt-2">
                 <RecordingUpload
                   sessionId={s.id}
                   initialUrl={s.recording_url}
@@ -1206,7 +1609,10 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
             {hasStarted ? (
               <>
                 {s.location ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 max-w-[260px]" title={s.location}>
+                  <span
+                    className="inline-flex max-w-[260px] items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300"
+                    title={s.location}
+                  >
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{s.location}</span>
                   </span>
@@ -1215,7 +1621,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                     href={s.meet_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-102"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-102 hover:bg-emerald-500"
                   >
                     <Video className="h-3.5 w-3.5" />
                     Join Meet
@@ -1230,7 +1636,7 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                   <>
                     <button
                       onClick={() => setShowAttendance(true)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
                       title="Mark attendance sheet"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
@@ -1243,14 +1649,22 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
                         const fd = new FormData();
                         fd.set('sessionId', s.id);
                         const res = await endSessionAction(fd);
-                        if (res?.error) { toast.error(res.error); setEndingSession(false); return; }
+                        if (res?.error) {
+                          toast.error(res.error);
+                          setEndingSession(false);
+                          return;
+                        }
                         toast.success('Session ended');
                         onEndOnly?.();
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 py-2 text-xs font-semibold text-rose-300 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/20 disabled:opacity-50"
                       title="End mentorship room"
                     >
-                      {endingSession ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      {endingSession ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <X className="h-3.5 w-3.5" />
+                      )}
                       End Session
                     </button>
                   </>
@@ -1259,21 +1673,21 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
             ) : (
               <>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs font-semibold text-amber-300">
-                  <Clock className="h-3.5 w-3.5 animate-pulse text-amber-405" />
+                  <Clock className="text-amber-405 h-3.5 w-3.5 animate-pulse" />
                   {countdown ?? 'Scheduled'}
                 </span>
                 {!isArchived && (
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={onEdit}
-                      className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-gray-500 hover:text-emerald-300 transition-colors"
+                      className="rounded-lg border border-white/10 bg-black/30 p-2 text-gray-500 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300"
                       title="Edit scheduled room details"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={onCancel}
-                      className="p-2 rounded-lg border border-white/10 bg-black/30 hover:bg-rose-500/10 hover:border-rose-500/30 text-gray-500 hover:text-rose-300 transition-colors"
+                      className="rounded-lg border border-white/10 bg-black/30 p-2 text-gray-500 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300"
                       title="Cancel room slot"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -1306,8 +1720,10 @@ function ScheduledRow({ session: s, onCancel, onEnd, onEndOnly, onRecordingUploa
 function Step({ n, label, children }) {
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-        <span className="inline-flex h-5.5 w-5.5 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-400">{n}</span>
+      <label className="flex items-center gap-2 text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+        <span className="inline-flex h-5.5 w-5.5 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/15 text-[10px] font-black text-emerald-400">
+          {n}
+        </span>
         {label}
       </label>
       {children}
@@ -1319,11 +1735,19 @@ function Step({ n, label, children }) {
 
 function groupByDate(sessions) {
   const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86_400_000)
+    .toISOString()
+    .slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
   const monthAgo = new Date(Date.now() - 30 * 86_400_000);
 
-  const groups = { Today: [], Yesterday: [], 'This week': [], 'This month': [], Earlier: [] };
+  const groups = {
+    Today: [],
+    Yesterday: [],
+    'This week': [],
+    'This month': [],
+    Earlier: [],
+  };
   sessions.forEach((s) => {
     const date = s.session_date?.slice(0, 10);
     const d = new Date(s.session_date);
@@ -1338,7 +1762,9 @@ function groupByDate(sessions) {
 
 function ensureJsonDescription(raw) {
   if (!raw) {
-    return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]);
+    return JSON.stringify([
+      { id: crypto.randomUUID(), type: 'richText', content: '' },
+    ]);
   }
   const trimmed = raw.trim();
   if (
@@ -1353,10 +1779,20 @@ function ensureJsonDescription(raw) {
     }
   }
   // Wrap plain text in a rich text block
-  return JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: raw }]);
+  return JSON.stringify([
+    { id: crypto.randomUUID(), type: 'richText', content: raw },
+  ]);
 }
 
-function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studentMap, bootcamps, onStartLog }) {
+function PastSessionsView({
+  mentorships,
+  mentorId,
+  sessions,
+  setSessions,
+  studentMap,
+  bootcamps,
+  onStartLog,
+}) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -1372,12 +1808,18 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
     const q = search.toLowerCase();
     return sessions
       .filter((s) => {
-        const effectiveAttended = s.attendance_data?.length > 0
-          ? s.attendance_data.some((r) => r.attended)
-          : s.attended;
+        const effectiveAttended =
+          s.attendance_data?.length > 0
+            ? s.attendance_data.some((r) => r.attended)
+            : s.attended;
         if (filter === 'attended' && !effectiveAttended) return false;
         if (filter === 'missed' && effectiveAttended) return false;
-        if (q && !s.topic?.toLowerCase().includes(q) && !s.menteeName?.toLowerCase().includes(q)) return false;
+        if (
+          q &&
+          !s.topic?.toLowerCase().includes(q) &&
+          !s.menteeName?.toLowerCase().includes(q)
+        )
+          return false;
         return true;
       })
       .sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
@@ -1388,19 +1830,28 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
   // Selected session lookup
   const selectedSession = useMemo(() => {
     if (!selectedSessionId) return null;
-    return sessions.find(s => s.id === selectedSessionId) || null;
+    return sessions.find((s) => s.id === selectedSessionId) || null;
   }, [sessions, selectedSessionId]);
 
   const selectedSessionBootcamp = useMemo(() => {
     if (!selectedSession) return null;
-    return bootcamps.find(b => b.id === selectedSession.bootcamp_id || b.id === selectedSession.bootcampId);
+    return bootcamps.find(
+      (b) =>
+        b.id === selectedSession.bootcamp_id ||
+        b.id === selectedSession.bootcampId
+    );
   }, [selectedSession, bootcamps]);
 
-  const isSelectedSessionArchived = selectedSessionBootcamp ? selectedSessionBootcamp.status !== 'published' : false;
+  const isSelectedSessionArchived = selectedSessionBootcamp
+    ? selectedSessionBootcamp.status !== 'published'
+    : false;
 
   const sessionStudents = useMemo(() => {
     if (!selectedSession) return [];
-    if (selectedSession.attendance_data && selectedSession.attendance_data.length > 0) {
+    if (
+      selectedSession.attendance_data &&
+      selectedSession.attendance_data.length > 0
+    ) {
       return selectedSession.attendance_data.map((r) => {
         const profile = studentMap.get(r.user_id);
         return {
@@ -1422,7 +1873,11 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsEditingNotes(false);
     } else {
-      setNotesInput(JSON.stringify([{ id: crypto.randomUUID(), type: 'richText', content: '' }]));
+      setNotesInput(
+        JSON.stringify([
+          { id: crypto.randomUUID(), type: 'richText', content: '' },
+        ])
+      );
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsEditingNotes(false);
     }
@@ -1441,7 +1896,9 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
     } else {
       toast.success('Session logs saved');
       setSessions((prev) =>
-        prev.map((s) => (s.id === selectedSession.id ? { ...s, notes: notesInput } : s))
+        prev.map((s) =>
+          s.id === selectedSession.id ? { ...s, notes: notesInput } : s
+        )
       );
       setIsEditingNotes(false);
     }
@@ -1467,22 +1924,22 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
       {/* LEFT PANEL: Log history queue (5-cols) */}
-      <div className="lg:col-span-5 space-y-4">
+      <div className="space-y-4 lg:col-span-5">
         {/* Controls Grid */}
-        <div className="space-y-3 bg-zinc-900/50 border border-white/5 p-3.5 rounded-2xl backdrop-blur-md">
+        <div className="space-y-3 rounded-2xl border border-white/5 bg-zinc-900/50 p-3.5 backdrop-blur-md">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search topic, candidate..."
-              className="w-full rounded-xl border border-white/10 bg-black/20 py-2 pl-9 pr-3 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
+              className="w-full rounded-xl border border-white/10 bg-black/20 py-2 pr-3 pl-9 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-emerald-500/40"
             />
           </div>
-          <div className="flex gap-2 justify-between items-center flex-wrap sm:flex-nowrap">
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
             <div className="flex gap-1">
               {[
                 { v: 'all', label: 'All' },
@@ -1493,30 +1950,43 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
                   key={t.v}
                   type="button"
                   onClick={() => setFilter(t.v)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold tracking-wider uppercase transition-colors ${
                     filter === t.v
-                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                      : 'bg-black/20 border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/2'
+                      ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                      : 'border border-white/5 bg-black/20 text-gray-400 hover:bg-white/2 hover:text-gray-200'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-            <ActionButton tone="emerald" icon={Plus} onClick={onStartLog} className="text-[10px] py-1.5">
+            <ActionButton
+              tone="emerald"
+              icon={Plus}
+              onClick={onStartLog}
+              className="py-1.5 text-[10px]"
+            >
               Log Session
             </ActionButton>
           </div>
         </div>
 
         {/* Grouped session list */}
-        <div className="space-y-5 max-h-[580px] overflow-y-auto pr-1">
+        <div className="max-h-[580px] space-y-5 overflow-y-auto pr-1">
           {grouped.length === 0 ? (
             <GlassCard padding="py-12" className="border-white/5">
               <EmptyState
                 icon={Video}
-                title={search || filter !== 'all' ? 'No matched records' : 'No logs recorded'}
-                description={search || filter !== 'all' ? 'Adjust filters to explore.' : 'Log an interactive session below.'}
+                title={
+                  search || filter !== 'all'
+                    ? 'No matched records'
+                    : 'No logs recorded'
+                }
+                description={
+                  search || filter !== 'all'
+                    ? 'Adjust filters to explore.'
+                    : 'Log an interactive session below.'
+                }
                 accent="emerald"
                 action={
                   <ActionButton tone="emerald" icon={Plus} onClick={onStartLog}>
@@ -1529,56 +1999,84 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
             grouped.map(([label, items]) => (
               <div key={label} className="space-y-2">
                 <div className="flex items-center gap-2 pl-0.5">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 font-mono">{label}</span>
-                  <span className="text-[9px] font-black text-gray-650 px-1.5 py-0.2 bg-white/5 border border-white/5 rounded-full">{items.length}</span>
-                  <div className="flex-1 h-px bg-white/5" />
+                  <span className="font-mono text-[9px] font-black tracking-wider text-gray-500 uppercase">
+                    {label}
+                  </span>
+                  <span className="text-gray-650 py-0.2 rounded-full border border-white/5 bg-white/5 px-1.5 text-[9px] font-black">
+                    {items.length}
+                  </span>
+                  <div className="h-px flex-1 bg-white/5" />
                 </div>
                 <div className="space-y-2">
                   {items.map((s) => {
                     const isSelected = selectedSessionId === s.id;
-                    const effectiveAttended = s.attendance_data?.length > 0
-                      ? s.attendance_data.some((r) => r.attended)
-                      : s.attended;
-                    const presentCount = s.attendance_data?.filter(r => r.attended).length || 0;
+                    const effectiveAttended =
+                      s.attendance_data?.length > 0
+                        ? s.attendance_data.some((r) => r.attended)
+                        : s.attended;
+                    const presentCount =
+                      s.attendance_data?.filter((r) => r.attended).length || 0;
                     const totalCount = s.attendance_data?.length || 0;
 
                     return (
                       <div
                         key={s.id}
                         onClick={() => setSelectedSessionId(s.id)}
-                        className={`rounded-xl border p-3.5 transition-all text-left flex flex-col gap-2.5 cursor-pointer select-none ${
+                        className={`flex cursor-pointer flex-col gap-2.5 rounded-xl border p-3.5 text-left transition-all select-none ${
                           isSelected
                             ? 'border-emerald-500/50 bg-emerald-950/[0.06] shadow-md shadow-emerald-500/5'
                             : 'border-white/5 bg-white/2 hover:border-white/10 hover:bg-white/2'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className={`text-xs font-bold leading-snug truncate max-w-[220px] ${isSelected ? 'text-emerald-300' : 'text-gray-100'}`}>{s.topic}</h4>
+                          <h4
+                            className={`max-w-[220px] truncate text-xs leading-snug font-bold ${isSelected ? 'text-emerald-300' : 'text-gray-100'}`}
+                          >
+                            {s.topic}
+                          </h4>
                           {s.attendance_data?.length > 0 ? (
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${presentCount === totalCount ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-405 border border-amber-500/20'}`}>
+                            <span
+                              className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${presentCount === totalCount ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'text-amber-405 border border-amber-500/20 bg-amber-500/10'}`}
+                            >
                               {presentCount}/{totalCount} present
                             </span>
                           ) : (
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${effectiveAttended ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-455 border border-rose-500/20'}`}>
+                            <span
+                              className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${effectiveAttended ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'text-rose-455 border border-rose-500/20 bg-rose-500/10'}`}
+                            >
                               {effectiveAttended ? 'Attended' : 'Missed'}
                             </span>
                           )}
                         </div>
 
                         <div className="flex items-center justify-between text-[10px] text-gray-500">
-                          <div className="flex items-center gap-1.5 truncate max-w-[170px]">
+                          <div className="flex max-w-[170px] items-center gap-1.5 truncate">
                             {s.menteeAvatars?.length > 1 ? (
-                              <div className="flex -space-x-1 shrink-0">
+                              <div className="flex shrink-0 -space-x-1">
                                 {s.menteeAvatars.slice(0, 3).map((av, idx) => (
-                                  <Avatar key={idx} name="Student" src={av} size="sm" />
+                                  <Avatar
+                                    key={idx}
+                                    name="Student"
+                                    src={av}
+                                    size="sm"
+                                  />
                                 ))}
                               </div>
                             ) : (
-                              <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" className="shrink-0" />
+                              <Avatar
+                                name={s.menteeName}
+                                src={s.menteeAvatar}
+                                size="sm"
+                                className="shrink-0"
+                              />
                             )}
-                            <span className="truncate text-gray-400 font-medium">{s.menteeName}</span>
+                            <span className="truncate font-medium text-gray-400">
+                              {s.menteeName}
+                            </span>
                           </div>
-                          <span className="font-medium">{formatDate(s.session_date)}</span>
+                          <span className="font-medium">
+                            {formatDate(s.session_date)}
+                          </span>
                         </div>
                       </div>
                     );
@@ -1592,243 +2090,315 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
 
       {/* RIGHT PANEL: Workspace Inspector (7-cols) */}
       <div className="lg:col-span-7">
-        <GlassCard padding="p-6" className="min-h-[500px] border-white/10 flex flex-col justify-between">
+        <GlassCard
+          padding="p-6"
+          className="flex min-h-[500px] flex-col justify-between border-white/10"
+        >
           {!selectedSession ? (
-            <div className="my-auto py-16 flex flex-col items-center justify-center text-center">
-              <div className="rounded-2xl border border-white/10 bg-white/2 p-4 text-gray-500 mb-4 shadow-inner">
+            <div className="my-auto flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 rounded-2xl border border-white/10 bg-white/2 p-4 text-gray-500 shadow-inner">
                 <Tv className="h-8 w-8 text-emerald-400/40" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-300">Inspector Workspace Empty</h3>
-              <p className="text-xs text-gray-500 max-w-sm mt-1 leading-relaxed">
-                Select an interaction slot from the log history queue on the left to critique details, audit presence logs, access Drive records, and write session summaries.
+              <h3 className="text-sm font-semibold text-gray-300">
+                Inspector Workspace Empty
+              </h3>
+              <p className="mt-1 max-w-sm text-xs leading-relaxed text-gray-500">
+                Select an interaction slot from the log history queue on the
+                left to critique details, audit presence logs, access Drive
+                records, and write session summaries.
               </p>
             </div>
-          ) : (() => {
-            const s = selectedSession;
-            const effectiveAttended = s.attendance_data?.length > 0
-              ? s.attendance_data.some((r) => r.attended)
-              : s.attended;
-            return (
-              <div className="space-y-6">
-                {/* Header detail */}
-                <div className="flex items-start justify-between flex-wrap gap-4 border-b border-white/10 pb-4">
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {s.bootcampTitle && <Pill tone="gray">{s.bootcampTitle}</Pill>}
-                      <Pill tone={s.targetType === 'one-on-one' ? 'violet' : s.targetType === 'selected-group' ? 'amber' : 'sky'}>
-                        {s.targetType === 'one-on-one' ? '1:1 Session' : s.targetType === 'selected-group' ? 'Group Room' : 'Broadcast'}
-                      </Pill>
+          ) : (
+            (() => {
+              const s = selectedSession;
+              const effectiveAttended =
+                s.attendance_data?.length > 0
+                  ? s.attendance_data.some((r) => r.attended)
+                  : s.attended;
+              return (
+                <div className="space-y-6">
+                  {/* Header detail */}
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-4">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {s.bootcampTitle && (
+                          <Pill tone="gray">{s.bootcampTitle}</Pill>
+                        )}
+                        <Pill
+                          tone={
+                            s.targetType === 'one-on-one'
+                              ? 'violet'
+                              : s.targetType === 'selected-group'
+                                ? 'amber'
+                                : 'sky'
+                          }
+                        >
+                          {s.targetType === 'one-on-one'
+                            ? '1:1 Session'
+                            : s.targetType === 'selected-group'
+                              ? 'Group Room'
+                              : 'Broadcast'}
+                        </Pill>
+                      </div>
+                      <h3 className="text-base leading-tight font-extrabold text-white">
+                        {s.topic}
+                      </h3>
+                      <p className="text-gray-550 flex items-center gap-1.5 text-xs">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatDatetime(s.session_date)}
+                        {s.duration > 0 && (
+                          <>
+                            <span className="text-gray-700">·</span>
+                            <Clock className="h-3.5 w-3.5" />
+                            {s.duration} mins logged
+                          </>
+                        )}
+                      </p>
                     </div>
-                    <h3 className="text-base font-extrabold text-white leading-tight">{s.topic}</h3>
-                    <p className="flex items-center gap-1.5 text-xs text-gray-550">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {formatDatetime(s.session_date)}
-                      {s.duration > 0 && (
-                        <>
-                          <span className="text-gray-700">·</span>
-                          <Clock className="h-3.5 w-3.5" />
-                          {s.duration} mins logged
-                        </>
+
+                    <div className="flex items-center gap-2">
+                      {!isSelectedSessionArchived && (
+                        <button
+                          onClick={handleDeleteInspectorSession}
+                          disabled={deleting}
+                          className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2 text-rose-300 transition-colors hover:bg-rose-500/15 disabled:opacity-50"
+                          title="Delete interaction log"
+                        >
+                          {deleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
                       )}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {!isSelectedSessionArchived && (
                       <button
-                        onClick={handleDeleteInspectorSession}
-                        disabled={deleting}
-                        className="p-2 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 text-rose-300 transition-colors disabled:opacity-50"
-                        title="Delete interaction log"
+                        onClick={() => setSelectedSessionId(null)}
+                        className="rounded-lg border border-white/5 bg-white/2 p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
+                        title="Close workspace"
                       >
-                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        <X className="h-4 w-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => setSelectedSessionId(null)}
-                      className="p-2 rounded-lg border border-white/5 bg-white/2 hover:bg-white/5 text-gray-500 hover:text-white transition-colors"
-                      title="Close workspace"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Drive Recording Section */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Drive Video Vault</h4>
-                  <div className="rounded-2xl border border-white/5 bg-black/30 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-xl border border-violet-500/10 bg-violet-500/5 p-2.5 text-violet-400">
-                        <Film className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-200">Meet Session Recording</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          {s.recording_url ? 'Active recording indexed successfully.' : 'No recording uploaded to Drive yet.'}
-                        </p>
-                      </div>
                     </div>
-                    <RecordingUpload
-                      sessionId={s.id}
-                      initialUrl={s.recording_url}
-                      onUploaded={(url) => {
-                        setSessions((prev) => prev.map((r) => r.id === s.id ? { ...r, recording_url: url } : r))
-                      }}
-                      readOnly={isSelectedSessionArchived}
-                    />
                   </div>
-                </div>
 
-                {/* Attendance audit sheet */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-555">Attendance Audit Sheet</h4>
-                    {!isSelectedSessionArchived && (
-                      <button
-                        onClick={() => setShowAttendanceEdit(true)}
-                        className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg"
-                      >
-                        <CheckCircle2 className="h-3 w-3" />
-                        Manage
-                      </button>
-                    )}
-                  </div>
-                  {s.attendance_data?.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/20 p-3 border border-white/5 rounded-2xl">
-                      {s.attendance_data.map((r) => {
-                        const cand = studentMap.get(r.user_id) || {
-                          name: 'Enrolled Candidate',
-                          email: 'Candidate',
-                          avatar_url: null,
-                        };
-
-                        return (
-                          <div
-                            key={r.user_id}
-                            className={`flex items-center justify-between rounded-xl border p-2.5 ${
-                              r.attended
-                                ? 'border-emerald-500/15 bg-emerald-500/[0.02]'
-                                : 'border-rose-500/15 bg-rose-500/[0.01]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Avatar name={cand.name} src={cand.avatar_url} size="sm" />
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-gray-200 truncate">{cand.name}</p>
-                                <p className="text-[9px] text-gray-500 truncate">{cand.email}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {r.points > 0 && (
-                                <span className="text-[9px] font-extrabold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md">
-                                  +{r.points} pts
-                                </span>
-                              )}
-                              {r.attended ? (
-                                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400 shrink-0" />
-                              ) : (
-                                <XCircle className="h-4.5 w-4.5 text-rose-455 shrink-0" />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/30 px-4 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar name={s.menteeName} src={s.menteeAvatar} size="sm" />
+                  {/* Drive Recording Section */}
+                  <div className="space-y-2">
+                    <h4 className="text-gray-550 text-[10px] font-bold tracking-wider uppercase">
+                      Drive Video Vault
+                    </h4>
+                    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-white/5 bg-black/30 p-4 md:flex-row md:items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl border border-violet-500/10 bg-violet-500/5 p-2.5 text-violet-400">
+                          <Film className="h-5 w-5" />
+                        </div>
                         <div>
-                          <p className="text-xs font-semibold text-gray-200">{s.menteeName}</p>
-                          <p className="text-[10px] text-gray-550">
-                            {effectiveAttended ? 'Candidate reported presence.' : 'Candidate reported absence.'}
+                          <p className="text-xs font-semibold text-gray-200">
+                            Meet Session Recording
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-gray-500">
+                            {s.recording_url
+                              ? 'Active recording indexed successfully.'
+                              : 'No recording uploaded to Drive yet.'}
                           </p>
                         </div>
                       </div>
-                      <Pill tone={effectiveAttended ? 'emerald' : 'rose'} icon={effectiveAttended ? CheckCircle2 : XCircle}>
-                        {effectiveAttended ? 'Attended' : 'Absent'}
-                      </Pill>
-                    </div>
-                  )}
-                </div>
-
-                {/* Notes logs section */}
-                <div className="space-y-2 border-t border-white/5 pt-4">
-                  <div className="flex items-center justify-between text-gray-300">
-                    <div className="flex items-center gap-1.5">
-                      <MessageSquare className="h-4 w-4 text-emerald-400" />
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-550">Interactive Discussion logs</h4>
-                    </div>
-                    {s.notes && !isEditingNotes && !isSelectedSessionArchived && (
-                      <button
-                        onClick={() => {
-                          setNotesInput(ensureJsonDescription(s.notes));
-                          setIsEditingNotes(true);
+                      <RecordingUpload
+                        sessionId={s.id}
+                        initialUrl={s.recording_url}
+                        onUploaded={(url) => {
+                          setSessions((prev) =>
+                            prev.map((r) =>
+                              r.id === s.id ? { ...r, recording_url: url } : r
+                            )
+                          );
                         }}
-                        className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Edit Logs
-                      </button>
-                    )}
+                        readOnly={isSelectedSessionArchived}
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-3.5 text-left">
-                    {(!s.notes || isEditingNotes) && !isSelectedSessionArchived ? (
-                      <>
-                        <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                          <MultiBlockEditor
-                            key={selectedSession ? `inspector-edit-${selectedSession.id}-${isEditingNotes}` : 'inspector-create'}
-                            value={notesInput}
-                            onChange={setNotesInput}
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          {s.notes && (
-                            <button
-                              onClick={() => {
-                                setNotesInput(ensureJsonDescription(s.notes));
-                                setIsEditingNotes(false);
-                              }}
-                              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs font-semibold text-gray-300 transition-colors"
+                  {/* Attendance audit sheet */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-gray-555 text-[10px] font-bold tracking-wider uppercase">
+                        Attendance Audit Sheet
+                      </h4>
+                      {!isSelectedSessionArchived && (
+                        <button
+                          onClick={() => setShowAttendanceEdit(true)}
+                          className="flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-400 transition-colors hover:text-emerald-300"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Manage
+                        </button>
+                      )}
+                    </div>
+                    {s.attendance_data?.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2 rounded-2xl border border-white/5 bg-black/20 p-3 md:grid-cols-2">
+                        {s.attendance_data.map((r) => {
+                          const cand = studentMap.get(r.user_id) || {
+                            name: 'Enrolled Candidate',
+                            email: 'Candidate',
+                            avatar_url: null,
+                          };
+
+                          return (
+                            <div
+                              key={r.user_id}
+                              className={`flex items-center justify-between rounded-xl border p-2.5 ${
+                                r.attended
+                                  ? 'border-emerald-500/15 bg-emerald-500/[0.02]'
+                                  : 'border-rose-500/15 bg-rose-500/[0.01]'
+                              }`}
                             >
-                              Cancel
-                            </button>
-                          )}
-                          <button
-                            onClick={handleSaveInspectorNotes}
-                            disabled={savingNotes}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-emerald-250 transition-colors"
-                          >
-                            {savingNotes ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                Syncing logs...
-                              </>
-                            ) : (
-                              <>
-                                <Check className="h-3.5 w-3.5" />
-                                Save notes
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Avatar
+                                  name={cand.name}
+                                  src={cand.avatar_url}
+                                  size="sm"
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-semibold text-gray-200">
+                                    {cand.name}
+                                  </p>
+                                  <p className="truncate text-[9px] text-gray-500">
+                                    {cand.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                {r.points > 0 && (
+                                  <span className="rounded-md border border-violet-500/20 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-extrabold text-violet-300">
+                                    +{r.points} pts
+                                  </span>
+                                )}
+                                {r.attended ? (
+                                  <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-400" />
+                                ) : (
+                                  <XCircle className="text-rose-455 h-4.5 w-4.5 shrink-0" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : (
-                      <div className="text-gray-300 text-[13px] leading-relaxed bg-[#080a0f]/40 border border-white/[0.04] p-4 rounded-xl">
-                        {s.notes ? (
-                          <TaskDescriptionRenderer content={s.notes} />
-                        ) : (
-                          <p className="text-zinc-500 italic text-xs">No notes logged for this archived session.</p>
-                        )}
+                      <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/30 px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar
+                            name={s.menteeName}
+                            src={s.menteeAvatar}
+                            size="sm"
+                          />
+                          <div>
+                            <p className="text-xs font-semibold text-gray-200">
+                              {s.menteeName}
+                            </p>
+                            <p className="text-gray-550 text-[10px]">
+                              {effectiveAttended
+                                ? 'Candidate reported presence.'
+                                : 'Candidate reported absence.'}
+                            </p>
+                          </div>
+                        </div>
+                        <Pill
+                          tone={effectiveAttended ? 'emerald' : 'rose'}
+                          icon={effectiveAttended ? CheckCircle2 : XCircle}
+                        >
+                          {effectiveAttended ? 'Attended' : 'Absent'}
+                        </Pill>
                       </div>
                     )}
                   </div>
+
+                  {/* Notes logs section */}
+                  <div className="space-y-2 border-t border-white/5 pt-4">
+                    <div className="flex items-center justify-between text-gray-300">
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="h-4 w-4 text-emerald-400" />
+                        <h4 className="text-gray-550 text-[10px] font-bold tracking-wider uppercase">
+                          Interactive Discussion logs
+                        </h4>
+                      </div>
+                      {s.notes &&
+                        !isEditingNotes &&
+                        !isSelectedSessionArchived && (
+                          <button
+                            onClick={() => {
+                              setNotesInput(ensureJsonDescription(s.notes));
+                              setIsEditingNotes(true);
+                            }}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 uppercase transition-colors hover:text-emerald-300"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Edit Logs
+                          </button>
+                        )}
+                    </div>
+
+                    <div className="space-y-3.5 text-left">
+                      {(!s.notes || isEditingNotes) &&
+                      !isSelectedSessionArchived ? (
+                        <>
+                          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                            <MultiBlockEditor
+                              key={
+                                selectedSession
+                                  ? `inspector-edit-${selectedSession.id}-${isEditingNotes}`
+                                  : 'inspector-create'
+                              }
+                              value={notesInput}
+                              onChange={setNotesInput}
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            {s.notes && (
+                              <button
+                                onClick={() => {
+                                  setNotesInput(ensureJsonDescription(s.notes));
+                                  setIsEditingNotes(false);
+                                }}
+                                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/10"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                            <button
+                              onClick={handleSaveInspectorNotes}
+                              disabled={savingNotes}
+                              className="text-emerald-250 inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+                            >
+                              {savingNotes ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  Syncing logs...
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-3.5 w-3.5" />
+                                  Save notes
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-white/[0.04] bg-[#080a0f]/40 p-4 text-[13px] leading-relaxed text-gray-300">
+                          {s.notes ? (
+                            <TaskDescriptionRenderer content={s.notes} />
+                          ) : (
+                            <p className="text-xs text-zinc-500 italic">
+                              No notes logged for this archived session.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()
+          )}
         </GlassCard>
       </div>
 
@@ -1856,28 +2426,39 @@ function PastSessionsView({ mentorships, mentorId, sessions, setSessions, studen
   );
 }
 
-
-
 // ─── Attendance Modal ─────────────────────────────────────────────────────────
 
-function AttendanceModal({ session, students, onClose, onSaved, isPast = false }) {
+function AttendanceModal({
+  session,
+  students,
+  onClose,
+  onSaved,
+  isPast = false,
+}) {
   useScrollLock();
   const [rows, setRows] = useState(() =>
     students.map((st) => {
-      const match = (session.attendance_data || []).find((r) => r.user_id === st.id);
+      const match = (session.attendance_data || []).find(
+        (r) => r.user_id === st.id
+      );
       return {
         user_id: st.id,
         name: st.name,
         avatar_url: st.avatar_url,
         attended: match ? match.attended : false,
-        points: match && match.points !== undefined && match.points !== 0 ? String(match.points) : '',
+        points:
+          match && match.points !== undefined && match.points !== 0
+            ? String(match.points)
+            : '',
       };
     })
   );
   const [saving, setSaving] = useState(false);
 
   const setRow = (userId, patch) =>
-    setRows((prev) => prev.map((r) => (r.user_id === userId ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r) => (r.user_id === userId ? { ...r, ...patch } : r))
+    );
 
   const handleSave = async () => {
     setSaving(true);
@@ -1886,7 +2467,11 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
       const endFd = new FormData();
       endFd.set('sessionId', session.id);
       const endResult = await endSessionAction(endFd);
-      if (endResult?.error) { toast.error(endResult.error); setSaving(false); return; }
+      if (endResult?.error) {
+        toast.error(endResult.error);
+        setSaving(false);
+        return;
+      }
     }
 
     const attendance_data = rows.map((r) => ({
@@ -1898,9 +2483,17 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
     fd.set('sessionId', session.id);
     fd.set('attendance_data', JSON.stringify(attendance_data));
     const result = await saveSessionAttendanceAction(fd);
-    if (result?.error) { toast.error(result.error); setSaving(false); return; }
+    if (result?.error) {
+      toast.error(result.error);
+      setSaving(false);
+      return;
+    }
 
-    toast.success(isPast ? 'Attendance updated successfully' : 'Session ended & attendance saved');
+    toast.success(
+      isPast
+        ? 'Attendance updated successfully'
+        : 'Session ended & attendance saved'
+    );
     onSaved(attendance_data);
   };
 
@@ -1908,9 +2501,11 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
   const absentCount = rows.length - attendedCount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/75 backdrop-blur-sm"
         onClick={onClose}
       />
@@ -1919,20 +2514,24 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        className="relative z-10 w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl overflow-hidden max-h-[85dvh]"
+        className="relative z-10 flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-zinc-900 shadow-2xl sm:max-w-md sm:rounded-2xl"
       >
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-white/10">
+        <div className="border-b border-white/10 px-5 pt-5 pb-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">
-                {isPast ? 'Edit Attendance Sheet' : 'Interactive Attendance Sheet'}
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-[9px] font-black tracking-widest text-emerald-400 uppercase">
+                {isPast
+                  ? 'Edit Attendance Sheet'
+                  : 'Interactive Attendance Sheet'}
               </p>
-              <h2 className="text-sm font-bold text-white leading-tight truncate">{session.topic}</h2>
+              <h2 className="truncate text-sm leading-tight font-bold text-white">
+                {session.topic}
+              </h2>
             </div>
             <button
               onClick={onClose}
-              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-white/10 hover:text-white transition-colors animate-all"
+              className="animate-all mt-0.5 shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1941,36 +2540,55 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
           {/* Stats Bar */}
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[
-              { label: 'Enrolled list', value: students.length, color: 'text-gray-300' },
-              { label: 'Attended', value: attendedCount, color: 'text-emerald-400' },
+              {
+                label: 'Enrolled list',
+                value: students.length,
+                color: 'text-gray-300',
+              },
+              {
+                label: 'Attended',
+                value: attendedCount,
+                color: 'text-emerald-400',
+              },
               { label: 'Absent', value: absentCount, color: 'text-rose-405' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-white/5 bg-black/30 px-3 py-2.5 text-center">
+              <div
+                key={label}
+                className="rounded-xl border border-white/5 bg-black/30 px-3 py-2.5 text-center"
+              >
                 <p className={`text-base font-black ${color}`}>{value}</p>
-                <p className="text-[10px] text-gray-550 mt-1 font-medium">{label}</p>
+                <p className="text-gray-550 mt-1 text-[10px] font-medium">
+                  {label}
+                </p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Bulk Action Strip */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-black/20">
-          <span className="text-[10px] text-gray-500 font-mono">
-            {attendedCount === students.length && students.length > 0 ? 'All candidates marked present' : `${attendedCount} / ${students.length} logged`}
+        <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-5 py-3">
+          <span className="font-mono text-[10px] text-gray-500">
+            {attendedCount === students.length && students.length > 0
+              ? 'All candidates marked present'
+              : `${attendedCount} / ${students.length} logged`}
           </span>
           <div className="flex gap-2 text-[10px]">
             <button
               type="button"
-              onClick={() => setRows((prev) => prev.map((r) => ({ ...r, attended: true })))}
-              className="font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+              onClick={() =>
+                setRows((prev) => prev.map((r) => ({ ...r, attended: true })))
+              }
+              className="font-bold text-emerald-400 transition-colors hover:text-emerald-300"
             >
               All Present
             </button>
             <span className="text-gray-700">·</span>
             <button
               type="button"
-              onClick={() => setRows((prev) => prev.map((r) => ({ ...r, attended: false })))}
-              className="font-bold text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={() =>
+                setRows((prev) => prev.map((r) => ({ ...r, attended: false })))
+              }
+              className="font-bold text-gray-500 transition-colors hover:text-gray-300"
             >
               Clear Log
             </button>
@@ -1983,39 +2601,45 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
             No targeted candidates configured.
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2 max-h-[400px]">
+          <div className="max-h-[400px] flex-1 space-y-2 overflow-y-auto px-4 py-3">
             {rows.map((r) => (
               <div
                 key={r.user_id}
-                className={`group flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all cursor-pointer select-none ${
+                className={`group flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all select-none ${
                   r.attended
                     ? 'border-emerald-500/20 bg-emerald-500/[0.04]'
                     : 'border-white/5 bg-black/20 hover:border-white/10'
                 }`}
                 onClick={() => setRow(r.user_id, { attended: !r.attended })}
               >
-                <div className={`shrink-0 h-5.5 w-5.5 rounded-full border flex items-center justify-center transition-all ${
-                  r.attended
-                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                    : 'border-white/20 bg-transparent group-hover:border-white/40'
-                }`}>
+                <div
+                  className={`flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                    r.attended
+                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                      : 'border-white/20 bg-transparent group-hover:border-white/40'
+                  }`}
+                >
                   {r.attended && <Check className="h-3 w-3" strokeWidth={3} />}
                 </div>
 
                 <Avatar name={r.name} src={r.avatar_url} size="sm" />
 
-                <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold truncate transition-colors ${r.attended ? 'text-white' : 'text-gray-400'}`}>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`truncate text-xs font-semibold transition-colors ${r.attended ? 'text-white' : 'text-gray-400'}`}
+                  >
                     {r.name}
                   </p>
-                  <p className={`text-[9px] font-mono mt-0.5 ${r.attended ? 'text-emerald-400' : 'text-gray-600'}`}>
+                  <p
+                    className={`mt-0.5 font-mono text-[9px] ${r.attended ? 'text-emerald-400' : 'text-gray-600'}`}
+                  >
                     {r.attended ? 'Present' : 'Absent'}
                   </p>
                 </div>
 
                 {/* Performance points */}
                 <div
-                  className="shrink-0 flex items-center gap-1"
+                  className="flex shrink-0 items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
@@ -2023,15 +2647,19 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
                     min="0"
                     max="100"
                     value={r.points}
-                    onChange={(e) => setRow(r.user_id, { points: e.target.value })}
+                    onChange={(e) =>
+                      setRow(r.user_id, { points: e.target.value })
+                    }
                     placeholder="0"
-                    className={`w-10 rounded-lg border px-1.5 py-1 text-center text-xs font-bold outline-none transition-all ${
+                    className={`w-10 rounded-lg border px-1.5 py-1 text-center text-xs font-bold transition-all outline-none ${
                       r.attended
                         ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 focus:border-emerald-500/60'
                         : 'border-white/10 bg-black/30 text-gray-500 focus:border-white/20'
                     }`}
                   />
-                  <span className="text-[9px] text-gray-600 font-bold font-mono">pts</span>
+                  <span className="font-mono text-[9px] font-bold text-gray-600">
+                    pts
+                  </span>
                 </div>
               </div>
             ))}
@@ -2039,15 +2667,31 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
         )}
 
         {/* Footer actions */}
-        <div className="px-4 py-4 border-t border-white/10 bg-black/30 flex gap-2">
-          <ActionButton tone="ghost" onClick={onClose} className="flex-1 justify-center py-2.5">Cancel</ActionButton>
+        <div className="flex gap-2 border-t border-white/10 bg-black/30 px-4 py-4">
+          <ActionButton
+            tone="ghost"
+            onClick={onClose}
+            className="flex-1 justify-center py-2.5"
+          >
+            Cancel
+          </ActionButton>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/10 transition-colors"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/10 transition-colors hover:bg-violet-500 disabled:opacity-50"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <CheckCircle2 className="h-4 w-4 text-violet-200" />}
-            {saving ? (isPast ? 'Updating logs…' : 'Closing slot…') : (isPast ? 'Save Changes' : 'Close & Log Attendance')}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-violet-200" />
+            )}
+            {saving
+              ? isPast
+                ? 'Updating logs…'
+                : 'Closing slot…'
+              : isPast
+                ? 'Save Changes'
+                : 'Close & Log Attendance'}
           </button>
         </div>
       </motion.div>
@@ -2057,7 +2701,12 @@ function AttendanceModal({ session, students, onClose, onSaved, isPast = false }
 
 // ─── Recording Upload ─────────────────────────────────────────────────────────
 
-function RecordingUpload({ sessionId, initialUrl, onUploaded, readOnly = false }) {
+function RecordingUpload({
+  sessionId,
+  initialUrl,
+  onUploaded,
+  readOnly = false,
+}) {
   const [uploading, setUploading] = useState(false);
   const [recordingUrl, setRecordingUrl] = useState(initialUrl || null);
 
@@ -2081,27 +2730,31 @@ function RecordingUpload({ sessionId, initialUrl, onUploaded, readOnly = false }
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap text-xs">
+    <div className="flex flex-wrap items-center gap-2 text-xs">
       {recordingUrl ? (
         <a
           href={recordingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-650 hover:bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-md shadow-violet-500/15 transition-all hover:scale-102"
+          className="bg-violet-650 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white shadow-md shadow-violet-500/15 transition-all hover:scale-102 hover:bg-violet-600"
         >
           <Film className="h-3.5 w-3.5" />
           View Recording
           <ExternalLink className="h-3 w-3 opacity-70" />
         </a>
       ) : readOnly ? (
-        <span className="text-gray-555 text-[10px] italic">No recording uploaded</span>
+        <span className="text-gray-555 text-[10px] italic">
+          No recording uploaded
+        </span>
       ) : null}
       {!readOnly && (
-        <label className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-colors ${
-          uploading
-            ? 'border-white/10 bg-white/2 text-gray-500 cursor-not-allowed'
-            : 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300'
-        }`}>
+        <label
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold transition-colors ${
+            uploading
+              ? 'cursor-not-allowed border-white/10 bg-white/2 text-gray-500'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+          }`}
+        >
           {uploading ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

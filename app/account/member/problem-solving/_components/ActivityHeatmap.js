@@ -683,10 +683,10 @@ export default function ActivityHeatmap({ data = [], onDayClick }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-transparent shadow-lg shadow-black/5 sm:rounded-2xl md:rounded-2xl"
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-linear-to-br from-white/[0.03] to-transparent shadow-lg shadow-black/5 sm:rounded-2xl md:rounded-2xl"
     >
       {/* Top accent line */}
-      <div className="absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-emerald-500 to-teal-500" />
+      <div className="absolute top-0 right-0 left-0 h-[2px] bg-linear-to-r from-emerald-500 to-teal-500" />
 
       {/* Background decoration */}
       <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-emerald-500/5 blur-3xl" />
@@ -696,7 +696,7 @@ export default function ActivityHeatmap({ data = [], onDayClick }) {
         {/* Header */}
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg ring-2 shadow-emerald-500/20 ring-emerald-400/20 sm:h-11 sm:w-11 md:h-12 md:w-12">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-lg ring-2 shadow-emerald-500/20 ring-emerald-400/20 sm:h-11 sm:w-11 md:h-12 md:w-12">
               <Activity className="h-5 w-5 text-white sm:h-5 sm:w-5 md:h-6 md:w-6" />
             </div>
             <div>

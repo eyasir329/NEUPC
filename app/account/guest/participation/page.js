@@ -6,11 +6,11 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getUserEventRegistrations,
   getUserCertificates,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import GuestParticipationClient from './_components/GuestParticipationClient';
 
 export const metadata = { title: 'My Participation | Guest | NEUPC' };

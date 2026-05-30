@@ -1,3 +1,8 @@
+/**
+ * @file Account sidebar component
+ * @module AccountSidebar
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -27,8 +32,8 @@ import {
   FloatingPortal,
   FloatingFocusManager,
 } from '@floating-ui/react';
-import { signOutAction } from '@/app/_lib/actions';
-import { cn } from '@/app/_lib/utils';
+import { signOutAction } from '@/app/_lib/actions/actions';
+import { cn } from '@/app/_lib/utils/utils';
 import { ROLE_THEMES, ROLE_LABELS } from './roleTheme';
 
 const ROLE_DESCRIPTIONS = {
@@ -66,16 +71,14 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
         href={item.href}
         onClick={onClick}
         className={cn(
-          'group/nav relative flex items-center rounded-lg transition-all duration-150 outline-none border border-transparent',
+          'group/nav relative flex items-center rounded-lg border border-transparent transition-all duration-150 outline-none',
           'focus-visible:ring-2 focus-visible:ring-white/20',
-          collapsed
-            ? 'h-9 w-9 justify-center'
-            : 'h-11 gap-3 px-3 md:h-9',
+          collapsed ? 'h-9 w-9 justify-center' : 'h-11 gap-3 px-3 md:h-9',
           isActive
             ? cn('font-semibold shadow-sm', theme.active)
             : item.accent
-            ? 'bg-gradient-to-r from-indigo-500/10 to-violet-500/10 text-indigo-400 hover:from-indigo-500/15 hover:to-violet-500/15 hover:text-indigo-300 font-bold border-indigo-500/20 shadow-[0_0_12px_rgba(99,102,241,0.08)]'
-            : 'text-gray-500 hover:bg-white/[0.04] hover:text-gray-200 active:bg-white/[0.07]'
+              ? 'border-indigo-500/20 bg-linear-to-r from-indigo-500/10 to-violet-500/10 font-bold text-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.08)] hover:from-indigo-500/15 hover:to-violet-500/15 hover:text-indigo-300'
+              : 'text-gray-500 hover:bg-white/[0.04] hover:text-gray-200 active:bg-white/[0.07]'
         )}
       >
         {isActive && (
@@ -93,8 +96,8 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
             isActive
               ? ''
               : item.accent
-              ? 'text-indigo-400 opacity-90 group-hover/nav:opacity-100 group-hover/nav:text-indigo-300'
-              : 'opacity-60 group-hover/nav:opacity-100'
+                ? 'text-indigo-400 opacity-90 group-hover/nav:text-indigo-300 group-hover/nav:opacity-100'
+                : 'opacity-60 group-hover/nav:opacity-100'
           )}
         />
         {!collapsed && (
@@ -109,8 +112,8 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
                   item.badgeType === 'alert'
                     ? 'bg-sky-500 text-white'
                     : typeof item.badge === 'string'
-                    ? 'bg-white/[0.07] text-gray-500 text-[9px] tracking-wider uppercase'
-                    : 'bg-white/[0.07] text-gray-400'
+                      ? 'bg-white/[0.07] text-[9px] tracking-wider text-gray-500 uppercase'
+                      : 'bg-white/[0.07] text-gray-400'
                 )}
               >
                 {typeof item.badge === 'number' && item.badge > 99
@@ -235,11 +238,29 @@ function useRoleMenu({ placement }) {
   const click = useClick(context);
   const dismiss = useDismiss(context, { outsidePress: true, escapeKey: true });
   const role = useRole(context, { role: 'menu' });
-  const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role]);
-  return { open, setOpen, refs, floatingStyles, context, getReferenceProps, getFloatingProps };
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    click,
+    dismiss,
+    role,
+  ]);
+  return {
+    open,
+    setOpen,
+    refs,
+    floatingStyles,
+    context,
+    getReferenceProps,
+    getFloatingProps,
+  };
 }
 
-function RoleMenuPanel({ context, refs, floatingStyles, getFloatingProps, children }) {
+function RoleMenuPanel({
+  context,
+  refs,
+  floatingStyles,
+  getFloatingProps,
+  children,
+}) {
   return (
     <FloatingPortal>
       <FloatingFocusManager context={context} modal={false}>
@@ -264,9 +285,18 @@ function RoleMenuPanel({ context, refs, floatingStyles, getFloatingProps, childr
 }
 
 // ─── User profile section ─────────────────────────────────────────────────────
-function UserProfile({ session, activeRole, userRoles, theme, onSwitch, collapsed }) {
+function UserProfile({
+  session,
+  activeRole,
+  userRoles,
+  theme,
+  onSwitch,
+  collapsed,
+}) {
   const hasMultiple = userRoles && userRoles.length > 1;
-  const menu = useRoleMenu({ placement: collapsed ? 'right-end' : 'top-start' });
+  const menu = useRoleMenu({
+    placement: collapsed ? 'right-end' : 'top-start',
+  });
 
   const initials = session?.name
     ? session.name
@@ -297,7 +327,7 @@ function UserProfile({ session, activeRole, userRoles, theme, onSwitch, collapse
         <div className="relative shrink-0">
           <div
             className={cn(
-              'flex items-center justify-center rounded-full text-white font-semibold overflow-hidden',
+              'flex items-center justify-center overflow-hidden rounded-full font-semibold text-white',
               collapsed ? 'h-8 w-8 text-[11px]' : 'h-8 w-8 text-[11px]'
             )}
           >
@@ -307,7 +337,9 @@ function UserProfile({ session, activeRole, userRoles, theme, onSwitch, collapse
                 src={avatar}
                 alt={session?.name || 'User'}
                 className="h-full w-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             ) : (
               <div
@@ -326,10 +358,10 @@ function UserProfile({ session, activeRole, userRoles, theme, onSwitch, collapse
 
         {!collapsed && (
           <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-[12.5px] font-semibold leading-tight text-gray-100">
+            <p className="truncate text-[12.5px] leading-tight font-semibold text-gray-100">
               {session?.name || 'User'}
             </p>
-            <p className="truncate text-[10.5px] text-gray-500 leading-tight mt-0.5">
+            <p className="mt-0.5 truncate text-[10.5px] leading-tight text-gray-500">
               {session?.email || ''}
             </p>
           </div>
@@ -391,7 +423,7 @@ function MembershipCard({ role }) {
           Upgrade
         </p>
       </div>
-      <p className="mb-1 text-[13px] font-semibold text-white leading-snug">
+      <p className="mb-1 text-[13px] leading-snug font-semibold text-white">
         Become a Member
       </p>
       <p className="mb-3 text-[11px] leading-relaxed text-gray-500">
@@ -488,7 +520,10 @@ export default function AccountSidebar({
               : 'flex items-center gap-3 px-4 py-[16px]'
           )}
         >
-          <Link href="/" className="shrink-0 transition-opacity hover:opacity-80">
+          <Link
+            href="/"
+            className="shrink-0 transition-opacity hover:opacity-80"
+          >
             {collapsed ? (
               <span className="text-[15px] font-bold tracking-tight text-white select-none">
                 N<span className={theme.accentText}>P</span>
@@ -540,7 +575,12 @@ export default function AccountSidebar({
         {/* ── User profile + footer ─────────────────────────────────────────── */}
         <div className="shrink-0 border-t border-white/[0.06]">
           {/* User profile row */}
-          <div className={cn('px-1.5 pt-2', collapsed ? 'flex justify-center' : '')}>
+          <div
+            className={cn(
+              'px-1.5 pt-2',
+              collapsed ? 'flex justify-center' : ''
+            )}
+          >
             <UserProfile
               session={session}
               activeRole={activeRole}
@@ -552,7 +592,12 @@ export default function AccountSidebar({
           </div>
 
           {/* Sign out */}
-          <div className={cn('px-2 pb-2 pt-1', collapsed ? 'flex justify-center' : 'flex')}>
+          <div
+            className={cn(
+              'px-2 pt-1 pb-2',
+              collapsed ? 'flex justify-center' : 'flex'
+            )}
+          >
             <form action={signOutAction}>
               <Tooltip label="Sign out" show={collapsed}>
                 <button

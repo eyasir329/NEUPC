@@ -21,7 +21,7 @@ import { UserRoleProvider } from './_components/ui/UserRoleProvider';
 import NavbarSkeleton from './_components/ui/NavbarSkeleton';
 import AppShell from './_components/ui/AppShell';
 import PageTransition from './_components/motion/PageTransition';
-import { auth } from '@/app/_lib/auth';
+import { auth } from '@/app/_lib/auth/auth';
 
 import {
   SITE_URL,
@@ -30,7 +30,7 @@ import {
   SITE_DESCRIPTION,
   DEFAULT_OG_IMAGE,
   BASE_KEYWORDS,
-} from '@/app/_lib/seo';
+} from '@/app/_lib/config/seo';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -136,7 +136,10 @@ export default async function RootLayout({ children }) {
   try {
     session = await auth();
   } catch (error) {
-    console.warn('[layout] auth() failed, continuing as unauthenticated:', error?.message);
+    console.warn(
+      '[layout] auth() failed, continuing as unauthenticated:',
+      error?.message
+    );
   }
 
   return (
@@ -162,7 +165,10 @@ export default async function RootLayout({ children }) {
               <AsyncHeader />
             </Suspense>
           </div>
-          <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
+          <UserRoleProvider
+            role={session?.user?.role || null}
+            isLoggedIn={!!session}
+          >
             <main className="w-full grow">
               <PageTransition>{children}</PageTransition>
             </main>

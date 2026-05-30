@@ -75,7 +75,7 @@ export default function TopProgressBar() {
         <div className="absolute inset-0 animate-[shimmer_1.5s_ease-in-out_infinite] bg-linear-to-r from-transparent via-white/30 to-transparent" />
 
         {/* Leading glow dot */}
-        <div className="absolute top-1/2 right-0 h-2.5 w-2.5 translate-x-1/2 -translate-y-1/2 rounded-full bg-neon-lime shadow-[0_0_10px_2px_rgba(182,243,107,0.8)]" />
+        <div className="bg-neon-lime absolute top-1/2 right-0 h-2.5 w-2.5 translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_10px_2px_rgba(182,243,107,0.8)]" />
       </div>
     </div>
   );

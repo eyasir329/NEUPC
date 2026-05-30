@@ -6,11 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
 import {
   extractLeaderboardData,
   exportToCSV,
-} from '@/app/_lib/problem-solving-extraction';
+} from '@/app/_lib/services/problem-solving-extraction';
 
 export async function GET(request) {
   try {

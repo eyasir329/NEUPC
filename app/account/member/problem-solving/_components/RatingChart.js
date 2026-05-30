@@ -11,7 +11,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Calendar, Filter, Trophy, Activity } from 'lucide-react';
-import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/problem-solving-platforms';
+import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
 
 // Platform configurations
 const PLATFORM_CONFIG = PROBLEM_SOLVING_PLATFORMS.reduce((acc, platform) => {
@@ -601,7 +601,7 @@ export default function RatingChart({
         <div className="absolute top-0 right-0 left-0 h-0.5 rounded-t-2xl bg-linear-to-r from-blue-500 to-indigo-500" />
 
         <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
             <TrendingUp className="h-4 w-4 text-white" />
           </div>
           <h3 className="font-semibold text-white">Rating History</h3>
@@ -633,7 +633,7 @@ export default function RatingChart({
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
             <TrendingUp className="h-4 w-4 text-white" />
           </div>
           <h3 className="font-semibold text-white">Rating History</h3>

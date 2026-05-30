@@ -6,7 +6,7 @@
  * @access executive | admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 
 export default async function ExecutiveLayout({ children }) {
   await requireRole(['executive', 'admin']);

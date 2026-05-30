@@ -6,11 +6,11 @@
  * View another member's problem solving statistics and activity.
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getMemberProblemSolvingData } from '@/app/_lib/problem-solving-actions';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getMemberProblemSolvingData } from '@/app/_lib/actions/problem-solving-actions';
 import { notFound } from 'next/navigation';
 import MemberProfileClient from './_components/MemberProfileClient';
-import { PageShell } from '../../_components/_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 export async function generateMetadata({ params }) {
   const { userId } = await params;

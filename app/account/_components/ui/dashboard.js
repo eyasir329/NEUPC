@@ -94,9 +94,7 @@ export function PageHeader({
           <h1 className="truncate text-2xl font-bold text-white sm:text-3xl">
             {title}
           </h1>
-          {subtitle && (
-            <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
-          )}
+          {subtitle && <p className="mt-1 text-sm text-gray-400">{subtitle}</p>}
           {meta && <div className="mt-2 flex flex-wrap gap-2">{meta}</div>}
         </div>
       </div>
@@ -155,9 +153,7 @@ export function SectionHeader({
         )}
         <div>
           <h2 className="text-sm font-semibold text-gray-200">{title}</h2>
-          {subtitle && (
-            <p className="text-xs text-gray-500">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
       </div>
       {action}
@@ -277,7 +273,12 @@ const GRADIENT_TONES = {
   red: 'from-red-500/70 to-rose-500/50',
 };
 
-export function GradientBar({ value, max = 100, tone = 'blue', height = 'h-2' }) {
+export function GradientBar({
+  value,
+  max = 100,
+  tone = 'blue',
+  height = 'h-2',
+}) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div
@@ -287,7 +288,7 @@ export function GradientBar({ value, max = 100, tone = 'blue', height = 'h-2' })
         initial={{ width: 0 }}
         animate={{ width: `${pct}%` }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
-        className={`h-full bg-gradient-to-r ${GRADIENT_TONES[tone] ?? GRADIENT_TONES.blue}`}
+        className={`h-full bg-linear-to-r ${GRADIENT_TONES[tone] ?? GRADIENT_TONES.blue}`}
       />
     </div>
   );
@@ -305,7 +306,7 @@ export function TabBar({ tabs, value, onChange }) {
             key={t.value}
             type="button"
             onClick={() => onChange(t.value)}
-            className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
               active
                 ? 'bg-white/[0.06] text-white shadow-sm'
                 : 'text-gray-400 hover:bg-white/[0.03] hover:text-gray-200'
@@ -316,9 +317,7 @@ export function TabBar({ tabs, value, onChange }) {
             {typeof t.count === 'number' && (
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                  active
-                    ? 'bg-white/10 text-white'
-                    : 'bg-white/5 text-gray-500'
+                  active ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-500'
                 }`}
               >
                 {t.count}
@@ -446,7 +445,7 @@ export function Avatar({ name = '?', size = 'md', src }) {
   const tone = AVATAR_TONES[hashName(name) % AVATAR_TONES.length];
   return (
     <div
-      className={`${sizes[size]} flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br font-semibold ${tone}`}
+      className={`${sizes[size]} flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-linear-to-br font-semibold ${tone}`}
     >
       {initials || '?'}
     </div>

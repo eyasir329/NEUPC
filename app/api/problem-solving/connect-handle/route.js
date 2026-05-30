@@ -5,21 +5,21 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { getCachedUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { getCachedUserByEmail } from '@/app/_lib/services/data-service';
 import {
   CodeforcesService,
   AtCoderService,
   LeetCodeService,
   TophService,
-} from '@/app/_lib/problem-solving-services';
-import { PROBLEM_SOLVING_PLATFORM_IDS } from '@/app/_lib/problem-solving-platforms';
+} from '@/app/_lib/services/problem-solving-services';
+import { PROBLEM_SOLVING_PLATFORM_IDS } from '@/app/_lib/services/problem-solving-platforms';
 import {
   V2_TABLES,
   getPlatformId,
   upsertUserHandleV2,
-} from '@/app/_lib/problem-solving-v2-helpers.js';
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 function normalizeIncomingHandle(platform, rawHandle) {
   const trimmed = String(rawHandle || '').trim();
@@ -141,16 +141,14 @@ export async function POST(request) {
       switch (platform) {
         case 'codeforces':
           const codeforcesService = new CodeforcesService();
-          verificationResult = await codeforcesService.getUserInfo(
-            normalizedHandle
-          );
+          verificationResult =
+            await codeforcesService.getUserInfo(normalizedHandle);
           break;
 
         case 'atcoder':
           const atcoderService = new AtCoderService();
-          const atcoderStats = await atcoderService.getUserStats(
-            normalizedHandle
-          );
+          const atcoderStats =
+            await atcoderService.getUserStats(normalizedHandle);
           verificationResult = {
             handle: normalizedHandle,
             rating: atcoderStats.rating,
@@ -164,9 +162,8 @@ export async function POST(request) {
 
         case 'leetcode':
           const leetcodeService = new LeetCodeService();
-          const leetcodeProfile = await leetcodeService.getUserProfile(
-            normalizedHandle
-          );
+          const leetcodeProfile =
+            await leetcodeService.getUserProfile(normalizedHandle);
           verificationResult = {
             handle: leetcodeProfile.username,
             rating: leetcodeProfile.contest_rating,
@@ -179,7 +176,8 @@ export async function POST(request) {
 
         case 'toph':
           const tophService = new TophService();
-          const tophProfile = await tophService.getUserProfile(normalizedHandle);
+          const tophProfile =
+            await tophService.getUserProfile(normalizedHandle);
           verificationResult = {
             handle: tophProfile.handle || normalizedHandle,
             rating: tophProfile.rating || 0,
@@ -223,12 +221,12 @@ export async function POST(request) {
       platform,
       canonicalHandle,
       {
-      is_verified: isVerified,
-      verified_at: isVerified ? new Date().toISOString() : null,
-      current_rating: verificationResult?.rating,
-      max_rating: verificationResult?.maxRating,
-      rank_title: verificationResult?.rank,
-      avatar_url: verificationResult?.avatar,
+        is_verified: isVerified,
+        verified_at: isVerified ? new Date().toISOString() : null,
+        current_rating: verificationResult?.rating,
+        max_rating: verificationResult?.maxRating,
+        rank_title: verificationResult?.rank,
+        avatar_url: verificationResult?.avatar,
       }
     );
 

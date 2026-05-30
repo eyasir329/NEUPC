@@ -4,8 +4,8 @@
  */
 
 import Link from 'next/link';
-import { auth } from '@/app/_lib/auth';
-import { driveImageUrl, getFallbackAvatarUrl } from '@/app/_lib/utils';
+import { auth } from '@/app/_lib/auth/auth';
+import { driveImageUrl, getFallbackAvatarUrl } from '@/app/_lib/utils/utils';
 
 async function Avatar() {
   const session = await auth();
@@ -44,7 +44,7 @@ async function Avatar() {
           }}
         />
       ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-xs font-bold text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-xs font-bold text-white">
           {initials}
         </div>
       )}

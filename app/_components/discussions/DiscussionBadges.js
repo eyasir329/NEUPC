@@ -37,7 +37,7 @@ import {
   getPriorityConfig,
   getRoleBadgeConfig,
   isStaffRole,
-} from '@/app/_lib/discussion-config';
+} from '@/app/_lib/config/discussion-config';
 
 // Icon mapping for dynamic icon rendering
 const ICONS = {

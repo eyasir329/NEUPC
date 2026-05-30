@@ -41,7 +41,7 @@ import {
   getStatusConfig,
   getPriorityConfig,
   STAFF_ROLES,
-} from '@/app/_lib/discussion-config';
+} from '@/app/_lib/config/discussion-config';
 import {
   fetchDiscussionsAction,
   fetchStaffStatsAction,
@@ -54,7 +54,7 @@ import {
   toggleLockAction,
   deleteDiscussionAction,
   fetchDiscussionDetailAction,
-} from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/actions/discussion-actions';
 import {
   DiscussionCard,
   StaffStats,

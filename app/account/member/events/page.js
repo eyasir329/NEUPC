@@ -6,11 +6,11 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getPublishedEvents,
   getUserEventRegistrations,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import MemberEventsClient from './_components/MemberEventsClient';
 
 export const metadata = { title: 'Events | Member | NEUPC' };

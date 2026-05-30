@@ -55,7 +55,7 @@ import {
   GraduationCap,
   Keyboard,
 } from 'lucide-react';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 // ── Language → CodeMirror extension ──────────────────────────────────────────
 

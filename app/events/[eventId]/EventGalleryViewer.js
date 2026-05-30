@@ -1,8 +1,13 @@
+/**
+ * @file Event gallery viewer component
+ * @module EventGalleryViewer
+ */
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import SafeImg from '@/app/_components/ui/SafeImg';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 /* ──────────────────────────────────────────────────────── */
 /*  EventGalleryViewer                                      */

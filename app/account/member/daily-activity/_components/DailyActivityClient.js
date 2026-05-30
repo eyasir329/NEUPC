@@ -1,3 +1,8 @@
+/**
+ * @file Daily activity client component
+ * @module DailyActivityClient
+ */
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -29,18 +34,18 @@ import {
   FolderPlus,
   ChevronDown,
   Check,
-  Edit2
+  Edit2,
 } from 'lucide-react';
 import {
-    GlassCard,
-    SectionHeader,
-    Pill,
-    ActionButton,
-    EmptyState,
-    PageShell,
-    TabBar,
-    PageHeader,
-  } from '../../_components/_ui';
+  GlassCard,
+  SectionHeader,
+  Pill,
+  ActionButton,
+  EmptyState,
+  PageShell,
+  TabBar,
+  PageHeader,
+} from '@/app/account/_components/ui';
 
 // ───────────────────────── Constants ─────────────────────────
 const STORAGE_KEY = 'neupc.member.daily-activity.v1';
@@ -246,7 +251,7 @@ const SEED_FEED = [
     location: 'Online · codeforces.com',
     start: offsetDate(10, 14, 35),
     durationMin: 150,
-  }
+  },
 ];
 
 const TABS = [
@@ -254,7 +259,15 @@ const TABS = [
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
 ];
 
-const GROUP_TONES = ['blue', 'emerald', 'amber', 'violet', 'rose', 'cyan', 'pink'];
+const GROUP_TONES = [
+  'blue',
+  'emerald',
+  'amber',
+  'violet',
+  'rose',
+  'cyan',
+  'pink',
+];
 
 const GROUP_DOT_CLASS = {
   blue: 'bg-blue-400 border-blue-400',
@@ -264,65 +277,114 @@ const GROUP_DOT_CLASS = {
   rose: 'bg-rose-400 border-rose-400',
   cyan: 'bg-cyan-400 border-cyan-400',
   pink: 'bg-pink-400 border-pink-400',
-  gray: 'bg-gray-400 border-gray-400'
+  gray: 'bg-gray-400 border-gray-400',
 };
 
-function TodoOccurrenceItem({ occurrence, todo, onEdit, onToggle, onDelete, isDone, group }) {
+function TodoOccurrenceItem({
+  occurrence,
+  todo,
+  onEdit,
+  onToggle,
+  onDelete,
+  isDone,
+  group,
+}) {
   const { dateKey } = occurrence;
   const isRecurring = Boolean(todo.recurrence);
   const recDesc = describeRecurrence(todo.recurrence);
-  const priorityColors = { high: 'text-rose-400', medium: 'text-amber-400', low: 'text-sky-400' };
+  const priorityColors = {
+    high: 'text-rose-400',
+    medium: 'text-amber-400',
+    low: 'text-sky-400',
+  };
   const priorityDot = priorityColors[todo.priority] || 'text-gray-500';
   return (
-    <div className={`group flex items-center justify-between rounded-lg border px-3 py-2.5 transition-all duration-150 ${isDone ? 'border-transparent bg-transparent opacity-50' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]'}`}>
-      <div className="flex items-start gap-3 min-w-0">
+    <div
+      className={`group flex items-center justify-between rounded-lg border px-3 py-2.5 transition-all duration-150 ${isDone ? 'border-transparent bg-transparent opacity-50' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]'}`}
+    >
+      <div className="flex min-w-0 items-start gap-3">
         <button
           type="button"
           onClick={() => onToggle(todo.id, dateKey)}
-          className={`shrink-0 mt-0.5 flex h-4 w-4 items-center justify-center rounded border transition ${isDone ? 'border-violet-500 bg-violet-500 text-white' : 'border-white/20 hover:border-violet-400 hover:bg-violet-500/10'}`}
+          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${isDone ? 'border-violet-500 bg-violet-500 text-white' : 'border-white/20 hover:border-violet-400 hover:bg-violet-500/10'}`}
         >
           {isDone && <Check className="h-3 w-3" />}
         </button>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className={`text-[13px] leading-snug ${isDone ? 'line-through text-gray-500' : 'text-white'}`}>
-            <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${group?.tone ? GROUP_DOT_CLASS[group.tone] : GROUP_DOT_CLASS['gray']}`} />
+          <span
+            className={`text-[13px] leading-snug ${isDone ? 'text-gray-500 line-through' : 'text-white'}`}
+          >
+            <span
+              className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${group?.tone ? GROUP_DOT_CLASS[group.tone] : GROUP_DOT_CLASS['gray']}`}
+            />
             {todo.title}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {todo.time && (
               <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                <Clock className="h-3 w-3" />{todo.time}
+                <Clock className="h-3 w-3" />
+                {todo.time}
               </span>
             )}
             {todo.priority && (
-              <span className={`text-[10px] font-semibold uppercase tracking-wide ${priorityDot}`}>
+              <span
+                className={`text-[10px] font-semibold tracking-wide uppercase ${priorityDot}`}
+              >
                 {todo.priority}
               </span>
             )}
             {isRecurring && (
               <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                <Repeat className="h-3 w-3" />{recDesc}
+                <Repeat className="h-3 w-3" />
+                {recDesc}
               </span>
             )}
-            {todo.notes && <span className="text-[11px] text-gray-500 line-clamp-1">{todo.notes}</span>}
+            {todo.notes && (
+              <span className="line-clamp-1 text-[11px] text-gray-500">
+                {todo.notes}
+              </span>
+            )}
           </div>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 pl-2">
         {group && (
-          <span className={`hidden sm:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${GROUP_DOT_CLASS[group.tone] ? `text-gray-400 border-white/[0.06] bg-white/[0.02]` : 'text-gray-500'}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${GROUP_DOT_CLASS[group.tone]?.split(' ')[0]}`} />
+          <span
+            className={`hidden items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium sm:inline-flex ${GROUP_DOT_CLASS[group.tone] ? `border-white/[0.06] bg-white/[0.02] text-gray-400` : 'text-gray-500'}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${GROUP_DOT_CLASS[group.tone]?.split(' ')[0]}`}
+            />
             {group.name}
           </span>
         )}
-        <button onClick={() => onEdit(todo)} className="text-gray-500 hover:text-white p-1 rounded-md transition opacity-0 group-hover:opacity-100" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
-        <button onClick={() => onDelete(todo, isRecurring ? dateKey : null)} className="text-gray-500 hover:text-rose-400 p-1 rounded-md transition opacity-0 group-hover:opacity-100" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+        <button
+          onClick={() => onEdit(todo)}
+          className="rounded-md p-1 text-gray-500 opacity-0 transition group-hover:opacity-100 hover:text-white"
+          title="Edit"
+        >
+          <Edit2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => onDelete(todo, isRecurring ? dateKey : null)}
+          className="rounded-md p-1 text-gray-500 opacity-0 transition group-hover:opacity-100 hover:text-rose-400"
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
 }
 
-function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) {
+function TodoEditor({
+  open,
+  onClose,
+  onSave,
+  initial,
+  groups,
+  defaultDateKey,
+}) {
   const [draft, setDraft] = useState({});
   const [recFreq, setRecFreq] = useState('');
   const [recInterval, setRecInterval] = useState(1);
@@ -337,9 +399,13 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
         const rec = initial.recurrence;
         setRecFreq(rec?.freq || '');
         setRecInterval(rec?.interval || 1);
-        if (rec?.end?.type === 'count') { setRecEndType('count'); setRecCount(rec.end.count || 10); }
-        else if (rec?.end?.type === 'until') { setRecEndType('until'); setRecUntil(rec.end.untilKey || ''); }
-        else setRecEndType('none');
+        if (rec?.end?.type === 'count') {
+          setRecEndType('count');
+          setRecCount(rec.end.count || 10);
+        } else if (rec?.end?.type === 'until') {
+          setRecEndType('until');
+          setRecUntil(rec.end.untilKey || '');
+        } else setRecEndType('none');
       } else {
         setDraft({
           title: '',
@@ -360,9 +426,14 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
 
   function buildRecurrence() {
     if (!recFreq) return null;
-    const rec = { freq: recFreq, interval: Math.max(1, Number(recInterval) || 1) };
-    if (recEndType === 'count') rec.end = { type: 'count', count: Math.max(1, Number(recCount) || 10) };
-    else if (recEndType === 'until' && recUntil) rec.end = { type: 'until', untilKey: recUntil };
+    const rec = {
+      freq: recFreq,
+      interval: Math.max(1, Number(recInterval) || 1),
+    };
+    if (recEndType === 'count')
+      rec.end = { type: 'count', count: Math.max(1, Number(recCount) || 10) };
+    else if (recEndType === 'until' && recUntil)
+      rec.end = { type: 'until', untilKey: recUntil };
     else rec.end = null;
     return rec;
   }
@@ -374,29 +445,43 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
 
   if (!open) return null;
 
-  const inputCls = "w-full bg-gray-900/80 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/60 transition";
-  const labelCls = "text-[11px] font-semibold uppercase tracking-wider text-gray-500";
+  const inputCls =
+    'w-full bg-gray-900/80 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/60 transition';
+  const labelCls =
+    'text-[11px] font-semibold uppercase tracking-wider text-gray-500';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] bg-gray-950 shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-950 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-          <h2 className="text-[15px] font-semibold text-white">{draft.id ? 'Edit Task' : 'New Task'}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition p-1 rounded-md"><X className="w-4 h-4" /></button>
+          <h2 className="text-[15px] font-semibold text-white">
+            {draft.id ? 'Edit Task' : 'New Task'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-gray-500 transition hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
         {/* Body */}
-        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5">
           {/* Title */}
           <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Title <span className="text-rose-500">*</span></label>
+            <label className={labelCls}>
+              Title <span className="text-rose-500">*</span>
+            </label>
             <input
               className={inputCls}
               value={draft.title || ''}
-              onChange={e => setDraft({ ...draft, title: e.target.value })}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               placeholder="Task title"
               autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             />
           </div>
           {/* Notes */}
@@ -405,7 +490,7 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
             <textarea
               className={inputCls}
               value={draft.notes || ''}
-              onChange={e => setDraft({ ...draft, notes: e.target.value })}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               placeholder="Optional notes"
               rows={2}
             />
@@ -415,14 +500,30 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
             {groups && groups.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>Group</label>
-                <select className={inputCls} value={draft.groupId || ''} onChange={e => setDraft({ ...draft, groupId: e.target.value })}>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                <select
+                  className={inputCls}
+                  value={draft.groupId || ''}
+                  onChange={(e) =>
+                    setDraft({ ...draft, groupId: e.target.value })
+                  }
+                >
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
             <div className="flex flex-col gap-1.5">
               <label className={labelCls}>Priority</label>
-              <select className={inputCls} value={draft.priority || 'medium'} onChange={e => setDraft({ ...draft, priority: e.target.value })}>
+              <select
+                className={inputCls}
+                value={draft.priority || 'medium'}
+                onChange={(e) =>
+                  setDraft({ ...draft, priority: e.target.value })
+                }
+              >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -437,7 +538,9 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
                 type="date"
                 className={`${inputCls} [color-scheme:dark]`}
                 value={draft.startKey || ''}
-                onChange={e => setDraft({ ...draft, startKey: e.target.value })}
+                onChange={(e) =>
+                  setDraft({ ...draft, startKey: e.target.value })
+                }
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -446,7 +549,7 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
                 type="time"
                 className={`${inputCls} [color-scheme:dark]`}
                 value={draft.time || ''}
-                onChange={e => setDraft({ ...draft, time: e.target.value })}
+                onChange={(e) => setDraft({ ...draft, time: e.target.value })}
               />
             </div>
           </div>
@@ -454,7 +557,11 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
           <div className="flex flex-col gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
             <label className={labelCls}>Recurrence</label>
             <div className="grid grid-cols-2 gap-3">
-              <select className={inputCls} value={recFreq} onChange={e => setRecFreq(e.target.value)}>
+              <select
+                className={inputCls}
+                value={recFreq}
+                onChange={(e) => setRecFreq(e.target.value)}
+              >
                 <option value="">No repeat</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -462,23 +569,36 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
               </select>
               {recFreq && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500 whitespace-nowrap">Every</span>
+                  <span className="text-[11px] whitespace-nowrap text-gray-500">
+                    Every
+                  </span>
                   <input
                     type="number"
-                    min={1} max={99}
+                    min={1}
+                    max={99}
                     className={`${inputCls} w-16 text-center`}
                     value={recInterval}
-                    onChange={e => setRecInterval(e.target.value)}
+                    onChange={(e) => setRecInterval(e.target.value)}
                   />
-                  <span className="text-[11px] text-gray-500">{recFreq === 'daily' ? 'day(s)' : recFreq === 'weekly' ? 'wk(s)' : 'mo(s)'}</span>
+                  <span className="text-[11px] text-gray-500">
+                    {recFreq === 'daily'
+                      ? 'day(s)'
+                      : recFreq === 'weekly'
+                        ? 'wk(s)'
+                        : 'mo(s)'}
+                  </span>
                 </div>
               )}
             </div>
             {recFreq && (
-              <div className="grid grid-cols-2 gap-3 mt-1">
+              <div className="mt-1 grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>End condition</label>
-                  <select className={inputCls} value={recEndType} onChange={e => setRecEndType(e.target.value)}>
+                  <select
+                    className={inputCls}
+                    value={recEndType}
+                    onChange={(e) => setRecEndType(e.target.value)}
+                  >
                     <option value="none">Forever</option>
                     <option value="count">After N occurrences</option>
                     <option value="until">Until date</option>
@@ -487,13 +607,25 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
                 {recEndType === 'count' && (
                   <div className="flex flex-col gap-1.5">
                     <label className={labelCls}>Occurrences</label>
-                    <input type="number" min={1} max={999} className={inputCls} value={recCount} onChange={e => setRecCount(e.target.value)} />
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      className={inputCls}
+                      value={recCount}
+                      onChange={(e) => setRecCount(e.target.value)}
+                    />
                   </div>
                 )}
                 {recEndType === 'until' && (
                   <div className="flex flex-col gap-1.5">
                     <label className={labelCls}>Until</label>
-                    <input type="date" className={`${inputCls} [color-scheme:dark]`} value={recUntil} onChange={e => setRecUntil(e.target.value)} />
+                    <input
+                      type="date"
+                      className={`${inputCls} [color-scheme:dark]`}
+                      value={recUntil}
+                      onChange={(e) => setRecUntil(e.target.value)}
+                    />
                   </div>
                 )}
               </div>
@@ -502,11 +634,16 @@ function TodoEditor({ open, onClose, onSave, initial, groups, defaultDateKey }) 
         </div>
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-6 py-4">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition rounded-lg">Cancel</button>
+          <button
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm text-gray-400 transition hover:text-white"
+          >
+            Cancel
+          </button>
           <button
             onClick={handleSave}
             disabled={!draft.title?.trim()}
-            className="px-5 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition"
+            className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Save Task
           </button>
@@ -521,18 +658,30 @@ function DeleteRecurringModal({ open, pending, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-[1rem] border border-white/10 bg-gray-900 p-6 text-center">
-        <h3 className="text-white text-lg font-medium mb-4">Delete Mode</h3>
-        <p className="text-white/60 text-sm mb-6">Do you want to delete this specific occurrence or the entire recurring series?</p>
+        <h3 className="mb-4 text-lg font-medium text-white">Delete Mode</h3>
+        <p className="mb-6 text-sm text-white/60">
+          Do you want to delete this specific occurrence or the entire recurring
+          series?
+        </p>
         <div className="flex flex-col gap-2">
           {pending?.occKey && (
-            <button onClick={() => onConfirm('one')} className="px-4 py-2 bg-white/5 hover:bg-white/10 transition text-white rounded">
+            <button
+              onClick={() => onConfirm('one')}
+              className="rounded bg-white/5 px-4 py-2 text-white transition hover:bg-white/10"
+            >
               Delete this occurrence
             </button>
           )}
-          <button onClick={() => onConfirm('all')} className="px-4 py-2 bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition rounded">
+          <button
+            onClick={() => onConfirm('all')}
+            className="rounded bg-rose-500/20 px-4 py-2 text-rose-400 transition hover:bg-rose-500 hover:text-white"
+          >
             Delete entire series
           </button>
-          <button onClick={onClose} className="px-4 py-2 mt-2 text-white/50 hover:text-white transition">
+          <button
+            onClick={onClose}
+            className="mt-2 px-4 py-2 text-white/50 transition hover:text-white"
+          >
             Cancel
           </button>
         </div>
@@ -644,7 +793,7 @@ const DEFAULT_TODOS = [
       freq: 'weekly',
       interval: 1,
       byWeekday: [1, 3],
-      end: null
+      end: null,
     },
   },
   {
@@ -659,7 +808,7 @@ const DEFAULT_TODOS = [
       freq: 'weekly',
       interval: 1,
       byWeekday: [1],
-      end: null
+      end: null,
     },
   },
   {
@@ -673,7 +822,7 @@ const DEFAULT_TODOS = [
     recurrence: {
       freq: 'monthly',
       interval: 1,
-      end: null
+      end: null,
     },
   },
   {
@@ -688,7 +837,7 @@ const DEFAULT_TODOS = [
       freq: 'weekly',
       interval: 1,
       byWeekday: [4],
-      end: null
+      end: null,
     },
   },
   {
@@ -703,7 +852,7 @@ const DEFAULT_TODOS = [
       freq: 'weekly',
       interval: 1,
       byWeekday: [2, 4],
-      end: null
+      end: null,
     },
   },
   {
@@ -714,7 +863,7 @@ const DEFAULT_TODOS = [
     notes: 'Solve problem D and E',
     startKey: dateKey(offsetDate(1)),
     time: '14:00',
-    recurrence: null
+    recurrence: null,
   },
 ];
 
@@ -729,7 +878,6 @@ function addDaysKey(key, n) {
   d.setDate(d.getDate() + n);
   return dateKey(d);
 }
-
 
 /**
  * Yields all occurrence date-keys for `todo` that fall within
@@ -836,7 +984,10 @@ function describeRecurrence(rec) {
         .sort((a, b) => a - b)
         .map((w) => WEEKDAYS[w])
         .join(', ');
-      base = interval === 1 ? `Weekly on ${names}` : `Every ${interval} weeks on ${names}`;
+      base =
+        interval === 1
+          ? `Weekly on ${names}`
+          : `Every ${interval} weeks on ${names}`;
     } else {
       base = interval === 1 ? 'Every week' : `Every ${interval} weeks`;
     }
@@ -875,8 +1026,6 @@ function saveState(s) {
 
 // ───────────────────────── Subcomponents ─────────────────────────
 // ───────────────────────── Group Panel ─────────────────────────
-
-
 
 function GroupPanel({
   groups,
@@ -918,12 +1067,14 @@ function GroupPanel({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between pb-2 border-b border-white/[0.04] mb-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Lists</span>
+      <div className="mb-1 flex items-center justify-between border-b border-white/[0.04] pb-2">
+        <span className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+          Lists
+        </span>
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[11px] font-medium text-gray-400 hover:border-white/[0.1] hover:bg-white/[0.04] hover:text-gray-200 transition"
+          className="inline-flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[11px] font-medium text-gray-400 transition hover:border-white/[0.1] hover:bg-white/[0.04] hover:text-gray-200"
         >
           <Plus className="h-3 w-3" /> New list
         </button>
@@ -984,28 +1135,49 @@ function GroupPanel({
         <span className="inline-flex items-center gap-2">
           <Folder className="h-3.5 w-3.5" /> All tasks
         </span>
-        <span className="text-[10.5px] text-gray-400">{countsByGroup.__all || 0}</span>
+        <span className="text-[10.5px] text-gray-400">
+          {countsByGroup.__all || 0}
+        </span>
       </button>
 
       {groups.map((g) => {
         const isActive = activeGroupId === g.id;
         const visible = groupVisible[g.id] !== false;
-        
+
         if (deletingGroupId === g.id) {
           return (
-            <div key={g.id} className="rounded-md border border-white/[0.06] bg-rose-500/10 p-2 text-center text-xs">
+            <div
+              key={g.id}
+              className="rounded-md border border-white/[0.06] bg-rose-500/10 p-2 text-center text-xs"
+            >
               <p className="mb-2 text-rose-200">Delete &quot;{g.name}&quot;?</p>
               <div className="flex justify-center gap-2">
-                <button onClick={() => setDeletingGroupId(null)} className="px-2 text-gray-400 hover:text-white">Cancel</button>
-                <button onClick={() => { onDelete(g.id); setDeletingGroupId(null); }} className="rounded bg-rose-500 px-2 py-1 text-white">Delete</button>
+                <button
+                  onClick={() => setDeletingGroupId(null)}
+                  className="px-2 text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onDelete(g.id);
+                    setDeletingGroupId(null);
+                  }}
+                  className="rounded bg-rose-500 px-2 py-1 text-white"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           );
         }
-        
+
         if (renamingGroupId === g.id) {
           return (
-            <div key={g.id} className="flex flex-col gap-1.5 rounded-md border border-white/[0.06] bg-white/[0.01] p-2">
+            <div
+              key={g.id}
+              className="flex flex-col gap-1.5 rounded-md border border-white/[0.06] bg-white/[0.01] p-2"
+            >
               <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -1014,8 +1186,18 @@ function GroupPanel({
                 autoFocus
               />
               <div className="flex justify-end gap-1">
-                <button onClick={() => setRenamingGroupId(null)} className="px-2 py-1 text-[11px] text-gray-400 hover:text-white">Cancel</button>
-                <button onClick={() => handleRename(g.id)} className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[11px] text-white">Save</button>
+                <button
+                  onClick={() => setRenamingGroupId(null)}
+                  className="px-2 py-1 text-[11px] text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRename(g.id)}
+                  className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[11px] text-white"
+                >
+                  Save
+                </button>
               </div>
             </div>
           );
@@ -1046,12 +1228,18 @@ function GroupPanel({
               type="button"
               onClick={() => setActiveGroupId(g.id)}
               className="flex-1 truncate text-left text-[12.5px] font-medium transition"
-              style={{ color: isActive ? 'rgb(196 181 253)' : 'rgb(209 213 219)' }}
+              style={{
+                color: isActive ? 'rgb(196 181 253)' : 'rgb(209 213 219)',
+              }}
             >
               {g.name}
             </button>
-            <span className="text-[10.5px] text-gray-400">{countsByGroup[g.id] || 0}</span>
-            <div className={`flex items-center opacity-0 transition group-hover:opacity-100`}>
+            <span className="text-[10.5px] text-gray-400">
+              {countsByGroup[g.id] || 0}
+            </span>
+            <div
+              className={`flex items-center opacity-0 transition group-hover:opacity-100`}
+            >
               <button
                 type="button"
                 onClick={() => startRename(g)}
@@ -1080,7 +1268,9 @@ function GroupPanel({
 function getPageRange(current, total) {
   // Compact pagination: 1 … (current-1) current (current+1) … total
   const pages = new Set([1, total, current, current - 1, current + 1]);
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
   const out = [];
   let prev = 0;
   for (const p of sorted) {
@@ -1091,7 +1281,16 @@ function getPageRange(current, total) {
   return out;
 }
 
-function Pagination({ page, totalPages, total, pageStart, pageEnd, pageSize, setPage, setPageSize }) {
+function Pagination({
+  page,
+  totalPages,
+  total,
+  pageStart,
+  pageEnd,
+  pageSize,
+  setPage,
+  setPageSize,
+}) {
   if (total === 0) return null;
   const range = getPageRange(page, totalPages);
   const btn =
@@ -1156,7 +1355,7 @@ function Pagination({ page, totalPages, total, pageStart, pageEnd, pageSize, set
             >
               {p}
             </button>
-          ),
+          )
         )}
         <button
           type="button"
@@ -1195,7 +1394,7 @@ function MonthCalendar({
   const daysInMonth = new Date(
     monthAnchor.getFullYear(),
     monthAnchor.getMonth() + 1,
-    0,
+    0
   ).getDate();
 
   const cells = [];
@@ -1263,7 +1462,7 @@ function MonthCalendar({
         {WEEKDAYS.map((w) => (
           <div
             key={w}
-            className="px-1 py-1 text-center text-[10px] font-medium tracking-widest text-gray-400 font-mono uppercase"
+            className="px-1 py-1 text-center font-mono text-[10px] font-medium tracking-widest text-gray-400 uppercase"
           >
             {w}
           </div>
@@ -1275,9 +1474,11 @@ function MonthCalendar({
           const isToday = sameDay(cell.date, TODAY);
           const isSelected = sameDay(cell.date, selected);
           const dayItems = (itemsByDay.get(dateKey(cell.date)) || []).filter(
-            (it) => visible[it.category],
+            (it) => visible[it.category]
           );
-          const dotCats = Array.from(new Set(dayItems.map((it) => it.category))).slice(0, 4);
+          const dotCats = Array.from(
+            new Set(dayItems.map((it) => it.category))
+          ).slice(0, 4);
 
           return (
             <button
@@ -1294,7 +1495,7 @@ function MonthCalendar({
                 <span
                   className={`text-[11.5px] font-semibold ${
                     isToday
-                      ? 'flex h-6 w-6 items-center justify-center rounded-full bg-violet-500/30 text-violet-300 font-bold'
+                      ? 'flex h-6 w-6 items-center justify-center rounded-full bg-violet-500/30 font-bold text-violet-300'
                       : isSelected
                         ? 'text-violet-300'
                         : cell.inMonth
@@ -1324,8 +1525,12 @@ function MonthCalendar({
                       title={it.title}
                     >
                       <Icon className="mt-px h-2.5 w-2.5 shrink-0" />
-                      {it.recurring && <Repeat className="mt-px h-2.5 w-2.5 shrink-0 opacity-70" />}
-                      <span className="break-words whitespace-normal">{it.title}</span>
+                      {it.recurring && (
+                        <Repeat className="mt-px h-2.5 w-2.5 shrink-0 opacity-70" />
+                      )}
+                      <span className="wrap-break-word whitespace-normal">
+                        {it.title}
+                      </span>
                     </span>
                   );
                 })}
@@ -1352,11 +1557,15 @@ function FeedEntry({ item }) {
   const Icon = cat.icon;
   return (
     <div className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-      <div className={`mt-0.5 inline-flex shrink-0 rounded-md border p-1.5 ${cat.chip}`}>
+      <div
+        className={`mt-0.5 inline-flex shrink-0 rounded-md border p-1.5 ${cat.chip}`}
+      >
         <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-white">{item.title}</p>
+        <p className="truncate text-[13px] font-medium text-white">
+          {item.title}
+        </p>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -1383,7 +1592,8 @@ export default function DailyActivityClient() {
     if (s) {
       if (Array.isArray(s.groups)) setGroups(s.groups);
       if (Array.isArray(s.todos)) setTodos(s.todos);
-      if (s.completions && typeof s.completions === 'object') setCompletions(s.completions);
+      if (s.completions && typeof s.completions === 'object')
+        setCompletions(s.completions);
     }
     setHydrated(true);
   }, []);
@@ -1396,7 +1606,7 @@ export default function DailyActivityClient() {
   const [selected, setSelected] = useState(new Date(TODAY));
   const [monthAnchor, setMonthAnchor] = useState(new Date(TODAY));
   const [visible, setVisible] = useState(() =>
-    Object.fromEntries(Object.keys(CATEGORIES).map((k) => [k, true])),
+    Object.fromEntries(Object.keys(CATEGORIES).map((k) => [k, true]))
   );
   const [groupVisible, setGroupVisible] = useState({});
   const [activeGroupId, setActiveGroupId] = useState(null);
@@ -1424,7 +1634,9 @@ export default function DailyActivityClient() {
       const remaining = gs.filter((g) => g.id !== id);
       if (remaining.length === 0) return gs; // keep at least one
       const fallback = remaining[0].id;
-      setTodos((ts) => ts.map((t) => (t.groupId === id ? { ...t, groupId: fallback } : t)));
+      setTodos((ts) =>
+        ts.map((t) => (t.groupId === id ? { ...t, groupId: fallback } : t))
+      );
       return remaining;
     });
     if (activeGroupId === id) setActiveGroupId(null);
@@ -1441,7 +1653,8 @@ export default function DailyActivityClient() {
   }
   function saveTodo(draft) {
     setTodos((prev) => {
-      if (draft.id) return prev.map((t) => (t.id === draft.id ? { ...t, ...draft } : t));
+      if (draft.id)
+        return prev.map((t) => (t.id === draft.id ? { ...t, ...draft } : t));
       return [{ ...draft, id: `t-${Date.now()}` }, ...prev];
     });
     setEditorOpen(false);
@@ -1477,27 +1690,29 @@ export default function DailyActivityClient() {
         prev.map((t) =>
           t.id === todo.id
             ? { ...t, exclusions: [...(t.exclusions || []), occKey] }
-            : t,
-        ),
+            : t
+        )
       );
     } else if (scope === 'future') {
       // Set recurrence end to (occKey - 1 day).
       const newUntil = addDaysKey(occKey, -1);
       setTodos((prev) =>
-        prev.map((t) => {
-          if (t.id !== todo.id) return t;
-          if (newUntil < t.startKey) {
-            // Removes the entire series including its first occurrence.
-            return null;
-          }
-          return {
-            ...t,
-            recurrence: {
-              ...(t.recurrence || {}),
-              end: { type: 'until', untilKey: newUntil },
-            },
-          };
-        }).filter(Boolean),
+        prev
+          .map((t) => {
+            if (t.id !== todo.id) return t;
+            if (newUntil < t.startKey) {
+              // Removes the entire series including its first occurrence.
+              return null;
+            }
+            return {
+              ...t,
+              recurrence: {
+                ...(t.recurrence || {}),
+                end: { type: 'until', untilKey: newUntil },
+              },
+            };
+          })
+          .filter(Boolean)
       );
     }
     setPendingDelete(null);
@@ -1521,7 +1736,7 @@ export default function DailyActivityClient() {
       startKey: dateKey(offsetDate(-30)),
       endKey: dateKey(offsetDate(90)),
     }),
-    [],
+    []
   );
 
   function expandOccurrences(rangeStartKey, rangeEndKey) {
@@ -1543,7 +1758,9 @@ export default function DailyActivityClient() {
       map.get(key).push(payload);
     };
 
-    SEED_FEED.forEach((it) => push(dateKey(it.start), { ...it, dateKey: dateKey(it.start) }));
+    SEED_FEED.forEach((it) =>
+      push(dateKey(it.start), { ...it, dateKey: dateKey(it.start) })
+    );
 
     const occ = expandOccurrences(monthRange.startKey, monthRange.endKey);
     occ.forEach(({ todo, dateKey: k }) => {
@@ -1569,7 +1786,7 @@ export default function DailyActivityClient() {
   const occurrencesAll = useMemo(
     () => expandOccurrences(listRange.startKey, listRange.endKey),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [todos, listRange],
+    [todos, listRange]
   );
 
   // Combined task + calendar feed list.
@@ -1578,21 +1795,29 @@ export default function DailyActivityClient() {
     const selKeyLocal = dateKey(selected);
 
     // Tasks (group-aware).
-    const todoEntries = activeGroupId === '__contests' ? [] : occurrencesAll
-      .filter(({ todo }) => activeGroupId == null || todo.groupId === activeGroupId)
-      .filter(({ todo }) => groupVisible[todo.groupId] !== false)
-      .map(({ todo, dateKey: k }) => ({
-        kind: 'todo',
-        dateKey: k,
-        sortTime: todo.time || '00:00',
-        todo,
-      }));
+    const todoEntries =
+      activeGroupId === '__contests'
+        ? []
+        : occurrencesAll
+            .filter(
+              ({ todo }) =>
+                activeGroupId == null || todo.groupId === activeGroupId
+            )
+            .filter(({ todo }) => groupVisible[todo.groupId] !== false)
+            .map(({ todo, dateKey: k }) => ({
+              kind: 'todo',
+              dateKey: k,
+              sortTime: todo.time || '00:00',
+              todo,
+            }));
 
     // Calendar feed (category-aware via `visible`).
     const feedEntries =
       todoFilter === 'done'
         ? []
-        : SEED_FEED.filter((it) => activeGroupId === null && visible[it.category]).map((it) => ({
+        : SEED_FEED.filter(
+            (it) => activeGroupId === null && visible[it.category]
+          ).map((it) => ({
             kind: 'feed',
             dateKey: dateKey(it.start),
             sortTime: it.start.toTimeString().slice(0, 5),
@@ -1601,12 +1826,15 @@ export default function DailyActivityClient() {
 
     let list = [...todoEntries, ...feedEntries];
 
-    if (todoFilter === 'today') list = list.filter((e) => e.dateKey === todayKey);
-    else if (todoFilter === 'upcoming') list = list.filter((e) => e.dateKey >= todayKey);
-    else if (todoFilter === 'day') list = list.filter((e) => e.dateKey === selKeyLocal);
+    if (todoFilter === 'today')
+      list = list.filter((e) => e.dateKey === todayKey);
+    else if (todoFilter === 'upcoming')
+      list = list.filter((e) => e.dateKey >= todayKey);
+    else if (todoFilter === 'day')
+      list = list.filter((e) => e.dateKey === selKeyLocal);
     else if (todoFilter === 'done')
       list = list.filter(
-        (e) => e.kind === 'todo' && !!completions[e.todo.id]?.[e.dateKey],
+        (e) => e.kind === 'todo' && !!completions[e.todo.id]?.[e.dateKey]
       );
     else if (todoFilter === 'contests')
       list = SEED_FEED.filter((it) => it.category === 'contest').map((it) => ({
@@ -1630,10 +1858,16 @@ export default function DailyActivityClient() {
     visible,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredOccurrences.length / pageSize));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredOccurrences.length / pageSize)
+  );
   const safePage = Math.min(page, totalPages);
   const pageStart = (safePage - 1) * pageSize;
-  const pagedOccurrences = filteredOccurrences.slice(pageStart, pageStart + pageSize);
+  const pagedOccurrences = filteredOccurrences.slice(
+    pageStart,
+    pageStart + pageSize
+  );
 
   useEffect(() => {
     setPage(1);
@@ -1653,33 +1887,45 @@ export default function DailyActivityClient() {
     return counts;
   }, [occurrencesAll, completions]);
 
-  const groupById = useMemo(() => Object.fromEntries(groups.map((g) => [g.id, g])), [groups]);
+  const groupById = useMemo(
+    () => Object.fromEntries(groups.map((g) => [g.id, g])),
+    [groups]
+  );
 
   const renderTab = () => {
-    switch(activeTab) {
+    switch (activeTab) {
       case 'tasks': {
-          // Group filtered occurrences by date for display.
-          const todayKey2 = dateKey(TODAY);
-          const grouped = [];
-          let lastDateKey = null;
-          pagedOccurrences.forEach((entry) => {
-            if (entry.dateKey !== lastDateKey) {
-              lastDateKey = entry.dateKey;
-              const d = parseKey(entry.dateKey);
-              const isToday = entry.dateKey === todayKey2;
-              const isTomorrow = entry.dateKey === addDaysKey(todayKey2, 1);
-              const label = isToday
-                ? 'Today'
-                : isTomorrow
+        // Group filtered occurrences by date for display.
+        const todayKey2 = dateKey(TODAY);
+        const grouped = [];
+        let lastDateKey = null;
+        pagedOccurrences.forEach((entry) => {
+          if (entry.dateKey !== lastDateKey) {
+            lastDateKey = entry.dateKey;
+            const d = parseKey(entry.dateKey);
+            const isToday = entry.dateKey === todayKey2;
+            const isTomorrow = entry.dateKey === addDaysKey(todayKey2, 1);
+            const label = isToday
+              ? 'Today'
+              : isTomorrow
                 ? 'Tomorrow'
-                : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-              grouped.push({ type: 'separator', label, dateKey: entry.dateKey, isToday });
-            }
-            grouped.push({ type: 'item', entry });
-          });
+                : d.toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  });
+            grouped.push({
+              type: 'separator',
+              label,
+              dateKey: entry.dateKey,
+              isToday,
+            });
+          }
+          grouped.push({ type: 'item', entry });
+        });
 
-          return (
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 w-full">
+        return (
+          <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-12">
             {/* Left: Lists panel */}
             <div className="xl:col-span-3">
               <GlassCard padding="p-4">
@@ -1706,17 +1952,27 @@ export default function DailyActivityClient() {
             <div className="xl:col-span-9">
               <GlassCard padding="p-5">
                 {/* Header row */}
-                <div className="flex flex-col gap-3 mb-4">
+                <div className="mb-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-sm font-semibold text-gray-200">
-                        {activeGroupId ? groupById[activeGroupId]?.name || 'Tasks' : 'All Tasks'}
+                        {activeGroupId
+                          ? groupById[activeGroupId]?.name || 'Tasks'
+                          : 'All Tasks'}
                       </h2>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {todoFilter === 'day' ? fmtDayLong(selected) : `${filteredOccurrences.length} item${filteredOccurrences.length !== 1 ? 's' : ''}`}
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {todoFilter === 'day'
+                          ? fmtDayLong(selected)
+                          : `${filteredOccurrences.length} item${filteredOccurrences.length !== 1 ? 's' : ''}`}
                       </p>
                     </div>
-                    <ActionButton tone="primary" icon={Plus} onClick={openCreate}>New task</ActionButton>
+                    <ActionButton
+                      tone="primary"
+                      icon={Plus}
+                      onClick={openCreate}
+                    >
+                      New task
+                    </ActionButton>
                   </div>
 
                   {/* Filter tabs */}
@@ -1736,10 +1992,10 @@ export default function DailyActivityClient() {
                             key={t.v}
                             type="button"
                             onClick={() => setTodoFilter(t.v)}
-                            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all border ${
+                            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-all ${
                               todoFilter === t.v
-                                ? 'bg-white/[0.06] text-white shadow-sm border-white/[0.06]'
-                                : 'text-gray-400 border-transparent hover:bg-white/[0.03] hover:text-gray-200'
+                                ? 'border-white/[0.06] bg-white/[0.06] text-white shadow-sm'
+                                : 'border-transparent text-gray-400 hover:bg-white/[0.03] hover:text-gray-200'
                             }`}
                           >
                             <TIcon className="h-3 w-3" />
@@ -1753,7 +2009,14 @@ export default function DailyActivityClient() {
                   {/* Day filter back button */}
                   {todoFilter === 'day' && !sameDay(selected, TODAY) && (
                     <div className="flex justify-end">
-                      <ActionButton tone="ghost" icon={X} onClick={() => { setSelected(new Date(TODAY)); setTodoFilter('today'); }}>
+                      <ActionButton
+                        tone="ghost"
+                        icon={X}
+                        onClick={() => {
+                          setSelected(new Date(TODAY));
+                          setTodoFilter('today');
+                        }}
+                      >
                         Back to today
                       </ActionButton>
                     </div>
@@ -1766,12 +2029,25 @@ export default function DailyActivityClient() {
                     icon={Flag}
                     title="Nothing here"
                     description={
-                      todoFilter === 'done' ? 'No completed tasks yet. Check off tasks to see them here.' :
-                      todoFilter === 'contests' ? 'No upcoming contests in the next 30 days.' :
-                      todoFilter === 'today' ? 'Nothing scheduled for today. Add a task to get started.' :
-                      'No tasks match this filter.'
+                      todoFilter === 'done'
+                        ? 'No completed tasks yet. Check off tasks to see them here.'
+                        : todoFilter === 'contests'
+                          ? 'No upcoming contests in the next 30 days.'
+                          : todoFilter === 'today'
+                            ? 'Nothing scheduled for today. Add a task to get started.'
+                            : 'No tasks match this filter.'
                     }
-                    action={todoFilter !== 'contests' && <ActionButton tone="primary" icon={Plus} onClick={openCreate}>New task</ActionButton>}
+                    action={
+                      todoFilter !== 'contests' && (
+                        <ActionButton
+                          tone="primary"
+                          icon={Plus}
+                          onClick={openCreate}
+                        >
+                          New task
+                        </ActionButton>
+                      )
+                    }
                     accent="violet"
                   />
                 ) : (
@@ -1781,16 +2057,32 @@ export default function DailyActivityClient() {
                         {grouped.map((row, idx) => {
                           if (row.type === 'separator') {
                             return (
-                              <li key={`sep-${row.dateKey}`} className={`flex items-center gap-2 pt-3 pb-1 ${idx === 0 ? 'pt-0' : ''}`}>
-                                <span className={`text-[11px] font-semibold ${
-                                  row.isToday ? 'text-violet-400' : 'text-gray-500'
-                                }`}>{row.label}</span>
-                                <span className="flex-1 h-px bg-white/[0.04]" />
+                              <li
+                                key={`sep-${row.dateKey}`}
+                                className={`flex items-center gap-2 pt-3 pb-1 ${idx === 0 ? 'pt-0' : ''}`}
+                              >
+                                <span
+                                  className={`text-[11px] font-semibold ${
+                                    row.isToday
+                                      ? 'text-violet-400'
+                                      : 'text-gray-500'
+                                  }`}
+                                >
+                                  {row.label}
+                                </span>
+                                <span className="h-px flex-1 bg-white/[0.04]" />
                               </li>
                             );
                           }
                           const entry = row.entry;
-                          if (entry.kind === 'feed') return <li key={`feed-${entry.item.id}-${entry.dateKey}`}><FeedEntry item={entry.item} /></li>;
+                          if (entry.kind === 'feed')
+                            return (
+                              <li
+                                key={`feed-${entry.item.id}-${entry.dateKey}`}
+                              >
+                                <FeedEntry item={entry.item} />
+                              </li>
+                            );
                           return (
                             <motion.li
                               key={`todo-${entry.todo.id}-${entry.dateKey}`}
@@ -1804,7 +2096,9 @@ export default function DailyActivityClient() {
                                 occurrence={{ dateKey: entry.dateKey }}
                                 todo={entry.todo}
                                 group={groupById[entry.todo.groupId]}
-                                isDone={!!completions[entry.todo.id]?.[entry.dateKey]}
+                                isDone={
+                                  !!completions[entry.todo.id]?.[entry.dateKey]
+                                }
                                 onToggle={toggleOccurrence}
                                 onEdit={openEdit}
                                 onDelete={requestDelete}
@@ -1815,16 +2109,25 @@ export default function DailyActivityClient() {
                       </AnimatePresence>
                     </ul>
                     <Pagination
-                      page={safePage} totalPages={totalPages} total={filteredOccurrences.length}
-                      pageStart={pageStart} pageEnd={Math.min(pageStart + pageSize, filteredOccurrences.length)}
-                      pageSize={pageSize} setPage={setPage} setPageSize={setPageSize}
+                      page={safePage}
+                      totalPages={totalPages}
+                      total={filteredOccurrences.length}
+                      pageStart={pageStart}
+                      pageEnd={Math.min(
+                        pageStart + pageSize,
+                        filteredOccurrences.length
+                      )}
+                      pageSize={pageSize}
+                      setPage={setPage}
+                      setPageSize={setPageSize}
                     />
                   </>
                 )}
               </GlassCard>
             </div>
           </div>
-        );}
+        );
+      }
       case 'calendar': {
         const todayKeyLocal = dateKey(TODAY);
         const todaysEventsList = SEED_FEED.filter(
@@ -1832,10 +2135,14 @@ export default function DailyActivityClient() {
         ).sort((a, b) => a.start.getTime() - b.start.getTime());
 
         return (
-          <div className="flex flex-col gap-6 w-full">
+          <div className="flex w-full flex-col gap-6">
             {todaysEventsList.length > 0 && (
               <GlassCard padding="p-6">
-                <SectionHeader icon={CalendarIcon} title="Today's Events" subtitle="Events scheduled for today." />
+                <SectionHeader
+                  icon={CalendarIcon}
+                  title="Today's Events"
+                  subtitle="Events scheduled for today."
+                />
                 <ul className="space-y-1.5">
                   {todaysEventsList.map((event, i) => (
                     <li key={`event-${i}`}>
@@ -1850,7 +2157,11 @@ export default function DailyActivityClient() {
                 monthAnchor={monthAnchor}
                 setMonthAnchor={setMonthAnchor}
                 selected={selected}
-                setSelected={(d) => { setSelected(d); setTodoFilter('day'); setActiveTab('tasks'); }}
+                setSelected={(d) => {
+                  setSelected(d);
+                  setTodoFilter('day');
+                  setActiveTab('tasks');
+                }}
                 itemsByDay={itemsByDay}
                 visible={visible}
               />
@@ -1862,7 +2173,11 @@ export default function DailyActivityClient() {
     return null;
   };
 
-  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+  const uiTabs = TABS.map((t) => ({
+    value: t.id,
+    label: t.label,
+    icon: t.icon,
+  }));
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
@@ -1892,7 +2207,10 @@ export default function DailyActivityClient() {
         groups={groups}
         defaultDateKey={selKey}
         onSave={saveTodo}
-        onClose={() => { setEditorOpen(false); setEditing(null); }}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditing(null);
+        }}
       />
       <DeleteRecurringModal
         open={!!pendingDelete}

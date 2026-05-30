@@ -1,6 +1,11 @@
+/**
+ * @file Inbox error boundary
+ * @module InboxErrorBoundary
+ */
+
 'use client';
 
-import AccountError from '../../_components/AccountError';
+import AccountError from '@/app/account/_components/AccountError';
 
 export default function Error({ error, reset }) {
   return (

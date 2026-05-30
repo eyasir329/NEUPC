@@ -9,8 +9,8 @@
  */
 
 import { redirect } from 'next/navigation';
-import { requireAuth } from '../_lib/auth-guard';
-import { roleDashboards } from '../_lib/roleDashboardConfig';
+import { requireAuth } from '@/app/_lib/auth/auth-guard';
+import { roleDashboards } from '@/app/_lib/config/roleDashboardConfig';
 import AccountPageClient from './_components/AccountPageClient';
 import AccountHeader from './_components/AccountHeader';
 import UserAvatar from './_components/UserAvatar';
@@ -60,7 +60,7 @@ export default async function AccountPage() {
 
   return (
     <AccountPageClient redirectPath={redirectPath}>
-      <main className="relative min-h-screen overflow-hidden bg-[#060810] px-4 pt-32 pb-16 sm:px-6 sm:pt-36 lg:px-8">
+      <div className="relative w-full overflow-x-hidden bg-[#060810] px-4 pt-24 pb-28 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32">
         {/* Decorative gradient blobs (matches public-page hero language) */}
         <div className="pointer-events-none absolute inset-0 z-0">
           <div className="from-primary-500/10 absolute -top-20 -left-20 h-96 w-96 rounded-full bg-linear-to-br to-transparent blur-3xl" />
@@ -69,15 +69,16 @@ export default async function AccountPage() {
 
         <div className="relative z-10 mx-auto max-w-5xl">
           {/* Hero: avatar above gradient title (centered, matches PageHero) */}
-          <div className="mb-16">
+          <div className="mb-10 sm:mb-12">
             <UserAvatar
               session={session.user}
               userId={user?.id}
-              isAdmin={userRoles.includes('admin')}
             />
             <AccountHeader
               session={session.user}
               accountStatus={user?.account_status}
+              user={user}
+              userRoles={userRoles}
             />
           </div>
           <AvailableRoles
@@ -101,7 +102,9 @@ export default async function AccountPage() {
             userRoles={userRoles}
           />
         </div>
-      </main>
+      </div>
     </AccountPageClient>
   );
 }
+
+

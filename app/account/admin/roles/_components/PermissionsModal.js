@@ -8,7 +8,7 @@
 
 import { useState, useTransition, useMemo } from 'react';
 import { X, Key, Shield, Loader2, Search, Lock } from 'lucide-react';
-import { toggleRolePermissionAction } from '@/app/_lib/role-actions';
+import { toggleRolePermissionAction } from '@/app/_lib/actions/role-actions';
 import { getRoleConfig } from './roleConfig';
 
 export default function PermissionsModal({

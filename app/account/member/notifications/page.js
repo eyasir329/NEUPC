@@ -5,11 +5,11 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getUserNotifications,
   getUnreadNotificationsCount,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import MemberNotificationsClient from './_components/MemberNotificationsClient';
 
 export const metadata = { title: 'Notifications | Member | NEUPC' };

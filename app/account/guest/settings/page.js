@@ -5,7 +5,7 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import GuestSettingsClient from './_components/GuestSettingsClient';
 
 export const metadata = { title: 'Settings | Guest | NEUPC' };

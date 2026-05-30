@@ -5,11 +5,11 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getAchievementsAdmin,
   getMostEarnedAchievements,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import AdvisorAchievementsClient from './_components/AdvisorAchievementsClient';
 
 export const metadata = { title: 'Achievements | Advisor | NEUPC' };

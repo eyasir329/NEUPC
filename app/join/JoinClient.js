@@ -1,20 +1,26 @@
+/**
+ * @file Join client component
+ * @module JoinClient
+ */
+
 'use client';
 
 import { signIn } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useIsMember } from '../_components/ui/UserRoleProvider';
+import { useIsMember } from '@/app/_components/ui/UserRoleProvider';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
@@ -23,45 +29,26 @@ const cardsStagger = {
   visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
 
-// ─── Default features ────────────────────────────────────────────────────────
-
-const DEFAULT_FEATURES = [
-  {
-    Icon: Zap,
-    title: 'Event Registration',
-    description: 'Register for contests, workshops, and hackathons as they go live.',
-    accent: true,
-  },
-  {
-    Icon: Users,
-    title: 'Smart Notifications',
-    description: 'Get alerts for events, blogs, roadmaps, and club announcements.',
-    accent: false,
-  },
-  {
-    Icon: BarChart2,
-    title: 'Participation Log',
-    description: 'Track your event history and download participation certificates.',
-    accent: true,
-  },
-  {
-    Icon: BadgeCheck,
-    title: 'Membership Apply',
-    description: 'Submit your application to become an official club member.',
-    accent: false,
-  },
-];
-
-const ICON_MAP = { Zap, Users, BarChart2, BadgeCheck };
-
 // ─── Google SVG ───────────────────────────────────────────────────────────────
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
   </svg>
 );
 
@@ -99,7 +86,10 @@ function FeatureCard({ feature }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function JoinClient({ features: propFeatures = [], settings = {} }) {
+export default function JoinClient({
+  features: propFeatures = [],
+  settings = {},
+}) {
   const isLoggedIn = useIsMember();
   const router = useRouter();
 
@@ -107,31 +97,21 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
     if (isLoggedIn) router.replace('/account');
   }, [isLoggedIn, router]);
 
-  const handleGoogleSignIn = () => signIn('google', { callbackUrl: '/account' });
+  const handleGoogleSignIn = () =>
+    signIn('google', { callbackUrl: '/account' });
 
-  const features =
-    propFeatures.length > 0
-      ? propFeatures.map((f, i) => ({
-          Icon: ICON_MAP[DEFAULT_FEATURES[i]?.Icon?.displayName] || DEFAULT_FEATURES[i]?.Icon || Zap,
-          title: f.title,
-          description: f.description,
-          accent: i % 2 === 0,
-        }))
-      : DEFAULT_FEATURES;
+  const features = propFeatures.map((f, i) => ({
+    Icon: Icons[f.icon] || Icons.Zap,
+    title: f.title,
+    description: f.description,
+    accent: i % 2 === 0,
+  }));
 
   return (
     <div className="overflow-x-clip">
-
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[85vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-
-        {/* Ambient background — matches Events page exactly */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="absolute -top-24 left-1/4 h-100 w-100 -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-125 sm:w-125" />
-          <div className="absolute top-1/3 right-0 h-75 w-75 rounded-full bg-neon-lime/8 blur-[120px] sm:h-100 sm:w-100" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+      <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -140,7 +120,6 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
           className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
             {/* Eyebrow */}
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -152,7 +131,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
             {/* Kinetic headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               {settings?.join_page_title ? (
                 settings.join_page_title
@@ -177,7 +156,7 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
             {/* Status pill */}
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+              className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               Free · Open to All Students
@@ -193,17 +172,20 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
               >
                 <GoogleIcon />
                 <span>Continue with Google</span>
-                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                <span
+                  aria-hidden
+                  className="transition-transform group-hover:translate-x-1"
+                >
+                  →
+                </span>
               </motion.button>
             </motion.div>
-
           </div>
         </motion.div>
       </section>
 
       {/* ── What you get ──────────────────────────────────────────────────── */}
       <section className="relative py-20 sm:py-24 lg:py-32">
-
         {/* Ambient */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-20" />
@@ -211,7 +193,6 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
           {/* Section eyebrow */}
           <motion.div
             variants={fadeUp}
@@ -230,7 +211,8 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
               What You <span className="neon-text">Unlock.</span>
             </h2>
             <p className="max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:text-base">
-              Get started with a free public account. Upgrade to full membership anytime for deeper access.
+              Get started with a free public account. Upgrade to full membership
+              anytime for deeper access.
             </p>
           </motion.div>
 
@@ -256,17 +238,17 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
             <div className="flex items-start gap-4">
               <span className="mt-0.5 shrink-0 text-xl text-amber-400">ℹ</span>
               <div>
-                <h3 className="font-heading mb-1.5 text-sm font-bold text-amber-300 uppercase tracking-wide">
+                <h3 className="font-heading mb-1.5 text-sm font-bold tracking-wide text-amber-300 uppercase">
                   Important Note
                 </h3>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  Public accounts do not have access to internal member resources, weekly problem sets,
-                  or committee discussions. Upgrade to full membership for unrestricted access.
+                  Public accounts do not have access to internal member
+                  resources, weekly problem sets, or committee discussions.
+                  Upgrade to full membership for unrestricted access.
                 </p>
               </div>
             </div>
           </motion.div>
-
         </div>
       </section>
 
@@ -281,17 +263,18 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
             className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14 lg:p-16"
           >
             <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3">
-
               {/* Text */}
               <div className="md:col-span-2">
                 <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
                   /// Get started
                 </p>
                 <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
-                  Ready to join<br className="hidden sm:block" /> the community?
+                  Ready to join
+                  <br className="hidden sm:block" /> the community?
                 </h3>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
-                  Sign in with your Google account to register, track events, and start your journey with NEUPC.
+                  Sign in with your Google account to register, track events,
+                  and start your journey with NEUPC.
                 </p>
               </div>
 
@@ -305,13 +288,17 @@ export default function JoinClient({ features: propFeatures = [], settings = {} 
                 >
                   <GoogleIcon />
                   Sign in now
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  <span
+                    aria-hidden
+                    className="transition-transform group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
                 </motion.button>
                 <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">
                   Free · No credit card
                 </p>
               </div>
-
             </div>
           </motion.div>
         </div>

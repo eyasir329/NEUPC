@@ -6,9 +6,12 @@
  * @access executive | admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { supabaseAdmin } from '@/app/_lib/supabase';
-import { isV2SchemaAvailable, getUserHandlesV2 } from '@/app/_lib/problem-solving-v2-helpers';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import {
+  isV2SchemaAvailable,
+  getUserHandlesV2,
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 import ExecutiveProfileClient from './_components/ExecutiveProfileClient';
 
 export const metadata = { title: 'Profile | Executive | NEUPC' };

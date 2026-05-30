@@ -1,3 +1,8 @@
+/**
+ * @file Guest topbar component
+ * @module GuestTopbar
+ */
+
 'use client';
 
 import Link from 'next/link';

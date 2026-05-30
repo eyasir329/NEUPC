@@ -6,7 +6,10 @@
  * @access admin
  */
 
-import { getRolesWithStats, getUsersBasic } from '@/app/_lib/data-service';
+import {
+  getRolesWithStats,
+  getUsersBasic,
+} from '@/app/_lib/services/data-service';
 import RoleManagementClient from './_components/RoleManagementClient';
 
 export const metadata = { title: 'Roles | Admin | NEUPC' };

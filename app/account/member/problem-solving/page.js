@@ -18,7 +18,7 @@
  * - Badge and achievement system
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import ProblemSolvingClient from './_components/ProblemSolvingClient';
 
 export const metadata = {

@@ -1,5 +1,10 @@
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getEventsWithStats } from '@/app/_lib/data-service';
+/**
+ * @file Events route page
+ * @module EventsPage
+ */
+
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getEventsWithStats } from '@/app/_lib/services/data-service';
 import ManageEventsClient from './_components/ManageEventsClient';
 
 export const metadata = { title: 'Event Management | Executive | NEUPC' };

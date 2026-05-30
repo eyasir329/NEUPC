@@ -11,9 +11,9 @@
  * @module CommitteePage
  */
 
-import { getPublicCommittee } from '@/app/_lib/public-actions';
+import { getPublicCommittee, getAllPublicSettings } from '@/app/_lib/actions/public-actions';
 import CommitteeClient from './CommitteeClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
 export const metadata = buildMetadata({
@@ -348,15 +348,11 @@ function buildHeroStats(members, positions) {
 // ============================================================================
 
 export default async function Page() {
-  const { members, positions } = await getPublicCommittee();
-
-  console.log('[Committee] member count:', members.length);
-  if (members.length > 0) {
-    const m = members[0];
-    console.log('[Committee] first raw member keys:', Object.keys(m));
-    console.log('[Committee] users field:', JSON.stringify(m.users));
-    console.log('[Committee] user_id field:', m.user_id);
-  }
+  const [committeeResult, settings] = await Promise.all([
+    getPublicCommittee(),
+    getAllPublicSettings(),
+  ]);
+  const { members, positions } = committeeResult;
 
   // Transform raw data into display format
   const transformedMembers = members.map(transformMemberData);
@@ -384,6 +380,7 @@ export default async function Page() {
         coreExecutives={coreExecutives}
         executiveMembers={executiveMembers}
         heroStats={heroStats}
+        settings={settings}
       />
     </>
   );

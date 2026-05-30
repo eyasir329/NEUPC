@@ -4,14 +4,14 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
 import {
   suspendUser,
   activateUser,
   banUser,
   deleteUser,
   approveMember,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 
 export async function POST(request) {
   try {

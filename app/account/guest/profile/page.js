@@ -6,12 +6,12 @@
  * @access guest
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getUserEventRegistrations,
   getUserCertificates,
   getActiveNotices,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import GuestProfileClient from './_components/GuestProfileClient';
 
 export const metadata = { title: 'My Profile | Guest | NEUPC' };
@@ -32,7 +32,8 @@ export default async function GuestProfilePage() {
     );
   }).length;
 
-  const hasData = registrations.length > 0 || certificates.length > 0 || noticeCount > 0;
+  const hasData =
+    registrations.length > 0 || certificates.length > 0 || noticeCount > 0;
   const stats = hasData
     ? {
         eventsRegistered: registrations.length,

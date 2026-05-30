@@ -3,9 +3,9 @@
  * @module AdminRegistrationRoute
  */
 
-import { auth } from '@/app/_lib/auth';
-import { getUserRoles } from '@/app/_lib/data-service';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserRoles } from '@/app/_lib/services/data-service';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 
@@ -70,7 +70,7 @@ export async function PATCH(request, { params }) {
             {
               error: `${notAccepted.length} team member(s) have not yet accepted the invitation.`,
             },
-            { status: 422 },
+            { status: 422 }
           );
         }
       }

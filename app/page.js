@@ -12,8 +12,12 @@ import Join from './_components/sections/Join';
 import ScrollToTop from './_components/ui/ScrollToTop';
 import ScrollProgress from './_components/ui/ScrollProgress';
 import { OrganizationJsonLd, WebsiteJsonLd } from './_components/ui/JsonLd';
-import { getHomePageData } from './_lib/public-actions';
-import { buildMetadata, SITE_DESCRIPTION, SITE_TITLE } from './_lib/seo';
+import { getHomePageData } from '@/app/_lib/actions/public-actions';
+import {
+  buildMetadata,
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+} from '@/app/_lib/config/seo';
 
 export const metadata = buildMetadata({
   title: SITE_TITLE,

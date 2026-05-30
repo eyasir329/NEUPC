@@ -42,8 +42,8 @@ import {
   getRoleBadgeConfig,
   isStaffRole,
   STAFF_ROLES,
-} from '@/app/_lib/discussion-config';
-import { formatRelativeTime } from '@/app/_lib/utils';
+} from '@/app/_lib/config/discussion-config';
+import { formatRelativeTime } from '@/app/_lib/utils/utils';
 import {
   fetchDiscussionDetailAction,
   createReplyAction,
@@ -51,7 +51,7 @@ import {
   voteReplyAction,
   markAcceptedAnswerAction,
   deleteReplyAction,
-} from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/actions/discussion-actions';
 import {
   StatusBadge,
   TypeBadge,
@@ -101,7 +101,7 @@ function AuthorInfo({ author, role, createdAt, isEdited }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-purple-500/20">
         <User className="h-5 w-5 text-blue-400" />
       </div>
       <div>

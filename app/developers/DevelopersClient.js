@@ -1,56 +1,36 @@
+/**
+ * @file Developers client component
+ * @module DevelopersClient
+ */
+
 'use client';
 
 import Image from 'next/image';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { cn, driveImageUrl, getInitials } from '../_lib/utils';
-import CTASection from '../_components/ui/CTASection';
+import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
+import CTASection from '@/app/_components/ui/CTASection';
+import StatTile from '@/app/_components/ui/StatTile';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
-// ─── Fallback data ────────────────────────────────────────────────────────────
-
-const DEFAULT_TECH_STACK = {
-  frontend: [
-    { name: 'Next.js',      label: 'FRAMEWORK'   },
-    { name: 'React',        label: 'UI_LIBRARY'  },
-    { name: 'Tailwind CSS', label: 'STYLING'     },
-    { name: 'JavaScript',   label: 'LANGUAGE'    },
-  ],
-  backend: [
-    { name: 'Next.js API Routes', label: 'API_LAYER' },
-    { name: 'NextAuth v5',        label: 'AUTH'      },
-    { name: 'Supabase',           label: 'BaaS'      },
-    { name: 'PostgreSQL',         label: 'DATABASE'  },
-  ],
-  deployment: [
-    { name: 'Vercel',         label: 'HOSTING'    },
-    { name: 'GitHub Actions', label: 'CI_CD'      },
-    { name: 'Supabase Cloud', label: 'CLOUD'      },
-    { name: 'Edge Functions', label: 'SERVERLESS' },
-  ],
-};
+// ─── Tech stack display categories (presentation only) ────────────────────────
 
 const TECH_CATEGORIES = [
-  { key: 'frontend',   label: '01 Frontend',   accent: 'lime'   },
-  { key: 'backend',    label: '02 Backend',    accent: 'violet' },
-  { key: 'deployment', label: '03 Deployment', accent: 'lime'   },
-];
-
-const DEFAULT_TIMELINE = [
-  { year: '2024',   title: 'Project Initiated', description: 'Website concept proposed and planning began',       status: 'completed' },
-  { year: '2025',   title: 'MVP Launch',         description: 'Public website launched with core features',        status: 'completed' },
-  { year: '2026',   title: 'Member Portal',      description: 'Authentication and member dashboard added',         status: 'current'   },
-  { year: 'Future', title: 'Mobile App',         description: 'Native mobile application development',            status: 'planned'   },
+  { key: 'frontend', label: '01 Frontend', accent: 'lime' },
+  { key: 'backend', label: '02 Backend', accent: 'violet' },
+  { key: 'deployment', label: '03 Deployment', accent: 'lime' },
 ];
 
 // ─── Inline SVG icons ─────────────────────────────────────────────────────────
@@ -73,9 +53,18 @@ function LinkedinIcon() {
 
 function GlobeIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-3.5 w-3.5">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="h-3.5 w-3.5"
+    >
       <circle cx="12" cy="12" r="10" />
-      <path strokeLinecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
+      <path
+        strokeLinecap="round"
+        d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"
+      />
     </svg>
   );
 }
@@ -99,7 +88,7 @@ function Avatar({ name, image, className, imgClassName }) {
           onError={() => setErrored(true)}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neon-violet/20 via-surface to-neon-lime/10">
+        <div className="from-neon-violet/20 via-surface to-neon-lime/10 flex h-full w-full items-center justify-center bg-linear-to-br">
           <span className="font-heading text-3xl font-black text-white/30 select-none">
             {getInitials(name)}
           </span>
@@ -119,29 +108,10 @@ function SocialBtn({ href, icon, label }) {
       target="_blank"
       rel="noopener noreferrer"
       title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-neon-lime/30 hover:text-neon-lime"
+      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200"
     >
       {icon}
     </a>
-  );
-}
-
-// ─── Stat tile (exact match events page) ─────────────────────────────────────
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span className={cn(
-        'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-        accent ? 'text-neon-lime' : 'text-white'
-      )}>
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
   );
 }
 
@@ -152,18 +122,25 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
     <motion.div
       variants={fadeUp}
       initial="hidden"
-      {...(onMount ? { animate: 'visible' } : { whileInView: 'visible', viewport })}
+      {...(onMount
+        ? { animate: 'visible' }
+        : { whileInView: 'visible', viewport })}
       className="mb-10 sm:mb-14"
     >
-      <div className="flex items-center gap-3 mb-3">
+      <div className="mb-3 flex items-center gap-3">
         <span className="bg-neon-lime h-px w-7" />
-        <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
+        <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
           {tag}
         </span>
       </div>
       <h2 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl md:text-5xl">
         {title}
-        {accent && <> <span className="neon-text">{accent}</span></>}
+        {accent && (
+          <>
+            {' '}
+            <span className="neon-text">{accent}</span>
+          </>
+        )}
       </h2>
     </motion.div>
   );
@@ -173,27 +150,20 @@ function SectionLabel({ tag, title, accent, onMount = false }) {
 
 function Divider() {
   return (
-    <div className="mx-auto max-w-xs flex items-center gap-4 px-4">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/8" />
-      <div className="h-1 w-1 rounded-full bg-neon-lime/30" />
-      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/8" />
+    <div className="mx-auto flex max-w-xs items-center gap-4 px-4">
+      <div className="h-px flex-1 bg-linear-to-r from-transparent to-white/8" />
+      <div className="bg-neon-lime/30 h-1 w-1 rounded-full" />
+      <div className="h-px flex-1 bg-linear-to-l from-transparent to-white/8" />
     </div>
   );
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
-function Hero({ stats }) {
+function Hero({ stats, settings }) {
   return (
     <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-
-      {/* Ambient background — exact events pattern */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="grid-overlay absolute inset-0 opacity-25" />
-        <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
-        <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
-      </div>
+      <HeroAmbient />
 
       <motion.div
         variants={stagger}
@@ -202,22 +172,36 @@ function Hero({ stats }) {
         className="mx-auto w-full max-w-7xl"
       >
         <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
           {/* Eyebrow */}
           <motion.div variants={fadeUp} className="flex items-center gap-3">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
-              Developers · NEUPC · Digital Infrastructure
+              {settings?.developers_page_badge ||
+                'Developers · NEUPC · Digital Infrastructure'}
             </span>
           </motion.div>
 
           {/* Kinetic headline */}
           <motion.h1
             variants={fadeUp}
-            className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+            className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
           >
-            Meet the<br />
-            <span className="neon-text">Architects</span>
+            {(() => {
+              const title =
+                settings?.developers_page_title || 'Meet the Architects';
+              if (title.includes(' ')) {
+                return (
+                  <>
+                    {title.split(' ').slice(0, -1).join(' ')}
+                    <br />
+                    <span className="neon-text">
+                      {title.split(' ').slice(-1)[0]}
+                    </span>
+                  </>
+                );
+              }
+              return <span className="neon-text">{title}</span>;
+            })()}
           </motion.h1>
 
           {/* Subheadline */}
@@ -225,14 +209,13 @@ function Hero({ stats }) {
             variants={fadeUp}
             className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
           >
-            The technical force behind the NEUPC ecosystem — engineering
-            high-performance infrastructure and building the digital future of
-            our community.
+            {settings?.developers_page_description ||
+              'The technical force behind the NEUPC ecosystem — engineering high-performance infrastructure and building the digital future of our community.'}
           </motion.p>
 
           {/* Live badge */}
           <motion.div variants={fadeUp}>
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]">
+            <span className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]">
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               Open Source · GitHub · Active Development
             </span>
@@ -240,15 +223,20 @@ function Hero({ stats }) {
 
           {/* Stats row */}
           {stats.length > 0 && (
-            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
+            <motion.div
+              variants={fadeUp}
+              className="border-t border-white/8 pt-6 sm:pt-8"
+            >
               <div className="grid grid-cols-4 divide-x divide-white/8">
                 {stats.slice(0, 4).map((stat, i) => (
                   <div
                     key={i}
                     className={cn(
-                      i === 0 ? 'pr-4 sm:pr-8' :
-                      i === 3 ? 'pl-4 sm:pl-8' :
-                      'px-4 sm:px-8'
+                      i === 0
+                        ? 'pr-4 sm:pr-8'
+                        : i === 3
+                          ? 'pl-4 sm:pl-8'
+                          : 'px-4 sm:px-8'
                     )}
                   >
                     <StatTile
@@ -262,15 +250,10 @@ function Hero({ stats }) {
               </div>
             </motion.div>
           )}
-
         </div>
       </motion.div>
 
-      {/* Scroll indicator */}
-      <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-        <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">Scroll</span>
-        <div className="h-7 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
-      </div>
+      <ScrollCue />
     </section>
   );
 }
@@ -286,7 +269,7 @@ function DeveloperCard({ dev, index }) {
       whileHover={{ y: -4 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className={cn(
-        'group relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/8 bg-surface transition-all duration-500',
+        'group bg-surface relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/8 transition-all duration-500',
         isAlt ? 'hover:border-neon-violet/40' : 'hover:border-neon-lime/40'
       )}
     >
@@ -299,28 +282,30 @@ function DeveloperCard({ dev, index }) {
       />
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/95 via-[#05060b]/25 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/95 via-[#05060b]/25 to-transparent" />
 
       {/* Bottom content */}
       <div className="absolute inset-x-0 bottom-0 space-y-2 p-5 sm:p-6">
         {/* Role badge */}
-        <span className={cn(
-          'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase sm:text-[10px]',
-          isAlt
-            ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
-            : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-        )}>
+        <span
+          className={cn(
+            'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase sm:text-[10px]',
+            isAlt
+              ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+              : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+          )}
+        >
           {dev.role || 'Developer'}
         </span>
 
         {/* Name */}
-        <h3 className="font-heading text-xl font-black text-white uppercase leading-tight sm:text-2xl">
+        <h3 className="font-heading text-xl leading-tight font-black text-white uppercase sm:text-2xl">
           {dev.name}
         </h3>
 
         {/* Dept / session */}
         {(dev.department || dev.batch) && (
-          <p className="font-mono text-[9px] text-zinc-500 tracking-wider uppercase">
+          <p className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
             {[dev.department, dev.batch].filter(Boolean).join(' · ')}
           </p>
         )}
@@ -340,10 +325,18 @@ function DeveloperCard({ dev, index }) {
         )}
 
         {/* Hover-reveal socials */}
-        <div className="flex gap-2 pt-1 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-          <SocialBtn href={dev.github}    icon={<GithubIcon />}  label="GitHub"    />
-          <SocialBtn href={dev.linkedin}  icon={<LinkedinIcon />}label="LinkedIn"  />
-          <SocialBtn href={dev.portfolio} icon={<GlobeIcon />}   label="Portfolio" />
+        <div className="flex translate-y-2 gap-2 pt-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          <SocialBtn href={dev.github} icon={<GithubIcon />} label="GitHub" />
+          <SocialBtn
+            href={dev.linkedin}
+            icon={<LinkedinIcon />}
+            label="LinkedIn"
+          />
+          <SocialBtn
+            href={dev.portfolio}
+            icon={<GlobeIcon />}
+            label="Portfolio"
+          />
         </div>
       </div>
     </motion.div>
@@ -366,32 +359,40 @@ function ContributorCard({ contributor, index }) {
       )}
     >
       {/* Ambient glow */}
-      <div className={cn(
-        'pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100',
-        isAlt ? 'bg-neon-violet/6' : 'bg-neon-lime/6'
-      )} />
+      <div
+        className={cn(
+          'pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100',
+          isAlt ? 'bg-neon-violet/6' : 'bg-neon-lime/6'
+        )}
+      />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <span className={cn(
-            'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase',
-            isAlt
-              ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
-              : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
-          )}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase',
+              isAlt
+                ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
+                : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
+            )}
+          >
             {contributor.role || 'Contributor'}
           </span>
-          <h3 className="font-heading text-base font-black text-white uppercase leading-tight sm:text-lg">
+          <h3 className="font-heading text-base leading-tight font-black text-white uppercase sm:text-lg">
             {contributor.name}
           </h3>
           {contributor.contribution && (
-            <p className="text-xs leading-relaxed text-zinc-500 line-clamp-2">
+            <p className="line-clamp-2 text-xs leading-relaxed text-zinc-500">
               {contributor.contribution}
             </p>
           )}
         </div>
         <div className="shrink-0 pt-0.5">
-          <SocialBtn href={contributor.github} icon={<GithubIcon />} label="GitHub" />
+          <SocialBtn
+            href={contributor.github}
+            icon={<GithubIcon />}
+            label="GitHub"
+          />
         </div>
       </div>
     </motion.div>
@@ -402,11 +403,15 @@ function ContributorCard({ contributor, index }) {
 
 function TechStackCard({ category, items }) {
   const isViolet = category.accent === 'violet';
-  const accentText  = isViolet ? 'text-neon-violet'        : 'text-neon-lime';
-  const accentBor   = isViolet ? 'border-neon-violet/15'   : 'border-neon-lime/15';
-  const accentBorHov= isViolet ? 'group-hover/item:border-neon-violet/30' : 'group-hover/item:border-neon-lime/30';
-  const accentGlow  = isViolet ? 'bg-neon-violet/6'        : 'bg-neon-lime/6';
-  const accentHover = isViolet ? 'hover:border-neon-violet/20' : 'hover:border-neon-lime/20';
+  const accentText = isViolet ? 'text-neon-violet' : 'text-neon-lime';
+  const accentBor = isViolet ? 'border-neon-violet/15' : 'border-neon-lime/15';
+  const accentBorHov = isViolet
+    ? 'group-hover/item:border-neon-violet/30'
+    : 'group-hover/item:border-neon-lime/30';
+  const accentGlow = isViolet ? 'bg-neon-violet/6' : 'bg-neon-lime/6';
+  const accentHover = isViolet
+    ? 'hover:border-neon-violet/20'
+    : 'hover:border-neon-lime/20';
 
   return (
     <motion.div
@@ -419,17 +424,29 @@ function TechStackCard({ category, items }) {
       )}
     >
       {/* Corner glow */}
-      <div className={cn(
-        'pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100',
-        accentGlow
-      )} />
+      <div
+        className={cn(
+          'pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100',
+          accentGlow
+        )}
+      />
 
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h3 className={cn('font-heading text-base font-black uppercase tracking-tight sm:text-lg', accentText)}>
+        <h3
+          className={cn(
+            'font-heading text-base font-black tracking-tight uppercase sm:text-lg',
+            accentText
+          )}
+        >
           {category.label}
         </h3>
-        <span className={cn('font-mono text-[9px] tracking-[0.3em] uppercase opacity-40', accentText)}>
+        <span
+          className={cn(
+            'font-mono text-[9px] tracking-[0.3em] uppercase opacity-40',
+            accentText
+          )}
+        >
           {items.length} tech
         </span>
       </div>
@@ -439,12 +456,25 @@ function TechStackCard({ category, items }) {
         {items.map((tech, idx) => (
           <li key={idx} className="group/item flex items-center gap-4">
             {/* Icon slot */}
-            <div className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-surface transition-colors duration-200',
-              accentBor, accentBorHov
-            )}>
-              <svg viewBox="0 0 16 16" fill="none" className={cn('h-3.5 w-3.5', accentText)}>
-                <path d="M2 4l4 4-4 4M8 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <div
+              className={cn(
+                'bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200',
+                accentBor,
+                accentBorHov
+              )}
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className={cn('h-3.5 w-3.5', accentText)}
+              >
+                <path
+                  d="M2 4l4 4-4 4M8 12h6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
 
@@ -471,9 +501,11 @@ function TimelineItem({ item, index }) {
   const isEven = index % 2 === 0;
 
   const dotClass =
-    item.status === 'completed' ? 'border-neon-lime bg-neon-lime/30 shadow-[0_0_8px_rgba(182,243,107,0.4)]' :
-    item.status === 'current'   ? 'border-neon-violet bg-neon-violet/30 shadow-[0_0_10px_rgba(124,92,255,0.6)] animate-pulse' :
-                                  'border-white/20 bg-surface-2';
+    item.status === 'completed'
+      ? 'border-neon-lime bg-neon-lime/30 shadow-[0_0_8px_rgba(182,243,107,0.4)]'
+      : item.status === 'current'
+        ? 'border-neon-violet bg-neon-violet/30 shadow-[0_0_10px_rgba(124,92,255,0.6)] animate-pulse'
+        : 'border-white/20 bg-surface-2';
 
   return (
     <motion.div
@@ -489,18 +521,20 @@ function TimelineItem({ item, index }) {
       </div>
 
       {/* Card */}
-      <div className={cn(
-        'ml-12 flex-1 sm:ml-0 sm:w-[calc(50%-2rem)]',
-        isEven ? 'sm:pr-8' : 'sm:pl-8'
-      )}>
-        <div className="glass-panel group rounded-2xl border border-white/8 p-5 transition-all duration-300 hover:border-neon-lime/20 sm:p-6">
+      <div
+        className={cn(
+          'ml-12 flex-1 sm:ml-0 sm:w-[calc(50%-2rem)]',
+          isEven ? 'sm:pr-8' : 'sm:pl-8'
+        )}
+      >
+        <div className="glass-panel group hover:border-neon-lime/20 rounded-2xl border border-white/8 p-5 transition-all duration-300 sm:p-6">
           {/* Badges */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-neon-lime/30 bg-neon-lime/8 px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] text-neon-lime uppercase">
+            <span className="border-neon-lime/30 bg-neon-lime/8 text-neon-lime rounded-full border px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
               {item.year}
             </span>
             {item.status === 'current' && (
-              <span className="rounded-full border border-neon-violet/30 bg-neon-violet/8 px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] text-neon-violet uppercase">
+              <span className="border-neon-violet/30 bg-neon-violet/8 text-neon-violet rounded-full border px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                 Current
               </span>
             )}
@@ -510,13 +544,13 @@ function TimelineItem({ item, index }) {
               </span>
             )}
             {item.status === 'completed' && (
-              <span className="rounded-full border border-neon-lime/20 bg-neon-lime/5 px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] text-neon-lime/60 uppercase">
+              <span className="border-neon-lime/20 bg-neon-lime/5 text-neon-lime/60 rounded-full border px-3 py-0.5 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
                 Done
               </span>
             )}
           </div>
 
-          <h3 className="font-heading text-lg font-black text-white uppercase leading-tight">
+          <h3 className="font-heading text-lg leading-tight font-black text-white uppercase">
             {item.title}
           </h3>
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
@@ -533,7 +567,9 @@ function TimelineItem({ item, index }) {
 function EmptySlot({ message }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.015] py-20 text-center">
-      <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">{message}</p>
+      <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">
+        {message}
+      </p>
     </div>
   );
 }
@@ -548,30 +584,55 @@ export default function DevelopersClient({
   githubStats: propGithubStats = {},
   settings = {},
 }) {
-  const coreDevelopers = propCoreDevelopers.length > 0 ? propCoreDevelopers : [];
-  const contributors   = propContributors.length  > 0 ? propContributors  : [];
-  const techStack      = Object.keys(propTechStack).length > 0 ? propTechStack : DEFAULT_TECH_STACK;
-  const timeline       = propTimeline.length > 0 ? propTimeline : DEFAULT_TIMELINE;
+  const coreDevelopers = propCoreDevelopers;
+  const contributors = propContributors;
+  const techStack = propTechStack;
+  const timeline = propTimeline;
 
   const totalContributors = coreDevelopers.length + contributors.length;
+  const contributorCount = totalContributors || propGithubStats.contributors;
+
+  const hasTechStack = TECH_CATEGORIES.some(
+    (cat) => (techStack[cat.key] || []).length > 0
+  );
 
   const heroStats = [
-    { value: propGithubStats.commits      || '500+', label: 'Commits',      mobileLabel: 'Commits' },
-    { value: String(totalContributors || propGithubStats.contributors || '15+'), label: 'Contributors', mobileLabel: 'Devs' },
-    { value: propGithubStats.stars        || '42',   label: 'GitHub Stars',  mobileLabel: 'Stars'  },
-    { value: propGithubStats.forks        || '12',   label: 'Forks',         mobileLabel: 'Forks'  },
-  ];
+    propGithubStats.commits && {
+      value: propGithubStats.commits,
+      label: 'Commits',
+      mobileLabel: 'Commits',
+    },
+    contributorCount && {
+      value: String(contributorCount),
+      label: 'Contributors',
+      mobileLabel: 'Devs',
+    },
+    propGithubStats.stars && {
+      value: propGithubStats.stars,
+      label: 'GitHub Stars',
+      mobileLabel: 'Stars',
+    },
+    propGithubStats.forks && {
+      value: propGithubStats.forks,
+      label: 'Forks',
+      mobileLabel: 'Forks',
+    },
+  ].filter(Boolean);
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
-
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <Hero stats={heroStats} />
+      <Hero stats={heroStats} settings={settings} />
 
       {/* ── Core Developers ──────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
+      <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Engineering Team" title="Core" accent="Developers" onMount />
+          <SectionLabel
+            tag="Engineering Team"
+            title="Core"
+            accent="Developers"
+            onMount
+          />
           {coreDevelopers.length > 0 ? (
             <motion.div
               variants={stagger}
@@ -594,9 +655,13 @@ export default function DevelopersClient({
       {/* ── Contributors ─────────────────────────────────────────────────── */}
       {contributors.length > 0 && (
         <>
-          <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
+          <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
             <div className="mx-auto max-w-7xl">
-              <SectionLabel tag="Open Source" title="External" accent="Contributors" />
+              <SectionLabel
+                tag="Open Source"
+                title="External"
+                accent="Contributors"
+              />
               <motion.div
                 variants={stagger}
                 initial="hidden"
@@ -615,54 +680,63 @@ export default function DevelopersClient({
       )}
 
       {/* ── Tech Stack ───────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
-        <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="Architecture" title="Core" accent="Tech Stack" />
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="grid gap-6 sm:gap-7 md:grid-cols-3"
-          >
-            {TECH_CATEGORIES.map((cat) => (
-              <TechStackCard
-                key={cat.key}
-                category={cat}
-                items={(techStack[cat.key] || []).map((t) =>
-                  typeof t === 'string' ? { name: t } : t
-                )}
+      {hasTechStack && (
+        <>
+          <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+              <SectionLabel
+                tag="Architecture"
+                title="Core"
+                accent="Tech Stack"
               />
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      <Divider />
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                className="grid gap-6 sm:gap-7 md:grid-cols-3"
+              >
+                {TECH_CATEGORIES.map((cat) => (
+                  <TechStackCard
+                    key={cat.key}
+                    category={cat}
+                    items={(techStack[cat.key] || []).map((t) =>
+                      typeof t === 'string' ? { name: t } : t
+                    )}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </section>
+          <Divider />
+        </>
+      )}
 
       {/* ── Timeline ─────────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
-        <div className="mx-auto max-w-7xl">
-          <SectionLabel tag="History" title="Development" accent="Timeline" />
+      {timeline.length > 0 && (
+        <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionLabel tag="History" title="Development" accent="Timeline" />
 
-          <div className="relative">
-            {/* Vertical track line */}
-            <div className="absolute left-[1.1rem] top-0 bottom-0 w-px bg-gradient-to-b from-neon-lime/30 via-neon-violet/20 to-transparent sm:left-1/2 sm:-translate-x-px" />
+            <div className="relative">
+              {/* Vertical track line */}
+              <div className="from-neon-lime/30 via-neon-violet/20 absolute top-0 bottom-0 left-[1.1rem] w-px bg-linear-to-b to-transparent sm:left-1/2 sm:-translate-x-px" />
 
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="space-y-10 sm:space-y-14"
-            >
-              {timeline.map((item, i) => (
-                <TimelineItem key={i} item={item} index={i} />
-              ))}
-            </motion.div>
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                className="space-y-10 sm:space-y-14"
+              >
+                {timeline.map((item, i) => (
+                  <TimelineItem key={i} item={item} index={i} />
+                ))}
+              </motion.div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <CTASection

@@ -13,17 +13,17 @@ import ApprovalCard from './ApprovalCard';
 
 export default function PendingApprovals({ pendingApprovals = [] }) {
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10 gap-3">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 rounded-2xl shrink-0">
-            <AlertCircle className="w-6 h-6" />
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <AlertCircle className="h-6 w-6" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
               Pending Approvals
             </h3>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="mt-1 text-xs text-zinc-500">
               {pendingApprovals.length > 0
                 ? `${pendingApprovals.length} item${pendingApprovals.length === 1 ? '' : 's'} awaiting review`
                 : 'Queue clear'}
@@ -32,17 +32,17 @@ export default function PendingApprovals({ pendingApprovals = [] }) {
         </div>
         <Link
           href="/account/admin/applications"
-          className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 px-3 py-1.5 transition-colors shrink-0"
+          className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[9px] font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-100"
         >
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className="h-3.5 w-3.5" />
           View all
         </Link>
       </div>
 
       {pendingApprovals.length === 0 ? (
-        <div className="text-center py-8">
-          <AlertCircle className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+        <div className="py-8 text-center">
+          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-zinc-700" />
+          <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">
             Nothing to review
           </p>
         </div>

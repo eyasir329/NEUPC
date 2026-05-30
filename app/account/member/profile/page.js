@@ -6,8 +6,8 @@
  * @access member
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import MemberProfileClient from './_components/MemberProfileClient';
 
 export const metadata = { title: 'Profile | Member | NEUPC' };

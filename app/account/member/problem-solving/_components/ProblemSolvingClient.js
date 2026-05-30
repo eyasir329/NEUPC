@@ -41,7 +41,7 @@ import {
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
 import ProblemDetailModal from './ProblemDetailModal';
-import { PageShell, TabBar, PageHeader } from '../../_components/_ui';
+import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 // =====================================================================
 // Constants & helpers
@@ -162,7 +162,8 @@ function buildProblemUrl(platform, problemId) {
   if (p === 'codeforces') {
     // problemId is typically "1234A" or "1234/A"
     const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
-    if (match) return `https://codeforces.com/problemset/problem/${match[1]}/${match[2]}`;
+    if (match)
+      return `https://codeforces.com/problemset/problem/${match[1]}/${match[2]}`;
     if (String(problemId).includes('/')) {
       const [contest, prob] = String(problemId).split('/');
       return `https://codeforces.com/problemset/problem/${contest}/${prob}`;
@@ -173,12 +174,14 @@ function buildProblemUrl(platform, problemId) {
   if (p === 'atcoder') {
     // problemId like "abc123_a"
     const parts = String(problemId).split('_');
-    if (parts.length >= 2) return `https://atcoder.jp/contests/${parts.slice(0, -1).join('_')}/tasks/${problemId}`;
+    if (parts.length >= 2)
+      return `https://atcoder.jp/contests/${parts.slice(0, -1).join('_')}/tasks/${problemId}`;
     return null;
   }
   if (p === 'codechef') return `https://www.codechef.com/problems/${problemId}`;
   if (p === 'spoj') return `https://www.spoj.com/problems/${problemId}/`;
-  if (p === 'hackerrank') return `https://www.hackerrank.com/challenges/${problemId}`;
+  if (p === 'hackerrank')
+    return `https://www.hackerrank.com/challenges/${problemId}`;
   return null;
 }
 
@@ -891,7 +894,7 @@ function OverviewTab({
             className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
           >
             <div
-              className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-gradient-to-br opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
+              className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-linear-to-br opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
               style={{ backgroundImage: `var(--tw-gradient-stops)` }}
             />
 
@@ -907,7 +910,7 @@ function OverviewTab({
             <div className="relative z-10 flex flex-col gap-1">
               <span
                 className={cn(
-                  'bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent',
+                  'bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent',
                   s.t
                 )}
               >
@@ -1369,12 +1372,15 @@ function ProblemsTab({ submissions }) {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-zinc-200 transition-colors group-hover:text-indigo-300">
                       {title}
-                      {(s.problem_url || buildProblemUrl(s.platform, s.problem_id)) && (
+                      {(s.problem_url ||
+                        buildProblemUrl(s.platform, s.problem_id)) && (
                         <ExternalLink
                           className="h-3 w-3 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = s.problem_url || buildProblemUrl(s.platform, s.problem_id);
+                            const url =
+                              s.problem_url ||
+                              buildProblemUrl(s.platform, s.problem_id);
                             window.open(url, '_blank', 'noopener');
                           }}
                         />
@@ -1591,7 +1597,10 @@ function RatingLineChart({ ratingHistory }) {
           ))}
         </div>
       </div>
-      <div className="relative z-10 w-full" style={{ aspectRatio: '16/5', minHeight: 200 }}>
+      <div
+        className="relative z-10 w-full"
+        style={{ aspectRatio: '16/5', minHeight: 200 }}
+      >
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
@@ -1632,7 +1641,10 @@ function RatingLineChart({ ratingHistory }) {
             return Array.from({ length: tickCount }, (_, i) => {
               const t = minTime + (i / (tickCount - 1)) * (maxTime - minTime);
               const x = xOf(t);
-              const label = new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+              const label = new Date(t).toLocaleDateString('en-US', {
+                month: 'short',
+                year: '2-digit',
+              });
               return (
                 <text
                   key={i}
@@ -1659,8 +1671,13 @@ function RatingLineChart({ ratingHistory }) {
           {platforms.map((p) => {
             const arr = grouped.get(p);
             if (!arr || arr.length < 1) return null;
-            const pts = arr.map((pt) => ({ x: xOf(pt.date), y: yOf(pt.rating) }));
-            const path = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+            const pts = arr.map((pt) => ({
+              x: xOf(pt.date),
+              y: yOf(pt.rating),
+            }));
+            const path = pts
+              .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`)
+              .join(' ');
             const color = colors[p] || '#94a3b8';
             // area fill path
             const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD.t + innerH} L ${pts[0].x} ${PAD.t + innerH} Z`;
@@ -2154,7 +2171,7 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
               <div
                 key={idx}
                 className={cn(
-                  'relative flex flex-col items-center rounded-t-3xl border bg-black/40 bg-gradient-to-t from-black/80',
+                  'relative flex flex-col items-center rounded-t-3xl border bg-black/40 bg-linear-to-t from-black/80',
                   style.ring,
                   style.gradient,
                   style.width,
@@ -2406,14 +2423,14 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
       {/* ── Hero card ────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900">
         {/* subtle gradient wash */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-sky-600/5" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-violet-600/10 via-transparent to-sky-600/5" />
         {/* top strip accent */}
-        <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+        <div className="h-1 w-full bg-linear-to-r from-violet-500 via-purple-500 to-sky-500" />
 
         <div className="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8 sm:p-8">
           {/* Avatar */}
           <div className="shrink-0">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500 to-purple-600 text-3xl font-black text-white shadow-lg ring-4 ring-violet-500/20 sm:h-24 sm:w-24 sm:text-4xl">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-linear-to-br from-violet-500 to-purple-600 text-3xl font-black text-white shadow-lg ring-4 ring-violet-500/20 sm:h-24 sm:w-24 sm:text-4xl">
               {avatarLetter}
             </div>
           </div>
@@ -2767,7 +2784,11 @@ export default function ProblemSolvingClient({ userId }) {
     }
   };
 
-  const uiTabs = TABS.map((t) => ({ value: t.id, label: t.label, icon: t.icon }));
+  const uiTabs = TABS.map((t) => ({
+    value: t.id,
+    label: t.label,
+    icon: t.icon,
+  }));
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">

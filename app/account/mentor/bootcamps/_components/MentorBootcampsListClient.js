@@ -1,20 +1,55 @@
+/**
+ * @file Mentor bootcamps list client component
+ * @module MentorBootcampsListClient
+ */
+
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { GraduationCap, Clock, BookOpen, Calendar, ChevronRight } from 'lucide-react';
-import { PageShell, PageHeader, EmptyState } from '@/app/account/mentor/_components/_ui';
+import {
+  GraduationCap,
+  Clock,
+  BookOpen,
+  Calendar,
+  ChevronRight,
+} from 'lucide-react';
+import {
+  PageShell,
+  PageHeader,
+  EmptyState,
+} from '@/app/account/_components/ui';
 
 const STATUS_TONE = {
-  published: { dot: 'bg-emerald-400', text: 'text-emerald-300', ring: 'border-emerald-500/20 bg-emerald-500/10', glow: 'shadow-[0_0_8px_rgba(52,211,153,0.6)]', pulse: true },
-  draft:     { dot: 'bg-amber-400',   text: 'text-amber-300',   ring: 'border-amber-500/20 bg-amber-500/10',   glow: '', pulse: false },
-  archived:  { dot: 'bg-zinc-500',    text: 'text-zinc-400',    ring: 'border-white/10 bg-white/5',            glow: '', pulse: false },
+  published: {
+    dot: 'bg-emerald-400',
+    text: 'text-emerald-300',
+    ring: 'border-emerald-500/20 bg-emerald-500/10',
+    glow: 'shadow-[0_0_8px_rgba(52,211,153,0.6)]',
+    pulse: true,
+  },
+  draft: {
+    dot: 'bg-amber-400',
+    text: 'text-amber-300',
+    ring: 'border-amber-500/20 bg-amber-500/10',
+    glow: '',
+    pulse: false,
+  },
+  archived: {
+    dot: 'bg-zinc-500',
+    text: 'text-zinc-400',
+    ring: 'border-white/10 bg-white/5',
+    glow: '',
+    pulse: false,
+  },
 };
 
 function BootcampCard({ bootcamp, index }) {
   const tone = STATUS_TONE[bootcamp.status] ?? STATUS_TONE.archived;
-  const hours = bootcamp.total_duration ? Math.round(bootcamp.total_duration / 60) : null;
+  const hours = bootcamp.total_duration
+    ? Math.round(bootcamp.total_duration / 60)
+    : null;
 
   return (
     <motion.div
@@ -47,12 +82,18 @@ function BootcampCard({ bootcamp, index }) {
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${tone.ring} ${tone.text}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${tone.dot} ${tone.glow} ${tone.pulse ? 'animate-pulse' : ''}`} />
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${tone.ring} ${tone.text}`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${tone.dot} ${tone.glow} ${tone.pulse ? 'animate-pulse' : ''}`}
+                />
                 {bootcamp.status}
               </span>
               {bootcamp.batch_info && (
-                <span className="text-[11px] text-zinc-500">{bootcamp.batch_info}</span>
+                <span className="text-[11px] text-zinc-500">
+                  {bootcamp.batch_info}
+                </span>
               )}
             </div>
 
@@ -72,7 +113,11 @@ function BootcampCard({ bootcamp, index }) {
               {bootcamp.start_date && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3 text-emerald-400/80" />
-                  {new Date(bootcamp.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {new Date(bootcamp.start_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
                 </span>
               )}
             </div>
@@ -86,17 +131,22 @@ function BootcampCard({ bootcamp, index }) {
 export default function MentorBootcampsListClient({ bootcamps }) {
   const [activeTab, setActiveTab] = useState('active');
 
-  const activeBootcamps = bootcamps.filter(bc => bc.status === 'published');
-  const archivedBootcamps = bootcamps.filter(bc => bc.status !== 'published');
+  const activeBootcamps = bootcamps.filter((bc) => bc.status === 'published');
+  const archivedBootcamps = bootcamps.filter((bc) => bc.status !== 'published');
 
-  const visibleBootcamps = activeTab === 'active' ? activeBootcamps : archivedBootcamps;
+  const visibleBootcamps =
+    activeTab === 'active' ? activeBootcamps : archivedBootcamps;
 
   return (
     <PageShell>
       <PageHeader
         icon={GraduationCap}
         title="My Bootcamps"
-        subtitle={bootcamps.length > 0 ? `${activeBootcamps.length} active, ${archivedBootcamps.length} archived/inactive` : undefined}
+        subtitle={
+          bootcamps.length > 0
+            ? `${activeBootcamps.length} active, ${archivedBootcamps.length} archived/inactive`
+            : undefined
+        }
         accent="violet"
       />
 
@@ -104,8 +154,10 @@ export default function MentorBootcampsListClient({ bootcamps }) {
         <div className="mb-6 flex gap-2 border-b border-white/5 pb-px">
           <button
             onClick={() => setActiveTab('active')}
-            className={`relative pb-3 text-sm font-semibold transition-all px-2 flex items-center ${
-              activeTab === 'active' ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-300'
+            className={`relative flex items-center px-2 pb-3 text-sm font-semibold transition-all ${
+              activeTab === 'active'
+                ? 'text-violet-400'
+                : 'text-zinc-400 hover:text-zinc-300'
             }`}
           >
             Active Cohorts
@@ -115,15 +167,17 @@ export default function MentorBootcampsListClient({ bootcamps }) {
             {activeTab === 'active' && (
               <motion.div
                 layoutId="list-active-tab-bar"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500"
+                className="absolute right-0 bottom-0 left-0 h-0.5 bg-violet-500"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
           </button>
           <button
             onClick={() => setActiveTab('archived')}
-            className={`relative pb-3 text-sm font-semibold transition-all px-2 flex items-center ${
-              activeTab === 'archived' ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-300'
+            className={`relative flex items-center px-2 pb-3 text-sm font-semibold transition-all ${
+              activeTab === 'archived'
+                ? 'text-violet-400'
+                : 'text-zinc-400 hover:text-zinc-300'
             }`}
           >
             Archived & Inactive
@@ -133,7 +187,7 @@ export default function MentorBootcampsListClient({ bootcamps }) {
             {activeTab === 'archived' && (
               <motion.div
                 layoutId="list-active-tab-bar"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500"
+                className="absolute right-0 bottom-0 left-0 h-0.5 bg-violet-500"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -151,8 +205,16 @@ export default function MentorBootcampsListClient({ bootcamps }) {
       ) : visibleBootcamps.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
-          title={activeTab === 'active' ? "No active bootcamps" : "No archived bootcamps"}
-          description={activeTab === 'active' ? "You don't have any active bootcamps right now." : "You don't have any archived or inactive bootcamps."}
+          title={
+            activeTab === 'active'
+              ? 'No active bootcamps'
+              : 'No archived bootcamps'
+          }
+          description={
+            activeTab === 'active'
+              ? "You don't have any active bootcamps right now."
+              : "You don't have any archived or inactive bootcamps."
+          }
           accent="violet"
         />
       ) : (

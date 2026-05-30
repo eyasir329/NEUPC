@@ -1,3 +1,8 @@
+/**
+ * @file Event utils
+ * @module eventUtils
+ */
+
 export function fmtDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-US', {

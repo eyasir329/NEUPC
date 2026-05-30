@@ -25,9 +25,9 @@ import {
   getStatusConfig,
   getTypeConfig,
   getPriorityConfig,
-} from '@/app/_lib/discussion-config';
-import { formatRelativeTime } from '@/app/_lib/utils';
-import { fetchDiscussionsAction } from '@/app/_lib/discussion-actions';
+} from '@/app/_lib/config/discussion-config';
+import { formatRelativeTime } from '@/app/_lib/utils/utils';
+import { fetchDiscussionsAction } from '@/app/_lib/actions/discussion-actions';
 import { TypeBadge, PriorityBadge } from '@/app/_components/discussions';
 
 // Column icons and colors

@@ -1,3 +1,8 @@
+/**
+ * @file Scroll header component
+ * @module ScrollHeader
+ */
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,6 +21,7 @@ export default function ScrollHeader({ children }) {
   useEffect(() => {
     if (!headerRef.current) return;
     const update = () => {
+      if (!headerRef.current) return;
       document.documentElement.style.setProperty(
         '--header-h',
         `${headerRef.current.offsetHeight}px`

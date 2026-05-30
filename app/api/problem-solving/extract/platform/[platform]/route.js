@@ -6,8 +6,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
-import { extractPlatformData } from '@/app/_lib/problem-solving-extraction';
+import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
+import { extractPlatformData } from '@/app/_lib/services/problem-solving-extraction';
 
 export async function GET(request, { params }) {
   try {

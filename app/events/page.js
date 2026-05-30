@@ -5,10 +5,12 @@
 
 import {
   getPublicEvents,
+  getPublicFeaturedEvents,
+  getPublicUpcomingEvents,
   getAllPublicSettings,
-} from '@/app/_lib/public-actions';
+} from '@/app/_lib/actions/public-actions';
 import EventsClient from './EventsClient';
-import { buildMetadata } from '@/app/_lib/seo';
+import { buildMetadata } from '@/app/_lib/config/seo';
 import {
   CollectionPageJsonLd,
   BreadcrumbJsonLd,
@@ -30,10 +32,20 @@ export const metadata = buildMetadata({
 });
 
 export default async function EventsPage() {
-  const [events, settings] = await Promise.all([
+  // Load every published event once; the client filters/paginates in the
+  // browser (same pattern as blogs/roadmaps/gallery/achievements).
+  const [events, featured, settings] = await Promise.all([
     getPublicEvents(),
+    getPublicFeaturedEvents(),
     getAllPublicSettings(),
   ]);
+
+  // Featured carousel: prefer flagged events, else surface the soonest upcoming
+  // one so the section is never empty when events exist.
+  let featuredEvents = featured;
+  if (!featuredEvents.length) {
+    featuredEvents = await getPublicUpcomingEvents(1);
+  }
 
   return (
     <>
@@ -45,7 +57,11 @@ export default async function EventsPage() {
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Events' }]}
       />
-      <EventsClient events={events} settings={settings} />
+      <EventsClient
+        events={events}
+        featuredEvents={featuredEvents}
+        settings={settings}
+      />
     </>
   );
 }

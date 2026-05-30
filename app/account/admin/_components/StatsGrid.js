@@ -74,44 +74,40 @@ const statsConfig = [
 
 export default function StatsGrid({ stats }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 xl:gap-8">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:gap-8">
       {statsConfig.map((stat) => {
         const Icon = stat.icon;
         const raw = stats?.[stat.key];
         const value = stat.formatPct ? `${raw}%` : raw;
 
         return (
-          <Link
-            key={stat.key}
-            href={stat.href}
-            className="block h-full"
-          >
-            <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col justify-between hover:border-white/20 hover:shadow-lg hover:shadow-black/40 transition-all group h-full cursor-pointer">
-              <div className="flex justify-between items-start mb-6">
+          <Link key={stat.key} href={stat.href} className="block h-full">
+            <div className="group flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-xl transition-all hover:border-white/20 hover:shadow-lg hover:shadow-black/40">
+              <div className="mb-6 flex items-start justify-between">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                  <p className="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                     {stat.label}
                   </p>
-                  <h3 className="text-3xl font-light text-zinc-100 truncate">
+                  <h3 className="truncate text-3xl font-light text-zinc-100">
                     {value}
                   </h3>
                 </div>
-                <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center rounded-2xl group-hover:scale-105 transition-transform duration-300 shrink-0">
-                  <Icon className={`w-5 h-5 ${stat.iconClass}`} />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 transition-transform duration-300 group-hover:scale-105">
+                  <Icon className={`h-5 w-5 ${stat.iconClass}`} />
                 </div>
               </div>
-              <div className="flex items-center justify-between text-xs gap-2">
-                <p className="text-zinc-500 font-medium truncate">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <p className="truncate font-medium text-zinc-500">
                   {stat.subtitle}
                 </p>
                 {stat.accent === 'success' && (
-                  <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-2xl bg-emerald-500/10 text-emerald-300 shrink-0">
-                    <ArrowUpRight className="w-3 h-3" />
+                  <div className="flex shrink-0 items-center gap-1 rounded-2xl bg-emerald-500/10 px-2 py-1 text-[10px] font-bold tracking-widest text-emerald-300 uppercase">
+                    <ArrowUpRight className="h-3 w-3" />
                     Live
                   </div>
                 )}
                 {stat.accent === 'amber' && raw > 0 && (
-                  <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-2xl bg-amber-500/10 text-amber-300 shrink-0">
+                  <div className="flex shrink-0 items-center gap-1 rounded-2xl bg-amber-500/10 px-2 py-1 text-[10px] font-bold tracking-widest text-amber-300 uppercase">
                     Action
                   </div>
                 )}

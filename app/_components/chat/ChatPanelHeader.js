@@ -13,9 +13,9 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/app/_lib/utils';
-import { getInitials } from '@/app/_lib/utils';
-import { closeConversationAction } from '@/app/_lib/chat-actions';
+import { cn } from '@/app/_lib/utils/utils';
+import { getInitials } from '@/app/_lib/utils/utils';
+import { closeConversationAction } from '@/app/_lib/actions/chat-actions';
 import {
   ArrowLeft,
   Plus,

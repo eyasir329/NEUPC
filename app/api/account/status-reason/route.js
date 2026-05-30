@@ -3,12 +3,12 @@
  * @module StatusReasonRoute
  */
 
-import { supabaseAdmin } from '@/app/_lib/supabase';
+import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/app/_lib/auth';
-import { getUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserByEmail } from '@/app/_lib/services/data-service';
 import { NextResponse } from 'next/server';
-import { sanitizeText } from '@/app/_lib/validation';
+import { sanitizeText } from '@/app/_lib/utils/validation';
 
 export async function GET(request) {
   try {
@@ -73,7 +73,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { getUserRoles } = await import('@/app/_lib/data-service');
+    const { getUserRoles } = await import('@/app/_lib/services/data-service');
     const userRoles = await getUserRoles(session.user.email);
     const isAdmin = userRoles.includes('admin');
 

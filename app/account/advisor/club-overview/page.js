@@ -6,7 +6,7 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getPlatformStatistics,
   getDashboardMetrics,
@@ -14,7 +14,7 @@ import {
   getBudgetSummary,
   getMostEarnedAchievements,
   getActivityLogs,
-} from '@/app/_lib/data-service';
+} from '@/app/_lib/services/data-service';
 import AdvisorClubOverviewClient from './_components/AdvisorClubOverviewClient';
 
 export const metadata = { title: 'Club Overview | Advisor | NEUPC' };

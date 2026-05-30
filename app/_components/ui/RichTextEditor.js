@@ -15,23 +15,23 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
-import { createPortal } from "react-dom";
+} from 'react';
+import { createPortal } from 'react-dom';
 import {
   useFloating,
   autoUpdate,
   offset,
   flip,
   shift,
-} from "@floating-ui/react";
+} from '@floating-ui/react';
 import {
   EditorContent,
   useEditor,
   ReactNodeViewRenderer,
   NodeViewWrapper,
-} from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import LinkExtension from "@tiptap/extension-link";
+} from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import LinkExtension from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import ImageExtension from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -97,7 +97,7 @@ import {
   TableCellsMerge,
   TableCellsSplit,
 } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/hooks';
+import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1215,7 +1215,7 @@ export default function RichTextEditor({
 
   const editorBlock = (
     <div
-      className={`rich-text-editor min-w-0 w-full rounded-xl border border-white/10 bg-gray-950 transition-all ${
+      className={`rich-text-editor w-full min-w-0 rounded-xl border border-white/10 bg-gray-950 transition-all ${
         isFullscreen
           ? containedFullscreen
             ? 'absolute inset-0 z-40 flex flex-col rounded-none border-0'
@@ -1310,61 +1310,62 @@ export default function RichTextEditor({
                 >
                   <Code2 className="h-4 w-4" />
                 </ToolbarButton>
-                {showCodeLang && createPortal(
-                  <div
-                    ref={langRefs.setFloating}
-                    style={langStyles}
-                    className="z-100 max-h-60 w-44 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1117] py-1 shadow-xl"
-                  >
-                    {[
-                      ['plaintext', 'Plain Text'],
-                      ['javascript', 'JavaScript'],
-                      ['typescript', 'TypeScript'],
-                      ['python', 'Python'],
-                      ['cpp', 'C++'],
-                      ['c', 'C'],
-                      ['java', 'Java'],
-                      ['html', 'HTML'],
-                      ['css', 'CSS'],
-                      ['json', 'JSON'],
-                      ['bash', 'Bash'],
-                      ['sql', 'SQL'],
-                      ['go', 'Go'],
-                      ['rust', 'Rust'],
-                      ['php', 'PHP'],
-                      ['ruby', 'Ruby'],
-                      ['swift', 'Swift'],
-                      ['kotlin', 'Kotlin'],
-                      ['yaml', 'YAML'],
-                      ['markdown', 'Markdown'],
-                      ['jsx', 'JSX'],
-                      ['tsx', 'TSX'],
-                      ['scss', 'SCSS'],
-                      ['dockerfile', 'Dockerfile'],
-                      ['csharp', 'C#'],
-                    ].map(([val, label]) => (
-                      <button
-                        key={val}
-                        type="button"
-                        className="block w-full px-3 py-1.5 text-left text-xs text-gray-300 transition-colors hover:bg-white/8 hover:text-white"
-                        onClick={() => {
-                          const lang = val === 'plaintext' ? '' : val;
-                          const pos = savedCodeLangPos.current;
-                          editor
-                            .chain()
-                            .focus(pos !== null ? pos : undefined)
-                            .setCodeBlock({ language: lang })
-                            .run();
-                          savedCodeLangPos.current = null;
-                          setShowCodeLang(false);
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>,
-                  document.body
-                )}
+                {showCodeLang &&
+                  createPortal(
+                    <div
+                      ref={langRefs.setFloating}
+                      style={langStyles}
+                      className="z-100 max-h-60 w-44 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1117] py-1 shadow-xl"
+                    >
+                      {[
+                        ['plaintext', 'Plain Text'],
+                        ['javascript', 'JavaScript'],
+                        ['typescript', 'TypeScript'],
+                        ['python', 'Python'],
+                        ['cpp', 'C++'],
+                        ['c', 'C'],
+                        ['java', 'Java'],
+                        ['html', 'HTML'],
+                        ['css', 'CSS'],
+                        ['json', 'JSON'],
+                        ['bash', 'Bash'],
+                        ['sql', 'SQL'],
+                        ['go', 'Go'],
+                        ['rust', 'Rust'],
+                        ['php', 'PHP'],
+                        ['ruby', 'Ruby'],
+                        ['swift', 'Swift'],
+                        ['kotlin', 'Kotlin'],
+                        ['yaml', 'YAML'],
+                        ['markdown', 'Markdown'],
+                        ['jsx', 'JSX'],
+                        ['tsx', 'TSX'],
+                        ['scss', 'SCSS'],
+                        ['dockerfile', 'Dockerfile'],
+                        ['csharp', 'C#'],
+                      ].map(([val, label]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          className="block w-full px-3 py-1.5 text-left text-xs text-gray-300 transition-colors hover:bg-white/8 hover:text-white"
+                          onClick={() => {
+                            const lang = val === 'plaintext' ? '' : val;
+                            const pos = savedCodeLangPos.current;
+                            editor
+                              .chain()
+                              .focus(pos !== null ? pos : undefined)
+                              .setCodeBlock({ language: lang })
+                              .run();
+                            savedCodeLangPos.current = null;
+                            setShowCodeLang(false);
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>,
+                    document.body
+                  )}
               </div>
             </ToolbarGroup>
 
@@ -1394,19 +1395,20 @@ export default function RichTextEditor({
                     }}
                   />
                 </button>
-                {showColorPicker && createPortal(
-                  <div
-                    ref={colorRefs.setFloating}
-                    style={colorStyles}
-                    className="z-100 mt-1"
-                  >
-                    <ColorPicker
-                      editor={editor}
-                      onClose={() => setShowColorPicker(false)}
-                    />
-                  </div>,
-                  document.body
-                )}
+                {showColorPicker &&
+                  createPortal(
+                    <div
+                      ref={colorRefs.setFloating}
+                      style={colorStyles}
+                      className="z-100 mt-1"
+                    >
+                      <ColorPicker
+                        editor={editor}
+                        onClose={() => setShowColorPicker(false)}
+                      />
+                    </div>,
+                    document.body
+                  )}
               </div>
               <ToolbarButton
                 title="Highlight text"
@@ -1584,19 +1586,20 @@ export default function RichTextEditor({
                 >
                   <LinkIcon className="h-4 w-4" />
                 </button>
-                {showLinkPopover && createPortal(
-                  <div
-                    ref={linkRefs.setFloating}
-                    style={linkStyles}
-                    className="z-100 mt-1"
-                  >
-                    <LinkPopover
-                      editor={editor}
-                      onClose={() => setShowLinkPopover(false)}
-                    />
-                  </div>,
-                  document.body
-                )}
+                {showLinkPopover &&
+                  createPortal(
+                    <div
+                      ref={linkRefs.setFloating}
+                      style={linkStyles}
+                      className="z-100 mt-1"
+                    >
+                      <LinkPopover
+                        editor={editor}
+                        onClose={() => setShowLinkPopover(false)}
+                      />
+                    </div>,
+                    document.body
+                  )}
               </div>
               {editor.isActive('link') && (
                 <ToolbarButton
@@ -1681,7 +1684,7 @@ export default function RichTextEditor({
             ? containedFullscreen
               ? 'min-h-0 flex-1'
               : 'h-[calc(100vh-88px)]'
-            : 'min-h-87.5 max-h-[800px]'
+            : 'max-h-[800px] min-h-87.5'
         }`}
       >
         {showPreview ? (

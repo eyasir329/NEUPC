@@ -1,12 +1,17 @@
+/**
+ * @file Bootcamp id layout
+ * @module BootcampIdLayout
+ */
+
 import { notFound, redirect } from 'next/navigation';
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getBootcampCurriculumLight,
   checkEnrollment,
   getBootcampProgress,
   updateEnrollmentAccess,
-} from '@/app/_lib/bootcamp-actions';
-import { getUserByEmail } from '@/app/_lib/data-service';
+} from '@/app/_lib/actions/bootcamp-actions';
+import { getUserByEmail } from '@/app/_lib/services/data-service';
 import BootcampLearningClient from './_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
@@ -23,7 +28,6 @@ export default async function BootcampLayout({ params, children }) {
   const { bootcampId } = await params;
   await requireRole('member');
 
-  
   const { user: sessionUser } = await requireRole('member');
 
   let bootcamp;
@@ -40,7 +44,9 @@ export default async function BootcampLayout({ params, children }) {
     sessionUser?.email
       ? getUserByEmail(sessionUser.email)
           .then((u) =>
-            u ? { id: u.id, full_name: u.full_name, avatar_url: u.avatar_url } : null
+            u
+              ? { id: u.id, full_name: u.full_name, avatar_url: u.avatar_url }
+              : null
           )
           .catch(() => null)
       : Promise.resolve(null),

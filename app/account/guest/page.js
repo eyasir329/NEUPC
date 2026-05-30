@@ -10,14 +10,14 @@
  */
 
 import dynamic from 'next/dynamic';
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getPublishedEvents,
   getUserEventRegistrations,
   getActiveNotices,
   getJoinRequestByEmail,
-} from '@/app/_lib/data-service';
-import AccountLoading from '../_components/AccountLoading';
+} from '@/app/_lib/services/data-service';
+import AccountLoading from '@/app/account/_components/AccountLoading';
 
 const GuestDashboardClient = dynamic(
   () => import('./_components/GuestDashboardClient'),
@@ -38,7 +38,9 @@ export default async function GuestDashboardPage() {
 
   const notices = allNotices.filter((n) => {
     if (!n.target_audience || n.target_audience.length === 0) return true;
-    return n.target_audience.includes('all') || n.target_audience.includes('guest');
+    return (
+      n.target_audience.includes('all') || n.target_audience.includes('guest')
+    );
   });
 
   const latestApplication = joinRequests?.[0] ?? null;

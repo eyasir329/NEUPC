@@ -44,14 +44,14 @@ import {
   Avatar,
   SectionHeader,
   StaggerList,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 const WORKSPACE_TABS = [
   { value: 'overview-logs', label: 'Overview & Logs', icon: Activity },
-  { value: 'directory',     label: 'Member Directory', icon: Users },
-  { value: 'events-contests',label: 'Events & Contests', icon: Calendar },
-  { value: 'treasury',      label: 'Treasury & Budget', icon: Wallet },
-  { value: 'content-lms',   label: 'Content & Learning', icon: BookOpen },
+  { value: 'directory', label: 'Member Directory', icon: Users },
+  { value: 'events-contests', label: 'Events & Contests', icon: Calendar },
+  { value: 'treasury', label: 'Treasury & Budget', icon: Wallet },
+  { value: 'content-lms', label: 'Content & Learning', icon: BookOpen },
 ];
 
 function downloadCSV(data, filename) {
@@ -65,7 +65,9 @@ function downloadCSV(data, filename) {
       Object.values(row)
         .map((v) => {
           const stringVal = v === null || v === undefined ? '' : String(v);
-          return stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')
+          return stringVal.includes(',') ||
+            stringVal.includes('"') ||
+            stringVal.includes('\n')
             ? `"${stringVal.replace(/"/g, '""')}"`
             : stringVal;
         })
@@ -77,7 +79,10 @@ function downloadCSV(data, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute(
+    'download',
+    `${filename}_${new Date().toISOString().split('T')[0]}.csv`
+  );
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -177,11 +182,16 @@ export default function ReportsClient({
         EventTitle: e.title,
         Category: e.category ?? 'Uncategorized',
         Status: e.status,
-        StartDate: e.start_date ? new Date(e.start_date).toLocaleDateString() : 'N/A',
+        StartDate: e.start_date
+          ? new Date(e.start_date).toLocaleDateString()
+          : 'N/A',
         CreatedBy: e.creatorName,
         Registrations: e.registrationCount ?? 0,
         Attendees: e.attendedCount ?? 0,
-        AttendanceRate: e.registrationCount > 0 ? `${Math.round((e.attendedCount / e.registrationCount) * 100)}%` : '0%',
+        AttendanceRate:
+          e.registrationCount > 0
+            ? `${Math.round((e.attendedCount / e.registrationCount) * 100)}%`
+            : '0%',
       }));
       downloadCSV(data, 'events_performance_report');
     } else if (tab === 'treasury') {
@@ -204,7 +214,9 @@ export default function ReportsClient({
         Likes: post.likes ?? 0,
         CommentsCount: post.commentCount ?? 0,
         PendingComments: post.pendingComments ?? 0,
-        PublishedDate: post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Draft',
+        PublishedDate: post.published_at
+          ? new Date(post.published_at).toLocaleDateString()
+          : 'Draft',
       }));
       downloadCSV(blogData, 'content_blog_insights');
     }
@@ -226,7 +238,10 @@ export default function ReportsClient({
       />
 
       {/* Tabs Switcher Navigation */}
-      <GlassCard padding="p-4" className="border-white/[0.08] bg-white/[0.01] backdrop-blur-xl">
+      <GlassCard
+        padding="p-4"
+        className="border-white/[0.08] bg-white/[0.01] backdrop-blur-xl"
+      >
         <TabBar tabs={WORKSPACE_TABS} value={tab} onChange={setTab} />
 
         {/* ========================================================================= */}
@@ -255,7 +270,9 @@ export default function ReportsClient({
                 label="Budget Net Balance"
                 value={`৳${Number(budgetSummary.balance ?? 0).toLocaleString()}`}
                 sublabel={`${budgetEntries.length} logged ledger entries`}
-                accent={Number(budgetSummary.balance ?? 0) >= 0 ? 'emerald' : 'amber'}
+                accent={
+                  Number(budgetSummary.balance ?? 0) >= 0 ? 'emerald' : 'amber'
+                }
               />
               <StatCard
                 icon={Sparkles}
@@ -291,14 +308,26 @@ export default function ReportsClient({
                   description="System actions performed by members, mentors, or executives will appear here."
                 />
               ) : (
-                <GlassCard padding="p-4" className="overflow-hidden border-white/[0.05] bg-white/[0.02]">
+                <GlassCard
+                  padding="p-4"
+                  className="overflow-hidden border-white/[0.05] bg-white/[0.02]"
+                >
                   <ul className="divide-y divide-white/[0.04]">
                     <StaggerList>
                       {filteredLogs.map((log) => {
                         // Action styling
-                        const isApproval = log.action?.toLowerCase().includes('approve') || log.action?.toLowerCase().includes('create');
-                        const isDanger = log.action?.toLowerCase().includes('delete') || log.action?.toLowerCase().includes('ban') || log.action?.toLowerCase().includes('suspend');
-                        const pillTone = isApproval ? 'emerald' : isDanger ? 'rose' : 'blue';
+                        const isApproval =
+                          log.action?.toLowerCase().includes('approve') ||
+                          log.action?.toLowerCase().includes('create');
+                        const isDanger =
+                          log.action?.toLowerCase().includes('delete') ||
+                          log.action?.toLowerCase().includes('ban') ||
+                          log.action?.toLowerCase().includes('suspend');
+                        const pillTone = isApproval
+                          ? 'emerald'
+                          : isDanger
+                            ? 'rose'
+                            : 'blue';
 
                         return (
                           <li
@@ -306,25 +335,38 @@ export default function ReportsClient({
                             className="flex flex-col gap-3 py-3 transition-colors hover:bg-white/[0.01] sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="flex items-center gap-3">
-                              <Avatar name={log.users?.full_name ?? '?'} src={log.users?.avatar_url} size="sm" />
+                              <Avatar
+                                name={log.users?.full_name ?? '?'}
+                                src={log.users?.avatar_url}
+                                size="sm"
+                              />
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-white">
                                   {log.users?.full_name ?? 'System Action'}
-                                  <Pill tone={pillTone} className="ml-2 font-mono uppercase">
+                                  <Pill
+                                    tone={pillTone}
+                                    className="ml-2 font-mono uppercase"
+                                  >
                                     {log.action}
                                   </Pill>
                                 </p>
                                 <p className="mt-0.5 text-xs text-gray-500">
                                   Entity Type:{' '}
-                                  <span className="font-semibold text-gray-400 capitalize">{log.entity_type || 'General'}</span>
-                                  {log.entity_id && ` | Reference ID: #${log.entity_id.slice(0, 8)}`}
-                                  {log.details?.description && ` | ${log.details.description}`}
+                                  <span className="font-semibold text-gray-400 capitalize">
+                                    {log.entity_type || 'General'}
+                                  </span>
+                                  {log.entity_id &&
+                                    ` | Reference ID: #${log.entity_id.slice(0, 8)}`}
+                                  {log.details?.description &&
+                                    ` | ${log.details.description}`}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-gray-500 sm:self-center">
                               <Clock className="h-3.5 w-3.5 text-gray-600" />
-                              <span>{new Date(log.created_at).toLocaleString()}</span>
+                              <span>
+                                {new Date(log.created_at).toLocaleString()}
+                              </span>
                             </div>
                           </li>
                         );
@@ -333,7 +375,8 @@ export default function ReportsClient({
                   </ul>
                   {filteredLogs.length > 50 && (
                     <div className="pt-3 text-center text-xs text-gray-500">
-                      Showing first 50 logged activities. Export to spreadsheet to view all logs.
+                      Showing first 50 logged activities. Export to spreadsheet
+                      to view all logs.
                     </div>
                   )}
                 </GlassCard>
@@ -366,7 +409,10 @@ export default function ReportsClient({
               <StatCard
                 icon={Clock}
                 label="Awaiting Profile Approval"
-                value={(userStats.pending ?? 0) + (dashboardMetrics.pendingMemberApprovals ?? 0)}
+                value={
+                  (userStats.pending ?? 0) +
+                  (dashboardMetrics.pendingMemberApprovals ?? 0)
+                }
                 sublabel="Requires Executive sign-off"
                 accent="amber"
               />
@@ -381,34 +427,85 @@ export default function ReportsClient({
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
               {/* Account Status Distributions */}
-              <GlassCard padding="p-5" className="lg:col-span-5 space-y-5 border-white/[0.05] bg-white/[0.02]">
-                <SectionHeader icon={Users} title="Account Status Proportions" accent="violet" />
-                
+              <GlassCard
+                padding="p-5"
+                className="space-y-5 border-white/[0.05] bg-white/[0.02] lg:col-span-5"
+              >
+                <SectionHeader
+                  icon={Users}
+                  title="Account Status Proportions"
+                  accent="violet"
+                />
+
                 {[
-                  { label: 'Active Users',      count: userStats.active ?? 0,    max: userStats.total || 1, tone: 'emerald' },
-                  { label: 'Pending Approvals', count: userStats.pending ?? 0,   max: userStats.total || 1, tone: 'amber' },
-                  { label: 'Suspended Accounts',count: userStats.suspended ?? 0, max: userStats.total || 1, tone: 'rose' },
-                  { label: 'Banned / Blocked',  count: userStats.banned ?? 0,    max: userStats.total || 1, tone: 'red' },
-                  { label: 'Inactive Profiles',  count: userStats.inactive ?? 0,  max: userStats.total || 1, tone: 'gray' },
+                  {
+                    label: 'Active Users',
+                    count: userStats.active ?? 0,
+                    max: userStats.total || 1,
+                    tone: 'emerald',
+                  },
+                  {
+                    label: 'Pending Approvals',
+                    count: userStats.pending ?? 0,
+                    max: userStats.total || 1,
+                    tone: 'amber',
+                  },
+                  {
+                    label: 'Suspended Accounts',
+                    count: userStats.suspended ?? 0,
+                    max: userStats.total || 1,
+                    tone: 'rose',
+                  },
+                  {
+                    label: 'Banned / Blocked',
+                    count: userStats.banned ?? 0,
+                    max: userStats.total || 1,
+                    tone: 'red',
+                  },
+                  {
+                    label: 'Inactive Profiles',
+                    count: userStats.inactive ?? 0,
+                    max: userStats.total || 1,
+                    tone: 'gray',
+                  },
                 ].map((item) => (
                   <div key={item.label} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-300 font-medium">{item.label}</span>
-                      <span className="text-gray-400 font-mono">
-                        {item.count} <span className="text-gray-600">/ {userStats.total}</span>
+                      <span className="font-medium text-gray-300">
+                        {item.label}
+                      </span>
+                      <span className="font-mono text-gray-400">
+                        {item.count}{' '}
+                        <span className="text-gray-600">
+                          / {userStats.total}
+                        </span>
                       </span>
                     </div>
-                    <GradientBar value={item.count} max={item.max} tone={item.tone} />
+                    <GradientBar
+                      value={item.count}
+                      max={item.max}
+                      tone={item.tone}
+                    />
                   </div>
                 ))}
               </GlassCard>
 
               {/* Roles Breakdown Grid */}
-              <GlassCard padding="p-5" className="lg:col-span-7 space-y-4 border-white/[0.05] bg-white/[0.02]">
-                <SectionHeader icon={ShieldCheck} title="User Role Structure" accent="blue" />
+              <GlassCard
+                padding="p-5"
+                className="space-y-4 border-white/[0.05] bg-white/[0.02] lg:col-span-7"
+              >
+                <SectionHeader
+                  icon={ShieldCheck}
+                  title="User Role Structure"
+                  accent="blue"
+                />
 
                 {rolesList.length === 0 ? (
-                  <EmptyState icon={Users} title="No database roles cataloged" />
+                  <EmptyState
+                    icon={Users}
+                    title="No database roles cataloged"
+                  />
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {rolesList.map((role) => (
@@ -416,16 +513,24 @@ export default function ReportsClient({
                         key={role.id}
                         className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.1] hover:bg-white/[0.04]"
                       >
-                        <div className="flex justify-between items-start">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-white capitalize">{role.name}</p>
-                            <p className="mt-1 text-[11px] text-gray-500 font-mono">Priority: {role.priority}</p>
+                            <p className="text-sm font-semibold text-white capitalize">
+                              {role.name}
+                            </p>
+                            <p className="mt-1 font-mono text-[11px] text-gray-500">
+                              Priority: {role.priority}
+                            </p>
                           </div>
-                          <Pill tone="indigo" className="font-semibold">{role.userCount ?? 0} Assigned</Pill>
+                          <Pill tone="indigo" className="font-semibold">
+                            {role.userCount ?? 0} Assigned
+                          </Pill>
                         </div>
-                        <div className="mt-2 flex justify-between items-center text-xs text-gray-400 border-t border-white/[0.04] pt-2">
+                        <div className="mt-2 flex items-center justify-between border-t border-white/[0.04] pt-2 text-xs text-gray-400">
                           <span>Permissions</span>
-                          <span className="text-gray-500 font-semibold">{role.permissionsCount ?? 0} active rules</span>
+                          <span className="font-semibold text-gray-500">
+                            {role.permissionsCount ?? 0} active rules
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -502,7 +607,9 @@ export default function ReportsClient({
                     {filteredEvents.map((e) => {
                       const attendanceRate =
                         e.registrationCount > 0
-                          ? Math.round((e.attendedCount / e.registrationCount) * 100)
+                          ? Math.round(
+                              (e.attendedCount / e.registrationCount) * 100
+                            )
                           : 0;
 
                       // Event Status Pill Colors
@@ -522,43 +629,70 @@ export default function ReportsClient({
                           className="flex flex-col justify-between space-y-4 border-white/[0.06] bg-white/[0.02]"
                         >
                           <div className="space-y-1.5">
-                            <div className="flex justify-between items-start">
-                              <span className="text-[10px] uppercase font-mono tracking-wider text-violet-400">
+                            <div className="flex items-start justify-between">
+                              <span className="font-mono text-[10px] tracking-wider text-violet-400 uppercase">
                                 {e.category || 'General'}
                               </span>
-                              <Pill tone={statusTone} className="font-mono text-[9px] uppercase">
+                              <Pill
+                                tone={statusTone}
+                                className="font-mono text-[9px] uppercase"
+                              >
                                 {e.status}
                               </Pill>
                             </div>
-                            <h4 className="text-sm font-semibold text-white truncate" title={e.title}>
+                            <h4
+                              className="truncate text-sm font-semibold text-white"
+                              title={e.title}
+                            >
                               {e.title}
                             </h4>
                             <p className="text-[10px] text-gray-500">
-                              Hosted: {e.start_date ? new Date(e.start_date).toLocaleDateString() : 'Unscheduled'}
+                              Hosted:{' '}
+                              {e.start_date
+                                ? new Date(e.start_date).toLocaleDateString()
+                                : 'Unscheduled'}
                             </p>
                           </div>
 
                           <div className="grid grid-cols-3 gap-2 border-t border-white/[0.04] pt-3 text-center">
                             <div>
-                              <p className="text-sm font-bold text-white font-mono">{e.registrationCount ?? 0}</p>
-                              <p className="text-[9px] text-gray-500 uppercase tracking-wide">Registered</p>
+                              <p className="font-mono text-sm font-bold text-white">
+                                {e.registrationCount ?? 0}
+                              </p>
+                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                                Registered
+                              </p>
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white font-mono">{e.attendedCount ?? 0}</p>
-                              <p className="text-[9px] text-gray-500 uppercase tracking-wide">Attended</p>
+                              <p className="font-mono text-sm font-bold text-white">
+                                {e.attendedCount ?? 0}
+                              </p>
+                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                                Attended
+                              </p>
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-violet-400 font-mono">{attendanceRate}%</p>
-                              <p className="text-[9px] text-gray-500 uppercase tracking-wide">Conv. Rate</p>
+                              <p className="font-mono text-sm font-bold text-violet-400">
+                                {attendanceRate}%
+                              </p>
+                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                                Conv. Rate
+                              </p>
                             </div>
                           </div>
 
                           <div className="space-y-1">
                             <div className="flex justify-between text-[9px] text-gray-500">
                               <span>Attendance Performance Bar</span>
-                              <span>{e.attendedCount} / {e.registrationCount}</span>
+                              <span>
+                                {e.attendedCount} / {e.registrationCount}
+                              </span>
                             </div>
-                            <GradientBar value={e.attendedCount} max={e.registrationCount || 1} tone="violet" />
+                            <GradientBar
+                              value={e.attendedCount}
+                              max={e.registrationCount || 1}
+                              tone="violet"
+                            />
                           </div>
                         </GlassCard>
                       );
@@ -596,7 +730,9 @@ export default function ReportsClient({
                 label="Treasury Net Balance"
                 value={`৳${Number(budgetSummary.balance ?? 0).toLocaleString()}`}
                 sublabel="Current bank/cash reserves"
-                accent={Number(budgetSummary.balance ?? 0) >= 0 ? 'blue' : 'amber'}
+                accent={
+                  Number(budgetSummary.balance ?? 0) >= 0 ? 'blue' : 'amber'
+                }
               />
             </div>
 
@@ -624,16 +760,21 @@ export default function ReportsClient({
                   description="Income or expense transactions approved on the system will show up here."
                 />
               ) : (
-                <GlassCard padding="p-4" className="overflow-hidden border-white/[0.05] bg-white/[0.02]">
+                <GlassCard
+                  padding="p-4"
+                  className="overflow-hidden border-white/[0.05] bg-white/[0.02]"
+                >
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-white/10 text-xs tracking-wider text-gray-500 uppercase">
                           <th className="px-4 py-3">Date</th>
                           <th className="px-4 py-3">Description</th>
                           <th className="px-4 py-3">Entry Context</th>
                           <th className="px-4 py-3 text-right">Amount</th>
-                          <th className="px-4 py-3 text-right">Approval Officer</th>
+                          <th className="px-4 py-3 text-right">
+                            Approval Officer
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
@@ -641,28 +782,46 @@ export default function ReportsClient({
                           {filteredBudget.map((entry) => {
                             const isIncome = entry.entry_type === 'income';
                             return (
-                              <tr key={entry.id} className="transition-colors hover:bg-white/[0.01]">
-                                <td className="px-4 py-3 font-mono text-xs text-gray-400 whitespace-nowrap">
-                                  {new Date(entry.transaction_date).toLocaleDateString()}
+                              <tr
+                                key={entry.id}
+                                className="transition-colors hover:bg-white/[0.01]"
+                              >
+                                <td className="px-4 py-3 font-mono text-xs whitespace-nowrap text-gray-400">
+                                  {new Date(
+                                    entry.transaction_date
+                                  ).toLocaleDateString()}
                                 </td>
-                                <td className="px-4 py-3 font-medium text-white max-w-xs truncate" title={entry.description}>
+                                <td
+                                  className="max-w-xs truncate px-4 py-3 font-medium text-white"
+                                  title={entry.description}
+                                >
                                   {entry.description}
                                 </td>
                                 <td className="px-4 py-3">
-                                  <Pill tone={isIncome ? 'emerald' : 'rose'} className="text-[10px] font-semibold font-mono uppercase">
+                                  <Pill
+                                    tone={isIncome ? 'emerald' : 'rose'}
+                                    className="font-mono text-[10px] font-semibold uppercase"
+                                  >
                                     {entry.entry_type}
                                   </Pill>
                                   {entry.events && (
-                                    <span className="block text-[10px] text-gray-500 truncate max-w-[150px]" title={entry.events.title}>
+                                    <span
+                                      className="block max-w-[150px] truncate text-[10px] text-gray-500"
+                                      title={entry.events.title}
+                                    >
                                       Event: {entry.events.title}
                                     </span>
                                   )}
                                 </td>
-                                <td className={`px-4 py-3 text-right font-bold font-mono whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                  {isIncome ? '+' : '-'}৳{Number(entry.amount).toLocaleString()}
+                                <td
+                                  className={`px-4 py-3 text-right font-mono font-bold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}
+                                >
+                                  {isIncome ? '+' : '-'}৳
+                                  {Number(entry.amount).toLocaleString()}
                                 </td>
-                                <td className="px-4 py-3 text-right text-xs text-gray-500 whitespace-nowrap">
-                                  {entry.users?.full_name ?? 'Authorized / Admin'}
+                                <td className="px-4 py-3 text-right text-xs whitespace-nowrap text-gray-500">
+                                  {entry.users?.full_name ??
+                                    'Authorized / Admin'}
                                 </td>
                               </tr>
                             );
@@ -716,24 +875,46 @@ export default function ReportsClient({
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
               {/* Bootcamps Ledger */}
-              <GlassCard padding="p-5" className="lg:col-span-5 space-y-4 border-white/[0.05] bg-white/[0.02]">
-                <SectionHeader icon={GraduationCap} title="Active Learning Bootcamps" accent="violet" />
+              <GlassCard
+                padding="p-5"
+                className="space-y-4 border-white/[0.05] bg-white/[0.02] lg:col-span-5"
+              >
+                <SectionHeader
+                  icon={GraduationCap}
+                  title="Active Learning Bootcamps"
+                  accent="violet"
+                />
 
                 {bootcamps.length === 0 ? (
-                  <EmptyState icon={GraduationCap} title="No active Bootcamps available" />
+                  <EmptyState
+                    icon={GraduationCap}
+                    title="No active Bootcamps available"
+                  />
                 ) : (
-                  <ul className="divide-y divide-white/[0.04] max-h-[350px] overflow-y-auto pr-1">
+                  <ul className="max-h-[350px] divide-y divide-white/[0.04] overflow-y-auto pr-1">
                     {bootcamps.map((bc) => (
-                      <li key={bc.id} className="py-2.5 flex justify-between items-center">
+                      <li
+                        key={bc.id}
+                        className="flex items-center justify-between py-2.5"
+                      >
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate max-w-[200px]" title={bc.title}>
+                          <p
+                            className="max-w-[200px] truncate text-xs font-semibold text-white"
+                            title={bc.title}
+                          >
                             {bc.title}
                           </p>
                           <p className="text-[10px] text-gray-500">
-                            Released: {bc.start_date ? new Date(bc.start_date).toLocaleDateString() : 'Unscheduled'}
+                            Released:{' '}
+                            {bc.start_date
+                              ? new Date(bc.start_date).toLocaleDateString()
+                              : 'Unscheduled'}
                           </p>
                         </div>
-                        <Pill tone="blue" className="text-[9px] uppercase font-mono tracking-wide">
+                        <Pill
+                          tone="blue"
+                          className="font-mono text-[9px] tracking-wide uppercase"
+                        >
                           LMS Active
                         </Pill>
                       </li>
@@ -743,37 +924,72 @@ export default function ReportsClient({
               </GlassCard>
 
               {/* Popular Articles Performance Grid */}
-              <GlassCard padding="p-5" className="lg:col-span-7 space-y-4 border-white/[0.05] bg-white/[0.02]">
-                <SectionHeader icon={FileText} title="Top-Performing Articles Metrics" accent="emerald" />
+              <GlassCard
+                padding="p-5"
+                className="space-y-4 border-white/[0.05] bg-white/[0.02] lg:col-span-7"
+              >
+                <SectionHeader
+                  icon={FileText}
+                  title="Top-Performing Articles Metrics"
+                  accent="emerald"
+                />
 
-                {(!blogsData.posts || blogsData.posts.length === 0) ? (
-                  <EmptyState icon={BookOpen} title="No blog posts registered yet" />
+                {!blogsData.posts || blogsData.posts.length === 0 ? (
+                  <EmptyState
+                    icon={BookOpen}
+                    title="No blog posts registered yet"
+                  />
                 ) : (
-                  <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                  <div className="max-h-[350px] space-y-3 overflow-y-auto pr-1">
                     {blogsData.posts.slice(0, 5).map((post) => (
                       <div
                         key={post.id}
                         className="rounded-xl border border-white/[0.04] bg-white/[0.01] p-3 transition-colors hover:border-white/[0.08]"
                       >
-                        <div className="flex justify-between items-start gap-2">
+                        <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <span className="text-[9px] uppercase tracking-wide text-emerald-400 font-semibold">
+                            <span className="text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
                               {post.category || 'Tech'}
                             </span>
-                            <h5 className="text-xs font-semibold text-white truncate" title={post.title}>
+                            <h5
+                              className="truncate text-xs font-semibold text-white"
+                              title={post.title}
+                            >
                               {post.title}
                             </h5>
-                            <p className="text-[10px] text-gray-500">Author: {post.users?.full_name ?? 'Author'}</p>
+                            <p className="text-[10px] text-gray-500">
+                              Author: {post.users?.full_name ?? 'Author'}
+                            </p>
                           </div>
-                          <Pill tone={post.status === 'published' ? 'emerald' : 'gray'} className="text-[9px] uppercase font-mono whitespace-nowrap">
+                          <Pill
+                            tone={
+                              post.status === 'published' ? 'emerald' : 'gray'
+                            }
+                            className="font-mono text-[9px] whitespace-nowrap uppercase"
+                          >
                             {post.status}
                           </Pill>
                         </div>
 
-                        <div className="mt-2 flex justify-between items-center text-[10px] text-gray-400 border-t border-white/[0.04] pt-2 font-mono">
-                          <span className="text-gray-500">Views: <span className="text-white font-bold">{post.views ?? 0}</span></span>
-                          <span className="text-gray-500">Likes: <span className="text-white font-bold">{post.likes ?? 0}</span></span>
-                          <span className="text-gray-500">Comments: <span className="text-white font-bold">{post.commentCount ?? 0}</span></span>
+                        <div className="mt-2 flex items-center justify-between border-t border-white/[0.04] pt-2 font-mono text-[10px] text-gray-400">
+                          <span className="text-gray-500">
+                            Views:{' '}
+                            <span className="font-bold text-white">
+                              {post.views ?? 0}
+                            </span>
+                          </span>
+                          <span className="text-gray-500">
+                            Likes:{' '}
+                            <span className="font-bold text-white">
+                              {post.likes ?? 0}
+                            </span>
+                          </span>
+                          <span className="text-gray-500">
+                            Comments:{' '}
+                            <span className="font-bold text-white">
+                              {post.commentCount ?? 0}
+                            </span>
+                          </span>
                         </div>
                       </div>
                     ))}

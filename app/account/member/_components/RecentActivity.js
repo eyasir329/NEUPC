@@ -1,3 +1,8 @@
+/**
+ * @file Recent activity component
+ * @module RecentActivity
+ */
+
 'use client';
 
 import {
@@ -10,7 +15,7 @@ import {
   FileText,
   Activity,
   ArrowRight,
-  Trophy
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -42,44 +47,48 @@ export default function RecentActivity({ recentActivities = [] }) {
   const extra = recentActivities.length - visible.length;
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <div className="mb-8 flex items-center justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 rounded-2xl shrink-0">
-             <Activity className="w-6 h-6" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+            <Activity className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-light text-zinc-100 uppercase tracking-widest">Recent Activity</h3>
-            <p className="text-xs text-zinc-500 mt-1">Your latest actions</p>
+            <h3 className="text-lg font-light tracking-widest text-zinc-100 uppercase">
+              Recent Activity
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">Your latest actions</p>
           </div>
         </div>
         {extra > 0 && (
-          <Link 
-            href="/account/member/participation" 
-            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-100 transition-colors shrink-0"
+          <Link
+            href="/account/member/participation"
+            className="flex shrink-0 items-center gap-2 text-xs font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-100"
           >
-            All {recentActivities.length} <ArrowRight className="w-4 h-4" />
+            All {recentActivities.length} <ArrowRight className="h-4 w-4" />
           </Link>
         )}
       </div>
 
-      <div className="relative border-l border-white/10 ml-6 space-y-8 pb-2 mt-4">
+      <div className="relative mt-4 ml-6 space-y-8 border-l border-white/10 pb-2">
         {visible.map((activity, i) => {
           const Icon = ICON_MAP[activity.icon] ?? Activity;
           const toneConfig = TONE_TO_TW[activity.tone] || TONE_TO_TW.emerald;
-          
+
           return (
-            <div key={i} className="relative pl-8 group cursor-pointer">
+            <div key={i} className="group relative cursor-pointer pl-8">
               {/* Timeline Dot */}
-              <div className={`absolute -left-[17px] top-0 w-8 h-8 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border ${toneConfig.border} flex items-center justify-center shadow-lg shadow-black/40 group-hover:scale-110 transition-transform`}>
-                <Icon className={`w-4 h-4 ${toneConfig.text}`} />
+              <div
+                className={`absolute top-0 -left-[17px] h-8 w-8 rounded-2xl border bg-zinc-900/50 backdrop-blur-xl ${toneConfig.border} flex items-center justify-center shadow-lg shadow-black/40 transition-transform group-hover:scale-110`}
+              >
+                <Icon className={`h-4 w-4 ${toneConfig.text}`} />
               </div>
-              
+
               <div className="pt-1">
-                <h4 className="text-sm font-bold text-zinc-100 leading-tight mb-1 group-hover:text-indigo-400 transition-colors">
+                <h4 className="mb-1 text-sm leading-tight font-bold text-zinc-100 transition-colors group-hover:text-indigo-400">
                   {activity.action}
                 </h4>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                   {activity.time}
                 </p>
               </div>

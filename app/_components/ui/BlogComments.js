@@ -10,12 +10,12 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { getInitials, driveImageUrl } from '@/app/_lib/utils';
+import { getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   addCommentAction,
   editCommentAction,
   deleteOwnCommentAction,
-} from '@/app/_lib/blog-actions';
+} from '@/app/_lib/actions/blog-actions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -1,10 +1,15 @@
+/**
+ * @file Event content renderer component
+ * @module EventContentRenderer
+ */
+
 'use client';
 
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { createLowlight, common } from 'lowlight';
 import { BookOpen, Play, ListVideo, AlertCircle } from 'lucide-react';
-import { driveImageUrl } from '@/app/_lib/utils';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 const lowlight = createLowlight(common);
 
@@ -19,14 +24,17 @@ function parseContentBlocks(content) {
       return [{ id: 'legacy', type: 'richText', content: parsed.html }];
     }
   } catch {}
-  const stringContent = typeof content === 'object' ? (content?.html || '') : content;
+  const stringContent =
+    typeof content === 'object' ? content?.html || '' : content;
   return [{ id: 'legacy', type: 'richText', content: stringContent }];
 }
 
 function escapeHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function hastToString(node) {
@@ -34,17 +42,21 @@ function hastToString(node) {
   if (node.type === 'text') return escapeHtml(node.value);
   if (node.type === 'element') {
     const cls = node.properties?.className;
-    const ca = cls ? ` class="${Array.isArray(cls) ? cls.join(' ') : cls}"` : '';
+    const ca = cls
+      ? ` class="${Array.isArray(cls) ? cls.join(' ') : cls}"`
+      : '';
     return `<${node.tagName}${ca}>${(node.children || []).map(hastToString).join('')}</${node.tagName}>`;
   }
-  if (node.type === 'root') return (node.children || []).map(hastToString).join('');
+  if (node.type === 'root')
+    return (node.children || []).map(hastToString).join('');
   return '';
 }
 
 function highlightCode(code, lang) {
   try {
     const l = (lang || '').trim().toLowerCase();
-    if (l && lowlight.registered(l)) return hastToString(lowlight.highlight(l, code));
+    if (l && lowlight.registered(l))
+      return hastToString(lowlight.highlight(l, code));
   } catch {}
   return escapeHtml(code);
 }
@@ -54,7 +66,14 @@ function buildRenderer() {
 
   r.heading = function ({ tokens, depth }) {
     const text = this.parser.parseInline(tokens);
-    const sz = { 1: '1.375rem', 2: '1.125rem', 3: '1rem', 4: '0.9rem', 5: '0.85rem', 6: '0.8rem' };
+    const sz = {
+      1: '1.375rem',
+      2: '1.125rem',
+      3: '1rem',
+      4: '0.9rem',
+      5: '0.85rem',
+      6: '0.8rem',
+    };
     return `<h${depth} class="md-h md-h${depth}" style="font-size:${sz[depth] || '1rem'}">${text}</h${depth}>\n`;
   };
   r.paragraph = function ({ tokens }) {
@@ -77,7 +96,9 @@ function buildRenderer() {
     if (item.task) {
       return `<li class="md-li md-task"><input type="checkbox" ${item.checked ? 'checked' : ''} disabled> ${body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1')}</li>\n`;
     }
-    const inner = item.loose ? body : body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
+    const inner = item.loose
+      ? body
+      : body.replace(/^\s*<p[^>]*>(.*)<\/p>\s*$/s, '$1');
     return `<li class="md-li">${inner}</li>\n`;
   };
   r.table = function (token) {
@@ -114,8 +135,12 @@ function buildRenderer() {
       `</div>\n`,
     ].join('');
   };
-  r.strong = function ({ tokens }) { return `<strong class="md-strong">${this.parser.parseInline(tokens)}</strong>`; };
-  r.em = function ({ tokens }) { return `<em class="md-em">${this.parser.parseInline(tokens)}</em>`; };
+  r.strong = function ({ tokens }) {
+    return `<strong class="md-strong">${this.parser.parseInline(tokens)}</strong>`;
+  };
+  r.em = function ({ tokens }) {
+    return `<em class="md-em">${this.parser.parseInline(tokens)}</em>`;
+  };
   r.codespan = ({ text }) => `<code class="md-inline-code">${text}</code>`;
   r.link = function ({ href, title, tokens }) {
     const text = this.parser.parseInline(tokens);
@@ -131,8 +156,11 @@ const MD_RENDERER = buildRenderer();
 
 function processMarkdown(md) {
   if (!md) return '';
-  try { return marked.parse(md, { gfm: true, breaks: true, renderer: MD_RENDERER }); }
-  catch { return '<p>Failed to parse markdown.</p>'; }
+  try {
+    return marked.parse(md, { gfm: true, breaks: true, renderer: MD_RENDERER });
+  } catch {
+    return '<p>Failed to parse markdown.</p>';
+  }
 }
 
 const MD_STYLES = `
@@ -199,9 +227,10 @@ function EventVideoEmbed({ vid }) {
   }
 
   if (src === 'youtube') {
-    const ytId = id?.includes('youtube.com') || id?.includes('youtu.be')
-      ? id.split(/[/?=]/).find((p) => /^[a-zA-Z0-9_-]{11}$/.test(p))
-      : id;
+    const ytId =
+      id?.includes('youtube.com') || id?.includes('youtu.be')
+        ? id.split(/[/?=]/).find((p) => /^[a-zA-Z0-9_-]{11}$/.test(p))
+        : id;
     return (
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
         <iframe
@@ -245,41 +274,61 @@ function MultiVideoPlaylist({ videos }) {
   const activeVid = videos[activeIdx];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#273647] bg-[#051424] shadow-2xl flex flex-col lg:flex-row">
-      <div className="flex-1 min-w-0">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-[#273647] bg-[#051424] shadow-2xl lg:flex-row">
+      <div className="min-w-0 flex-1">
         <EventVideoEmbed vid={activeVid} />
         {activeVid.label && (
-          <div className="px-4 py-3 border-t border-white/8 bg-[#0a0d14]">
-            <p className="text-sm font-medium text-white/75 truncate">{activeVid.label}</p>
+          <div className="border-t border-white/8 bg-[#0a0d14] px-4 py-3">
+            <p className="truncate text-sm font-medium text-white/75">
+              {activeVid.label}
+            </p>
           </div>
         )}
       </div>
-      <div className="lg:w-72 shrink-0 border-t lg:border-t-0 lg:border-l border-[#273647] bg-[#010f1f] flex flex-col max-h-[400px] lg:max-h-none">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#273647] bg-[#051424] shrink-0">
+      <div className="flex max-h-[400px] shrink-0 flex-col border-t border-[#273647] bg-[#010f1f] lg:max-h-none lg:w-72 lg:border-t-0 lg:border-l">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#273647] bg-[#051424] px-4 py-3">
           <div className="flex items-center gap-2">
             <ListVideo className="h-4 w-4 text-[#8083ff]" />
             <span className="text-sm font-bold text-[#d4e4fa]">Playlist</span>
           </div>
-          <span className="text-[11px] font-bold text-[#c0c1ff] bg-[#8083ff]/10 px-2 py-0.5 rounded-md tabular-nums border border-[#8083ff]/20">
+          <span className="rounded-md border border-[#8083ff]/20 bg-[#8083ff]/10 px-2 py-0.5 text-[11px] font-bold text-[#c0c1ff] tabular-nums">
             {activeIdx + 1} / {videos.length}
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 space-y-1 overflow-y-auto p-2">
           {videos.map((vid, idx) => {
             const isActive = idx === activeIdx;
             const hasVideo = vid.video_id || vid.video_url;
             return (
-              <button key={vid.id ?? idx} onClick={() => hasVideo && setActiveIdx(idx)} disabled={!hasVideo}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all relative overflow-hidden group ${
-                  isActive ? 'bg-[#122131] border border-[#464554]' : 'border border-transparent hover:bg-[#051424] hover:border-[#273647]'
-                } disabled:opacity-40 disabled:cursor-not-allowed`}>
-                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#8083ff]" />}
-                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                  isActive ? 'bg-[#8083ff] text-white' : 'bg-[#273647] text-[#908fa0] group-hover:bg-[#34465c]'
-                }`}>
-                  {isActive ? <Play className="h-3.5 w-3.5 fill-current ml-0.5" /> : <span>{idx + 1}</span>}
+              <button
+                key={vid.id ?? idx}
+                onClick={() => hasVideo && setActiveIdx(idx)}
+                disabled={!hasVideo}
+                className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl p-3 text-left transition-all ${
+                  isActive
+                    ? 'border border-[#464554] bg-[#122131]'
+                    : 'border border-transparent hover:border-[#273647] hover:bg-[#051424]'
+                } disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                {isActive && (
+                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-[#8083ff]" />
+                )}
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                    isActive
+                      ? 'bg-[#8083ff] text-white'
+                      : 'bg-[#273647] text-[#908fa0] group-hover:bg-[#34465c]'
+                  }`}
+                >
+                  {isActive ? (
+                    <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
                 </div>
-                <p className={`text-sm font-semibold truncate transition-colors ${isActive ? 'text-white' : 'text-[#908fa0] group-hover:text-[#d4e4fa]'}`}>
+                <p
+                  className={`truncate text-sm font-semibold transition-colors ${isActive ? 'text-white' : 'text-[#908fa0] group-hover:text-[#d4e4fa]'}`}
+                >
                   {vid.label || `Video ${idx + 1}`}
                 </p>
               </button>
@@ -305,14 +354,18 @@ export default function EventContentRenderer({ content }) {
       if (btn._wired) return;
       btn._wired = true;
       btn.addEventListener('click', () => {
-        const code = btn.closest('[data-has-copy="true"]')?.querySelector('code')
-          || btn.closest('.md-code-block')?.querySelector('code');
+        const code =
+          btn.closest('[data-has-copy="true"]')?.querySelector('code') ||
+          btn.closest('.md-code-block')?.querySelector('code');
         if (!code) return;
         navigator.clipboard.writeText(code.textContent).then(() => {
           const orig = btn.textContent;
           btn.textContent = '✓ Copied!';
           btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = orig === '✓ Copied!' ? 'Copy' : orig; btn.classList.remove('copied'); }, 2000);
+          setTimeout(() => {
+            btn.textContent = orig === '✓ Copied!' ? 'Copy' : orig;
+            btn.classList.remove('copied');
+          }, 2000);
         });
       });
     });
@@ -328,18 +381,34 @@ export default function EventContentRenderer({ content }) {
         if (!hasContent && !hasData && block.type !== 'lessonPlan') return null;
 
         if (block.type === 'richText') {
-          return <div key={block.id} className="tiptap-viewer-content" dangerouslySetInnerHTML={{ __html: block.content }} />;
+          return (
+            <div
+              key={block.id}
+              className="tiptap-viewer-content"
+              dangerouslySetInnerHTML={{ __html: block.content }}
+            />
+          );
         }
 
         if (block.type === 'html') {
-          return <div key={block.id} dangerouslySetInnerHTML={{ __html: block.content }} />;
+          return (
+            <div
+              key={block.id}
+              dangerouslySetInnerHTML={{ __html: block.content }}
+            />
+          );
         }
 
         if (block.type === 'markdown') {
           return (
             <div key={block.id}>
               <style dangerouslySetInnerHTML={{ __html: MD_STYLES }} />
-              <div className="md-viewer" dangerouslySetInnerHTML={{ __html: processMarkdown(block.content) }} />
+              <div
+                className="md-viewer"
+                dangerouslySetInnerHTML={{
+                  __html: processMarkdown(block.content),
+                }}
+              />
             </div>
           );
         }
@@ -347,28 +416,43 @@ export default function EventContentRenderer({ content }) {
         if (block.type === 'image') {
           let images = block.data?.images;
           if (!images || !Array.isArray(images) || images.length === 0) {
-            if (block.content) images = [{ id: 'legacy', url: block.content, alt: block.data?.alt }];
+            if (block.content)
+              images = [
+                { id: 'legacy', url: block.content, alt: block.data?.alt },
+              ];
             else return null;
           }
           const valid = images.filter((img) => img.url);
           if (valid.length === 0) return null;
-          const gridClass = valid.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto'
-            : valid.length === 2 ? 'grid-cols-1 sm:grid-cols-2'
-            : valid.length === 3 ? 'grid-cols-1 sm:grid-cols-2'
-            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3';
+          const gridClass =
+            valid.length === 1
+              ? 'grid-cols-1 max-w-4xl mx-auto'
+              : valid.length === 2
+                ? 'grid-cols-1 sm:grid-cols-2'
+                : valid.length === 3
+                  ? 'grid-cols-1 sm:grid-cols-2'
+                  : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3';
           return (
             <div key={block.id} className={`grid gap-4 ${gridClass}`}>
               {valid.map((img, idx) => (
-                <div key={img.id ?? idx}
-                  className={`rounded-2xl border border-white/10 overflow-hidden bg-[#020810] flex justify-center items-center shadow-xl group/img relative ${
+                <div
+                  key={img.id ?? idx}
+                  className={`group/img relative flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#020810] shadow-xl ${
                     valid.length === 3 && idx === 0 ? 'sm:col-span-2' : ''
-                  }`}>
+                  }`}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={driveImageUrl(img.url)} alt={img.alt || ''} loading="lazy"
-                    className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 group-hover/img:scale-[1.02]" />
+                  <img
+                    src={driveImageUrl(img.url)}
+                    alt={img.alt || ''}
+                    loading="lazy"
+                    className="h-auto max-h-[600px] w-full object-contain transition-transform duration-700 group-hover/img:scale-[1.02]"
+                  />
                   {img.alt && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 pointer-events-none pt-12 pb-4 px-6 flex items-end">
-                      <p className="text-white/90 text-sm font-medium translate-y-2 group-hover/img:translate-y-0 transition-transform duration-300">{img.alt}</p>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end bg-linear-to-t from-black/90 via-black/40 to-transparent px-6 pt-12 pb-4 opacity-0 transition-opacity duration-300 group-hover/img:opacity-100">
+                      <p className="translate-y-2 text-sm font-medium text-white/90 transition-transform duration-300 group-hover/img:translate-y-0">
+                        {img.alt}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -381,7 +465,15 @@ export default function EventContentRenderer({ content }) {
           const data = block.data || {};
           let videos = data.videos;
           if (!videos || !Array.isArray(videos)) {
-            videos = data.video_id ? [{ id: 'legacy', video_source: data.video_source || 'drive', video_id: data.video_id }] : [];
+            videos = data.video_id
+              ? [
+                  {
+                    id: 'legacy',
+                    video_source: data.video_source || 'drive',
+                    video_id: data.video_id,
+                  },
+                ]
+              : [];
           }
           if (videos.length === 0) return null;
           if (videos.length === 1) {
@@ -392,7 +484,9 @@ export default function EventContentRenderer({ content }) {
                 <EventVideoEmbed vid={vid} />
                 {vid.label && (
                   <div className="px-1">
-                    <p className="text-sm font-medium text-white/60">{vid.label}</p>
+                    <p className="text-sm font-medium text-white/60">
+                      {vid.label}
+                    </p>
                   </div>
                 )}
               </div>
@@ -403,8 +497,11 @@ export default function EventContentRenderer({ content }) {
 
         if (block.type === 'lessonPlan') {
           return (
-            <div key={block.id} className="rounded-2xl border border-[#8083ff]/30 bg-[#8083ff]/5 p-6 sm:p-8">
-              <h4 className="text-lg font-bold text-[#c0c1ff] mb-6 flex items-center gap-3">
+            <div
+              key={block.id}
+              className="rounded-2xl border border-[#8083ff]/30 bg-[#8083ff]/5 p-6 sm:p-8"
+            >
+              <h4 className="mb-6 flex items-center gap-3 text-lg font-bold text-[#c0c1ff]">
                 <BookOpen className="h-5 w-5" /> Content Section
               </h4>
               <EventContentRenderer content={block.content} />

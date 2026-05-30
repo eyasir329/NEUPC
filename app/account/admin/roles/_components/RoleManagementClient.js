@@ -32,7 +32,7 @@ import {
   EmptyState,
   GlassCard,
   StaggerList,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 
 export default function RoleManagementClient({
   initialRoles,
@@ -197,7 +197,9 @@ export default function RoleManagementClient({
           icon={Users}
           label="Users with Roles"
           value={totalUsers}
-          sublabel={mostUsedRole ? `Most common: ${mostUsedRole.name}` : undefined}
+          sublabel={
+            mostUsedRole ? `Most common: ${mostUsedRole.name}` : undefined
+          }
           accent="emerald"
           delay={0.15}
         />
@@ -220,7 +222,7 @@ export default function RoleManagementClient({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <div className="relative w-full sm:max-w-xs">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
             <Search className="h-4 w-4 text-gray-500" />
           </div>
           <input
@@ -228,12 +230,12 @@ export default function RoleManagementClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search roles by name or description..."
-            className="w-full bg-white/3 border border-white/8 rounded-xl py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-3.5 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
           />
         </div>
 
         {/* View Switcher */}
-        <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 p-1 self-end sm:self-auto">
+        <div className="flex items-center gap-1 self-end rounded-xl border border-white/8 bg-white/3 p-1 sm:self-auto">
           <button
             onClick={() => setView('grid')}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
@@ -291,7 +293,7 @@ export default function RoleManagementClient({
       {view === 'matrix' && (
         <GlassCard padding="p-0" className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-160 text-left border-collapse">
+            <table className="w-full min-w-160 border-collapse text-left">
               <thead>
                 <tr className="border-b border-white/8 bg-white/2">
                   <th className="sticky left-0 z-10 bg-gray-950 px-5 py-4 text-xs font-bold tracking-wider text-gray-400 uppercase">
@@ -300,14 +302,17 @@ export default function RoleManagementClient({
                   {[...roles].reverse().map((role) => {
                     const cfg = getRoleConfig(role.name);
                     return (
-                      <th key={role.id} className="px-5 py-4 text-center border-l border-white/6">
+                      <th
+                        key={role.id}
+                        className="border-l border-white/6 px-5 py-4 text-center"
+                      >
                         <div className="flex flex-col items-center gap-1.5">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase ${cfg.badge}`}
                           >
                             {role.name}
                           </span>
-                          <span className="text-[10px] text-gray-500 font-medium">
+                          <span className="text-[10px] font-medium text-gray-500">
                             Priority {role.priority}
                           </span>
                         </div>
@@ -323,7 +328,7 @@ export default function RoleManagementClient({
                     <tr className="bg-white/3">
                       <td
                         colSpan={roles.length + 1}
-                        className="sticky left-0 bg-gray-900/90 backdrop-blur-sm px-5 py-2.5 text-[9px] font-extrabold tracking-widest text-indigo-400/90 uppercase border-y border-white/8"
+                        className="sticky left-0 border-y border-white/8 bg-gray-900/90 px-5 py-2.5 text-[9px] font-extrabold tracking-widest text-indigo-400/90 uppercase backdrop-blur-sm"
                       >
                         {category} Permissions
                       </td>
@@ -334,9 +339,9 @@ export default function RoleManagementClient({
                       .map((perm) => (
                         <tr
                           key={perm.id}
-                          className="hover:bg-white/2 transition-colors duration-150"
+                          className="transition-colors duration-150 hover:bg-white/2"
                         >
-                          <td className="sticky left-0 bg-gray-950 px-5 py-3.5 min-w-[280px]">
+                          <td className="sticky left-0 min-w-[280px] bg-gray-950 px-5 py-3.5">
                             <p className="font-mono text-xs font-bold text-gray-200">
                               {perm.name}
                             </p>
@@ -353,14 +358,14 @@ export default function RoleManagementClient({
                             return (
                               <td
                                 key={role.id}
-                                className="px-5 py-3.5 text-center border-l border-white/6"
+                                className="border-l border-white/6 px-5 py-3.5 text-center"
                               >
                                 {has ? (
-                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
                                     <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
                                   </div>
                                 ) : (
-                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/2 border border-white/6">
+                                  <div className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/6 bg-white/2">
                                     <XCircle className="h-4.5 w-4.5 text-gray-700" />
                                   </div>
                                 )}
@@ -389,7 +394,7 @@ export default function RoleManagementClient({
 
       {/* ── Priority Legend ───────────────────────────────── */}
       <GlassCard>
-        <div className="flex items-center gap-2 mb-3.5">
+        <div className="mb-3.5 flex items-center gap-2">
           <Shield className="h-4 w-4 text-purple-400" />
           <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase">
             Role Hierarchy & Precedence
@@ -403,21 +408,22 @@ export default function RoleManagementClient({
                 key={role.id}
                 className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2 shadow-sm ${cfg.bgGlass} ${cfg.border}`}
               >
-                <span className={`h-2.5 w-2.5 rounded-full animate-pulse ${cfg.dot}`} />
                 <span
-                  className={`text-xs font-bold capitalize ${cfg.accent}`}
-                >
+                  className={`h-2.5 w-2.5 animate-pulse rounded-full ${cfg.dot}`}
+                />
+                <span className={`text-xs font-bold capitalize ${cfg.accent}`}>
                   {role.name}
                 </span>
-                <span className="text-[10px] text-gray-500 font-mono">
+                <span className="font-mono text-[10px] text-gray-500">
                   Priority {role.priority}
                 </span>
               </div>
             );
           })}
           <div className="flex items-center gap-2.5 rounded-xl border border-white/6 bg-white/2 px-3.5 py-2">
-            <span className="text-[10px] text-gray-500 font-medium">
-              Note: Higher priority levels grant override capabilities and inherit access from sub-priority roles.
+            <span className="text-[10px] font-medium text-gray-500">
+              Note: Higher priority levels grant override capabilities and
+              inherit access from sub-priority roles.
             </span>
           </div>
         </div>

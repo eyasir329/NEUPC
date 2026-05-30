@@ -10,12 +10,12 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { getInitials, driveImageUrl } from '@/app/_lib/utils';
+import { getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   addResourceCommentAction,
   editResourceCommentAction,
   deleteResourceCommentAction,
-} from '@/app/_lib/member-resources-actions';
+} from '@/app/_lib/actions/member-resources-actions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -443,7 +443,7 @@ export default function ResourceComments({
 
       {/* Comments list */}
       {topLevel.length === 0 ? (
-        <div className="py-8 text-center border border-dashed border-white/[0.04] rounded-2xl">
+        <div className="rounded-2xl border border-dashed border-white/[0.04] py-8 text-center">
           <p className="text-xs text-gray-600">
             No comments yet.{' '}
             {currentUser ? 'Be the first to share your thoughts.' : ''}

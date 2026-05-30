@@ -3,7 +3,7 @@
  * @module ui/StatCard
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 export function StatCard({
   icon: Icon,
@@ -50,12 +50,13 @@ export function StatCard({
 }
 
 export function StatGrid({ cols = 4, className, children }) {
-  const colClass = {
-    2: 'sm:grid-cols-2',
-    3: 'sm:grid-cols-2 lg:grid-cols-3',
-    4: 'sm:grid-cols-2 lg:grid-cols-4',
-    5: 'sm:grid-cols-2 lg:grid-cols-5',
-  }[cols] || 'sm:grid-cols-2 lg:grid-cols-4';
+  const colClass =
+    {
+      2: 'sm:grid-cols-2',
+      3: 'sm:grid-cols-2 lg:grid-cols-3',
+      4: 'sm:grid-cols-2 lg:grid-cols-4',
+      5: 'sm:grid-cols-2 lg:grid-cols-5',
+    }[cols] || 'sm:grid-cols-2 lg:grid-cols-4';
   return (
     <div className={cn('grid grid-cols-1 gap-3', colClass, className)}>
       {children}

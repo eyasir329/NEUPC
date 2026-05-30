@@ -44,7 +44,7 @@ export default function RoleCard({ role, config, colorClass }) {
   return (
     <button
       onClick={handleRoleSwitch}
-      className={`group w-full overflow-hidden rounded-2xl border-2 bg-linear-to-br ${colorClass} text-left shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl`}
+      className={`group w-full overflow-hidden rounded-2xl border-2 bg-linear-to-br ${colorClass} text-left shadow-xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none active:scale-[0.98] will-change-transform`}
     >
       <div className="p-6">
         <div className="mb-4 flex items-center justify-between">

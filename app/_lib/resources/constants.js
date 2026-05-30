@@ -1,3 +1,8 @@
+/**
+ * @file Constants
+ * @module constants
+ */
+
 export const RESOURCE_TYPES = [
   'image',
   'video',

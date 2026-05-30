@@ -184,7 +184,9 @@ const BADGE_CONFIG = {
 function getBadgeConfig(badgeId) {
   return (
     BADGE_CONFIG[badgeId] || {
-      name: badgeId ? badgeId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Unknown Badge',
+      name: badgeId
+        ? badgeId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : 'Unknown Badge',
       description: 'Achievement unlocked',
       icon: Award,
       color: 'text-gray-400',
@@ -284,7 +286,10 @@ export default function BadgesDisplay({ badges = [], compact = false }) {
         className={`grid gap-2.5 ${compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'}`}
       >
         {displayBadges.map((badge) => (
-          <BadgeCard key={badge.id || badge.code || badge.badge} badge={badge} />
+          <BadgeCard
+            key={badge.id || badge.code || badge.badge}
+            badge={badge}
+          />
         ))}
       </div>
 

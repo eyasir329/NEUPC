@@ -1,6 +1,11 @@
+/**
+ * @file Id API route handler
+ * @module IdRoute
+ */
+
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { getUserRoles } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth/auth';
+import { getUserRoles } from '@/app/_lib/services/data-service';
 import { getResourceById } from '@/app/_lib/resources/queries';
 
 export async function GET(_request, { params }) {

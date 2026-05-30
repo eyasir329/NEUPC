@@ -3,7 +3,7 @@
  * @module AdminBootcampsPage
  */
 
-import { getAdminBootcamps } from '@/app/_lib/bootcamp-actions';
+import { getAdminBootcamps } from '@/app/_lib/actions/bootcamp-actions';
 import BootcampErrorState from '@/app/account/_components/bootcamps/BootcampErrorState';
 import { safeFetch } from '@/app/account/_components/bootcamps/bootcampPageHelpers';
 import BootcampManagementClient from './_components/BootcampManagementClient';

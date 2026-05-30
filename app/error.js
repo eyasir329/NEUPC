@@ -1,3 +1,8 @@
+/**
+ * @file App error boundary
+ * @module AppErrorBoundary
+ */
+
 'use client';
 
 import { useEffect } from 'react';

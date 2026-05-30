@@ -1,3 +1,8 @@
+/**
+ * @file Resource filters component
+ * @module ResourceFilters
+ */
+
 'use client';
 
 import { useState } from 'react';

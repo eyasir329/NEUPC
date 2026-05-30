@@ -11,7 +11,12 @@
 
 import Link from 'next/link';
 import { AlertTriangle, TrendingDown, Clock, ArrowRight } from 'lucide-react';
-import { GlassCard, SectionHeader, Pill, EmptyState } from '../../_components/ui/dashboard';
+import {
+  GlassCard,
+  SectionHeader,
+  Pill,
+  EmptyState,
+} from '@/app/account/_components/ui/dashboard';
 
 const SEVERITY = {
   critical: { tone: 'rose', icon: AlertTriangle },

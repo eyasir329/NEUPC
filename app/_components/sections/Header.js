@@ -4,8 +4,8 @@
  */
 
 import Navigation from './Navigation';
-import Logo from '../ui/Logo';
-import ScrollHeader from '../ui/ScrollHeader';
+import Logo from '@/app/_components/ui/Logo';
+import ScrollHeader from '@/app/_components/ui/ScrollHeader';
 
 export default function Header({ session }) {
   return (

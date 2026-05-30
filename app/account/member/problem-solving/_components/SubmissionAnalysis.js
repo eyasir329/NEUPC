@@ -1,3 +1,8 @@
+/**
+ * @file Submission analysis component
+ * @module SubmissionAnalysis
+ */
+
 'use client';
 
 import { useState } from 'react';

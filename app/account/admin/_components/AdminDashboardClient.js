@@ -24,7 +24,7 @@ import RecentActivity from './RecentActivity';
 import QuickActions from './QuickActions';
 import SystemNotifications from './SystemNotifications';
 import ManagementLinks from './ManagementLinks';
-import { PageShell } from './_ui';
+import { PageShell } from '@/app/account/_components/ui';
 
 export default function AdminDashboardClient({ session }) {
   // Mock stats - replace with real data
@@ -135,13 +135,13 @@ export default function AdminDashboardClient({ session }) {
 
       <SystemMetrics systemStats={systemStats} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative mt-2">
-        <div className="xl:col-span-8 flex flex-col gap-8">
+      <div className="relative mt-2 grid grid-cols-1 gap-8 xl:grid-cols-12">
+        <div className="flex flex-col gap-8 xl:col-span-8">
           <PendingApprovals pendingApprovals={pendingApprovals} />
           <QuickActions quickActions={quickActions} />
         </div>
 
-        <div className="xl:col-span-4 flex flex-col gap-8">
+        <div className="flex flex-col gap-8 xl:col-span-4">
           <div className="sticky top-8 flex flex-col gap-8">
             <RecentActivity recentActivities={recentActivities} />
             <SystemNotifications />

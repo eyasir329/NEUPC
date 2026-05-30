@@ -5,7 +5,7 @@
  * @access executive
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import ExecutiveSettingsClient from './_components/ExecutiveSettingsClient';
 
 export const metadata = { title: 'Settings | Executive | NEUPC' };

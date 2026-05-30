@@ -5,7 +5,7 @@
  * @access advisor
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
 import AdvisorSettingsClient from './_components/AdvisorSettingsClient';
 
 export const metadata = { title: 'Settings | Advisor | NEUPC' };

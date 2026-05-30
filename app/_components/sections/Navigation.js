@@ -3,7 +3,7 @@
  * @module Navigation
  */
 
-import Navbar from '../ui/Navbar';
+import Navbar from '@/app/_components/ui/Navbar';
 
 function Navigation({ session }) {
   return <Navbar session={session} />;

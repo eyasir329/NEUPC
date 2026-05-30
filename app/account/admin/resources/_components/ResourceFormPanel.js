@@ -1,3 +1,8 @@
+/**
+ * @file Resource form panel component
+ * @module ResourceFormPanel
+ */
+
 'use client';
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react';
@@ -19,11 +24,11 @@ import ResourceViewer from '@/app/_components/resources/ResourceViewer';
 import {
   createResourceAction,
   updateResourceAction,
-} from '@/app/_lib/resource-actions';
+} from '@/app/_lib/actions/resource-actions';
 import {
   submitMemberFullResourceAction,
   updateMemberResourceAction,
-} from '@/app/_lib/member-resource-submit-action';
+} from '@/app/_lib/actions/member-resource-submit-action';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 
 function toFormData(form, id = null) {
@@ -124,8 +129,8 @@ export default function ResourceFormPanel({
         typeof resource.content === 'string'
           ? resource.content
           : Array.isArray(resource.content)
-          ? JSON.stringify(resource.content)
-          : resource.content?.html || '',
+            ? JSON.stringify(resource.content)
+            : resource.content?.html || '',
       embed_url: resource.embed_url || '',
       file_url: resource.file_url || '',
       media_mime_type:
@@ -174,8 +179,12 @@ export default function ResourceFormPanel({
       try {
         const fd = toFormData(form, isEdit ? resource.id : null);
         const action = isEdit
-          ? (submitAsMember ? updateMemberResourceAction : updateResourceAction)
-          : (submitAsMember ? submitMemberFullResourceAction : createResourceAction);
+          ? submitAsMember
+            ? updateMemberResourceAction
+            : updateResourceAction
+          : submitAsMember
+            ? submitMemberFullResourceAction
+            : createResourceAction;
         const result = await action(fd);
 
         if (result?.error) {
@@ -235,7 +244,7 @@ export default function ResourceFormPanel({
       <div
         className={`relative flex flex-col overflow-hidden bg-[#0a0d14] transition-all duration-300 ${
           isFullscreen
-            ? 'flex-1 rounded-none border-0 border-none m-0 sm:m-0 lg:m-0'
+            ? 'm-0 flex-1 rounded-none border-0 border-none sm:m-0 lg:m-0'
             : `m-2 flex-1 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/50 sm:m-3 lg:m-4 ${
                 closing ? 'scale-95 opacity-0' : 'animate-in fade-in zoom-in-95'
               }`

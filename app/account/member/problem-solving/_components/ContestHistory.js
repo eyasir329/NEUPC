@@ -27,7 +27,7 @@ import {
   ChevronUp,
   Search,
 } from 'lucide-react';
-import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/problem-solving-platforms';
+import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
 
 // Platform configurations
 const PLATFORM_CONFIG = PROBLEM_SOLVING_PLATFORMS.reduce((acc, platform) => {

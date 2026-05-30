@@ -6,8 +6,8 @@
  * @access admin
  */
 
-import { requireRole } from '@/app/_lib/auth-guard';
-import { getSecurityData } from '@/app/_lib/security-service';
+import { requireRole } from '@/app/_lib/auth/auth-guard';
+import { getSecurityData } from '@/app/_lib/services/security-service';
 import SecurityClient from './_components/SecurityClient';
 
 export const metadata = { title: 'Security | Admin | NEUPC' };

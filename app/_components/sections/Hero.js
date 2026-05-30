@@ -101,7 +101,7 @@ function Hero({ data = {}, settings = {} }) {
           <motion.div variants={heroItem} className="flex items-center gap-4">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[9px] font-medium tracking-[0.24em] text-zinc-400 uppercase sm:text-[10px] sm:tracking-[0.3em] md:text-[11px] md:tracking-[0.35em]">
-              {department} · {university}
+              {settings?.hero_welcome_text || `${department} · ${university}`}
             </span>
           </motion.div>
 
@@ -136,7 +136,7 @@ function Hero({ data = {}, settings = {} }) {
                 href="/join"
                 className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
               >
-                Join the Club
+                {settings?.hero_join_label || 'Join the Club'}
                 <span
                   aria-hidden
                   className="transition-transform group-hover:translate-x-1"
@@ -150,7 +150,7 @@ function Hero({ data = {}, settings = {} }) {
                 href="/events"
                 className="font-heading hover:border-neon-lime/50 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:text-white"
               >
-                View Events
+                {settings?.hero_learn_more_label || 'View Events'}
               </Link>
             </motion.div>
           </motion.div>
@@ -216,7 +216,7 @@ function Hero({ data = {}, settings = {} }) {
         <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
           Scroll
         </span>
-        <div className="h-8 w-[1px] bg-gradient-to-b from-zinc-600 to-transparent" />
+        <div className="h-8 w-[1px] bg-linear-to-b from-zinc-600 to-transparent" />
       </div>
     </section>
   );

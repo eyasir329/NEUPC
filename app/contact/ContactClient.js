@@ -1,7 +1,13 @@
+/**
+ * @file Contact client component
+ * @module ContactClient
+ */
+
 'use client';
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,79 +16,24 @@ import {
   GitHubIcon,
   TwitterIcon,
   YouTubeIcon,
-} from '../_components/ui/SocialIcons';
-import { submitContactFormAction } from '@/app/_lib/contact-actions';
-import { cn } from '../_lib/utils';
+} from '@/app/_components/ui/SocialIcons';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
+import { submitContactFormAction } from '@/app/_lib/actions/contact-actions';
+import { cn } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
   pageCardReveal as cardReveal,
   pageViewport as viewport,
-} from '../_components/motion/motion';
+} from '@/app/_components/motion/motion';
 
-const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
+const ScrollToTop = dynamic(() => import('@/app/_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const SUBJECT_OPTIONS = [
-  'General Inquiry',
-  'Membership Information',
-  'Event Participation',
-  'Collaboration Proposal',
-  'Sponsorship Inquiry',
-  'Technical Support',
-  'Feedback / Suggestion',
-];
-
-const DEFAULT_CONTACT_INFO = {
-  email: 'programmingclub@nu.edu.bd',
-  phone: '+880 1XXX-XXXXXX',
-  address: 'Department of CSE, Netrokona University, Netrokona, Bangladesh',
-  officeHours: 'Sunday – Thursday, 10:00 AM – 4:00 PM',
-};
-
-const DEFAULT_KEY_CONTACTS = [
-  { id: 1, role: 'President', name: 'TBD', email: 'president@neupc.com', linkedin: '#' },
-  { id: 2, role: 'General Secretary', name: 'TBD', email: 'gs@neupc.com', linkedin: '#' },
-  { id: 3, role: 'Faculty Advisor', name: 'TBD', email: 'advisor@nu.edu.bd', linkedin: '#' },
-];
-
-const DEFAULT_FAQS = [
-  {
-    id: 1,
-    question: 'How can I join the programming club?',
-    answer:
-      'Fill out the membership form on our Join page. All CSE students are welcome to participate in our activities.',
-  },
-  {
-    id: 2,
-    question: 'When are events typically held?',
-    answer:
-      'We organize events throughout the academic year — weekly problem-solving sessions, monthly workshops, and annual programming contests. Check our Events page for the latest schedule.',
-  },
-  {
-    id: 3,
-    question: 'Do I need prior programming experience?',
-    answer:
-      'No. We welcome students of all skill levels. Beginner-friendly workshops are designed to help you learn and grow from scratch.',
-  },
-  {
-    id: 4,
-    question: 'How can I sponsor or collaborate with the club?',
-    answer:
-      'Use the contact form with subject "Collaboration Proposal" or "Sponsorship Inquiry". Our team responds promptly.',
-  },
-  {
-    id: 5,
-    question: 'What is the response time for inquiries?',
-    answer:
-      'We typically respond within 24–48 hours during office hours (Sunday–Thursday, 10 AM–4 PM).',
-  },
-];
-
-const DEFAULT_SOCIAL_NAMES = ['Facebook', 'LinkedIn', 'GitHub', 'Twitter', 'YouTube'];
 
 const SOCIAL_ICON_MAP = {
   facebook: FacebookIcon,
@@ -92,7 +43,13 @@ const SOCIAL_ICON_MAP = {
   youtube: YouTubeIcon,
 };
 
-const INITIAL_FORM = { name: '', email: '', phone: '', subject: '', message: '' };
+const INITIAL_FORM = {
+  name: '',
+  email: '',
+  phone: '',
+  subject: '',
+  message: '',
+};
 
 // ─── Contact info config ─────────────────────────────────────────────────────
 
@@ -103,8 +60,18 @@ const INFO_ITEMS = [
     isLink: true,
     prefix: 'mailto:',
     icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+        />
       </svg>
     ),
   },
@@ -115,8 +82,18 @@ const INFO_ITEMS = [
     prefix: 'tel:',
     format: (v) => v.replace(/\s/g, ''),
     icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+        />
       </svg>
     ),
   },
@@ -125,9 +102,23 @@ const INFO_ITEMS = [
     label: 'Physical Node',
     isLink: false,
     icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+        />
       </svg>
     ),
   },
@@ -136,36 +127,24 @@ const INFO_ITEMS = [
     label: 'Active Hours',
     isLink: false,
     icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
       </svg>
     ),
   },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SectionEyebrow({ tag, title, accent }) {
-  return (
-    <div className="mb-10 sm:mb-12">
-      <div className="flex items-center gap-3">
-        <span className="h-px w-7 bg-neon-lime" />
-        <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
-          {tag}
-        </span>
-      </div>
-      <h2 className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <span className="neon-text">{accent}</span>
-          </>
-        )}
-      </h2>
-    </div>
-  );
-}
 
 function FaqItem({ faq, isActive, onToggle }) {
   return (
@@ -174,12 +153,12 @@ function FaqItem({ faq, isActive, onToggle }) {
         onClick={onToggle}
         className="flex w-full items-start justify-between gap-4 p-5 text-left"
       >
-        <span className="font-heading text-sm font-bold leading-snug text-white sm:text-base">
+        <span className="font-heading text-sm leading-snug font-bold text-white sm:text-base">
           {faq.question}
         </span>
         <svg
           className={cn(
-            'mt-0.5 h-4 w-4 shrink-0 text-neon-lime transition-transform duration-300',
+            'text-neon-lime mt-0.5 h-4 w-4 shrink-0 transition-transform duration-300',
             isActive && 'rotate-180'
           )}
           fill="none"
@@ -187,7 +166,11 @@ function FaqItem({ faq, isActive, onToggle }) {
           stroke="currentColor"
           strokeWidth={2}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
       <AnimatePresence initial={false}>
@@ -231,33 +214,23 @@ export default function ContactClient({
   const [activeFaq, setActiveFaq] = useState(null);
 
   // Data normalization
-  const contactInfo = { ...DEFAULT_CONTACT_INFO, ...propContactInfo };
+  const contactInfo = { ...propContactInfo };
   if (propContactInfo.office_hours && !propContactInfo.officeHours) {
     contactInfo.officeHours = propContactInfo.office_hours;
   }
 
-  const keyContacts = propKeyContacts.length > 0 ? propKeyContacts : DEFAULT_KEY_CONTACTS;
+  const keyContacts = propKeyContacts;
 
-  const socialLinks = (() => {
-    const entries = Object.entries(propSocialLinks)
-      .filter(([, url]) => url && url !== '#')
-      .map(([name, url], idx) => {
-        const Icon = SOCIAL_ICON_MAP[name.toLowerCase()] || GitHubIcon;
-        return { id: idx + 1, name: name.charAt(0).toUpperCase() + name.slice(1), url, Icon };
-      });
-    if (entries.length > 0) return entries;
-    return DEFAULT_SOCIAL_NAMES.map((name, idx) => ({
+  const socialLinks = Object.entries(propSocialLinks)
+    .filter(([, url]) => url && url !== '#')
+    .map(([name, url], idx) => ({
       id: idx + 1,
-      name,
-      url: '#',
-      Icon: SOCIAL_ICON_MAP[name.toLowerCase()],
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      url,
+      Icon: SOCIAL_ICON_MAP[name.toLowerCase()] || GitHubIcon,
     }));
-  })();
 
-  const faqs =
-    propFaqs.length > 0
-      ? propFaqs.map((f, i) => ({ ...f, id: f.id || i + 1 }))
-      : DEFAULT_FAQS;
+  const faqs = propFaqs.map((f, i) => ({ ...f, id: f.id || i + 1 }));
 
   // Form logic
   const validateForm = () => {
@@ -267,7 +240,8 @@ export default function ContactClient({
     else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = 'Invalid email';
     if (!formData.subject) e.subject = 'Please select a subject';
     if (!formData.message.trim()) e.message = 'Message is required';
-    else if (formData.message.trim().length < 10) e.message = 'Minimum 10 characters';
+    else if (formData.message.trim().length < 10)
+      e.message = 'Minimum 10 characters';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -303,23 +277,18 @@ export default function ContactClient({
     }
   };
 
-  const inputBase = 'w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none backdrop-blur-sm transition-all focus:bg-white/8 sm:text-base';
-  const inputNormal = 'border-white/10 focus:border-neon-lime/40 focus:ring-1 focus:ring-neon-lime/20';
-  const inputError = 'border-red-500/50 focus:border-red-500/80 focus:ring-1 focus:ring-red-500/20';
+  const inputBase =
+    'w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none backdrop-blur-sm transition-all focus:bg-white/8 sm:text-base';
+  const inputNormal =
+    'border-white/10 focus:border-neon-lime/40 focus:ring-1 focus:ring-neon-lime/20';
+  const inputError =
+    'border-red-500/50 focus:border-red-500/80 focus:ring-1 focus:ring-red-500/20';
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
-
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-
-        {/* Ambient background — identical to events/achievements */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -328,7 +297,6 @@ export default function ContactClient({
           className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
-
             {/* Eyebrow — same pulse-dot pattern as events/achievements */}
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -340,16 +308,17 @@ export default function ContactClient({
             {/* Kinetic headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
-              {settings?.contact_page_title
-                ? settings.contact_page_title
-                : (
-                  <>
-                    Get in<br />
-                    <span className="neon-text">Touch.</span>
-                  </>
-                )}
+              {settings?.contact_page_title ? (
+                settings.contact_page_title
+              ) : (
+                <>
+                  Get in
+                  <br />
+                  <span className="neon-text">Touch.</span>
+                </>
+              )}
             </motion.h1>
 
             {/* Description */}
@@ -364,22 +333,39 @@ export default function ContactClient({
             {/* Status pill */}
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+              className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               Responding within 24–48 hrs
             </motion.div>
 
             {/* Quick stat row */}
-            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
-              <div className="grid grid-cols-3 divide-x divide-white/8">
+            <motion.div
+              variants={fadeUp}
+              className="border-t border-white/8 pt-6 sm:pt-8"
+            >
+              <div className="grid grid-cols-2 divide-x divide-white/8">
                 {[
-                  { value: '24h', label: 'Avg Response', mobile: '24h' },
                   { value: faqs.length, label: 'FAQ Answered', mobile: 'FAQs' },
-                  { value: keyContacts.length, label: 'Key Contacts', mobile: 'Contacts' },
+                  {
+                    value: keyContacts.length,
+                    label: 'Key Contacts',
+                    mobile: 'Contacts',
+                  },
                 ].map((stat, i) => (
-                  <div key={i} className={cn('flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left', i === 0 ? 'pr-3 sm:pr-6 lg:pr-8' : i === 1 ? 'px-3 sm:px-6 lg:px-8' : 'pl-3 sm:pl-6 lg:pl-8')}>
-                    <span className={cn('font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl', i === 0 ? 'text-neon-lime' : 'text-white')}>
+                  <div
+                    key={i}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left',
+                      i === 0 ? 'pr-3 sm:pr-6 lg:pr-8' : 'pl-3 sm:pl-6 lg:pl-8'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
+                        i === 0 ? 'text-neon-lime' : 'text-white'
+                      )}
+                    >
                       {stat.value}
                     </span>
                     <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
@@ -390,26 +376,18 @@ export default function ContactClient({
                 ))}
               </div>
             </motion.div>
-
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">Scroll</span>
-          <div className="h-7 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Main Contact Grid ──────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-7xl">
-
           <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
-
             {/* ── LEFT: Info + Social + Key Contacts ── */}
             <div className="flex flex-col gap-6 lg:col-span-5">
-
               {/* Contact info card */}
               <motion.div
                 variants={fadeUp}
@@ -418,128 +396,144 @@ export default function ContactClient({
                 className="glass-panel rounded-2xl p-6 sm:p-7"
               >
                 <div className="mb-5 flex items-center gap-3">
-                  <span className="h-px w-7 bg-neon-lime" />
-                  <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
+                  <span className="bg-neon-lime h-px w-7" />
+                  <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
                     Direct Line
                   </span>
                 </div>
 
                 <div className="space-y-5">
-                  {INFO_ITEMS.map(({ key, label, isLink, prefix, format, icon }) => {
-                    const value = contactInfo[key];
-                    const href = isLink ? `${prefix}${format ? format(value) : value}` : undefined;
-                    return (
-                      <div key={key} className="flex items-start gap-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-neon-lime/20 bg-neon-lime/8 text-neon-lime">
-                          {icon}
+                  {INFO_ITEMS.map(
+                    ({ key, label, isLink, prefix, format, icon }) => {
+                      const value = contactInfo[key];
+                      if (!value) return null;
+                      const href = isLink
+                        ? `${prefix}${format ? format(value) : value}`
+                        : undefined;
+                      return (
+                        <div key={key} className="flex items-start gap-4">
+                          <div className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border">
+                            {icon}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+                              {label}
+                            </p>
+                            {isLink ? (
+                              <a
+                                href={href}
+                                className="hover:text-neon-lime mt-0.5 block text-sm font-semibold break-all text-white transition-colors"
+                              >
+                                {value}
+                              </a>
+                            ) : (
+                              <p className="mt-0.5 text-sm leading-snug text-zinc-300">
+                                {value}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
-                            {label}
-                          </p>
-                          {isLink ? (
-                            <a
-                              href={href}
-                              className="mt-0.5 block text-sm font-semibold text-white break-all transition-colors hover:text-neon-lime"
-                            >
-                              {value}
-                            </a>
-                          ) : (
-                            <p className="mt-0.5 text-sm leading-snug text-zinc-300">{value}</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               </motion.div>
 
               {/* Social links */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                animate="visible"
-                className="glass-panel rounded-2xl p-6 sm:p-7"
-              >
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="h-px w-7 bg-neon-lime" />
-                  <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
-                    Follow Us
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-                  {socialLinks.map((social) => (
-                    <motion.a
-                      key={social.id}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-all hover:border-neon-lime/30 hover:bg-neon-lime/5"
-                    >
-                      <span className="shrink-0 text-zinc-400 transition-colors group-hover:text-neon-lime">
-                        <social.Icon className="h-4 w-4" />
-                      </span>
-                      <span className="truncate font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition-colors hover:text-white">
-                        {social.name}
-                      </span>
-                    </motion.a>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Key contacts */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                animate="visible"
-                className="glass-panel rounded-2xl p-6 sm:p-7"
-              >
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="h-px w-7 bg-neon-lime" />
-                  <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
-                    Key Contacts
-                  </span>
-                </div>
+              {socialLinks.length > 0 && (
                 <motion.div
-                  className="space-y-3"
-                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+                  variants={fadeUp}
                   initial="hidden"
-                  whileInView="visible"
-                  viewport={viewport}
+                  animate="visible"
+                  className="glass-panel rounded-2xl p-6 sm:p-7"
                 >
-                  {keyContacts.map((contact) => (
-                    <motion.div
-                      key={contact.id}
-                      variants={cardReveal}
-                      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:border-neon-lime/20 hover:bg-white/[0.05]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-neon-lime">
-                          {contact.role}
-                        </p>
-                        <p className="mt-0.5 text-sm font-bold text-white">{contact.name}</p>
-                        <a
-                          href={`mailto:${contact.email}`}
-                          className="mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors hover:text-neon-lime"
-                        >
-                          {contact.email}
-                        </a>
-                      </div>
-                      <a
-                        href={contact.linkedin}
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
+                      Follow Us
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                    {socialLinks.map((social) => (
+                      <motion.a
+                        key={social.id}
+                        href={social.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-neon-lime/40 hover:bg-neon-lime/10"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="hover:border-neon-lime/30 hover:bg-neon-lime/5 flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-all"
                       >
-                        <LinkedInIcon className="h-4 w-4 text-zinc-400" />
-                      </a>
-                    </motion.div>
-                  ))}
+                        <span className="group-hover:text-neon-lime shrink-0 text-zinc-400 transition-colors">
+                          <social.Icon className="h-4 w-4" />
+                        </span>
+                        <span className="truncate font-mono text-[10px] font-bold tracking-wider text-zinc-400 uppercase transition-colors hover:text-white">
+                          {social.name}
+                        </span>
+                      </motion.a>
+                    ))}
+                  </div>
                 </motion.div>
-              </motion.div>
+              )}
+
+              {/* Key contacts */}
+              {keyContacts.length > 0 && (
+                <motion.div
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                  className="glass-panel rounded-2xl p-6 sm:p-7"
+                >
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
+                      Key Contacts
+                    </span>
+                  </div>
+                  <motion.div
+                    className="space-y-3"
+                    variants={{
+                      hidden: {},
+                      visible: { transition: { staggerChildren: 0.08 } },
+                    }}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={viewport}
+                  >
+                    {keyContacts.map((contact) => (
+                      <motion.div
+                        key={contact.id}
+                        variants={cardReveal}
+                        whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                        className="hover:border-neon-lime/20 flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-neon-lime font-mono text-[9px] font-bold tracking-widest uppercase">
+                            {contact.role}
+                          </p>
+                          <p className="mt-0.5 text-sm font-bold text-white">
+                            {contact.name}
+                          </p>
+                          <a
+                            href={`mailto:${contact.email}`}
+                            className="hover:text-neon-lime mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors"
+                          >
+                            {contact.email}
+                          </a>
+                        </div>
+                        <a
+                          href={contact.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:border-neon-lime/40 hover:bg-neon-lime/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all"
+                        >
+                          <LinkedInIcon className="h-4 w-4 text-zinc-400" />
+                        </a>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </motion.div>
+              )}
             </div>
 
             {/* ── RIGHT: Contact Form ── */}
@@ -550,17 +544,17 @@ export default function ContactClient({
               className="lg:col-span-7"
             >
               <div className="glass-panel rounded-2xl p-6 sm:p-8 lg:p-10">
-
                 {/* Form header */}
                 <div className="mb-8">
                   <div className="mb-3 flex items-center gap-3">
-                    <span className="h-px w-7 bg-neon-lime" />
-                    <span className="font-mono text-[10px] font-bold tracking-[0.35em] text-neon-lime uppercase">
+                    <span className="bg-neon-lime h-px w-7" />
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.35em] uppercase">
                       Send Message
                     </span>
                   </div>
                   <h2 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl">
-                    Start the<br />
+                    Start the
+                    <br />
                     <span className="neon-text">Conversation</span>
                   </h2>
                 </div>
@@ -573,17 +567,29 @@ export default function ContactClient({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.98 }}
                       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                      className="mb-6 overflow-hidden rounded-xl border border-neon-lime/25 bg-neon-lime/8 p-4"
+                      className="border-neon-lime/25 bg-neon-lime/8 mb-6 overflow-hidden rounded-xl border p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neon-lime/20">
-                          <svg className="h-4 w-4 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        <div className="bg-neon-lime/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                          <svg
+                            className="text-neon-lime h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-neon-lime">Message sent!</p>
-                          <p className="mt-0.5 font-mono text-[10px] tracking-wider text-neon-lime/70">
+                          <p className="text-neon-lime text-sm font-bold">
+                            Message sent!
+                          </p>
+                          <p className="text-neon-lime/70 mt-0.5 font-mono text-[10px] tracking-wider">
                             We will get back to you within 24–48 hours.
                           </p>
                         </div>
@@ -603,8 +609,18 @@ export default function ContactClient({
                       className="mb-6 rounded-xl border border-red-500/30 bg-red-500/8 p-4"
                     >
                       <div className="flex items-center gap-3">
-                        <svg className="h-4 w-4 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        <svg
+                          className="h-4 w-4 shrink-0 text-red-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
                         </svg>
                         <p className="text-sm text-red-300">{errors.submit}</p>
                       </div>
@@ -613,11 +629,10 @@ export default function ContactClient({
                 </AnimatePresence>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-
                   {/* Name + Email */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                         Full Name <span className="text-neon-lime">*</span>
                       </label>
                       <input
@@ -626,12 +641,19 @@ export default function ContactClient({
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="Your full name"
-                        className={cn(inputBase, errors.name ? inputError : inputNormal)}
+                        className={cn(
+                          inputBase,
+                          errors.name ? inputError : inputNormal
+                        )}
                       />
-                      {errors.name && <p className="mt-1 font-mono text-[9px] text-red-400">{errors.name}</p>}
+                      {errors.name && (
+                        <p className="mt-1 font-mono text-[9px] text-red-400">
+                          {errors.name}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                         Email <span className="text-neon-lime">*</span>
                       </label>
                       <input
@@ -640,16 +662,23 @@ export default function ContactClient({
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="your@email.com"
-                        className={cn(inputBase, errors.email ? inputError : inputNormal)}
+                        className={cn(
+                          inputBase,
+                          errors.email ? inputError : inputNormal
+                        )}
                       />
-                      {errors.email && <p className="mt-1 font-mono text-[9px] text-red-400">{errors.email}</p>}
+                      {errors.email && (
+                        <p className="mt-1 font-mono text-[9px] text-red-400">
+                          {errors.email}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Phone + Subject */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                         Phone <span className="text-zinc-700">(optional)</span>
                       </label>
                       <input
@@ -662,27 +691,44 @@ export default function ContactClient({
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                         Subject <span className="text-neon-lime">*</span>
                       </label>
                       <select
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        className={cn(inputBase, 'cursor-pointer', errors.subject ? inputError : inputNormal, !formData.subject && 'text-zinc-600')}
+                        className={cn(
+                          inputBase,
+                          'cursor-pointer',
+                          errors.subject ? inputError : inputNormal,
+                          !formData.subject && 'text-zinc-600'
+                        )}
                       >
-                        <option value="" className="bg-[#0c0e16]">Select a subject</option>
-                        {SUBJECT_OPTIONS.map((s) => (
-                          <option key={s} value={s} className="bg-[#0c0e16] text-white">{s}</option>
+                        <option value="" className="bg-[#0c0e16]">
+                          Select a subject
+                        </option>
+                        {(contactInfo.subjects || []).map((s) => (
+                          <option
+                            key={s}
+                            value={s}
+                            className="bg-[#0c0e16] text-white"
+                          >
+                            {s}
+                          </option>
                         ))}
                       </select>
-                      {errors.subject && <p className="mt-1 font-mono text-[9px] text-red-400">{errors.subject}</p>}
+                      {errors.subject && (
+                        <p className="mt-1 font-mono text-[9px] text-red-400">
+                          {errors.subject}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Message */}
                   <div>
-                    <label className="mb-1.5 block font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                    <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                       Message <span className="text-neon-lime">*</span>
                     </label>
                     <textarea
@@ -691,14 +737,25 @@ export default function ContactClient({
                       onChange={handleChange}
                       rows={5}
                       placeholder="Tell us what's on your mind..."
-                      className={cn(inputBase, 'resize-none', errors.message ? inputError : inputNormal)}
+                      className={cn(
+                        inputBase,
+                        'resize-none',
+                        errors.message ? inputError : inputNormal
+                      )}
                     />
                     <div className="mt-1 flex items-center justify-between">
-                      {errors.message
-                        ? <p className="font-mono text-[9px] text-red-400">{errors.message}</p>
-                        : <p className="font-mono text-[9px] text-zinc-600">Minimum 10 characters</p>
-                      }
-                      <p className="font-mono text-[9px] text-zinc-600">{formData.message.length}/500</p>
+                      {errors.message ? (
+                        <p className="font-mono text-[9px] text-red-400">
+                          {errors.message}
+                        </p>
+                      ) : (
+                        <p className="font-mono text-[9px] text-zinc-600">
+                          Minimum 10 characters
+                        </p>
+                      )}
+                      <p className="font-mono text-[9px] text-zinc-600">
+                        {formData.message.length}/500
+                      </p>
                     </div>
                   </div>
 
@@ -706,81 +763,108 @@ export default function ContactClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="group flex w-full items-center justify-center gap-2 rounded-full bg-neon-lime px-8 py-4 font-heading text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="group bg-neon-lime font-heading flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? (
                       <>
-                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
                         </svg>
                         Sending…
                       </>
                     ) : (
                       <>
                         Send Message
-                        <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+                        <span className="transition-transform duration-200 group-hover:translate-x-1">
+                          →
+                        </span>
                       </>
                     )}
                   </button>
                 </form>
               </div>
             </motion.div>
-
           </div>
         </div>
       </section>
 
       {/* ── FAQ Section ────────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="mb-10 flex flex-col gap-1 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="h-px w-7 bg-neon-lime" />
-                <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
-                  FAQ
-                </span>
-              </motion.div>
-              <motion.h2
+      {faqs.length > 0 && (
+        <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="mb-10 flex flex-col gap-1 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
+            >
+              <div>
+                <motion.div
+                  variants={fadeUp}
+                  className="flex items-center gap-3"
+                >
+                  <span className="bg-neon-lime h-px w-7" />
+                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
+                    FAQ
+                  </span>
+                </motion.div>
+                <motion.h2
+                  variants={fadeUp}
+                  className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
+                >
+                  Common <span className="neon-text">Questions</span>
+                </motion.h2>
+              </div>
+              <motion.p
                 variants={fadeUp}
-                className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl"
+                className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
               >
-                Common <span className="neon-text">Questions</span>
-              </motion.h2>
-            </div>
-            <motion.p variants={fadeUp} className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]">
-              {faqs.length} answers
-            </motion.p>
-          </motion.div>
+                {faqs.length} answers
+              </motion.p>
+            </motion.div>
 
-          <motion.div
-            className="grid gap-3 lg:grid-cols-2"
-            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-          >
-            {faqs.map((faq) => (
-              <motion.div key={faq.id} variants={cardReveal}>
-                <FaqItem
-                  faq={faq}
-                  isActive={activeFaq === faq.id}
-                  onToggle={() => setActiveFaq(activeFaq === faq.id ? null : faq.id)}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-
-        </div>
-      </section>
+            <motion.div
+              className="grid gap-3 lg:grid-cols-2"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.07 } },
+              }}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+            >
+              {faqs.map((faq) => (
+                <motion.div key={faq.id} variants={cardReveal}>
+                  <FaqItem
+                    faq={faq}
+                    isActive={activeFaq === faq.id}
+                    onToggle={() =>
+                      setActiveFaq(activeFaq === faq.id ? null : faq.id)
+                    }
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA Strip — same pattern as events page join prompt ───────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -790,19 +874,23 @@ export default function ContactClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel overflow-hidden rounded-2xl border-neon-lime/10 p-8 sm:p-12 lg:p-16"
+            className="glass-panel border-neon-lime/10 overflow-hidden rounded-2xl p-8 sm:p-12 lg:p-16"
           >
             <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <span className="h-px w-7 bg-neon-lime" />
-                  <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase">
+                  <span className="bg-neon-lime h-px w-7" />
+                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase">
                     Ready to join?
                   </span>
                 </div>
                 <h3 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl">
                   {settings?.contact_page_cta_title || (
-                    <>Become Part<br />of the Crew</>
+                    <>
+                      Become Part
+                      <br />
+                      of the Crew
+                    </>
                   )}
                 </h3>
                 <p className="max-w-md text-sm leading-relaxed text-zinc-400">
@@ -811,18 +899,18 @@ export default function ContactClient({
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
-                <a
+                <Link
                   href="/join"
-                  className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-7 py-3.5 font-heading text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:py-4"
+                  className="bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:py-4"
                 >
                   Join Our Club →
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/events"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/12 px-7 py-3.5 font-heading text-[11px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/35 hover:text-neon-lime sm:py-4"
+                  className="font-heading hover:border-neon-lime/35 hover:text-neon-lime inline-flex items-center gap-2 rounded-full border border-white/12 px-7 py-3.5 text-[11px] font-bold tracking-widest text-zinc-400 uppercase transition-all sm:py-4"
                 >
                   Explore Events
-                </a>
+                </Link>
               </div>
             </div>
           </motion.div>

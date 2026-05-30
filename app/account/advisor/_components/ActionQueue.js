@@ -18,7 +18,12 @@ import {
   Clock,
   ChevronRight,
 } from 'lucide-react';
-import { GlassCard, SectionHeader, Pill, ActionButton } from '../../_components/ui/dashboard';
+import {
+  GlassCard,
+  SectionHeader,
+  Pill,
+  ActionButton,
+} from '@/app/account/_components/ui/dashboard';
 
 const PRIORITY_TONE = {
   High: 'rose',
@@ -107,7 +112,9 @@ export default function ActionQueue({ pendingApprovals = [] }) {
                       {approval.title}
                     </h3>
                     <p className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
-                      <span className="truncate">By {approval.submittedBy}</span>
+                      <span className="truncate">
+                        By {approval.submittedBy}
+                      </span>
                       <span>·</span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />

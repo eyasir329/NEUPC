@@ -8,7 +8,7 @@
  * <PageBackground variant="fixed" />
  */
 
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 
 /** @type {Record<string, string>} Position presets for the two blobs */
 const VARIANTS = {

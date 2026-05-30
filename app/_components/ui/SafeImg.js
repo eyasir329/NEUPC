@@ -1,3 +1,8 @@
+/**
+ * @file Safe img component
+ * @module SafeImg
+ */
+
 'use client';
 
 /**

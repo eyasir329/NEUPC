@@ -33,7 +33,7 @@ import {
   PageShell,
   PageHeader,
   ActionButton,
-} from '../../_components/_ui';
+} from '@/app/account/_components/ui';
 import {
   exportUsersAction,
   exportJoinRequestsAction,
@@ -45,7 +45,7 @@ import {
   exportNoticesAction,
   exportActivityLogsAction,
   exportResourcesAction,
-} from '@/app/_lib/export-actions';
+} from '@/app/_lib/actions/export-actions';
 
 // ─── CSV Helpers ─────────────────────────────────────────────────────────────
 

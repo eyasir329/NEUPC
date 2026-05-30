@@ -20,11 +20,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { cn } from '@/app/_lib/utils';
+import { cn } from '@/app/_lib/utils/utils';
 import {
   sendMessageAction,
   sendFileMessageAction,
-} from '@/app/_lib/chat-actions';
+} from '@/app/_lib/actions/chat-actions';
 import {
   Send,
   Loader2,

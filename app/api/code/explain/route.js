@@ -1,3 +1,8 @@
+/**
+ * @file Explain API route handler
+ * @module ExplainRoute
+ */
+
 import { NextResponse } from 'next/server';
 
 /**
