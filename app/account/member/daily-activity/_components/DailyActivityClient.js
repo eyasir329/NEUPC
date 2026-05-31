@@ -38,6 +38,8 @@ import {
   MapPin,
   Video,
   ClipboardCheck,
+  ExternalLink,
+  CalendarDays,
 } from 'lucide-react';
 import {
   GlassCard,
@@ -59,6 +61,11 @@ import {
   excludeOccurrenceAction,
   toggleCompletionAction,
 } from '@/app/_lib/actions/member-todo-actions';
+import {
+  disconnectGoogleCalendarAction,
+  setGoogleCalendarSyncEnabledAction,
+  syncTodosToCalendarAction,
+} from '@/app/_lib/actions/google-calendar-actions';
 
 // ───────────────────────── Constants ─────────────────────────
 const TODAY = new Date();
@@ -180,11 +187,26 @@ const CATEGORIES = {
     dot: 'bg-indigo-400',
     chip: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300',
   },
+  gcal: {
+    label: 'Google Calendar',
+    icon: CalendarDays,
+    tone: 'sky',
+    dot: 'bg-sky-400',
+    chip: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+  },
 };
 
 // Categories that actually appear on the calendar: the member's own tasks,
-// plus the real events / contests / enrolled-bootcamp feed.
-const LEGEND_CATEGORIES = ['todo', 'event', 'contest', 'session', 'task'];
+// plus the real events / contests / enrolled-bootcamp feed and (when connected)
+// the member's own Google Calendar.
+const LEGEND_CATEGORIES = [
+  'todo',
+  'event',
+  'contest',
+  'session',
+  'task',
+  'gcal',
+];
 
 const PRIORITY_DOT = {
   high: 'bg-rose-400',
@@ -1416,7 +1438,7 @@ function FeedEntry({ item }) {
             {item.description}
           </p>
         )}
-        {(item.meetLink || item.recordingUrl) && (
+        {(item.meetLink || item.recordingUrl || item.url || item.category === 'event' || item.category === 'session' || item.category === 'task') && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {item.meetLink && (
               <a
@@ -1438,10 +1460,166 @@ function FeedEntry({ item }) {
                 <PlaySquare className="h-3 w-3" /> Recording
               </a>
             )}
+            {item.url && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20"
+              >
+                <ExternalLink className="h-3 w-3" /> Open
+              </a>
+            )}
+            {item.category === 'event' && (
+              <a
+                href={`/account/member/events?event=${item.id.replace(/^event-/, '')}`}
+                className="inline-flex items-center gap-1 rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-violet-300 transition hover:bg-violet-500/20"
+              >
+                <ExternalLink className="h-3 w-3" /> View event
+              </a>
+            )}
+            {item.category === 'session' && (
+              <a
+                href={`/account/member/bootcamps?tab=sessions#${item.id}`}
+                className="inline-flex items-center gap-1 rounded-md border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-teal-300 transition hover:bg-teal-500/20"
+              >
+                <ExternalLink className="h-3 w-3" /> View session
+              </a>
+            )}
+            {item.category === 'task' && (
+              <a
+                href={`/account/member/bootcamps?tab=tasks#${item.id}`}
+                className="inline-flex items-center gap-1 rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-orange-300 transition hover:bg-orange-500/20"
+              >
+                <ExternalLink className="h-3 w-3" /> View task
+              </a>
+            )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// ───────────────────────── Google Calendar ─────────────────────────
+function GoogleCalendarCard({ status, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  async function disconnect() {
+    setBusy(true);
+    setMsg(null);
+    const res = await disconnectGoogleCalendarAction();
+    setBusy(false);
+    if (res?.error) return setMsg({ type: 'error', text: res.error });
+    onChange({ connected: false, email: null, syncEnabled: false });
+    setMsg({
+      type: 'ok',
+      text: 'Disconnected. Your tasks stay in NEUPC; reload to drop calendar events.',
+    });
+  }
+
+  async function syncNow() {
+    setBusy(true);
+    setMsg(null);
+    const res = await syncTodosToCalendarAction();
+    setBusy(false);
+    if (res?.error) return setMsg({ type: 'error', text: res.error });
+    setMsg({
+      type: 'ok',
+      text: `Synced ${res.synced} task${res.synced === 1 ? '' : 's'} to Google Calendar.`,
+    });
+  }
+
+  async function toggleSync() {
+    const next = !status.syncEnabled;
+    setBusy(true);
+    setMsg(null);
+    const res = await setGoogleCalendarSyncEnabledAction(next);
+    setBusy(false);
+    if (res?.error) return setMsg({ type: 'error', text: res.error });
+    onChange({ ...status, syncEnabled: next });
+  }
+
+  return (
+    <GlassCard padding="p-5">
+      <SectionHeader
+        icon={CalendarDays}
+        accent="sky"
+        title="Google Calendar"
+        subtitle={
+          status.connected
+            ? status.email || 'Connected'
+            : 'Two-way sync with your own calendar'
+        }
+      />
+      {status.connected ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-[12.5px] text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span className="truncate">
+              Connected{status.email ? ` · ${status.email}` : ''}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleSync}
+            disabled={busy}
+            className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-left text-[13px] text-gray-200 transition hover:bg-white/[0.04] disabled:opacity-50"
+          >
+            <span>
+              Mirror my tasks to Google
+              <span className="mt-0.5 block text-[11px] text-gray-500">
+                New & edited tasks become calendar events
+              </span>
+            </span>
+            <span
+              className={`relative h-5 w-9 shrink-0 rounded-full transition ${status.syncEnabled ? 'bg-sky-500/70' : 'bg-white/10'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${status.syncEnabled ? 'left-[1.125rem]' : 'left-0.5'}`}
+              />
+            </span>
+          </button>
+
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              tone="ghost"
+              icon={Repeat}
+              onClick={syncNow}
+              disabled={busy || !status.syncEnabled}
+            >
+              Sync tasks now
+            </ActionButton>
+            <ActionButton tone="danger" icon={X} onClick={disconnect} disabled={busy}>
+              Disconnect
+            </ActionButton>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-[12.5px] leading-relaxed text-gray-400">
+            Connect your Google account to show your calendar here and mirror
+            your NEUPC tasks back to Google Calendar.
+          </p>
+          <a
+            href="/api/integrations/google-calendar/connect"
+            className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 transition-all hover:border-sky-500/40 hover:bg-sky-500/20"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Connect Google Calendar
+          </a>
+        </div>
+      )}
+      {msg && (
+        <p
+          className={`mt-3 text-[11.5px] ${msg.type === 'error' ? 'text-rose-400' : 'text-emerald-400'}`}
+        >
+          {msg.text}
+        </p>
+      )}
+    </GlassCard>
   );
 }
 
@@ -1451,6 +1629,7 @@ export default function DailyActivityClient({
   initialTodos = [],
   initialCompletions = {},
   feed: rawFeed = [],
+  googleCalendar = { connected: false, email: null, syncEnabled: false },
 }) {
   // Server-persisted state, seeded from props. Mutations update local state
   // optimistically and call server actions; on error the change is reverted.
@@ -1479,6 +1658,35 @@ export default function DailyActivityClient({
   const [editing, setEditing] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [activeTab, setActiveTab] = useState('calendar');
+  const [gcal, setGcal] = useState(googleCalendar);
+  const [gcalBanner, setGcalBanner] = useState(null);
+
+  // Surface the OAuth callback result (?gcal=connected|denied|error), then strip
+  // the param so a refresh doesn't re-show the banner.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('gcal');
+    if (!result) return;
+    const messages = {
+      connected: {
+        type: 'ok',
+        text: 'Google Calendar connected. Your events now appear here.',
+      },
+      denied: { type: 'error', text: 'Google Calendar connection cancelled.' },
+      error: {
+        type: 'error',
+        text: 'Could not connect Google Calendar. Please try again.',
+      },
+    };
+    setGcalBanner(messages[result] || null);
+    params.delete('gcal');
+    const qs = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${qs ? `?${qs}` : ''}`
+    );
+  }, []);
 
   function toggleGroupVisible(gid) {
     setGroupVisible((v) => ({ ...v, [gid]: v[gid] === false ? true : false }));
@@ -2035,8 +2243,10 @@ export default function DailyActivityClient({
               </GlassCard>
             </div>
 
-            {/* Right rail: legend + selected-day agenda */}
+            {/* Right rail: Google Calendar + legend + selected-day agenda */}
             <div className="flex flex-col gap-5 xl:col-span-4">
+              <GoogleCalendarCard status={gcal} onChange={setGcal} />
+
               <GlassCard padding="p-5">
                 <SectionHeader
                   icon={Filter}
@@ -2161,6 +2371,29 @@ export default function DailyActivityClient({
           </ActionButton>
         }
       />
+
+      {gcalBanner && (
+        <div
+          className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-[13px] ${
+            gcalBanner.type === 'error'
+              ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0" />
+            {gcalBanner.text}
+          </span>
+          <button
+            type="button"
+            onClick={() => setGcalBanner(null)}
+            className="rounded-md p-1 text-current/70 transition hover:text-current"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

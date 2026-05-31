@@ -30,6 +30,7 @@ const PAGE_MOTION = { duration: 0.18, ease: [0.22, 1, 0.36, 1] };
  *   flashSlot    — React node: flash/toast (member only)
  *   aboveList    — React node: rendered above the event list (e.g. toolbar for manage roles)
  *   listHeader   — React node: rendered inside the list column, above the count row
+ *   initialEventId — optional event id to open directly on mount (deep link)
  */
 export default function EventListLayout({
   pageHeader,
@@ -44,15 +45,21 @@ export default function EventListLayout({
   flashSlot,
   aboveList,
   listHeader,
+  initialEventId = null,
 }) {
   const [activeTab, setActiveTab] = useState(tabs[0]?.value ?? 'All');
-  const [selectedEventId, setSelectedEventId] = useState(null);
+  // `undefined` = untouched (fall back to the deep-linked id); `null` = the
+  // user explicitly closed the detail. This keeps the server/client first
+  // render identical (no hydration mismatch) without a sync effect.
+  const [selectedEventId, setSelectedEventId] = useState(undefined);
   const [filterCategory, setFilterCategory] = useState('');
   const [filterVenue, setFilterVenue] = useState('');
   const [search, setSearch] = useState('');
 
-  const selectedEvent = selectedEventId
-    ? events.find((e) => e.id === selectedEventId)
+  const effectiveEventId =
+    selectedEventId === undefined ? initialEventId : selectedEventId;
+  const selectedEvent = effectiveEventId
+    ? events.find((e) => e.id === effectiveEventId)
     : null;
 
   const dynamicCategories = useMemo(

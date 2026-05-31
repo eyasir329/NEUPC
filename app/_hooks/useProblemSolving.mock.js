@@ -467,37 +467,6 @@ export const dummyData = {
     },
   ],
 
-  upcomingContests: [
-    {
-      platform: 'codeforces',
-      name: 'Codeforces Round 950 (Div. 2)',
-      date: 'Today, 20:35',
-      duration: '2 hours',
-      url: 'https://codeforces.com/contests',
-    },
-    {
-      platform: 'leetcode',
-      name: 'Weekly Contest 400',
-      date: 'Tomorrow, 08:00',
-      duration: '1.5 hours',
-      url: 'https://leetcode.com/contest',
-    },
-    {
-      platform: 'atcoder',
-      name: 'AtCoder Beginner Contest 355',
-      date: 'Sat, May 10, 18:00',
-      duration: '100 mins',
-      url: 'https://atcoder.jp/contests',
-    },
-    {
-      platform: 'codechef',
-      name: 'Starters 120 (Div 1 & 2)',
-      date: 'Wed, May 14, 20:00',
-      duration: '2 hours',
-      url: 'https://www.codechef.com/contests',
-    },
-  ],
-
   badges: [
     {
       id: 'b-1',

@@ -7,9 +7,10 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { X, Move, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import {
   ACHIEVEMENT_CATEGORIES,
   CONTEST_PLATFORMS,
@@ -50,6 +51,36 @@ export default function AchievementFormModal({ achievement, onClose }) {
   );
   const [clearFeaturedPhoto, setClearFeaturedPhoto] = useState(false);
   const featuredPhotoInputRef = useRef(null);
+  const [cropSrc, setCropSrc] = useState(null);
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    const reader = new FileReader();
+    reader.onload = (ev) => setCropSrc(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  function handleCropApply(croppedFile) {
+    setFeaturedPhotoFile(croppedFile);
+    setFeaturedPhotoPreviewUrl(URL.createObjectURL(croppedFile));
+    setClearFeaturedPhoto(false);
+    setCropSrc(null);
+  }
+
+  function handleCropCancel() {
+    setCropSrc(null);
+    if (featuredPhotoInputRef.current) {
+      featuredPhotoInputRef.current.value = '';
+    }
+  }
+
+  function handleReposition() {
+    if (featuredPhotoPreviewUrl) {
+      setCropSrc(featuredPhotoPreviewUrl);
+    }
+  }
 
   const years = generateYearOptions();
 
@@ -67,35 +98,52 @@ export default function AchievementFormModal({ achievement, onClose }) {
       ? await updateAchievementAction(fd)
       : await createAchievementAction(fd);
 
-    if (!res?.error) {
-      // Handle featured photo changes
-      const targetId = isEdit ? achievement.id : res.id;
-      if (targetId) {
-        if (clearFeaturedPhoto && !featuredPhotoFile) {
-          const dfd = new FormData();
-          dfd.set('achievement_id', targetId);
-          await deleteAchievementFeaturedPhotoAction(dfd);
-        } else if (featuredPhotoFile) {
-          const ufd = new FormData();
-          ufd.set('achievement_id', targetId);
-          ufd.set('file', featuredPhotoFile);
-          await uploadAchievementFeaturedPhotoAction(ufd);
+    if (res?.error) {
+      setError(res.error);
+      setLoading(false);
+      return;
+    }
+
+    // Handle featured photo changes
+    const targetId = isEdit ? achievement.id : res.id;
+    if (targetId) {
+      if (clearFeaturedPhoto && !featuredPhotoFile) {
+        const dfd = new FormData();
+        dfd.set('achievement_id', targetId);
+        const photoRes = await deleteAchievementFeaturedPhotoAction(dfd);
+        if (photoRes?.error) {
+          setError(photoRes.error);
+          setLoading(false);
+          return;
+        }
+      } else if (featuredPhotoFile) {
+        const ufd = new FormData();
+        ufd.set('achievement_id', targetId);
+        ufd.set('file', featuredPhotoFile);
+        const photoRes = await uploadAchievementFeaturedPhotoAction(ufd);
+        if (photoRes?.error) {
+          setError(photoRes.error);
+          setLoading(false);
+          return;
         }
       }
     }
 
     setLoading(false);
-
-    if (res?.error) {
-      setError(res.error);
-    } else {
-      router.refresh();
-      onClose();
-    }
+    router.refresh();
+    onClose();
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      {cropSrc && (
+        <FeaturedPhotoCropModal
+          src={cropSrc}
+          onApply={handleCropApply}
+          onCancel={handleCropCancel}
+          defaultFeatured={isFeatured}
+        />
+      )}
       <div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-700/50 bg-slate-900 px-6 py-4">
@@ -300,7 +348,7 @@ export default function AchievementFormModal({ achievement, onClose }) {
             </label>
             {featuredPhotoPreviewUrl ? (
               <div className="relative inline-block">
-                <div className="relative h-32 w-48 overflow-hidden rounded-xl border border-slate-700/60">
+                <div className={`relative overflow-hidden rounded-xl border border-slate-700/60 transition-all duration-300 ${isFeatured ? 'h-24 w-56' : 'h-32 w-48'}`}>
                   <Image
                     src={featuredPhotoPreviewUrl}
                     alt="Featured photo preview"
@@ -330,13 +378,22 @@ export default function AchievementFormModal({ achievement, onClose }) {
                     <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
                   </svg>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => featuredPhotoInputRef.current?.click()}
-                  className="mt-2 block text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
-                >
-                  Replace photo
-                </button>
+                <div className="mt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => featuredPhotoInputRef.current?.click()}
+                    className="text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                  >
+                    Replace photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReposition}
+                    className="text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                  >
+                    Reposition photo
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -363,14 +420,7 @@ export default function AchievementFormModal({ achievement, onClose }) {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setFeaturedPhotoFile(f);
-                  setFeaturedPhotoPreviewUrl(URL.createObjectURL(f));
-                  setClearFeaturedPhoto(false);
-                }
-              }}
+              onChange={handleFileChange}
             />
           </div>
 
@@ -476,6 +526,252 @@ export default function AchievementFormModal({ achievement, onClose }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedPhotoCropModal({ src, onApply, onCancel, defaultFeatured = false }) {
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const dragging = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [aspect, setAspect] = useState(defaultFeatured ? '21:9' : '3:2');
+
+  const aspectWidth = aspect === '21:9' ? 483 : 480;
+  const aspectHeight = aspect === '21:9' ? 207 : 320;
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, aspectWidth, aspectHeight);
+
+    const baseScale = Math.max(aspectWidth / img.naturalWidth, aspectHeight / img.naturalHeight);
+    const scale = baseScale * zoom;
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    const cx = aspectWidth / 2 + offset.x - w / 2;
+    const cy = aspectHeight / 2 + offset.y - h / 2;
+
+    ctx.save();
+    ctx.drawImage(img, cx, cy, w, h);
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)'; // amber border overlay
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, aspectWidth - 2, aspectHeight - 2);
+  }, [offset, zoom, aspectWidth, aspectHeight]);
+
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+  function onPointerDown(e) {
+    dragging.current = true;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e) {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+  }
+
+  function onPointerUp() {
+    dragging.current = false;
+  }
+
+  function handleWheel(e) {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.001;
+    setZoom((z) => Math.min(3, Math.max(1, +(z + delta).toFixed(2))));
+  }
+
+  function reset() {
+    setOffset({ x: 0, y: 0 });
+    setZoom(1);
+  }
+
+  function apply() {
+    const img = imgRef.current;
+    if (!img) return;
+
+    // Calculate dimensions at high resolution based on zoom and aspect boundaries
+    const baseScale = Math.max(aspectWidth / img.naturalWidth, aspectHeight / img.naturalHeight);
+    const scale = baseScale * zoom;
+
+    // Visual dimensions of the drawn image
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+
+    // Visual coordinates of the drawn image relative to the visual canvas
+    const cx = aspectWidth / 2 + offset.x - w / 2;
+    const cy = aspectHeight / 2 + offset.y - h / 2;
+
+    // Crop box width and height scaled up to match the original image coordinates
+    const sourceWidth = aspectWidth / scale;
+    const sourceHeight = aspectHeight / scale;
+
+    // Create an offscreen canvas at original pixel resolution to avoid any downscaling quality loss
+    const offscreen = document.createElement('canvas');
+    offscreen.width = sourceWidth;
+    offscreen.height = sourceHeight;
+    const ctx = offscreen.getContext('2d');
+
+    // Draw the full original image onto the high-res offscreen canvas at the exact relative high-res position
+    ctx.drawImage(img, cx / scale, cy / scale, img.naturalWidth, img.naturalHeight);
+
+    offscreen.toBlob((blob) => {
+      onApply(new File([blob], 'featured_photo.png', { type: 'image/png' }));
+    }, 'image/png');
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
+        {/* header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div>
+            <p className="text-sm font-semibold text-white/90">
+              Crop &amp; Position Featured Photo
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Drag to reposition · slide or scroll to zoom
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* hidden img */}
+        <img
+          ref={imgRef}
+          src={src}
+          onLoad={draw}
+          className="hidden"
+          alt=""
+          crossOrigin={src?.startsWith('data:') || src?.startsWith('blob:') ? undefined : 'anonymous'}
+        />
+
+        {/* Crop Aspect Ratio Toggle */}
+        <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-950/40 p-2.5">
+          <span className="text-xs font-medium text-slate-400">Crop Mode:</span>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setAspect('3:2');
+                reset();
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                aspect === '3:2'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Standard (3:2)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAspect('21:9');
+                reset();
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                aspect === '21:9'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Featured (21:9)
+            </button>
+          </div>
+        </div>
+
+        {/* canvas container */}
+        <div className="relative mx-5 mb-4 flex justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={aspectWidth}
+              height={aspectHeight}
+              className="max-w-full cursor-grab touch-none rounded-lg active:cursor-grabbing"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onWheel={handleWheel}
+            />
+            <span className="absolute -bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-[11px] text-slate-500">
+              <Move className="h-3.5 w-3.5" /> drag or scroll to reposition
+            </span>
+          </div>
+        </div>
+
+        {/* zoom */}
+        <div className="mx-5 mt-8 mb-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(1, +(z - 0.1).toFixed(2)))}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <div className="relative h-1.5 flex-1 rounded-full bg-slate-800">
+            <div
+              className="absolute top-0 left-0 h-1.5 rounded-full bg-amber-500/70 transition-all"
+              style={{ width: `${((zoom - 1) / 2) * 100}%` }}
+            />
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="absolute inset-0 h-1.5 w-full cursor-pointer opacity-0"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-white"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-4 text-center text-xs text-slate-500">
+          {Math.round(zoom * 100)}%
+        </p>
+
+        {/* actions */}
+        <div className="flex gap-3 border-t border-slate-700/50 px-5 py-4">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs text-slate-300 transition hover:bg-slate-700"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Reset
+          </button>
+          <button
+            type="button"
+            onClick={apply}
+            className="flex-1 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-500 active:bg-amber-700"
+          >
+            Apply Crop
+          </button>
+        </div>
       </div>
     </div>
   );

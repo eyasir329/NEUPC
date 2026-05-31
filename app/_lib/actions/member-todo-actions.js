@@ -45,6 +45,51 @@ async function ownsList(userId, listId) {
   return !!data;
 }
 
+/**
+ * Mirror a saved task to the member's Google Calendar (best-effort). Inserts or
+ * updates the linked event and persists its id; if the task lost its date, the
+ * previously-mirrored event is removed. Never throws — calendar problems must
+ * not fail the task save. No-op when the member hasn't connected a calendar.
+ */
+async function mirrorSavedTodo(userId, todoId, fields, existingEventId) {
+  try {
+    const { pushTodo, deleteTodoEvent } = await import(
+      '@/app/_lib/integrations/google-calendar'
+    );
+
+    if (!fields.start_date) {
+      if (existingEventId) {
+        await deleteTodoEvent(userId, existingEventId);
+        await supabaseAdmin
+          .from('todos')
+          .update({ gcal_event_id: null })
+          .eq('id', todoId)
+          .eq('user_id', userId);
+      }
+      return;
+    }
+
+    const eventId = await pushTodo(userId, {
+      id: todoId,
+      title: fields.title,
+      notes: fields.notes,
+      startKey: fields.start_date,
+      time: fields.due_time || '',
+      recurrence: fields.recurrence || null,
+      gcalEventId: existingEventId || null,
+    });
+    if (eventId && eventId !== existingEventId) {
+      await supabaseAdmin
+        .from('todos')
+        .update({ gcal_event_id: eventId })
+        .eq('id', todoId)
+        .eq('user_id', userId);
+    }
+  } catch (err) {
+    console.error('mirrorSavedTodo:', err?.message);
+  }
+}
+
 /** Validate + normalize a recurrence rule from the client. */
 function normalizeRecurrence(rec) {
   if (!rec || typeof rec !== 'object') return null;
@@ -198,13 +243,14 @@ export async function saveTodoAction(draft = {}) {
       .update({ ...fields, updated_at: new Date().toISOString() })
       .eq('id', draft.id)
       .eq('user_id', a.userId)
-      .select('id')
+      .select('id, gcal_event_id')
       .maybeSingle();
     if (updErr) {
       console.error('saveTodoAction (update):', updErr);
       return { error: 'Failed to save task.' };
     }
     if (updated) {
+      await mirrorSavedTodo(a.userId, draft.id, fields, updated.gcal_event_id);
       revalidatePath(PATH);
       return { success: true, id: draft.id };
     }
@@ -216,6 +262,7 @@ export async function saveTodoAction(draft = {}) {
       console.error('saveTodoAction (insert w/ id):', insErr);
       return { error: 'Failed to create task.' };
     }
+    await mirrorSavedTodo(a.userId, draft.id, fields, null);
     revalidatePath(PATH);
     return { success: true, id: draft.id };
   }
@@ -229,6 +276,7 @@ export async function saveTodoAction(draft = {}) {
     console.error('saveTodoAction (insert):', error);
     return { error: 'Failed to create task.' };
   }
+  await mirrorSavedTodo(a.userId, data.id, fields, null);
   revalidatePath(PATH);
   return { success: true, id: data.id };
 }
@@ -237,6 +285,14 @@ export async function deleteTodoAction({ id } = {}) {
   const a = await memberId();
   if (a.error) return { error: a.error };
   if (!isValidUUID(id)) return { error: 'Invalid task id.' };
+
+  // Capture the linked calendar event before the row (and its id) are gone.
+  const { data: existing } = await supabaseAdmin
+    .from('todos')
+    .select('gcal_event_id')
+    .eq('id', id)
+    .eq('user_id', a.userId)
+    .maybeSingle();
 
   const { error } = await supabaseAdmin
     .from('todos')
@@ -247,6 +303,18 @@ export async function deleteTodoAction({ id } = {}) {
     console.error('deleteTodoAction:', error);
     return { error: 'Failed to delete task.' };
   }
+
+  if (existing?.gcal_event_id) {
+    try {
+      const { deleteTodoEvent } = await import(
+        '@/app/_lib/integrations/google-calendar'
+      );
+      await deleteTodoEvent(a.userId, existing.gcal_event_id);
+    } catch (err) {
+      console.error('deleteTodoAction (calendar):', err?.message);
+    }
+  }
+
   revalidatePath(PATH);
   return { success: true };
 }

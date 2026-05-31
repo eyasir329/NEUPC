@@ -28,6 +28,7 @@ import {
   Search,
   Funnel,
   SlidersHorizontal,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   Calendar,
@@ -40,6 +41,7 @@ import {
   useProblemSolving,
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
+import { getUpcomingContestsAction } from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
@@ -145,7 +147,6 @@ const DEFAULT_PROBLEM_SOLVING_DATA = {
   leaderboard: null,
   ratingHistory: [],
   contestHistory: [],
-  upcomingContests: [],
 };
 
 const getErrorMessage = (error, fallbackMessage) => {
@@ -209,6 +210,30 @@ function shortDate(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function formatContestStart(iso) {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatContestDuration(seconds) {
+  const total = Number(seconds || 0);
+  if (!Number.isFinite(total) || total <= 0) return '—';
+  const minutes = Math.round(total / 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
 }
 
 // =====================================================================
@@ -1714,6 +1739,8 @@ function RatingLineChart({ ratingHistory }) {
   );
 }
 
+const UPCOMING_PAGE_SIZE = 7;
+
 function ContestsTab({
   ratingHistory,
   contestHistory,
@@ -1722,6 +1749,15 @@ function ContestsTab({
   syncing,
 }) {
   const [expanded, setExpanded] = useState(null);
+  const [upcomingPage, setUpcomingPage] = useState(0);
+
+  const totalPages = Math.ceil(
+    (upcomingContests?.length || 0) / UPCOMING_PAGE_SIZE
+  );
+  const pageContests = (upcomingContests || []).slice(
+    upcomingPage * UPCOMING_PAGE_SIZE,
+    (upcomingPage + 1) * UPCOMING_PAGE_SIZE
+  );
 
   return (
     <div className="space-y-6">
@@ -1760,8 +1796,9 @@ function ContestsTab({
                   <Calendar className="h-5 w-5 text-zinc-500" />
                 </div>
                 <p className="mb-6">
-                  Upcoming contest data appears here once your platform sync is
-                  complete.
+                  {syncing
+                    ? 'Loading upcoming contests…'
+                    : 'No upcoming contests right now. Refresh to pull the latest schedule from Codeforces, AtCoder, LeetCode, and CodeChef.'}
                 </p>
                 <button
                   onClick={onSync}
@@ -1769,17 +1806,17 @@ function ContestsTab({
                   className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-500 disabled:opacity-70 disabled:hover:translate-y-0"
                 >
                   <Bell className="h-4 w-4 transition-transform group-hover:scale-110" />
-                  Sync Platforms
+                  {syncing ? 'Refreshing…' : 'Refresh Schedule'}
                 </button>
               </>
             ) : (
               <div className="w-full text-left">
                 <div className="divide-y divide-white/5">
-                  {upcomingContests.map((c, i) => {
+                  {pageContests.map((c, i) => {
                     const meta = getPlatformMeta(c.platform);
                     return (
                       <div
-                        key={i}
+                        key={c.id || i}
                         className="group -mx-4 flex items-center justify-between rounded-xl px-4 py-4 transition-colors hover:bg-white/[0.04]"
                       >
                         <div className="flex items-center gap-4">
@@ -1800,10 +1837,12 @@ function ContestsTab({
                             </h4>
                             <div className="mt-1 flex items-center gap-4 text-xs font-medium tracking-wide text-zinc-500">
                               <span className="flex items-center gap-1.5">
-                                <Calendar className="h-3.5 w-3.5" /> {c.date}
+                                <Calendar className="h-3.5 w-3.5" />{' '}
+                                {formatContestStart(c.startTime)}
                               </span>
                               <span className="flex items-center gap-1.5">
-                                <Clock className="h-3.5 w-3.5" /> {c.duration}
+                                <Clock className="h-3.5 w-3.5" />{' '}
+                                {formatContestDuration(c.durationSeconds)}
                               </span>
                             </div>
                           </div>
@@ -1820,6 +1859,48 @@ function ContestsTab({
                     );
                   })}
                 </div>
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
+                    <p className="text-xs font-medium text-zinc-500">
+                      {upcomingPage * UPCOMING_PAGE_SIZE + 1}–
+                      {Math.min(
+                        (upcomingPage + 1) * UPCOMING_PAGE_SIZE,
+                        upcomingContests.length
+                      )}{' '}
+                      of {upcomingContests.length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setUpcomingPage((p) => p - 1)}
+                        disabled={upcomingPage === 0}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-zinc-400"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setUpcomingPage(i)}
+                          className={cn(
+                            'flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors',
+                            i === upcomingPage
+                              ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                              : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                          )}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setUpcomingPage((p) => p + 1)}
+                        disabled={upcomingPage === totalPages - 1}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-zinc-400"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2642,6 +2723,9 @@ export default function ProblemSolvingClient({ userId }) {
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connectTarget, setConnectTarget] = useState(null);
+  const [upcomingContests, setUpcomingContests] = useState([]);
+  const [upcomingSyncing, setUpcomingSyncing] = useState(false);
+  const upcomingLoadedRef = useRef(false);
   const toastTimeoutRef = useRef(null);
 
   const {
@@ -2655,6 +2739,27 @@ export default function ProblemSolvingClient({ userId }) {
     refetch,
   } = useProblemSolving();
   const { connect } = useConnectHandle();
+
+  const loadUpcomingContests = useCallback(async ({ refresh = false } = {}) => {
+    setUpcomingSyncing(true);
+    try {
+      const result = await getUpcomingContestsAction(refresh);
+      if (result?.success) {
+        setUpcomingContests(result.data || []);
+      }
+      return result;
+    } finally {
+      setUpcomingSyncing(false);
+    }
+  }, []);
+
+  // Lazy-load the upcoming-contests feed the first time the Contests tab opens.
+  useEffect(() => {
+    if (activeTab === 'contests' && !upcomingLoadedRef.current) {
+      upcomingLoadedRef.current = true;
+      loadUpcomingContests();
+    }
+  }, [activeTab, loadUpcomingContests]);
 
   useEffect(() => {
     return () => {
@@ -2680,6 +2785,20 @@ export default function ProblemSolvingClient({ userId }) {
       showToast(getErrorMessage(err, 'Sync failed'), 'error');
     }
   }, [sync, showToast]);
+
+  const handleRefreshUpcoming = useCallback(async () => {
+    showToast('Refreshing contest schedule...', 'info');
+    try {
+      const result = await loadUpcomingContests({ refresh: true });
+      if (result?.success) {
+        showToast('Contest schedule updated!', 'success');
+      } else {
+        showToast(result?.error || 'Failed to refresh contests', 'error');
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to refresh contests'), 'error');
+    }
+  }, [loadUpcomingContests, showToast]);
 
   const handleSyncPlatform = useCallback(
     async (platform) => {
@@ -2728,7 +2847,6 @@ export default function ProblemSolvingClient({ userId }) {
     leaderboard,
     ratingHistory,
     contestHistory,
-    upcomingContests,
   } = problemSolvingData;
 
   const renderTab = () => {
@@ -2757,8 +2875,8 @@ export default function ProblemSolvingClient({ userId }) {
             ratingHistory={ratingHistory}
             contestHistory={contestHistory}
             upcomingContests={upcomingContests}
-            onSync={handleSync}
-            syncing={syncing}
+            onSync={handleRefreshUpcoming}
+            syncing={upcomingSyncing}
           />
         );
       case 'topics':

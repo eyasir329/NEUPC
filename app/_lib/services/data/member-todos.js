@@ -6,6 +6,11 @@
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { getPublishedEvents } from './events';
 import { getUpcomingContests } from './contests';
+import { getUpcomingExternalContests } from './external-contests';
+import {
+  getConnection,
+  listCalendarEvents,
+} from '@/app/_lib/integrations/google-calendar';
 
 /**
  * Load a member's lists, tasks, and completions, shaped to match the
@@ -77,11 +82,23 @@ export async function getMemberTodoData(userId) {
  * @returns {Promise<object[]>}
  */
 export async function getDailyActivityFeed(userId) {
-  const [events, contests, bootcamps] = await Promise.all([
-    getPublishedEvents().catch(() => []),
-    getUpcomingContests(100).catch(() => []),
-    getEnrolledBootcamps(userId).catch(() => []),
-  ]);
+  // Member's own Google Calendar, when connected: a window around today wide
+  // enough to cover a few months of calendar navigation.
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+
+  const [events, contests, externalContests, bootcamps, gcalItems] =
+    await Promise.all([
+      getPublishedEvents().catch(() => []),
+      getUpcomingContests(100).catch(() => []),
+      getUpcomingExternalContests(100).catch(() => []),
+      getEnrolledBootcamps(userId).catch(() => []),
+      listCalendarEvents(
+        userId,
+        new Date(now - 30 * DAY).toISOString(),
+        new Date(now + 120 * DAY).toISOString()
+      ).catch(() => []),
+    ]);
 
   const eventItems = (events || [])
     .filter((e) => e.start_date)
@@ -112,6 +129,21 @@ export async function getDailyActivityFeed(userId) {
       durationMin: typeof c.duration === 'number' ? c.duration : null,
     }));
 
+  const externalContestItems = (externalContests || [])
+    .filter((c) => c.start_time)
+    .map((c) => ({
+      id: `ext-contest-${c.id}`,
+      category: 'contest',
+      title: c.name,
+      location: c.platform || null,
+      start: new Date(c.start_time).toISOString(),
+      durationMin:
+        typeof c.duration_seconds === 'number'
+          ? Math.round(c.duration_seconds / 60)
+          : null,
+      url: c.url || null,
+    }));
+
   // Sessions + assignment deadlines for the member's enrolled bootcamps.
   const bootcampIds = (bootcamps || []).map((b) => b.id);
   const titleMap = Object.fromEntries(
@@ -122,7 +154,30 @@ export async function getDailyActivityFeed(userId) {
     getBootcampTaskItems(userId, bootcampIds, titleMap).catch(() => []),
   ]);
 
-  return [...eventItems, ...contestItems, ...sessionItems, ...taskItems];
+  return [
+    ...eventItems,
+    ...contestItems,
+    ...externalContestItems,
+    ...sessionItems,
+    ...taskItems,
+    ...(gcalItems || []),
+  ];
+}
+
+/**
+ * Connection state for the member's Google Calendar, for the page to seed the
+ * connect/disconnect UI. Safe to call when not connected (returns disconnected).
+ *
+ * @param {string} userId
+ * @returns {Promise<{ connected: boolean, email: string|null, syncEnabled: boolean }>}
+ */
+export async function getGoogleCalendarStatus(userId) {
+  const conn = await getConnection(userId).catch(() => null);
+  return {
+    connected: !!conn,
+    email: conn?.google_email || null,
+    syncEnabled: conn ? conn.sync_enabled !== false : false,
+  };
 }
 
 /** Ids + titles of the member's active bootcamp enrollments. */

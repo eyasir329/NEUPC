@@ -304,8 +304,6 @@ export class ClistRateLimiter {
 export const clistRateLimiter = new ClistRateLimiter();
 
 export const CLIST_NETWORK_COOLDOWN_MS = 5 * 60 * 1000;
-let clistNetworkUnavailableUntil = 0;
-let clistLastCooldownWarnAt = 0;
 
 // ============================================
 // ERROR TYPES AND HELPERS
