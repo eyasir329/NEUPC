@@ -1236,32 +1236,45 @@ function ParticipationRecordCard({ record, onClick }) {
 
         <div className="mt-auto" />
 
-        {/* Lead member */}
+        {/* Lead member / Team name */}
         <div className="border-t border-white/8 pt-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="bg-neon-lime/15 ring-neon-lime/20 relative h-7 w-7 shrink-0 overflow-hidden rounded-full ring-1">
-                {record.users?.avatar_url ? (
-                  <Image
-                    src={record.users.avatar_url}
-                    alt={record.users.full_name ?? ''}
-                    width={28}
-                    height={28}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="text-neon-lime flex h-full w-full items-center justify-center font-mono text-xs font-bold">
-                    {(
-                      record.users?.full_name?.[0] ??
-                      members[0]?.name?.[0] ??
-                      '?'
-                    ).toUpperCase()}
+              {record.is_team ? (
+                <>
+                  <div className="bg-neon-lime/15 ring-neon-lime/20 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1">
+                    <span className="text-xs">👥</span>
                   </div>
-                )}
-              </div>
-              <p className="truncate font-mono text-[10px] text-zinc-400">
-                {record.users?.full_name ?? members[0]?.name ?? 'Unknown'}
-              </p>
+                  <p className="truncate font-mono text-[10px] font-semibold text-zinc-400">
+                    {record.team_name || 'Team'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="bg-neon-lime/15 ring-neon-lime/20 relative h-7 w-7 shrink-0 overflow-hidden rounded-full ring-1">
+                    {record.users?.avatar_url ? (
+                      <Image
+                        src={record.users.avatar_url}
+                        alt={record.users.full_name ?? ''}
+                        width={28}
+                        height={28}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-neon-lime flex h-full w-full items-center justify-center font-mono text-xs font-bold">
+                        {(
+                          record.users?.full_name?.[0] ??
+                          members[0]?.name?.[0] ??
+                          '?'
+                        ).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <p className="truncate font-mono text-[10px] text-zinc-400">
+                    {record.users?.full_name ?? members[0]?.name ?? 'Unknown'}
+                  </p>
+                </>
+              )}
             </div>
             <span className="text-neon-lime font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
               View →

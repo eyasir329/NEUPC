@@ -16,6 +16,7 @@ export * from './data/discussions';
 export * from './data/events';
 export * from './data/gallery';
 export * from './data/members';
+export * from './data/member-todos';
 export * from './data/mentorship';
 export * from './data/misc';
 export * from './data/notices';

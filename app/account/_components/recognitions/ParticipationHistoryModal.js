@@ -1527,7 +1527,11 @@ export default function ParticipationHistoryModal({
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
                                 <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-slate-700">
-                                  {row.users?.avatar_url ? (
+                                  {row.is_team ? (
+                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-400">
+                                      👥
+                                    </div>
+                                  ) : row.users?.avatar_url ? (
                                     <Image
                                       src={row.users.avatar_url}
                                       alt={row.users.full_name ?? ''}
@@ -1549,9 +1553,11 @@ export default function ParticipationHistoryModal({
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className="max-w-28 truncate font-medium text-white">
-                                      {row.users?.full_name ??
-                                        (row.team_members ?? [])[0]?.name ??
-                                        'Unknown'}
+                                      {row.is_team
+                                        ? (row.team_name || 'Team')
+                                        : (row.users?.full_name ??
+                                          (row.team_members ?? [])[0]?.name ??
+                                          'Unknown')}
                                     </span>
                                     {row.is_team ? (
                                       <span className="shrink-0 rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-400">
@@ -1563,9 +1569,9 @@ export default function ParticipationHistoryModal({
                                       </span>
                                     )}
                                   </div>
-                                  {row.is_team && row.team_name && (
-                                    <p className="max-w-28 truncate text-xs text-slate-500">
-                                      {row.team_name}
+                                  {row.is_team && row.users?.full_name && (
+                                    <p className="max-w-28 truncate text-[11px] text-slate-500">
+                                      Lead: {row.users.full_name}
                                     </p>
                                   )}
                                   {row.is_team &&

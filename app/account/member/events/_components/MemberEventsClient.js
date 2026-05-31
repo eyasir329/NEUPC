@@ -131,6 +131,13 @@ export default function MemberEventsClient({
   myRegistrations,
 }) {
   const [flash, setFlash] = useState(null);
+  // Event id from a ?event= deep link (e.g. from the Daily Activity feed).
+  const [initialEventId, setInitialEventId] = useState(null);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('event');
+    if (id) setInitialEventId(id);
+  }, []);
 
   useEffect(() => {
     if (!flash) return;
@@ -170,6 +177,7 @@ export default function MemberEventsClient({
       filterFn={filterFn}
       stats={stats}
       sidebarCta={SIDEBAR_CTA}
+      initialEventId={initialEventId}
       renderDetail={(event, onBack) => (
         <EventContentDetail
           event={event}

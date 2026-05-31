@@ -2242,8 +2242,10 @@ function TaskStepper({ task, sub }) {
   );
 }
 
-function TaskCard({ task, onSubmitted }) {
-  const [open, setOpen] = useState(false);
+function TaskCard({ task, onSubmitted, focusId }) {
+  const isFocused = focusId === `task-${task.id}`;
+  const cardRef = useRef(null);
+  const [open, setOpen] = useState(isFocused);
   const [content, setContent] = useState(
     () =>
       task.mySubmission?.notes ||
@@ -2265,6 +2267,15 @@ function TaskCard({ task, onSubmitted }) {
   const isRedo = sub?.status === 'redo action required';
   const canSubmit = !sub || isRedo;
   const isPastDue = task.deadline && new Date(task.deadline) < new Date();
+
+  // Scroll a deep-linked task into view once it mounts (after async load).
+  useEffect(() => {
+    if (!isFocused || !cardRef.current) return;
+    const t = setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [isFocused]);
 
   const handleFiles = async (files) => {
     if (!files?.length) return;
@@ -2330,14 +2341,17 @@ function TaskCard({ task, onSubmitted }) {
 
   return (
     <div
+      ref={cardRef}
+      id={`task-${task.id}`}
       className={cn(
-        'relative overflow-hidden rounded-2xl border bg-zinc-900/40 backdrop-blur-xl transition-all duration-300',
+        'relative scroll-mt-24 overflow-hidden rounded-2xl border bg-zinc-900/40 backdrop-blur-xl transition-all duration-300',
         open
           ? 'animate-none border-violet-500/30 bg-zinc-900/60 shadow-[0_0_24px_rgba(139,92,246,0.06)]'
           : cn(
               'border-white/5 hover:border-white/20 hover:bg-zinc-900/60',
               activeDiff.glow
             ),
+        isFocused && 'ring-2 ring-violet-500/60 ring-offset-2 ring-offset-zinc-950',
         activeDiff.border
       )}
     >
@@ -2647,7 +2661,7 @@ function TaskCard({ task, onSubmitted }) {
     </div>
   );
 }
-function TasksTab({ enrolledBootcamps }) {
+function TasksTab({ enrolledBootcamps, focusId }) {
   const [allTasks, setAllTasks] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [bootcampFilter, setBootcampFilter] = useState('all');
@@ -2933,7 +2947,12 @@ function TasksTab({ enrolledBootcamps }) {
       ) : (
         <div className="space-y-3">
           {filtered.map((task) => (
-            <TaskCard key={task.id} task={task} onSubmitted={handleSubmitted} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onSubmitted={handleSubmitted}
+              focusId={focusId}
+            />
           ))}
         </div>
       )}
@@ -3332,8 +3351,10 @@ function CountdownBlock({ timeLeft, compact = false }) {
     </div>
   );
 }
-function SessionCard({ session: s, userId }) {
-  const [open, setOpen] = useState(false);
+function SessionCard({ session: s, userId, focusId }) {
+  const isFocused = focusId === `session-${s.id}`;
+  const cardRef = useRef(null);
+  const [open, setOpen] = useState(isFocused);
   const dt = new Date(s.scheduled_at || s.session_date);
   const isUpcoming = s.status === 'scheduled' && dt >= new Date();
   const dateStr = dt.toLocaleDateString('en-US', {
@@ -3356,6 +3377,15 @@ function SessionCard({ session: s, userId }) {
   const myPoints = myAttendance?.points ?? null;
   const attended = myAttendance?.attended ?? s.attended;
 
+  // Scroll a deep-linked session into view once it mounts (after async load).
+  useEffect(() => {
+    if (!isFocused || !cardRef.current) return;
+    const t = setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [isFocused]);
+
   const targetBadgeStyle = {
     'one-on-one':
       'text-cyan-405 bg-cyan-500/10 ring-cyan-500/20 shadow-[0_0_8px_rgba(34,211,238,0.05)]',
@@ -3367,13 +3397,16 @@ function SessionCard({ session: s, userId }) {
 
   return (
     <div
+      ref={cardRef}
+      id={`session-${s.id}`}
       className={cn(
-        'relative overflow-hidden rounded-2xl border bg-zinc-900/40 text-left backdrop-blur-xl transition-all duration-300',
+        'relative scroll-mt-24 overflow-hidden rounded-2xl border bg-zinc-900/40 text-left backdrop-blur-xl transition-all duration-300',
         open
           ? 'border-violet-500/30 bg-zinc-900/60 shadow-[0_0_24px_rgba(139,92,246,0.06)]'
           : isUpcoming
             ? 'border-violet-500/20 bg-violet-500/[0.01] hover:border-violet-500/40 hover:shadow-[0_4px_24px_rgba(139,92,246,0.04)]'
-            : 'border-white/5 hover:border-white/20 hover:bg-zinc-900/60'
+            : 'border-white/5 hover:border-white/20 hover:bg-zinc-900/60',
+        isFocused && 'ring-2 ring-violet-500/60 ring-offset-2 ring-offset-zinc-950'
       )}
     >
       <button
@@ -3590,7 +3623,7 @@ function SessionCard({ session: s, userId }) {
   );
 }
 
-function SessionsTab({ enrolledBootcamps, user }) {
+function SessionsTab({ enrolledBootcamps, user, focusId }) {
   const [allSessions, setAllSessions] = useState(null);
   const [filter, setFilter] = useState('all');
   const [bootcampFilter, setBootcampFilter] = useState('all');
@@ -3941,7 +3974,12 @@ function SessionsTab({ enrolledBootcamps, user }) {
           ) : (
             <div className="space-y-3">
               {visible.map((s) => (
-                <SessionCard key={s.id} session={s} userId={user?.id} />
+                <SessionCard
+                  key={s.id}
+                  session={s}
+                  userId={user?.id}
+                  focusId={focusId}
+                />
               ))}
             </div>
           )}
@@ -4799,6 +4837,20 @@ export default function MemberBootcampsClient({
   const [, startTransition] = useTransition();
   const [enrollingId, setEnrollingId] = useState(null);
   const [localEnrollmentMap, setLocalEnrollmentMap] = useState(enrollmentMap);
+  // Deep-link target: the id of a task/session card to scroll to + highlight,
+  // taken from the URL hash (e.g. #task-<id> / #session-<id>) on first load.
+  const [focusId, setFocusId] = useState(null);
+
+  // Honour ?tab= and #hash deep links (used by the Daily Activity feed to jump
+  // straight to a specific task or session). Done in an effect to avoid SSR
+  // hydration mismatch.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && TABS.some((t) => t.id === tab)) setActiveTab(tab);
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash) setFocusId(hash);
+  }, []);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -4935,10 +4987,16 @@ export default function MemberBootcampsClient({
           />
         );
       case 'tasks':
-        return <TasksTab enrolledBootcamps={enrolledBootcamps} />;
+        return (
+          <TasksTab enrolledBootcamps={enrolledBootcamps} focusId={focusId} />
+        );
       case 'sessions':
         return (
-          <SessionsTab enrolledBootcamps={enrolledBootcamps} user={user} />
+          <SessionsTab
+            enrolledBootcamps={enrolledBootcamps}
+            user={user}
+            focusId={focusId}
+          />
         );
       case 'leaderboard':
         return (

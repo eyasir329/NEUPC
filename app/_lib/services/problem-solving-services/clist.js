@@ -17,6 +17,9 @@ import {
   clistRateLimiter,
   fetchWithTimeout,
 } from './_shared';
+
+let clistNetworkUnavailableUntil = 0;
+let clistLastCooldownWarnAt = 0;
 import { AtCoderService } from './atcoder';
 import { CodeChefService } from './codechef';
 import { CodeforcesService } from './codeforces';
@@ -415,6 +418,72 @@ export class ClistService {
       created: account.created,
       url: account.url,
     };
+  }
+
+  /**
+   * Parse a clist datetime. clist returns naive UTC timestamps
+   * (e.g. "2026-06-01T14:35:00"); coerce them to real UTC Dates.
+   */
+  parseClistDate(value) {
+    if (!value) return null;
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(value);
+    const date = new Date(hasTz ? value : `${value}Z`);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  /**
+   * Get upcoming contests for the given platforms from the clist /contest API.
+   * Returns normalized rows ready to persist; only well-formed future contests
+   * are kept. Each platform host is queried separately so a single bad resource
+   * cannot drop the rest, and every call is cached by fetchApi.
+   *
+   * @param {string[]} platforms - Our platform ids (e.g. ['codeforces', ...])
+   * @param {number} limitPerPlatform - Max contests fetched per platform
+   */
+  async getUpcomingContests(
+    platforms = ['codeforces', 'atcoder', 'leetcode', 'codechef'],
+    limitPerPlatform = 25
+  ) {
+    const contests = [];
+
+    for (const platform of platforms) {
+      const host = this.getClistHost(platform);
+      if (!host) {
+        console.warn(`CLIST: No host mapping for platform ${platform}`);
+        continue;
+      }
+
+      const data = await this.fetchApi('contest', {
+        resource: host,
+        upcoming: 'true',
+        order_by: 'start',
+        limit: limitPerPlatform,
+      });
+
+      if (!data?.objects) continue;
+
+      for (const c of data.objects) {
+        const start = this.parseClistDate(c.start);
+        const name = c.event?.trim();
+        if (!c.id || !name || !start) continue;
+
+        const end = this.parseClistDate(c.end);
+        contests.push({
+          clistId: c.id,
+          platform,
+          resource: host,
+          name,
+          url: c.href || null,
+          startTime: start.toISOString(),
+          endTime: end ? end.toISOString() : null,
+          durationSeconds: typeof c.duration === 'number' ? c.duration : null,
+        });
+      }
+    }
+
+    return contests.sort(
+      (a, b) => new Date(a.startTime) - new Date(b.startTime)
+    );
   }
 
   /**
