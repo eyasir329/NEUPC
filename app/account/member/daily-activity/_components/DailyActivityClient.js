@@ -35,6 +35,9 @@ import {
   ChevronDown,
   Check,
   Edit2,
+  MapPin,
+  Video,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   GlassCard,
@@ -45,11 +48,19 @@ import {
   PageShell,
   TabBar,
   PageHeader,
+  StatCard,
 } from '@/app/account/_components/ui';
+import {
+  createTodoListAction,
+  renameTodoListAction,
+  deleteTodoListAction,
+  saveTodoAction,
+  deleteTodoAction,
+  excludeOccurrenceAction,
+  toggleCompletionAction,
+} from '@/app/_lib/actions/member-todo-actions';
 
 // ───────────────────────── Constants ─────────────────────────
-const STORAGE_KEY = 'neupc.member.daily-activity.v1';
-
 const TODAY = new Date();
 TODAY.setHours(0, 0, 0, 0);
 
@@ -127,12 +138,19 @@ const CATEGORIES = {
     dot: 'bg-violet-400',
     chip: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
   },
-  bootcamp: {
-    label: 'Bootcamps',
-    icon: GraduationCap,
-    tone: 'emerald',
-    dot: 'bg-emerald-400',
-    chip: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  session: {
+    label: 'Sessions',
+    icon: Video,
+    tone: 'teal',
+    dot: 'bg-teal-400',
+    chip: 'border-teal-500/30 bg-teal-500/10 text-teal-300',
+  },
+  task: {
+    label: 'Tasks',
+    icon: ClipboardCheck,
+    tone: 'orange',
+    dot: 'bg-orange-400',
+    chip: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
   },
   problem: {
     label: 'Problem Solving',
@@ -164,99 +182,19 @@ const CATEGORIES = {
   },
 };
 
+// Categories that actually appear on the calendar: the member's own tasks,
+// plus the real events / contests / enrolled-bootcamp feed.
+const LEGEND_CATEGORIES = ['todo', 'event', 'contest', 'session', 'task'];
+
 const PRIORITY_DOT = {
   high: 'bg-rose-400',
   medium: 'bg-amber-400',
   low: 'bg-white/[0.01]',
 };
 
-// ───────────────────────── Seed data ─────────────────────────
-const SEED_FEED = [
-  {
-    id: 'f1',
-    category: 'contest',
-    title: 'Codeforces Round #960 (Div. 2)',
-    location: 'Online · codeforces.com',
-    start: offsetDate(1, 14, 35),
-    durationMin: 120,
-  },
-  {
-    id: 'f2',
-    category: 'contest',
-    title: 'AtCoder Beginner Contest 350',
-    location: 'Online · atcoder.jp',
-    start: offsetDate(2, 12, 0),
-    durationMin: 100,
-  },
-  {
-    id: 'f3',
-    category: 'event',
-    title: 'Google I/O Extended',
-    location: 'Tech Hub',
-    start: offsetDate(4, 18, 0),
-    durationMin: 180,
-  },
-  {
-    id: 'f4',
-    category: 'meeting',
-    title: 'Mentor 1:1',
-    location: 'Google Meet',
-    start: offsetDate(0, 16, 0),
-    durationMin: 45,
-  },
-  {
-    id: 'f5',
-    category: 'meeting',
-    title: 'Hackathon Info Session',
-    location: 'Room 201',
-    start: offsetDate(5, 17, 30),
-    durationMin: 60,
-  },
-  {
-    id: 'f6',
-    category: 'contest',
-    title: 'LeetCode Weekly Contest 400',
-    location: 'Online · leetcode.com',
-    start: offsetDate(3, 2, 30),
-    durationMin: 90,
-  },
-  {
-    id: 'f7',
-    category: 'event',
-    title: 'Tech Career Fair',
-    location: 'University Hall',
-    start: offsetDate(8, 10, 0),
-    durationMin: 240,
-  },
-  {
-    id: 'f8',
-    category: 'meeting',
-    title: 'Group Project Sync',
-    location: 'Discord',
-    start: offsetDate(1, 20, 30),
-    durationMin: 60,
-  },
-  {
-    id: 'f9',
-    category: 'event',
-    title: 'Tech Talk: AI in SWE',
-    location: 'Auditorium 1',
-    start: offsetDate(12, 15, 0),
-    durationMin: 120,
-  },
-  {
-    id: 'f10',
-    category: 'contest',
-    title: 'Codeforces Round #961 (Div. 1 + Div. 2)',
-    location: 'Online · codeforces.com',
-    start: offsetDate(10, 14, 35),
-    durationMin: 150,
-  },
-];
-
 const TABS = [
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
 const GROUP_TONES = [
@@ -287,6 +225,7 @@ function TodoOccurrenceItem({
   onToggle,
   onDelete,
   isDone,
+  isOverdue,
   group,
 }) {
   const { dateKey } = occurrence;
@@ -297,10 +236,22 @@ function TodoOccurrenceItem({
     medium: 'text-amber-400',
     low: 'text-sky-400',
   };
+  const priorityBorder = {
+    high: 'border-l-rose-500/70',
+    medium: 'border-l-amber-500/60',
+    low: 'border-l-sky-500/50',
+  };
   const priorityDot = priorityColors[todo.priority] || 'text-gray-500';
+  const accent = priorityBorder[todo.priority] || 'border-l-white/10';
+  const showOverdue = isOverdue && !isDone;
+  const stateCls = isDone
+    ? 'border-transparent bg-transparent opacity-50'
+    : showOverdue
+      ? `border-rose-500/20 ${accent} bg-rose-500/[0.05] hover:bg-rose-500/[0.08]`
+      : `border-white/[0.06] ${accent} bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]`;
   return (
     <div
-      className={`group flex items-center justify-between rounded-lg border px-3 py-2.5 transition-all duration-150 ${isDone ? 'border-transparent bg-transparent opacity-50' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]'}`}
+      className={`group flex items-center justify-between rounded-lg border border-l-2 px-3 py-2.5 transition-all duration-150 ${stateCls}`}
     >
       <div className="flex min-w-0 items-start gap-3">
         <button
@@ -320,6 +271,11 @@ function TodoOccurrenceItem({
             {todo.title}
           </span>
           <div className="flex flex-wrap items-center gap-2">
+            {showOverdue && (
+              <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-rose-300 uppercase">
+                Overdue
+              </span>
+            )}
             {todo.time && (
               <span className="flex items-center gap-1 text-[11px] text-gray-400">
                 <Clock className="h-3 w-3" />
@@ -495,39 +451,71 @@ function TodoEditor({
               rows={2}
             />
           </div>
-          {/* Group + Priority */}
-          <div className="grid grid-cols-2 gap-3">
-            {groups && groups.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>Group</label>
-                <select
-                  className={inputCls}
-                  value={draft.groupId || ''}
-                  onChange={(e) =>
-                    setDraft({ ...draft, groupId: e.target.value })
-                  }
-                >
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+          {/* Group */}
+          {groups && groups.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <label className={labelCls}>Priority</label>
-              <select
-                className={inputCls}
-                value={draft.priority || 'medium'}
-                onChange={(e) =>
-                  setDraft({ ...draft, priority: e.target.value })
-                }
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              <label className={labelCls}>Group</label>
+              <div className="flex flex-wrap gap-1.5">
+                {groups.map((g) => {
+                  const active = (draft.groupId || groups[0]?.id) === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, groupId: g.id })}
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition ${
+                        active
+                          ? 'border-violet-500/40 bg-violet-500/10 text-white'
+                          : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${GROUP_DOT_CLASS[g.tone]?.split(' ')[0] || 'bg-gray-400'}`}
+                      />
+                      {g.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Priority */}
+          <div className="flex flex-col gap-1.5">
+            <label className={labelCls}>Priority</label>
+            <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
+              {[
+                {
+                  v: 'low',
+                  l: 'Low',
+                  cls: 'border-sky-500/30 bg-sky-500/15 text-sky-300',
+                },
+                {
+                  v: 'medium',
+                  l: 'Medium',
+                  cls: 'border-amber-500/30 bg-amber-500/15 text-amber-300',
+                },
+                {
+                  v: 'high',
+                  l: 'High',
+                  cls: 'border-rose-500/30 bg-rose-500/15 text-rose-300',
+                },
+              ].map((p) => {
+                const active = (draft.priority || 'medium') === p.v;
+                return (
+                  <button
+                    key={p.v}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, priority: p.v })}
+                    className={`rounded-md border px-2 py-1.5 text-[12px] font-semibold transition ${
+                      active
+                        ? p.cls
+                        : 'border-transparent text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                    }`}
+                  >
+                    {p.l}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {/* Date + Time */}
@@ -690,183 +678,6 @@ function DeleteRecurringModal({ open, pending, onClose, onConfirm }) {
   );
 }
 
-const DEFAULT_GROUPS = [
-  { id: 'g-personal', name: 'Personal', tone: 'blue' },
-  { id: 'g-icpc', name: 'ICPC Prep', tone: 'amber' },
-  { id: 'g-bootcamp', name: 'Bootcamp', tone: 'emerald' },
-  { id: 'g-work', name: 'Internship', tone: 'cyan' },
-  { id: 'g-health', name: 'Health & Fitness', tone: 'rose' },
-  { id: 'g-uni', name: 'University', tone: 'violet' },
-  { id: 'g-finance', name: 'Finance', tone: 'emerald' },
-];
-
-// startDate as ISO date-string (YYYY-MM-DD) or null/undefined for "no date".
-// recurrence: { freq: 'daily'|'weekly'|'monthly', interval: N, byWeekday?: [0..6], end?: { type: 'until'|'count', untilKey?: string, count?: number } } | null
-const DEFAULT_TODOS = [
-  {
-    id: 't-seed-1',
-    groupId: 'g-icpc',
-    title: 'Solve 3 Dynamic Programming problems',
-    priority: 'high',
-    notes: 'Focus on CSES DP section.',
-    startKey: dateKey(TODAY),
-    time: '18:00',
-    recurrence: {
-      freq: 'daily',
-      interval: 1,
-      end: { type: 'count', count: 14 },
-    },
-  },
-  {
-    id: 't-seed-2',
-    groupId: 'g-icpc',
-    title: 'Team practice contest',
-    priority: 'high',
-    notes: 'Virtual participation Codeforces Div 2',
-    startKey: dateKey(offsetDate(1)),
-    time: '20:00',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [3, 6],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-3',
-    groupId: 'g-bootcamp',
-    title: 'Watch Graph Bootcamp lesson',
-    priority: 'medium',
-    notes: 'Topic: Dijkstra and A* algorithms',
-    startKey: dateKey(offsetDate(0)),
-    time: '19:30',
-    recurrence: null,
-  },
-  {
-    id: 't-seed-4',
-    groupId: 'g-personal',
-    title: 'Read Atomic Habits',
-    priority: 'low',
-    notes: 'Read for 30 minutes',
-    startKey: dateKey(offsetDate(0)),
-    time: '22:00',
-    recurrence: {
-      freq: 'daily',
-      interval: 1,
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-5',
-    groupId: 'g-health',
-    title: 'Morning Run 5K',
-    priority: 'medium',
-    notes: 'Maintain pace at 5:30/km',
-    startKey: dateKey(offsetDate(-2)),
-    time: '06:00',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [1, 3, 5],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-6',
-    groupId: 'g-uni',
-    title: 'Algorithms Assignment 3',
-    priority: 'high',
-    notes: 'Submit on Canvas before 23:59',
-    startKey: dateKey(offsetDate(3)),
-    time: '20:00',
-    recurrence: null,
-  },
-  {
-    id: 't-seed-7',
-    groupId: 'g-uni',
-    title: 'Operating Systems Lecture',
-    priority: 'medium',
-    notes: 'Room 402',
-    startKey: dateKey(offsetDate(0)),
-    time: '10:00',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [1, 3],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-8',
-    groupId: 'g-work',
-    title: 'Weekly Standup',
-    priority: 'high',
-    notes: 'Prepare updates for the login feature',
-    startKey: dateKey(offsetDate(0)),
-    time: '09:30',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [1],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-9',
-    groupId: 'g-finance',
-    title: 'Review Monthly Budget',
-    priority: 'medium',
-    notes: 'Check expenses in YNAB',
-    startKey: dateKey(offsetDate(14)),
-    time: '10:00',
-    recurrence: {
-      freq: 'monthly',
-      interval: 1,
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-10',
-    groupId: 'g-uni',
-    title: 'Study group meet',
-    priority: 'low',
-    notes: 'Library 3rd floor',
-    startKey: dateKey(offsetDate(2)),
-    time: '14:00',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [4],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-11',
-    groupId: 'g-health',
-    title: 'Gym (Upper Body)',
-    priority: 'high',
-    notes: 'Focus on chest and triceps',
-    startKey: dateKey(offsetDate(0)),
-    time: '17:30',
-    recurrence: {
-      freq: 'weekly',
-      interval: 1,
-      byWeekday: [2, 4],
-      end: null,
-    },
-  },
-  {
-    id: 't-seed-12',
-    groupId: 'g-icpc',
-    title: 'Upsolve AtCoder ABC',
-    priority: 'medium',
-    notes: 'Solve problem D and E',
-    startKey: dateKey(offsetDate(1)),
-    time: '14:00',
-    recurrence: null,
-  },
-];
-
 // ───────────────────────── Recurrence engine ─────────────────────────
 function parseKey(key) {
   const [y, m, d] = key.split('-').map(Number);
@@ -1002,26 +813,6 @@ function describeRecurrence(rec) {
     base += ` · ${rec.end.count}×`;
   }
   return base;
-}
-
-// ───────────────────────── Persistence ─────────────────────────
-function loadState() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveState(s) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  } catch {}
 }
 
 // ───────────────────────── Subcomponents ─────────────────────────
@@ -1552,9 +1343,20 @@ function MonthCalendar({
   );
 }
 
+const FEED_STATUS_TONE = {
+  completed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  late: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  pending: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  'bonus deserved': 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+};
+
 function FeedEntry({ item }) {
   const cat = CATEGORIES[item.category];
   const Icon = cat.icon;
+  const online = !item.location && item.meetLink;
+  const statusTone =
+    FEED_STATUS_TONE[item.status] ||
+    'border-white/[0.06] bg-white/[0.02] text-gray-400';
   return (
     <div className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
       <div
@@ -1563,45 +1365,105 @@ function FeedEntry({ item }) {
         <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-white">
-          {item.title}
-        </p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-[13px] font-medium text-white">
+            {item.title}
+          </p>
+          {item.status && item.status !== 'scheduled' && (
+            <span
+              className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase ${statusTone}`}
+            >
+              {item.status}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {fmtTime(item.start)} · {item.durationMin}m
+            {item.isDeadline && 'Due '}
+            {fmtTime(item.start)}
+            {item.durationMin ? ` · ${item.durationMin}m` : ''}
           </span>
-          {item.location && <span className="truncate">· {item.location}</span>}
+          {item.location && (
+            <span className="inline-flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3" />
+              {item.location}
+            </span>
+          )}
+          {online && <span className="text-emerald-400/80">Online</span>}
+          {item.taskType && (
+            <span className="text-gray-500">{item.taskType}</span>
+          )}
+          {item.difficulty && (
+            <span className="text-gray-500 capitalize">{item.difficulty}</span>
+          )}
+          {typeof item.points === 'number' && (
+            <span className="text-gray-500">
+              {item.pointsEarned != null
+                ? `${item.pointsEarned}/${item.points} pts`
+                : `${item.points} pts`}
+            </span>
+          )}
+          {item.bootcampTitle && (
+            <span className="inline-flex items-center gap-1 truncate text-gray-500">
+              <GraduationCap className="h-3 w-3" />
+              {item.bootcampTitle}
+            </span>
+          )}
         </div>
+        {item.description && (
+          <p className="mt-1 line-clamp-1 text-[11px] text-gray-500">
+            {item.description}
+          </p>
+        )}
+        {(item.meetLink || item.recordingUrl) && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {item.meetLink && (
+              <a
+                href={item.meetLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+              >
+                <Video className="h-3 w-3" /> Join
+              </a>
+            )}
+            {item.recordingUrl && (
+              <a
+                href={item.recordingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 text-[10.5px] font-semibold text-gray-300 transition hover:bg-white/[0.06]"
+              >
+                <PlaySquare className="h-3 w-3" /> Recording
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ───────────────────────── Main ─────────────────────────
-export default function DailyActivityClient() {
-  // Load persisted state once on mount.
-  const [hydrated, setHydrated] = useState(false);
-  const [groups, setGroups] = useState(DEFAULT_GROUPS);
-  const [todos, setTodos] = useState(DEFAULT_TODOS);
+export default function DailyActivityClient({
+  initialLists = [],
+  initialTodos = [],
+  initialCompletions = {},
+  feed: rawFeed = [],
+}) {
+  // Server-persisted state, seeded from props. Mutations update local state
+  // optimistically and call server actions; on error the change is reverted.
+  const [groups, setGroups] = useState(initialLists);
+  const [todos, setTodos] = useState(initialTodos);
   // completions: { [todoId]: { [dateKey]: true } }
-  const [completions, setCompletions] = useState({});
+  const [completions, setCompletions] = useState(initialCompletions);
 
-  useEffect(() => {
-    const s = loadState();
-    if (s) {
-      if (Array.isArray(s.groups)) setGroups(s.groups);
-      if (Array.isArray(s.todos)) setTodos(s.todos);
-      if (s.completions && typeof s.completions === 'object')
-        setCompletions(s.completions);
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    saveState({ groups, todos, completions });
-  }, [hydrated, groups, todos, completions]);
+  // Real events/contests feed — convert ISO `start` strings to Date once.
+  const feed = useMemo(
+    () => (rawFeed || []).map((f) => ({ ...f, start: new Date(f.start) })),
+    [rawFeed]
+  );
 
   const [selected, setSelected] = useState(new Date(TODAY));
   const [monthAnchor, setMonthAnchor] = useState(new Date(TODAY));
@@ -1616,30 +1478,43 @@ export default function DailyActivityClient() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState('calendar');
 
   function toggleGroupVisible(gid) {
     setGroupVisible((v) => ({ ...v, [gid]: v[gid] === false ? true : false }));
   }
 
-  // ── Group ops ──
-  function createGroup(name, tone) {
-    setGroups((gs) => [...gs, { id: `g-${Date.now()}`, name, tone }]);
+  function toggleCategory(cat) {
+    setVisible((v) => ({ ...v, [cat]: !v[cat] }));
   }
-  function renameGroup(id, name) {
+
+  // ── Group ops (optimistic local update + persist; revert on failure) ──
+  async function createGroup(name, tone) {
+    const id = crypto.randomUUID();
+    setGroups((gs) => [...gs, { id, name, tone }]);
+    const res = await createTodoListAction({ id, name, tone });
+    if (res?.error) setGroups((gs) => gs.filter((g) => g.id !== id));
+  }
+  async function renameGroup(id, name) {
+    const prev = groups;
     setGroups((gs) => gs.map((g) => (g.id === id ? { ...g, name } : g)));
+    const res = await renameTodoListAction({ id, name });
+    if (res?.error) setGroups(prev);
   }
-  function deleteGroup(id) {
-    setGroups((gs) => {
-      const remaining = gs.filter((g) => g.id !== id);
-      if (remaining.length === 0) return gs; // keep at least one
-      const fallback = remaining[0].id;
-      setTodos((ts) =>
-        ts.map((t) => (t.groupId === id ? { ...t, groupId: fallback } : t))
-      );
-      return remaining;
-    });
+  async function deleteGroup(id) {
+    const prevGroups = groups;
+    const prevTodos = todos;
+    // Tasks in this list become ungrouped (FK on delete set null).
+    setGroups((gs) => gs.filter((g) => g.id !== id));
+    setTodos((ts) =>
+      ts.map((t) => (t.groupId === id ? { ...t, groupId: null } : t))
+    );
     if (activeGroupId === id) setActiveGroupId(null);
+    const res = await deleteTodoListAction({ id });
+    if (res?.error) {
+      setGroups(prevGroups);
+      setTodos(prevTodos);
+    }
   }
 
   // ── Todo ops ──
@@ -1651,17 +1526,24 @@ export default function DailyActivityClient() {
     setEditing(todo);
     setEditorOpen(true);
   }
-  function saveTodo(draft) {
-    setTodos((prev) => {
-      if (draft.id)
-        return prev.map((t) => (t.id === draft.id ? { ...t, ...draft } : t));
-      return [{ ...draft, id: `t-${Date.now()}` }, ...prev];
-    });
+  async function saveTodo(draft) {
+    const prev = todos;
+    const saved = draft.id ? draft : { ...draft, id: crypto.randomUUID() };
+    if (draft.id) {
+      setTodos((p) =>
+        p.map((t) => (t.id === saved.id ? { ...t, ...saved } : t))
+      );
+    } else {
+      setTodos((p) => [{ exclusions: [], ...saved }, ...p]);
+    }
     setEditorOpen(false);
     setEditing(null);
+    const res = await saveTodoAction(saved);
+    if (res?.error) setTodos(prev);
   }
 
   function toggleOccurrence(todoId, dKey) {
+    const prev = completions;
     setCompletions((c) => {
       const cur = c[todoId] || {};
       const next = { ...cur };
@@ -1669,51 +1551,44 @@ export default function DailyActivityClient() {
       else next[dKey] = true;
       return { ...c, [todoId]: next };
     });
+    toggleCompletionAction({ todoId, occurrenceDate: dKey }).then((res) => {
+      if (res?.error) setCompletions(prev);
+    });
   }
 
   function requestDelete(todo, occKey) {
     if (!todo.recurrence) {
       // Single-instance: just remove.
-      setTodos((prev) => prev.filter((t) => t.id !== todo.id));
+      const prev = todos;
+      setTodos((p) => p.filter((t) => t.id !== todo.id));
+      deleteTodoAction({ id: todo.id }).then((res) => {
+        if (res?.error) setTodos(prev);
+      });
       return;
     }
     setPendingDelete({ todo, occKey });
   }
 
-  function confirmDelete(scope) {
+  async function confirmDelete(scope) {
     const { todo, occKey } = pendingDelete;
+    const prev = todos;
     if (scope === 'all') {
-      setTodos((prev) => prev.filter((t) => t.id !== todo.id));
+      setTodos((p) => p.filter((t) => t.id !== todo.id));
+      const res = await deleteTodoAction({ id: todo.id });
+      if (res?.error) setTodos(prev);
     } else if (scope === 'one') {
-      // Add an exclusion list.
-      setTodos((prev) =>
-        prev.map((t) =>
+      setTodos((p) =>
+        p.map((t) =>
           t.id === todo.id
             ? { ...t, exclusions: [...(t.exclusions || []), occKey] }
             : t
         )
       );
-    } else if (scope === 'future') {
-      // Set recurrence end to (occKey - 1 day).
-      const newUntil = addDaysKey(occKey, -1);
-      setTodos((prev) =>
-        prev
-          .map((t) => {
-            if (t.id !== todo.id) return t;
-            if (newUntil < t.startKey) {
-              // Removes the entire series including its first occurrence.
-              return null;
-            }
-            return {
-              ...t,
-              recurrence: {
-                ...(t.recurrence || {}),
-                end: { type: 'until', untilKey: newUntil },
-              },
-            };
-          })
-          .filter(Boolean)
-      );
+      const res = await excludeOccurrenceAction({
+        id: todo.id,
+        occurrenceDate: occKey,
+      });
+      if (res?.error) setTodos(prev);
     }
     setPendingDelete(null);
   }
@@ -1758,7 +1633,7 @@ export default function DailyActivityClient() {
       map.get(key).push(payload);
     };
 
-    SEED_FEED.forEach((it) =>
+    feed.forEach((it) =>
       push(dateKey(it.start), { ...it, dateKey: dateKey(it.start) })
     );
 
@@ -1778,7 +1653,7 @@ export default function DailyActivityClient() {
     });
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todos, completions, monthRange, groupVisible]);
+  }, [todos, completions, monthRange, groupVisible, feed]);
 
   // Selected-day data.
   const selKey = dateKey(selected);
@@ -1792,7 +1667,6 @@ export default function DailyActivityClient() {
   // Combined task + calendar feed list.
   const filteredOccurrences = useMemo(() => {
     const todayKey = dateKey(TODAY);
-    const selKeyLocal = dateKey(selected);
 
     // Tasks (group-aware).
     const todoEntries =
@@ -1815,14 +1689,14 @@ export default function DailyActivityClient() {
     const feedEntries =
       todoFilter === 'done'
         ? []
-        : SEED_FEED.filter(
-            (it) => activeGroupId === null && visible[it.category]
-          ).map((it) => ({
-            kind: 'feed',
-            dateKey: dateKey(it.start),
-            sortTime: it.start.toTimeString().slice(0, 5),
-            item: it,
-          }));
+        : feed
+            .filter((it) => activeGroupId === null && visible[it.category])
+            .map((it) => ({
+              kind: 'feed',
+              dateKey: dateKey(it.start),
+              sortTime: it.start.toTimeString().slice(0, 5),
+              item: it,
+            }));
 
     let list = [...todoEntries, ...feedEntries];
 
@@ -1830,19 +1704,19 @@ export default function DailyActivityClient() {
       list = list.filter((e) => e.dateKey === todayKey);
     else if (todoFilter === 'upcoming')
       list = list.filter((e) => e.dateKey >= todayKey);
-    else if (todoFilter === 'day')
-      list = list.filter((e) => e.dateKey === selKeyLocal);
     else if (todoFilter === 'done')
       list = list.filter(
         (e) => e.kind === 'todo' && !!completions[e.todo.id]?.[e.dateKey]
       );
     else if (todoFilter === 'contests')
-      list = SEED_FEED.filter((it) => it.category === 'contest').map((it) => ({
-        kind: 'feed',
-        dateKey: dateKey(it.start),
-        sortTime: it.start.toTimeString().slice(0, 5),
-        item: it,
-      }));
+      list = feed
+        .filter((it) => it.category === 'contest')
+        .map((it) => ({
+          kind: 'feed',
+          dateKey: dateKey(it.start),
+          sortTime: it.start.toTimeString().slice(0, 5),
+          item: it,
+        }));
 
     return list.sort((a, b) => {
       if (a.dateKey !== b.dateKey) return a.dateKey < b.dateKey ? -1 : 1;
@@ -1854,8 +1728,8 @@ export default function DailyActivityClient() {
     activeGroupId,
     groupVisible,
     completions,
-    selected,
     visible,
+    feed,
   ]);
 
   const totalPages = Math.max(
@@ -1871,7 +1745,7 @@ export default function DailyActivityClient() {
 
   useEffect(() => {
     setPage(1);
-  }, [todoFilter, activeGroupId, pageSize, selected]);
+  }, [todoFilter, activeGroupId, pageSize]);
 
   // Group counts (open occurrences in next 30 days).
   const countsByGroup = useMemo(() => {
@@ -1891,6 +1765,31 @@ export default function DailyActivityClient() {
     () => Object.fromEntries(groups.map((g) => [g.id, g])),
     [groups]
   );
+
+  // ── Header overview counts ──
+  const summaryStats = useMemo(() => {
+    const todayKey = dateKey(TODAY);
+    const weekEnd = dateKey(offsetDate(7));
+    const past30 = dateKey(offsetDate(-30));
+    let dueToday = 0;
+    let doneToday = 0;
+    let totalToday = 0;
+    let upcoming = 0;
+    let overdue = 0;
+    occurrencesAll.forEach(({ todo, dateKey: k }) => {
+      const done = !!completions[todo.id]?.[k];
+      if (k === todayKey) {
+        totalToday++;
+        if (done) doneToday++;
+        else dueToday++;
+      } else if (k > todayKey && k <= weekEnd) {
+        if (!done) upcoming++;
+      } else if (k < todayKey && k >= past30 && !done) {
+        overdue++;
+      }
+    });
+    return { dueToday, doneToday, totalToday, upcoming, overdue };
+  }, [occurrencesAll, completions]);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -1953,39 +1852,30 @@ export default function DailyActivityClient() {
               <GlassCard padding="p-5">
                 {/* Header row */}
                 <div className="mb-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h2 className="text-sm font-semibold text-gray-200">
-                        {activeGroupId
-                          ? groupById[activeGroupId]?.name || 'Tasks'
-                          : 'All Tasks'}
-                      </h2>
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        {todoFilter === 'day'
-                          ? fmtDayLong(selected)
-                          : `${filteredOccurrences.length} item${filteredOccurrences.length !== 1 ? 's' : ''}`}
-                      </p>
-                    </div>
-                    <ActionButton
-                      tone="primary"
-                      icon={Plus}
-                      onClick={openCreate}
-                    >
-                      New task
-                    </ActionButton>
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-200">
+                      {activeGroupId
+                        ? groupById[activeGroupId]?.name || 'Tasks'
+                        : 'All Tasks'}
+                    </h2>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {`${filteredOccurrences.length} item${filteredOccurrences.length !== 1 ? 's' : ''}`}
+                    </p>
                   </div>
 
                   {/* Filter tabs */}
-                  {activeGroupId === null && (
-                    <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-                      {[
-                        { v: 'today', l: 'Today', icon: CircleDot },
-                        { v: 'upcoming', l: 'Upcoming', icon: CalendarIcon },
-                        { v: 'contests', l: 'Contests', icon: Trophy },
-                        { v: 'day', l: 'By day', icon: Sparkles },
-                        { v: 'done', l: 'Completed', icon: CheckCircle2 },
-                        { v: 'all', l: 'All', icon: Filter },
-                      ].map((t) => {
+                  <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                    {[
+                      { v: 'today', l: 'Today', icon: CircleDot },
+                      { v: 'upcoming', l: 'Upcoming', icon: CalendarIcon },
+                      { v: 'contests', l: 'Contests', icon: Trophy },
+                      { v: 'done', l: 'Completed', icon: CheckCircle2 },
+                      { v: 'all', l: 'All', icon: Filter },
+                    ]
+                      .filter(
+                        (t) => activeGroupId === null || t.v !== 'contests'
+                      )
+                      .map((t) => {
                         const TIcon = t.icon;
                         return (
                           <button
@@ -2003,24 +1893,7 @@ export default function DailyActivityClient() {
                           </button>
                         );
                       })}
-                    </div>
-                  )}
-
-                  {/* Day filter back button */}
-                  {todoFilter === 'day' && !sameDay(selected, TODAY) && (
-                    <div className="flex justify-end">
-                      <ActionButton
-                        tone="ghost"
-                        icon={X}
-                        onClick={() => {
-                          setSelected(new Date(TODAY));
-                          setTodoFilter('today');
-                        }}
-                      >
-                        Back to today
-                      </ActionButton>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Task list */}
@@ -2099,6 +1972,10 @@ export default function DailyActivityClient() {
                                 isDone={
                                   !!completions[entry.todo.id]?.[entry.dateKey]
                                 }
+                                isOverdue={
+                                  entry.dateKey < todayKey2 &&
+                                  !completions[entry.todo.id]?.[entry.dateKey]
+                                }
                                 onToggle={toggleOccurrence}
                                 onEdit={openEdit}
                                 onDelete={requestDelete}
@@ -2130,42 +2007,134 @@ export default function DailyActivityClient() {
       }
       case 'calendar': {
         const todayKeyLocal = dateKey(TODAY);
-        const todaysEventsList = SEED_FEED.filter(
-          (i) => i.category === 'event' && dateKey(i.start) === todayKeyLocal
-        ).sort((a, b) => a.start.getTime() - b.start.getTime());
+        const dayIsToday = selKey === todayKeyLocal;
+        const dayTasks = occurrencesAll
+          .filter(({ dateKey: k }) => k === selKey)
+          .filter(({ todo }) => groupVisible[todo.groupId] !== false)
+          .sort((a, b) =>
+            (a.todo.time || '00:00').localeCompare(b.todo.time || '00:00')
+          );
+        const dayFeed = feed
+          .filter((it) => dateKey(it.start) === selKey && visible[it.category])
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
+        const dayEmpty = dayTasks.length === 0 && dayFeed.length === 0;
 
         return (
-          <div className="flex w-full flex-col gap-6">
-            {todaysEventsList.length > 0 && (
-              <GlassCard padding="p-6">
+          <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-12">
+            {/* Month grid */}
+            <div className="xl:col-span-8">
+              <GlassCard padding="p-5 sm:p-6">
+                <MonthCalendar
+                  monthAnchor={monthAnchor}
+                  setMonthAnchor={setMonthAnchor}
+                  selected={selected}
+                  setSelected={setSelected}
+                  itemsByDay={itemsByDay}
+                  visible={visible}
+                />
+              </GlassCard>
+            </div>
+
+            {/* Right rail: legend + selected-day agenda */}
+            <div className="flex flex-col gap-5 xl:col-span-4">
+              <GlassCard padding="p-5">
+                <SectionHeader
+                  icon={Filter}
+                  title="Show on calendar"
+                  subtitle="Toggle what appears in the grid."
+                />
+                <div className="flex flex-col gap-1">
+                  {LEGEND_CATEGORIES.map((key) => {
+                    const cat = CATEGORIES[key];
+                    const on = visible[key];
+                    const CatIcon = cat.icon;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleCategory(key)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-[13px] transition ${
+                          on
+                            ? 'border-white/[0.06] bg-white/[0.02] text-gray-200 hover:bg-white/[0.04]'
+                            : 'border-transparent text-gray-600 hover:text-gray-400'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className={`h-2 w-2 rounded-full ${cat.dot} ${on ? '' : 'opacity-40'}`}
+                          />
+                          <CatIcon className="h-3.5 w-3.5" />
+                          {cat.label}
+                        </span>
+                        {on ? (
+                          <Check className="h-3.5 w-3.5 text-violet-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-gray-600" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </GlassCard>
+
+              <GlassCard padding="p-5">
                 <SectionHeader
                   icon={CalendarIcon}
-                  title="Today's Events"
-                  subtitle="Events scheduled for today."
+                  accent={dayIsToday ? 'violet' : 'gray'}
+                  title={dayIsToday ? 'Today' : fmtDayLong(selected)}
+                  subtitle={dayIsToday ? fmtDayLong(selected) : undefined}
+                  action={
+                    <ActionButton
+                      tone="primary"
+                      icon={Plus}
+                      onClick={openCreate}
+                    >
+                      Add task
+                    </ActionButton>
+                  }
                 />
-                <ul className="space-y-1.5">
-                  {todaysEventsList.map((event, i) => (
-                    <li key={`event-${i}`}>
-                      <FeedEntry item={event} />
-                    </li>
-                  ))}
-                </ul>
+                {dayEmpty ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="Nothing planned"
+                    description="No tasks or events for this day yet."
+                    accent="violet"
+                  />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {dayFeed.length > 0 && (
+                      <ul className="space-y-1.5">
+                        {dayFeed.map((it) => (
+                          <li key={`dayfeed-${it.id}`}>
+                            <FeedEntry item={it} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {dayTasks.length > 0 && (
+                      <ul className="space-y-1">
+                        {dayTasks.map(({ todo, dateKey: k }) => (
+                          <li key={`daytask-${todo.id}-${k}`}>
+                            <TodoOccurrenceItem
+                              occurrence={{ dateKey: k }}
+                              todo={todo}
+                              group={groupById[todo.groupId]}
+                              isDone={!!completions[todo.id]?.[k]}
+                              isOverdue={
+                                k < todayKeyLocal && !completions[todo.id]?.[k]
+                              }
+                              onToggle={toggleOccurrence}
+                              onEdit={openEdit}
+                              onDelete={requestDelete}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </GlassCard>
-            )}
-            <GlassCard padding="p-6">
-              <MonthCalendar
-                monthAnchor={monthAnchor}
-                setMonthAnchor={setMonthAnchor}
-                selected={selected}
-                setSelected={(d) => {
-                  setSelected(d);
-                  setTodoFilter('day');
-                  setActiveTab('tasks');
-                }}
-                itemsByDay={itemsByDay}
-                visible={visible}
-              />
-            </GlassCard>
+            </div>
           </div>
         );
       }
@@ -2186,7 +2155,48 @@ export default function DailyActivityClient() {
         title="Daily Activity"
         subtitle="Your tasks, schedule, and daily goals"
         accent="blue"
+        actions={
+          <ActionButton tone="primary" icon={Plus} onClick={openCreate}>
+            New task
+          </ActionButton>
+        }
       />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          icon={CircleDot}
+          accent="blue"
+          label="Due today"
+          value={summaryStats.dueToday}
+          sublabel={`${summaryStats.totalToday} scheduled`}
+        />
+        <StatCard
+          icon={CheckCircle2}
+          accent="emerald"
+          label="Done today"
+          value={summaryStats.doneToday}
+          sublabel={
+            summaryStats.totalToday
+              ? `${Math.round((summaryStats.doneToday / summaryStats.totalToday) * 100)}% complete`
+              : 'Nothing scheduled'
+          }
+        />
+        <StatCard
+          icon={CalendarIcon}
+          accent="violet"
+          label="Next 7 days"
+          value={summaryStats.upcoming}
+          sublabel="upcoming tasks"
+        />
+        <StatCard
+          icon={Flag}
+          accent="rose"
+          label="Overdue"
+          value={summaryStats.overdue}
+          sublabel="past 30 days"
+        />
+      </div>
+
       <TabBar tabs={uiTabs} value={activeTab} onChange={setActiveTab} />
       <AnimatePresence mode="popLayout">
         <motion.div

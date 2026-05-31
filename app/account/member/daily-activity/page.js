@@ -1,18 +1,40 @@
 /**
- * @file Member daily activity — personal to-do list and a monthly
- *   calendar overlaying events, contests, bootcamp lessons, and
- *   personal tasks. State is in-memory only (no DB) for now.
+ * @file Member daily activity — personal to-do list and a monthly calendar
+ *   overlaying the member's tasks with real published events and upcoming
+ *   contests. All task data is persisted per-user in Supabase.
  *
  * @module MemberDailyActivityPage
  * @access member
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
+import {
+  getMemberTodoData,
+  getDailyActivityFeed,
+} from '@/app/_lib/services/data/member-todos';
 import DailyActivityClient from './_components/DailyActivityClient';
 
 export const metadata = { title: 'Daily Activity | Member | NEUPC' };
 
 export default async function MemberDailyActivityPage() {
-  await requireRole('member');
-  return <DailyActivityClient />;
+  const { user } = await requireRole('member');
+
+  const [data, feed] = await Promise.all([
+    getMemberTodoData(user.id).catch(() => ({
+      lists: [],
+      todos: [],
+      completions: {},
+    })),
+    getDailyActivityFeed(user.id).catch(() => []),
+  ]);
+
+  return (
+    <DailyActivityClient
+      initialLists={data.lists}
+      initialTodos={data.todos}
+      initialCompletions={data.completions}
+      feed={feed}
+      userId={user.id}
+    />
+  );
 }
