@@ -1,18 +1,14 @@
 /**
- * @file Event public content component
+ * @file Redesigned event public content component
  * @module EventPublicContent
  */
 
 'use client';
 
 import EventContentRenderer from './EventContentRenderer';
+import { driveImageUrl } from '@/app/_lib/utils/utils';
 
-// Public-style flowing event content (no images).
-// Mirrors the /events/[eventId] page layout: header, description + rich
-// content, At a Glance, Agenda timeline, Speakers (text-only), Prerequisites,
-// Tags. Shared by the in-account member/guest/mentor/advisor and
-// admin/executive event detail views.
-
+// Helper functions for date & status rendering
 function fmtDateShort(d) {
   if (!d) return '';
   return new Date(d)
@@ -23,6 +19,7 @@ function fmtDateShort(d) {
     })
     .toUpperCase();
 }
+
 function fmtTime(d) {
   if (!d) return '';
   return new Date(d).toLocaleTimeString('en-US', {
@@ -30,24 +27,34 @@ function fmtTime(d) {
     minute: '2-digit',
   });
 }
-function getDuration(start, end) {
-  if (!start || !end) return null;
-  const ms = new Date(end) - new Date(start);
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  if (hours > 24) {
-    const days = Math.ceil(hours / 24);
-    return `${days} Day${days > 1 ? 's' : ''}`;
+
+function formatTimelineDateTime(dtStr) {
+  if (!dtStr) return '';
+  const match = dtStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (match) {
+    const [_, year, month, day, hourStr, minuteStr] = match;
+    const hour = parseInt(hourStr, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(month, 10) - 1] || 'Jan';
+    return `${monthName} ${parseInt(day, 10)}, ${year} · ${hour12}:${minuteStr} ${ampm}`;
   }
-  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours} Hour${hours > 1 ? 's' : ''}`;
-  return `${minutes} Min`;
+  try {
+    const d = new Date(dtStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
+  } catch {}
+  return dtStr;
 }
-function venueLabel(type) {
-  return (
-    { online: 'Online', offline: 'In-Person', hybrid: 'Hybrid' }[type] || ''
-  );
-}
+
 function statusConfig(status) {
   const map = {
     draft: {
@@ -101,86 +108,76 @@ function SectionLabel({ accent = 'lime', children }) {
 
 export default function EventPublicContent({ event }) {
   const sc = statusConfig(event.status);
-  const duration = getDuration(event.start_date, event.end_date);
-  const venue = venueLabel(event.venue_type);
   const tags = event.tags || [];
   const agenda = Array.isArray(event.agenda) ? event.agenda : [];
   const speakers = Array.isArray(event.speakers) ? event.speakers : [];
+  const timeline = Array.isArray(event.timeline) ? event.timeline : [];
+  const coverUrl = driveImageUrl(event.cover_image || event.image);
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      {/* Header (no image) */}
-      <div className="holographic-card no-lift rounded-2xl p-5 sm:p-7">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] ${sc.badge}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-            {sc.label}
-          </span>
-          {event.category && (
-            <span className="inline-flex min-h-[28px] items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
-              {event.category}
+    <div className="space-y-6 sm:space-y-8">
+      {/* Redesigned Header Block with Dynamic Cover Banner */}
+      <div className="holographic-card no-lift overflow-hidden rounded-2xl border border-white/5 bg-white/2 backdrop-blur-md">
+        
+        {/* Cover image banner strip if it exists */}
+        {coverUrl && (
+          <div className="relative h-40 w-full overflow-hidden sm:h-52 md:h-60 border-b border-white/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverUrl}
+              alt=""
+              className="h-full w-full object-cover opacity-75"
+            />
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#090b11] via-transparent to-transparent" />
+          </div>
+        )}
+
+        <div className="p-6 sm:p-8 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex min-h-[26px] items-center gap-1.5 rounded-full border px-3.5 py-0.5 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] ${sc.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
+              {sc.label}
             </span>
-          )}
-        </div>
-        <h1 className="kinetic-headline font-heading text-[clamp(1.5rem,3vw+0.5rem,2.75rem)] [line-height:1.05] font-black text-white uppercase">
-          {event.title}
-        </h1>
-        <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-5 sm:flex sm:flex-wrap sm:gap-3">
+            {event.category && (
+              <span className="inline-flex min-h-[26px] items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-0.5 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
+                {event.category}
+              </span>
+            )}
+          </div>
+
+          <h1 className="kinetic-headline font-heading text-[clamp(1.5rem,3.5vw+0.5rem,2.5rem)] [line-height:1.05] font-black text-white uppercase">
+            {event.title}
+          </h1>
+
+          {/* Quick Date token */}
           {event.start_date && (
-            <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 sm:px-4">
-              <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
-                Date &amp; Time
-              </span>
-              <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
-                {fmtDateShort(event.start_date)}
-                {fmtTime(event.start_date)
-                  ? ` · ${fmtTime(event.start_date)}`
-                  : ''}
-              </span>
-            </div>
-          )}
-          {event.location && (
-            <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 sm:px-4">
-              <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
-                Location
-              </span>
-              <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
-                {event.location}
-              </span>
-            </div>
-          )}
-          {duration && (
-            <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 sm:px-4">
-              <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
-                Duration
-              </span>
-              <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
-                {duration}
-              </span>
-            </div>
-          )}
-          {event.participation_type && (
-            <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 sm:px-4">
-              <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
-                Format
-              </span>
-              <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
-                {event.participation_type === 'team'
-                  ? `Team${event.team_size ? ` of ${event.team_size}` : ''}`
-                  : 'Individual'}
-              </span>
+            <div className="flex items-center gap-2 pt-2 text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              <svg className="h-4 w-4 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{fmtDateShort(event.start_date)}</span>
+              {fmtTime(event.start_date) && (
+                <>
+                  <span>·</span>
+                  <span>{fmtTime(event.start_date)}</span>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Description + rich content */}
+      {/* Description + Rich Content Blocks */}
       {(event.description || event.content) && (
-        <div className="holographic-card rounded-2xl p-5 sm:p-7">
+        <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
+          <div className="mb-4">
+            <SectionLabel accent="lime">Overview</SectionLabel>
+          </div>
           {event.description && (
-            <p className="text-sm leading-[1.9] text-zinc-400 sm:text-base">
+            <p className="text-sm leading-[1.8] text-zinc-300 sm:text-[15px]">
               {event.description}
             </p>
           )}
@@ -188,8 +185,8 @@ export default function EventPublicContent({ event }) {
             <div
               className={
                 event.description
-                  ? 'mt-5 border-t border-white/5 pt-5 sm:mt-6 sm:pt-6'
-                  : ''
+                  ? "mt-6 border-t border-white/5 pt-6 sm:mt-8 sm:pt-8"
+                  : ""
               }
             >
               <EventContentRenderer content={event.content} />
@@ -198,73 +195,58 @@ export default function EventPublicContent({ event }) {
         </div>
       )}
 
-      {/* At a Glance */}
-      {(event.eligibility ||
-        venue ||
-        event.participation_type ||
-        event.category) && (
-        <div className="holographic-card rounded-2xl p-5 sm:p-6">
-          <div className="mb-5">
-            <SectionLabel accent="violet">At a Glance</SectionLabel>
+      {/* Multi-Timeline Sessions */}
+      {timeline.length > 0 && (
+        <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
+          <div className="mb-6">
+            <SectionLabel accent="lime">Schedule & Sessions</SectionLabel>
           </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
-            {event.category && (
-              <div>
-                <dt className="mb-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
-                  Category
-                </dt>
-                <dd className="text-sm leading-snug font-bold text-white">
-                  {event.category}
-                </dd>
+          <div className="relative space-y-6 border-l border-white/10 pl-6">
+            <span className="from-neon-lime/40 to-neon-violet/30 absolute top-1.5 bottom-1.5 left-0 w-px bg-linear-to-b via-white/10" />
+            {timeline.map((tm) => (
+              <div key={tm.id} className="relative group">
+                <span className="bg-neon-lime absolute top-1 -left-[27px] flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_12px_rgba(182,243,107,0.55)] group-hover:scale-105 transition-transform">
+                  <span className="h-1.5 w-1.5 rounded-full bg-black/50" />
+                </span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  {tm.start_date && (
+                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-widest uppercase">
+                      {formatTimelineDateTime(tm.start_date)}
+                    </span>
+                  )}
+                  {tm.end_date && (
+                    <span className="text-zinc-500 font-mono text-[10px] font-bold uppercase">
+                      to {formatTimelineDateTime(tm.end_date)}
+                    </span>
+                  )}
+                </div>
+                {tm.title && (
+                  <h4 className="font-heading mt-0.5 text-sm font-bold text-white uppercase tracking-wide">
+                    {tm.title}
+                  </h4>
+                )}
+                {tm.location && (
+                  <p className="mt-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                    Location · <span className="font-bold text-zinc-300">{tm.location}</span>
+                  </p>
+                )}
               </div>
-            )}
-            {event.participation_type && (
-              <div>
-                <dt className="mb-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
-                  Format
-                </dt>
-                <dd className="text-sm leading-snug font-bold text-white">
-                  {event.participation_type === 'team'
-                    ? `Team${event.team_size ? ` · ${event.team_size}` : ''}`
-                    : 'Individual'}
-                </dd>
-              </div>
-            )}
-            {venue && (
-              <div>
-                <dt className="mb-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
-                  Venue
-                </dt>
-                <dd className="text-sm leading-snug font-bold text-white">
-                  {venue}
-                </dd>
-              </div>
-            )}
-            {event.eligibility && (
-              <div>
-                <dt className="mb-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
-                  Eligibility
-                </dt>
-                <dd className="text-sm leading-snug font-bold text-white">
-                  {event.eligibility}
-                </dd>
-              </div>
-            )}
-          </dl>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Agenda timeline */}
+      {/* Agenda/Schedule timeline */}
       {agenda.length > 0 && (
-        <div className="holographic-card rounded-2xl p-5 sm:p-7">
+        <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
           <div className="mb-6">
             <SectionLabel accent="lime">Agenda</SectionLabel>
           </div>
           <div className="relative space-y-6 border-l border-white/10 pl-6">
             <span className="from-neon-lime/40 to-neon-violet/30 absolute top-1.5 bottom-1.5 left-0 w-px bg-linear-to-b via-white/10" />
             {agenda.map((ag) => (
-              <div key={ag.id} className="relative">
-                <span className="bg-neon-lime absolute top-1 -left-[27px] flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_12px_rgba(182,243,107,0.5)]">
+              <div key={ag.id} className="relative group">
+                <span className="bg-neon-lime absolute top-1 -left-[27px] flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_12px_rgba(182,243,107,0.55)] group-hover:scale-105 transition-transform">
                   <span className="h-1.5 w-1.5 rounded-full bg-black/50" />
                 </span>
                 {ag.time && (
@@ -273,21 +255,18 @@ export default function EventPublicContent({ event }) {
                   </span>
                 )}
                 {ag.title && (
-                  <h4 className="font-heading mt-0.5 text-sm font-bold text-white">
+                  <h4 className="font-heading mt-0.5 text-sm font-bold text-white uppercase tracking-wide">
                     {ag.title}
                   </h4>
                 )}
                 {ag.description && (
-                  <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
+                  <p className="mt-1 text-xs sm:text-[13px] leading-relaxed text-zinc-400">
                     {ag.description}
                   </p>
                 )}
                 {ag.speaker && (
-                  <p className="mt-1.5 font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                    Speaker ·{' '}
-                    <span className="font-bold text-zinc-300">
-                      {ag.speaker}
-                    </span>
+                  <p className="mt-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                    Speaker · <span className="font-bold text-zinc-300">{ag.speaker}</span>
                   </p>
                 )}
               </div>
@@ -296,9 +275,9 @@ export default function EventPublicContent({ event }) {
         </div>
       )}
 
-      {/* Speakers (text-only) */}
+      {/* Speakers Panel */}
       {speakers.length > 0 && (
-        <div className="holographic-card rounded-2xl p-5 sm:p-7">
+        <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
           <div className="mb-5">
             <SectionLabel accent="violet">Speakers</SectionLabel>
           </div>
@@ -306,16 +285,16 @@ export default function EventPublicContent({ event }) {
             {speakers.map((spk) => (
               <div
                 key={spk.id}
-                className="hover:border-neon-violet/30 rounded-xl border border-white/8 bg-white/3 px-4 py-3.5 transition-colors"
+                className="hover:border-neon-violet/30 rounded-xl border border-white/5 bg-white/1 px-4 py-3.5 transition-colors"
               >
-                <h5 className="font-heading text-sm font-bold text-white">
+                <h5 className="font-heading text-sm font-bold text-white uppercase tracking-wide">
                   {spk.name}
                 </h5>
                 {spk.role && (
-                  <p className="mt-0.5 text-[13px] text-zinc-500">{spk.role}</p>
+                  <p className="mt-0.5 text-xs text-zinc-400">{spk.role}</p>
                 )}
-                <p className="text-neon-lime mt-1.5 font-mono text-[9px] font-bold tracking-widest uppercase">
-                  Keynote Presenter
+                <p className="text-neon-lime mt-2 font-mono text-[9px] font-bold tracking-widest uppercase">
+                  Keynote Speaker
                 </p>
               </div>
             ))}
@@ -323,25 +302,25 @@ export default function EventPublicContent({ event }) {
         </div>
       )}
 
-      {/* Prerequisites */}
+      {/* Prerequisites / Requirements */}
       {event.prerequisites && (
-        <div className="holographic-card rounded-2xl p-5 sm:p-7">
+        <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
           <div className="mb-5">
             <SectionLabel accent="lime">Requirements</SectionLabel>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {event.prerequisites
               .split('\n')
               .filter(Boolean)
               .map((line, i) => (
                 <div
                   key={i}
-                  className="border-neon-lime/20 hover:border-neon-lime/50 hover:bg-neon-lime/5 flex gap-3 rounded-lg border-l-2 py-2.5 pl-4 transition-all"
+                  className="border-white/5 hover:border-neon-lime/30 hover:bg-white/2 flex gap-3.5 rounded-xl border p-3 transition-all duration-300"
                 >
                   <span className="text-neon-lime/60 shrink-0 font-mono text-[9px] font-bold tracking-widest sm:text-[10px]">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <p className="text-sm leading-relaxed text-zinc-400">
+                  <p className="text-xs sm:text-sm leading-relaxed text-zinc-300">
                     {line.trim()}
                   </p>
                 </div>
@@ -350,17 +329,15 @@ export default function EventPublicContent({ event }) {
         </div>
       )}
 
-      {/* Tags */}
+      {/* Tags Topics */}
       {tags.length > 0 && (
-        <div>
-          <div className="mb-3">
-            <SectionLabel accent="violet">Topics</SectionLabel>
-          </div>
+        <div className="space-y-3">
+          <SectionLabel accent="violet">Topics</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="border-neon-violet/20 bg-neon-violet/10 text-neon-violet inline-block rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase"
+                className="border-neon-violet/20 bg-neon-violet/10 text-neon-violet inline-block rounded-full border px-3.5 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]"
               >
                 #{tag}
               </span>

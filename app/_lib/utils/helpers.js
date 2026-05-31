@@ -138,3 +138,24 @@ export function parseEventSpeakers(raw) {
     }))
     .filter((it) => it.name || it.role || it.avatar);
 }
+
+export function parseEventTimeline(raw) {
+  if (!raw) return [];
+  let arr;
+  try {
+    arr = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((it, i) => ({
+      id: typeof it?.id === 'string' && it.id ? it.id : `tm_${i}`,
+      title: String(it?.title ?? '').trim(),
+      start_date: String(it?.start_date ?? '').trim(),
+      end_date: String(it?.end_date ?? '').trim(),
+      location: String(it?.location ?? '').trim(),
+    }))
+    .filter((it) => it.title || it.start_date || it.end_date || it.location);
+}
+

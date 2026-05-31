@@ -31,7 +31,7 @@ import { EVENT_STATUS_CONFIG, CATEGORIES } from './eventConstants';
 import { driveImageUrl } from '@/app/_lib/utils/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import EventContentRenderer from './EventContentRenderer';
-import { AgendaEditor, SpeakersEditor } from './EventSubEditors';
+import { AgendaEditor, SpeakersEditor, TimelineEditor } from './EventSubEditors';
 
 // ─── Shared primitives (copied from ManageEventDetail) ─────────────────────────
 
@@ -541,6 +541,7 @@ export default function CreateEventForm({
   const [teamSize, setTeamSize] = useState('');
   const [agenda, setAgenda] = useState([]);
   const [speakers, setSpeakers] = useState([]);
+  const [timeline, setTimeline] = useState([]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -568,6 +569,7 @@ export default function CreateEventForm({
     if (participationType === 'team' && teamSize) fd.set('team_size', teamSize);
     fd.set('agenda', JSON.stringify(agenda));
     fd.set('speakers', JSON.stringify(speakers));
+    fd.set('timeline', JSON.stringify(timeline));
     startTransition(async () => {
       const res = await createAction(fd);
       if (res?.error) return setError(res.error);
@@ -836,26 +838,6 @@ export default function CreateEventForm({
                 </div>
               </Section>
 
-              {/* 1b. Agenda */}
-              <Section
-                icon={CalendarClock}
-                title="Agenda / Schedule"
-                description="Chronology timeline shown under the “Event Agenda” tab"
-                accentColor="#818cf8"
-              >
-                <AgendaEditor value={agenda} onChange={setAgenda} />
-              </Section>
-
-              {/* 1c. Speakers */}
-              <Section
-                icon={Mic2}
-                title="Panel Speakers"
-                description="Presenters shown under the “Panel Speakers” tab"
-                accentColor="#34d399"
-              >
-                <SpeakersEditor value={speakers} onChange={setSpeakers} />
-              </Section>
-
               {/* 2. Media Assets */}
               <Section
                 icon={ImageIcon}
@@ -1010,6 +992,11 @@ export default function CreateEventForm({
                     placeholder="e.g. CSE Auditorium, Room 301, or Zoom Meeting Link"
                     className={inputCls}
                   />
+                </div>
+
+                <div className="mt-4 border-t border-white/5 pt-4">
+                  <Label hint="Schedule multiple sessions or day timelines">Event Multi-Timeline Sessions</Label>
+                  <TimelineEditor value={timeline} onChange={setTimeline} />
                 </div>
               </Section>
 

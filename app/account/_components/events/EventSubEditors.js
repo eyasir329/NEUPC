@@ -13,6 +13,7 @@ import {
   Mic2,
   ChevronUp,
   ChevronDown,
+  MapPin,
 } from 'lucide-react';
 
 // Shared Agenda + Speakers list editors used by the Create and Edit event forms.
@@ -235,3 +236,105 @@ export function SpeakersEditor({ value = [], onChange }) {
     </div>
   );
 }
+
+export function TimelineEditor({ value = [], onChange }) {
+  const items = Array.isArray(value) ? value : [];
+
+  const update = (id, patch) =>
+    onChange(items.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  const add = () =>
+    onChange([
+      ...items,
+      { id: uid(), title: '', start_date: '', end_date: '', location: '' },
+    ]);
+  const remove = (id) => onChange(items.filter((it) => it.id !== id));
+  const reorder = (i, dir) => onChange(move(items, i, i + dir));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8 text-center">
+          <CalendarClock className="h-6 w-6 text-gray-600" />
+          <p className="text-[12px] text-gray-500">
+            No timeline sessions scheduled yet. Add multiple timelines to this event.
+          </p>
+        </div>
+      ) : (
+        items.map((it, i) => (
+          <div
+            key={it.id}
+            className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">
+                    Session Title
+                  </label>
+                  <input
+                    value={it.title}
+                    onChange={(e) => update(it.id, { title: e.target.value })}
+                    placeholder="e.g. Day 1: Keynote & Kickoff"
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">
+                    Specific Venue / Location
+                  </label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+                    <input
+                      value={it.location}
+                      onChange={(e) => update(it.id, { location: e.target.value })}
+                      placeholder="e.g. Room 201 (optional)"
+                      className={`${fieldCls} pl-8`}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">
+                    Start Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={it.start_date}
+                    onChange={(e) => update(it.id, { start_date: e.target.value })}
+                    className={`${fieldCls} [color-scheme:dark]`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={it.end_date}
+                    onChange={(e) => update(it.id, { end_date: e.target.value })}
+                    className={`${fieldCls} [color-scheme:dark]`}
+                  />
+                </div>
+              </div>
+              <RowControls
+                index={i}
+                count={items.length}
+                onUp={() => reorder(i, -1)}
+                onDown={() => reorder(i, 1)}
+                onRemove={() => remove(it.id)}
+              />
+            </div>
+          </div>
+        ))
+      )}
+
+      <button
+        type="button"
+        onClick={add}
+        className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5 py-2.5 text-[12px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-500/10"
+      >
+        <Plus className="h-3.5 w-3.5" /> Add Timeline Session
+      </button>
+    </div>
+  );
+}
+

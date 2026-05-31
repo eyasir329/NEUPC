@@ -13,8 +13,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import {
   logActivity,
   generateSlug,
-  parseEventAgenda,
-  parseEventSpeakers,
+  parseEventTimeline,
 } from '@/app/_lib/utils/helpers';
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/integrations/gdrive';
 import { generateImage } from '@/app/_lib/integrations/image-gen';
@@ -167,8 +166,7 @@ export async function execCreateEventAction(formData) {
         ? parseInt(formData.get('team_size'), 10)
         : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
-    agenda: parseEventAgenda(formData.get('agenda')),
-    speakers: parseEventSpeakers(formData.get('speakers')),
+    timeline: parseEventTimeline(formData.get('timeline')),
     created_by: user.id,
     approved_by: status !== 'draft' ? user.id : null,
     approved_at: status !== 'draft' ? new Date().toISOString() : null,
@@ -242,8 +240,7 @@ export async function execUpdateEventAction(formData) {
         ? parseInt(formData.get('team_size'), 10)
         : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
-    agenda: parseEventAgenda(formData.get('agenda')),
-    speakers: parseEventSpeakers(formData.get('speakers')),
+    timeline: parseEventTimeline(formData.get('timeline')),
     updated_at: new Date().toISOString(),
   };
 
