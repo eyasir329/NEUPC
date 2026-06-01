@@ -107,46 +107,41 @@ async function isTodoCompleted(userId, todoId, fields) {
 }
 
 /**
- * Mirror a saved task to the member's Google Calendar — BOTH as a calendar event
- * and as a Google Task (the checkbox to-do list). Inserts/updates each and
- * persists their ids; if the task lost its date, previously-mirrored copies are
- * removed. Never throws — calendar problems must not fail the task save. No-op
- * when the member hasn't connected a calendar.
+ * Mirror a saved task to the member's Google Tasks list ONLY (the checkbox
+ * to-do list) — never as a calendar event, so a todo isn't duplicated in
+ * Google (a Task and a calendar event at once). Inserts/updates the Google
+ * Task and persists its id; if the task lost its date, the mirrored Task is
+ * removed. Any calendar event mirrored by an earlier version is cleaned up.
+ * Never throws — calendar problems must not fail the task save. No-op when the
+ * member hasn't connected a calendar.
  */
 async function mirrorSavedTodo(userId, todoId, fields, existingEventId, existingTaskId) {
   try {
-    const { pushTodo, deleteTodoEvent, pushTodoTask, deleteTodoTask } =
-      await import('@/app/_lib/integrations/google-calendar');
+    const { deleteTodoEvent, pushTodoTask, deleteTodoTask } = await import(
+      '@/app/_lib/integrations/google-calendar'
+    );
+
+    // Remove any legacy calendar event so a todo never shows up as an event.
+    if (existingEventId) {
+      await deleteTodoEvent(userId, existingEventId);
+      await supabaseAdmin
+        .from('todos')
+        .update({ gcal_event_id: null })
+        .eq('id', todoId)
+        .eq('user_id', userId);
+    }
 
     if (!fields.start_date) {
-      const patch = {};
-      if (existingEventId) {
-        await deleteTodoEvent(userId, existingEventId);
-        patch.gcal_event_id = null;
-      }
       if (existingTaskId) {
         await deleteTodoTask(userId, existingTaskId);
-        patch.gtask_id = null;
-      }
-      if (Object.keys(patch).length) {
         await supabaseAdmin
           .from('todos')
-          .update(patch)
+          .update({ gtask_id: null })
           .eq('id', todoId)
           .eq('user_id', userId);
       }
       return;
     }
-
-    const eventId = await pushTodo(userId, {
-      id: todoId,
-      title: fields.title,
-      notes: fields.notes,
-      startKey: fields.start_date,
-      time: fields.due_time || '',
-      recurrence: fields.recurrence || null,
-      gcalEventId: existingEventId || null,
-    });
 
     const taskId = await pushTodoTask(userId, {
       id: todoId,
@@ -157,13 +152,10 @@ async function mirrorSavedTodo(userId, todoId, fields, existingEventId, existing
       completed: await isTodoCompleted(userId, todoId, fields),
     });
 
-    const patch = {};
-    if (eventId && eventId !== existingEventId) patch.gcal_event_id = eventId;
-    if (taskId && taskId !== existingTaskId) patch.gtask_id = taskId;
-    if (Object.keys(patch).length) {
+    if (taskId && taskId !== existingTaskId) {
       await supabaseAdmin
         .from('todos')
-        .update(patch)
+        .update({ gtask_id: taskId })
         .eq('id', todoId)
         .eq('user_id', userId);
     }

@@ -16,9 +16,9 @@ import {
   getConnection,
   deleteConnection,
   setSyncEnabled,
-  pushTodo,
   pushTodoTask,
   pushFeedItem,
+  deleteTodoEvent,
 } from '@/app/_lib/integrations/google-calendar';
 
 const PATH = '/account/member/daily-activity';
@@ -121,19 +121,11 @@ export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
     const completedSet = new Set((comps || []).map((c) => c.todo_id));
 
     for (const r of rows || []) {
-      const eventId = await pushTodo(
-        a.userId,
-        {
-          id: r.id,
-          title: r.title,
-          notes: r.notes,
-          startKey: r.start_date,
-          time: r.due_time || '',
-          recurrence: r.recurrence || null,
-          gcalEventId: r.gcal_event_id || null,
-        },
-        { force: true }
-      );
+      // Todos mirror to Google Tasks ONLY (never a calendar event), so they're
+      // not duplicated. Clean up any calendar event from an earlier version.
+      if (r.gcal_event_id) {
+        await deleteTodoEvent(a.userId, r.gcal_event_id);
+      }
 
       const taskId = await pushTodoTask(
         a.userId,
@@ -149,7 +141,7 @@ export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
       );
 
       const patch = {};
-      if (eventId && eventId !== r.gcal_event_id) patch.gcal_event_id = eventId;
+      if (r.gcal_event_id) patch.gcal_event_id = null;
       if (taskId && taskId !== r.gtask_id) patch.gtask_id = taskId;
       if (Object.keys(patch).length) {
         await supabaseAdmin
@@ -158,7 +150,7 @@ export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
           .eq('id', r.id)
           .eq('user_id', a.userId);
       }
-      if (eventId || taskId) synced++;
+      if (taskId) synced++;
     }
   }
 
