@@ -34,6 +34,42 @@ async function memberId() {
   return { userId: auth.user.id };
 }
 
+/**
+ * Sanitise a task's `notes`. The client may store either plain text or a JSON
+ * metadata blob (subtasks/comments/labels/etc. produced by serializeTodoNotes).
+ * For the JSON form we must NOT strip HTML or truncate at 2000 chars — that
+ * would corrupt the JSON — so we parse-validate it and re-serialise within a
+ * generous cap. Plain text keeps the original strip-and-truncate behaviour.
+ */
+function sanitizeNotes(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const obj = JSON.parse(trimmed);
+      if (obj && typeof obj === 'object') {
+        const clean = JSON.stringify(obj).slice(0, 20000);
+        return clean;
+      }
+    } catch {
+      // Not valid JSON — fall through to plain-text handling.
+    }
+  }
+  return sanitizeText(raw, 2000) || null;
+}
+
+/** Confirm a section belongs to the user and to the given list. */
+async function ownsSection(userId, sectionId, listId) {
+  const { data } = await supabaseAdmin
+    .from('todo_sections')
+    .select('id')
+    .eq('id', sectionId)
+    .eq('user_id', userId)
+    .eq('list_id', listId)
+    .maybeSingle();
+  return !!data;
+}
+
 /** Confirm a list belongs to the user (so todos can't reference others' lists). */
 async function ownsList(userId, listId) {
   const { data } = await supabaseAdmin
@@ -282,7 +318,7 @@ export async function saveTodoAction(draft = {}) {
   const title = sanitizeText(draft.title, 200);
   if (!title) return { error: 'Task title is required.' };
 
-  const notes = draft.notes ? sanitizeText(draft.notes, 2000) : null;
+  const notes = sanitizeNotes(draft.notes);
   const priority = PRIORITIES.includes(draft.priority)
     ? draft.priority
     : 'medium';
@@ -299,6 +335,17 @@ export async function saveTodoAction(draft = {}) {
     list_id = draft.groupId;
   }
 
+  // A section is only valid when it belongs to the task's list and the user.
+  let section_id = null;
+  if (
+    draft.sectionId &&
+    isValidUUID(draft.sectionId) &&
+    list_id &&
+    (await ownsSection(a.userId, draft.sectionId, list_id))
+  ) {
+    section_id = draft.sectionId;
+  }
+
   const fields = {
     title,
     notes,
@@ -307,6 +354,7 @@ export async function saveTodoAction(draft = {}) {
     due_time,
     recurrence,
     list_id,
+    section_id,
   };
 
   if (draft.id) {
@@ -495,4 +543,161 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
   await syncTaskDone(true);
   revalidatePath(PATH);
   return { success: true, done: true };
+}
+
+// ── Labels ───────────────────────────────────────────────────────────────────
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Create a reusable label (name + hex color) for the member. */
+export async function createTodoLabelAction({ id, name, color } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+
+  const cleanName = sanitizeText(name, 40);
+  if (!cleanName) return { error: 'Label name is required.' };
+  if (id && !isValidUUID(id)) return { error: 'Invalid label id.' };
+  const safeColor = HEX_RE.test(color || '') ? color : '#9333ea';
+
+  const row = { user_id: a.userId, name: cleanName, color: safeColor };
+  if (id) row.id = id;
+
+  const { data, error } = await supabaseAdmin
+    .from('todo_labels')
+    .insert(row)
+    .select('id, name, color')
+    .single();
+  if (error) {
+    console.error('createTodoLabelAction:', error);
+    return { error: 'Failed to create label.' };
+  }
+  revalidatePath(PATH);
+  return { success: true, label: data };
+}
+
+/** Update a label's name and/or color. */
+export async function updateTodoLabelAction({ id, name, color } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+  if (!isValidUUID(id)) return { error: 'Invalid label id.' };
+
+  const patch = { };
+  const cleanName = sanitizeText(name, 40);
+  if (cleanName) patch.name = cleanName;
+  if (HEX_RE.test(color || '')) patch.color = color;
+  if (Object.keys(patch).length === 0) return { error: 'Nothing to update.' };
+
+  const { error } = await supabaseAdmin
+    .from('todo_labels')
+    .update(patch)
+    .eq('id', id)
+    .eq('user_id', a.userId);
+  if (error) {
+    console.error('updateTodoLabelAction:', error);
+    return { error: 'Failed to update label.' };
+  }
+  revalidatePath(PATH);
+  return { success: true };
+}
+
+/** Delete a label from the catalog. Attached references on tasks are left as
+ *  stored strings in notes and simply stop matching the catalog. */
+export async function deleteTodoLabelAction({ id } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+  if (!isValidUUID(id)) return { error: 'Invalid label id.' };
+
+  const { error } = await supabaseAdmin
+    .from('todo_labels')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', a.userId);
+  if (error) {
+    console.error('deleteTodoLabelAction:', error);
+    return { error: 'Failed to delete label.' };
+  }
+  revalidatePath(PATH);
+  return { success: true };
+}
+
+// ── Sections ─────────────────────────────────────────────────────────────────
+/** Create a named section inside one of the member's lists. */
+export async function createTodoSectionAction({ id, listId, name } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+  if (!isValidUUID(listId)) return { error: 'Invalid list id.' };
+  if (id && !isValidUUID(id)) return { error: 'Invalid section id.' };
+  if (!(await ownsList(a.userId, listId)))
+    return { error: 'List not found.' };
+
+  const cleanName = sanitizeText(name, 60);
+  if (!cleanName) return { error: 'Section name is required.' };
+
+  const { data: last } = await supabaseAdmin
+    .from('todo_sections')
+    .select('position')
+    .eq('list_id', listId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const position = (last?.position ?? -1) + 1;
+
+  const row = {
+    user_id: a.userId,
+    list_id: listId,
+    name: cleanName,
+    position,
+  };
+  if (id) row.id = id;
+
+  const { data, error } = await supabaseAdmin
+    .from('todo_sections')
+    .insert(row)
+    .select('id, list_id, name')
+    .single();
+  if (error) {
+    console.error('createTodoSectionAction:', error);
+    return { error: 'Failed to create section.' };
+  }
+  revalidatePath(PATH);
+  return { success: true, section: data };
+}
+
+/** Rename a section. */
+export async function renameTodoSectionAction({ id, name } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+  if (!isValidUUID(id)) return { error: 'Invalid section id.' };
+  const cleanName = sanitizeText(name, 60);
+  if (!cleanName) return { error: 'Section name is required.' };
+
+  const { error } = await supabaseAdmin
+    .from('todo_sections')
+    .update({ name: cleanName })
+    .eq('id', id)
+    .eq('user_id', a.userId);
+  if (error) {
+    console.error('renameTodoSectionAction:', error);
+    return { error: 'Failed to rename section.' };
+  }
+  revalidatePath(PATH);
+  return { success: true };
+}
+
+/** Delete a section. Tasks in it become section-less (FK on delete set null). */
+export async function deleteTodoSectionAction({ id } = {}) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+  if (!isValidUUID(id)) return { error: 'Invalid section id.' };
+
+  const { error } = await supabaseAdmin
+    .from('todo_sections')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', a.userId);
+  if (error) {
+    console.error('deleteTodoSectionAction:', error);
+    return { error: 'Failed to delete section.' };
+  }
+  revalidatePath(PATH);
+  return { success: true };
 }

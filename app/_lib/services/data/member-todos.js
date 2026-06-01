@@ -20,29 +20,43 @@ import {
  * @returns {Promise<{ lists: object[], todos: object[], completions: object }>}
  */
 export async function getMemberTodoData(userId) {
-  const [listsRes, todosRes, compRes] = await Promise.all([
-    supabaseAdmin
-      .from('todo_lists')
-      .select('id, name, tone')
-      .eq('user_id', userId)
-      .order('position', { ascending: true })
-      .order('created_at', { ascending: true }),
-    supabaseAdmin
-      .from('todos')
-      .select(
-        'id, list_id, title, notes, priority, start_date, due_time, recurrence, exclusions'
-      )
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin
-      .from('todo_completions')
-      .select('todo_id, occurrence_date')
-      .eq('user_id', userId),
-  ]);
+  const [listsRes, todosRes, compRes, labelsRes, sectionsRes] =
+    await Promise.all([
+      supabaseAdmin
+        .from('todo_lists')
+        .select('id, name, tone')
+        .eq('user_id', userId)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabaseAdmin
+        .from('todos')
+        .select(
+          'id, list_id, section_id, title, notes, priority, start_date, due_time, recurrence, exclusions'
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('todo_completions')
+        .select('todo_id, occurrence_date')
+        .eq('user_id', userId),
+      supabaseAdmin
+        .from('todo_labels')
+        .select('id, name, color')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true }),
+      supabaseAdmin
+        .from('todo_sections')
+        .select('id, list_id, name')
+        .eq('user_id', userId)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: true }),
+    ]);
 
   if (listsRes.error) throw new Error(listsRes.error.message);
   if (todosRes.error) throw new Error(todosRes.error.message);
   if (compRes.error) throw new Error(compRes.error.message);
+  if (labelsRes.error) throw new Error(labelsRes.error.message);
+  if (sectionsRes.error) throw new Error(sectionsRes.error.message);
 
   const lists = (listsRes.data || []).map((l) => ({
     id: l.id,
@@ -53,6 +67,7 @@ export async function getMemberTodoData(userId) {
   const todos = (todosRes.data || []).map((t) => ({
     id: t.id,
     groupId: t.list_id,
+    sectionId: t.section_id || null,
     title: t.title,
     notes: t.notes || '',
     priority: t.priority,
@@ -68,7 +83,19 @@ export async function getMemberTodoData(userId) {
     completions[c.todo_id][c.occurrence_date] = true;
   });
 
-  return { lists, todos, completions };
+  const labels = (labelsRes.data || []).map((l) => ({
+    id: l.id,
+    name: l.name,
+    color: l.color,
+  }));
+
+  const sections = (sectionsRes.data || []).map((s) => ({
+    id: s.id,
+    listId: s.list_id,
+    name: s.name,
+  }));
+
+  return { lists, todos, completions, labels, sections };
 }
 
 /**
