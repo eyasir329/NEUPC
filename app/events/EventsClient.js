@@ -484,7 +484,7 @@ export default function EventsClient({
   settings = {},
 }) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatus] = useState('active');
+  const [statusFilter, setStatus] = useState('all');
   const [categoryFilter, setCategory] = useState('all');
   const [currentPage, setPage] = useState(1);
   const [showAllArchive, setShowAll] = useState(false);
@@ -600,12 +600,12 @@ export default function EventsClient({
   const activeFilterCount =
     (search.trim() ? 1 : 0) +
     (categoryFilter !== 'all' ? 1 : 0) +
-    (statusFilter !== 'active' ? 1 : 0);
+    (statusFilter !== 'all' ? 1 : 0);
 
   function clearAll() {
     updateSearch('');
     updateCategory('all');
-    updateStatus('active');
+    updateStatus('all');
   }
 
   return (

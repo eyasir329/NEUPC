@@ -1502,9 +1502,17 @@ function FeedEntry({ item }) {
 }
 
 // ───────────────────────── Google Calendar ─────────────────────────
-function GoogleCalendarCard({ status, onChange }) {
+function GoogleCalendarCard({
+  status,
+  onChange,
+  monthLabel,
+  monthTaskIds,
+  monthFeedIds,
+}) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+
+  const totalVisible = monthTaskIds.length + monthFeedIds.length;
 
   async function disconnect() {
     setBusy(true);
@@ -1519,15 +1527,23 @@ function GoogleCalendarCard({ status, onChange }) {
     });
   }
 
+  // One-time push of everything currently shown for the viewed month — tasks
+  // plus the events/sessions/contests/deadlines feed. Works regardless of the
+  // auto-mirror toggle (the action forces the push).
   async function syncNow() {
     setBusy(true);
     setMsg(null);
-    const res = await syncTodosToCalendarAction();
+    const res = await syncTodosToCalendarAction({
+      taskIds: monthTaskIds,
+      feedIds: monthFeedIds,
+    });
     setBusy(false);
     if (res?.error) return setMsg({ type: 'error', text: res.error });
     setMsg({
       type: 'ok',
-      text: `Synced ${res.synced} task${res.synced === 1 ? '' : 's'} to Google Calendar.`,
+      text: res.synced
+        ? `Synced ${res.synced} item${res.synced === 1 ? '' : 's'} from ${monthLabel} to Google Calendar.`
+        : `Nothing visible in ${monthLabel} to sync.`,
     });
   }
 
@@ -1588,9 +1604,9 @@ function GoogleCalendarCard({ status, onChange }) {
               tone="ghost"
               icon={Repeat}
               onClick={syncNow}
-              disabled={busy || !status.syncEnabled}
+              disabled={busy || totalVisible === 0}
             >
-              Sync tasks now
+              Sync {monthLabel} to Google
             </ActionButton>
             <ActionButton tone="danger" icon={X} onClick={disconnect} disabled={busy}>
               Disconnect
@@ -1862,6 +1878,33 @@ export default function DailyActivityClient({
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todos, completions, monthRange, groupVisible, feed]);
+
+  // Scope for the one-time "Sync this month to Google" push: everything
+  // currently SHOWN in the viewed month. Tasks honor list visibility; feed
+  // items (events/sessions/contests/deadlines) honor the category toggles.
+  const monthTaskIds = useMemo(() => {
+    const occ = expandOccurrences(monthRange.startKey, monthRange.endKey);
+    return [
+      ...new Set(
+        occ
+          .filter(({ todo }) => groupVisible[todo.groupId] !== false)
+          .map(({ todo }) => todo.id)
+      ),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todos, monthRange, groupVisible]);
+
+  const monthFeedIds = useMemo(() => {
+    return feed
+      .filter((it) => visible[it.category])
+      .filter((it) => {
+        const k = dateKey(it.start);
+        return k >= monthRange.startKey && k <= monthRange.endKey;
+      })
+      .map((it) => it.id);
+  }, [feed, visible, monthRange]);
+
+  const monthLabel = `${MONTH_NAMES[monthAnchor.getMonth()]} ${monthAnchor.getFullYear()}`;
 
   // Selected-day data.
   const selKey = dateKey(selected);
@@ -2245,7 +2288,13 @@ export default function DailyActivityClient({
 
             {/* Right rail: Google Calendar + legend + selected-day agenda */}
             <div className="flex flex-col gap-5 xl:col-span-4">
-              <GoogleCalendarCard status={gcal} onChange={setGcal} />
+              <GoogleCalendarCard
+                status={gcal}
+                onChange={setGcal}
+                monthLabel={monthLabel}
+                monthTaskIds={monthTaskIds}
+                monthFeedIds={monthFeedIds}
+              />
 
               <GlassCard padding="p-5">
                 <SectionHeader

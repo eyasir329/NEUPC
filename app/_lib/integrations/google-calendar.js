@@ -26,12 +26,17 @@ import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 
 export const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/tasks',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
 // Tasks we push carry this marker so the import step can skip them (otherwise a
 // mirrored task would show up twice — once as a todo, once as a Google event).
 const TODO_MARKER = 'neupcTodoId';
+// Feed items (events/sessions/contests/deadlines) we push carry their NEUPC feed
+// id under this marker. They live in read-only tables with no place to store a
+// Google event id, so re-sync upserts by searching for this marker instead.
+const FEED_MARKER = 'neupcFeedId';
 const DEFAULT_EVENT_MINUTES = 60;
 const TIMEZONE = process.env.GOOGLE_CALENDAR_TIMEZONE || 'Asia/Dhaka';
 
@@ -135,7 +140,7 @@ export async function saveConnection(userId, { tokens, email }) {
   if (error) throw new Error(error.message);
 }
 
-/** Remove the connection and detach any mirrored event ids from the tasks. */
+/** Remove the connection and detach any mirrored event/task ids from the todos. */
 export async function deleteConnection(userId) {
   await supabaseAdmin
     .from('google_calendar_connections')
@@ -143,9 +148,9 @@ export async function deleteConnection(userId) {
     .eq('user_id', userId);
   await supabaseAdmin
     .from('todos')
-    .update({ gcal_event_id: null })
+    .update({ gcal_event_id: null, gtask_id: null })
     .eq('user_id', userId)
-    .not('gcal_event_id', 'is', null);
+    .or('gcal_event_id.not.is.null,gtask_id.not.is.null');
 }
 
 export async function setSyncEnabled(userId, enabled) {
@@ -190,6 +195,7 @@ async function getCalendarClient(userId) {
 
   return {
     calendar: google.calendar({ version: 'v3', auth }),
+    tasks: google.tasks({ version: 'v1', auth }),
     calendarId: conn.calendar_id || 'primary',
     syncEnabled: conn.sync_enabled !== false,
   };
@@ -226,7 +232,11 @@ export async function listCalendarEvents(userId, timeMinISO, timeMaxISO) {
 
     return (data.items || [])
       .filter((ev) => ev.status !== 'cancelled')
-      .filter((ev) => !ev.extendedProperties?.private?.[TODO_MARKER])
+      .filter(
+        (ev) =>
+          !ev.extendedProperties?.private?.[TODO_MARKER] &&
+          !ev.extendedProperties?.private?.[FEED_MARKER]
+      )
       .map(mapEventToFeedItem)
       .filter(Boolean);
   } catch (err) {
@@ -363,11 +373,15 @@ function todoToEvent(todo) {
  *
  * @param {string} userId
  * @param {object} todo  - UI-shaped task incl. optional `gcalEventId`.
+ * @param {object} [opts]
+ * @param {boolean} [opts.force=false]  - Push even when the auto-mirror toggle
+ *   is off (used by the on-demand "Sync this month" action).
  * @returns {Promise<string|null>}
  */
-export async function pushTodo(userId, todo) {
+export async function pushTodo(userId, todo, { force = false } = {}) {
   const client = await getCalendarClient(userId);
-  if (!client || !client.syncEnabled) return null;
+  if (!client) return null;
+  if (!force && !client.syncEnabled) return null;
 
   const body = todoToEvent(todo);
   if (!body) return null;
@@ -400,6 +414,85 @@ export async function pushTodo(userId, todo) {
   }
 }
 
+// ── Export: NEUPC feed item → Google Calendar event ────────────────────────────
+
+/** Build a Google event body from a Daily Activity feed item (real instant). */
+function feedItemToEvent(item) {
+  const start = new Date(item.start);
+  if (Number.isNaN(start.getTime())) return null;
+  const minutes = typeof item.durationMin === 'number' ? item.durationMin : 30;
+  const end = new Date(start.getTime() + Math.max(1, minutes) * 60000);
+
+  const PREFIX = {
+    contest: 'Contest: ',
+    session: 'Session: ',
+    event: 'Event: ',
+    task: 'Due: ',
+  };
+  const descParts = [];
+  if (item.description) descParts.push(item.description);
+  if (item.bootcampTitle) descParts.push(item.bootcampTitle);
+
+  return {
+    summary: `${PREFIX[item.category] || ''}${item.title}`,
+    description: descParts.join(' — ') || undefined,
+    location: item.location || undefined,
+    start: { dateTime: start.toISOString() },
+    end: { dateTime: end.toISOString() },
+    source: item.url ? { title: 'NEUPC', url: item.url } : undefined,
+    extendedProperties: { private: { [FEED_MARKER]: String(item.id) } },
+  };
+}
+
+/**
+ * Mirror a read-only feed item (event/session/contest/deadline) to the member's
+ * calendar. These have no stored event id, so this upserts by searching for the
+ * `FEED_MARKER` carrying the item's NEUPC id: update the match, else insert.
+ * Best-effort — returns true on success, false otherwise.
+ *
+ * @param {string} userId
+ * @param {object} item  - Daily Activity feed item (incl. `id`, `start`).
+ * @returns {Promise<boolean>}
+ */
+export async function pushFeedItem(userId, item) {
+  const client = await getCalendarClient(userId);
+  if (!client) return false;
+
+  const body = feedItemToEvent(item);
+  if (!body) return false;
+
+  try {
+    const { data: existing } = await client.calendar.events.list({
+      calendarId: client.calendarId,
+      privateExtendedProperty: `${FEED_MARKER}=${item.id}`,
+      maxResults: 1,
+      showDeleted: false,
+    });
+    const found = existing.items?.[0];
+
+    if (found?.id) {
+      await client.calendar.events.update({
+        calendarId: client.calendarId,
+        eventId: found.id,
+        requestBody: body,
+      });
+    } else {
+      await client.calendar.events.insert({
+        calendarId: client.calendarId,
+        requestBody: body,
+      });
+    }
+    return true;
+  } catch (err) {
+    if (isRevoked(err)) {
+      await deleteConnection(userId).catch(() => {});
+      return false;
+    }
+    console.error('pushFeedItem:', err?.message);
+    return false;
+  }
+}
+
 /** Delete a mirrored event. Best-effort; missing events are ignored. */
 export async function deleteTodoEvent(userId, gcalEventId) {
   if (!gcalEventId) return;
@@ -417,5 +510,118 @@ export async function deleteTodoEvent(userId, gcalEventId) {
       return;
     }
     console.error('deleteTodoEvent:', err?.message);
+  }
+}
+
+// ── Export: NEUPC task → Google Tasks (the checkbox to-do list) ─────────────────
+
+/**
+ * Google Tasks `due` is an RFC 3339 timestamp but Google only keeps the date
+ * part (tasks are all-day). Emit midnight UTC for the task's date.
+ */
+function taskDue(dateKey) {
+  if (!dateKey) return undefined;
+  return `${dateKey}T00:00:00.000Z`;
+}
+
+/**
+ * Mirror a NEUPC todo to the member's Google Tasks list (the checkbox to-dos in
+ * the Calendar "Tasks" panel / Google Tasks app). Inserts a new task or updates
+ * the linked one when `todo.gtaskId` is set. A recurring todo maps to a single
+ * task due on `todo.startKey` (caller passes the next occurrence). `completed`
+ * sets the done state. Returns the task id to persist, or null.
+ *
+ * @param {string} userId
+ * @param {object} todo  - { id, title, notes, startKey, gtaskId, completed }
+ * @param {object} [opts]
+ * @param {boolean} [opts.force=false]  - Push even when auto-mirror is off.
+ * @returns {Promise<string|null>}
+ */
+export async function pushTodoTask(userId, todo, { force = false } = {}) {
+  const client = await getCalendarClient(userId);
+  if (!client) return null;
+  if (!force && !client.syncEnabled) return null;
+
+  const body = {
+    title: todo.title || '(untitled)',
+    notes: todo.notes || undefined,
+    due: taskDue(todo.startKey),
+    status: todo.completed ? 'completed' : 'needsAction',
+  };
+  // Clearing completion requires explicitly nulling `completed`.
+  if (!todo.completed) body.completed = null;
+
+  try {
+    if (todo.gtaskId) {
+      const { data } = await client.tasks.tasks.update({
+        tasklist: '@default',
+        task: todo.gtaskId,
+        requestBody: { id: todo.gtaskId, ...body },
+      });
+      return data.id || todo.gtaskId;
+    }
+    const { data } = await client.tasks.tasks.insert({
+      tasklist: '@default',
+      requestBody: body,
+    });
+    return data.id || null;
+  } catch (err) {
+    // Stale id (task deleted in Google) → recreate once.
+    if ((err?.code === 404 || err?.code === 410) && todo.gtaskId) {
+      return pushTodoTask(userId, { ...todo, gtaskId: null }, { force });
+    }
+    if (isRevoked(err)) {
+      await deleteConnection(userId).catch(() => {});
+      return null;
+    }
+    console.error('pushTodoTask:', err?.message);
+    return null;
+  }
+}
+
+/**
+ * Flip the done state of an already-mirrored Google Task. Best-effort no-op when
+ * the todo was never pushed (no `gtaskId`) or sync isn't available.
+ *
+ * @param {string} userId
+ * @param {string} gtaskId
+ * @param {boolean} completed
+ */
+export async function setTodoTaskCompleted(userId, gtaskId, completed) {
+  if (!gtaskId) return;
+  const client = await getCalendarClient(userId);
+  if (!client) return;
+  try {
+    await client.tasks.tasks.patch({
+      tasklist: '@default',
+      task: gtaskId,
+      requestBody: completed
+        ? { status: 'completed' }
+        : { status: 'needsAction', completed: null },
+    });
+  } catch (err) {
+    if (err?.code === 404 || err?.code === 410) return; // already gone
+    if (isRevoked(err)) {
+      await deleteConnection(userId).catch(() => {});
+      return;
+    }
+    console.error('setTodoTaskCompleted:', err?.message);
+  }
+}
+
+/** Delete a mirrored Google Task. Best-effort; missing tasks are ignored. */
+export async function deleteTodoTask(userId, gtaskId) {
+  if (!gtaskId) return;
+  const client = await getCalendarClient(userId);
+  if (!client) return;
+  try {
+    await client.tasks.tasks.delete({ tasklist: '@default', task: gtaskId });
+  } catch (err) {
+    if (err?.code === 404 || err?.code === 410) return; // already gone
+    if (isRevoked(err)) {
+      await deleteConnection(userId).catch(() => {});
+      return;
+    }
+    console.error('deleteTodoTask:', err?.message);
   }
 }

@@ -46,23 +46,92 @@ async function ownsList(userId, listId) {
 }
 
 /**
- * Mirror a saved task to the member's Google Calendar (best-effort). Inserts or
- * updates the linked event and persists its id; if the task lost its date, the
- * previously-mirrored event is removed. Never throws — calendar problems must
- * not fail the task save. No-op when the member hasn't connected a calendar.
+ * Next occurrence date-key (>= today) for a saved todo, used as the Google Task
+ * due date. Non-recurring → its own start_date. Recurring → first occurrence
+ * today-or-later, falling back to the start_date. Pure date math, no TZ fuss.
  */
-async function mirrorSavedTodo(userId, todoId, fields, existingEventId) {
+function nextOccurrenceKey(fields) {
+  const start = fields.start_date;
+  if (!start) return null;
+  const rec = fields.recurrence;
+  if (!rec || !rec.freq) return start;
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  if (start >= todayKey) return start;
+
+  const interval = Math.max(1, rec.interval || 1);
+  const stepDays =
+    rec.freq === 'daily' ? interval : rec.freq === 'weekly' ? 7 * interval : 0;
+
+  // Daily/weekly: walk forward by step until today-or-later (cap to avoid loops).
+  if (stepDays > 0) {
+    const [y, m, d] = start.split('-').map(Number);
+    const cur = new Date(Date.UTC(y, m - 1, d));
+    for (let i = 0; i < 1000; i++) {
+      if (cur.toISOString().slice(0, 10) >= todayKey) break;
+      cur.setUTCDate(cur.getUTCDate() + stepDays);
+    }
+    return cur.toISOString().slice(0, 10);
+  }
+
+  // Monthly (or anything else): advance month-by-month from the start day.
+  const [y, m, d] = start.split('-').map(Number);
+  let yy = y;
+  let mm = m - 1;
+  for (let i = 0; i < 240; i++) {
+    const last = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+    const key = new Date(Date.UTC(yy, mm, Math.min(d, last)))
+      .toISOString()
+      .slice(0, 10);
+    if (key >= todayKey) return key;
+    mm += interval;
+    while (mm > 11) {
+      mm -= 12;
+      yy += 1;
+    }
+  }
+  return start;
+}
+
+/** Whether a non-recurring todo is completed (its single occurrence is done). */
+async function isTodoCompleted(userId, todoId, fields) {
+  if (fields.recurrence?.freq) return false; // recurring: no single done-state
+  const { data } = await supabaseAdmin
+    .from('todo_completions')
+    .select('todo_id')
+    .eq('todo_id', todoId)
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * Mirror a saved task to the member's Google Calendar — BOTH as a calendar event
+ * and as a Google Task (the checkbox to-do list). Inserts/updates each and
+ * persists their ids; if the task lost its date, previously-mirrored copies are
+ * removed. Never throws — calendar problems must not fail the task save. No-op
+ * when the member hasn't connected a calendar.
+ */
+async function mirrorSavedTodo(userId, todoId, fields, existingEventId, existingTaskId) {
   try {
-    const { pushTodo, deleteTodoEvent } = await import(
-      '@/app/_lib/integrations/google-calendar'
-    );
+    const { pushTodo, deleteTodoEvent, pushTodoTask, deleteTodoTask } =
+      await import('@/app/_lib/integrations/google-calendar');
 
     if (!fields.start_date) {
+      const patch = {};
       if (existingEventId) {
         await deleteTodoEvent(userId, existingEventId);
+        patch.gcal_event_id = null;
+      }
+      if (existingTaskId) {
+        await deleteTodoTask(userId, existingTaskId);
+        patch.gtask_id = null;
+      }
+      if (Object.keys(patch).length) {
         await supabaseAdmin
           .from('todos')
-          .update({ gcal_event_id: null })
+          .update(patch)
           .eq('id', todoId)
           .eq('user_id', userId);
       }
@@ -78,10 +147,23 @@ async function mirrorSavedTodo(userId, todoId, fields, existingEventId) {
       recurrence: fields.recurrence || null,
       gcalEventId: existingEventId || null,
     });
-    if (eventId && eventId !== existingEventId) {
+
+    const taskId = await pushTodoTask(userId, {
+      id: todoId,
+      title: fields.title,
+      notes: fields.notes,
+      startKey: nextOccurrenceKey(fields),
+      gtaskId: existingTaskId || null,
+      completed: await isTodoCompleted(userId, todoId, fields),
+    });
+
+    const patch = {};
+    if (eventId && eventId !== existingEventId) patch.gcal_event_id = eventId;
+    if (taskId && taskId !== existingTaskId) patch.gtask_id = taskId;
+    if (Object.keys(patch).length) {
       await supabaseAdmin
         .from('todos')
-        .update({ gcal_event_id: eventId })
+        .update(patch)
         .eq('id', todoId)
         .eq('user_id', userId);
     }
@@ -243,14 +325,20 @@ export async function saveTodoAction(draft = {}) {
       .update({ ...fields, updated_at: new Date().toISOString() })
       .eq('id', draft.id)
       .eq('user_id', a.userId)
-      .select('id, gcal_event_id')
+      .select('id, gcal_event_id, gtask_id')
       .maybeSingle();
     if (updErr) {
       console.error('saveTodoAction (update):', updErr);
       return { error: 'Failed to save task.' };
     }
     if (updated) {
-      await mirrorSavedTodo(a.userId, draft.id, fields, updated.gcal_event_id);
+      await mirrorSavedTodo(
+        a.userId,
+        draft.id,
+        fields,
+        updated.gcal_event_id,
+        updated.gtask_id
+      );
       revalidatePath(PATH);
       return { success: true, id: draft.id };
     }
@@ -262,7 +350,7 @@ export async function saveTodoAction(draft = {}) {
       console.error('saveTodoAction (insert w/ id):', insErr);
       return { error: 'Failed to create task.' };
     }
-    await mirrorSavedTodo(a.userId, draft.id, fields, null);
+    await mirrorSavedTodo(a.userId, draft.id, fields, null, null);
     revalidatePath(PATH);
     return { success: true, id: draft.id };
   }
@@ -276,7 +364,7 @@ export async function saveTodoAction(draft = {}) {
     console.error('saveTodoAction (insert):', error);
     return { error: 'Failed to create task.' };
   }
-  await mirrorSavedTodo(a.userId, data.id, fields, null);
+  await mirrorSavedTodo(a.userId, data.id, fields, null, null);
   revalidatePath(PATH);
   return { success: true, id: data.id };
 }
@@ -286,10 +374,10 @@ export async function deleteTodoAction({ id } = {}) {
   if (a.error) return { error: a.error };
   if (!isValidUUID(id)) return { error: 'Invalid task id.' };
 
-  // Capture the linked calendar event before the row (and its id) are gone.
+  // Capture the linked calendar event + task before the row (and ids) are gone.
   const { data: existing } = await supabaseAdmin
     .from('todos')
-    .select('gcal_event_id')
+    .select('gcal_event_id, gtask_id')
     .eq('id', id)
     .eq('user_id', a.userId)
     .maybeSingle();
@@ -304,12 +392,15 @@ export async function deleteTodoAction({ id } = {}) {
     return { error: 'Failed to delete task.' };
   }
 
-  if (existing?.gcal_event_id) {
+  if (existing?.gcal_event_id || existing?.gtask_id) {
     try {
-      const { deleteTodoEvent } = await import(
+      const { deleteTodoEvent, deleteTodoTask } = await import(
         '@/app/_lib/integrations/google-calendar'
       );
-      await deleteTodoEvent(a.userId, existing.gcal_event_id);
+      if (existing.gcal_event_id)
+        await deleteTodoEvent(a.userId, existing.gcal_event_id);
+      if (existing.gtask_id)
+        await deleteTodoTask(a.userId, existing.gtask_id);
     } catch (err) {
       console.error('deleteTodoAction (calendar):', err?.message);
     }
@@ -358,7 +449,7 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
 
   const { data: todo } = await supabaseAdmin
     .from('todos')
-    .select('id')
+    .select('id, recurrence, gtask_id')
     .eq('id', todoId)
     .eq('user_id', a.userId)
     .maybeSingle();
@@ -371,6 +462,20 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
     .eq('occurrence_date', occurrenceDate)
     .maybeSingle();
 
+  // Reflect the done-state on the linked Google Task. Only non-recurring todos
+  // map to a single task with one unambiguous done-state (best-effort).
+  async function syncTaskDone(done) {
+    if (todo.recurrence?.freq || !todo.gtask_id) return;
+    try {
+      const { setTodoTaskCompleted } = await import(
+        '@/app/_lib/integrations/google-calendar'
+      );
+      await setTodoTaskCompleted(a.userId, todo.gtask_id, done);
+    } catch (err) {
+      console.error('toggleCompletionAction (task):', err?.message);
+    }
+  }
+
   if (existing) {
     const { error } = await supabaseAdmin
       .from('todo_completions')
@@ -381,6 +486,7 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
       console.error('toggleCompletionAction (delete):', error);
       return { error: 'Failed to update.' };
     }
+    await syncTaskDone(false);
     revalidatePath(PATH);
     return { success: true, done: false };
   }
@@ -394,6 +500,7 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
     console.error('toggleCompletionAction (insert):', error);
     return { error: 'Failed to update.' };
   }
+  await syncTaskDone(true);
   revalidatePath(PATH);
   return { success: true, done: true };
 }

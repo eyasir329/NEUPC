@@ -526,16 +526,29 @@ function AchievementDetailModal({ achievement, onClose }) {
   }, [onClose, activePhoto]);
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-2xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/75 backdrop-blur-2xl"
+      />
 
       {/* Sheet */}
-      <div
-        className="animate-slide-up relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={achievement.title || 'Achievement details'}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Cover image ── */}
@@ -552,6 +565,7 @@ function AchievementDetailModal({ achievement, onClose }) {
           {/* Close button */}
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -741,7 +755,7 @@ function AchievementDetailModal({ achievement, onClose }) {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Gallery lightbox (nested above the sheet) ── */}
       {activePhoto && (
@@ -751,6 +765,7 @@ function AchievementDetailModal({ achievement, onClose }) {
         >
           <button
             onClick={() => setActivePhoto(null)}
+            aria-label="Close photo viewer"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -771,6 +786,7 @@ function AchievementDetailModal({ achievement, onClose }) {
                     ]
                   );
                 }}
+                aria-label="Previous photo"
                 className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -795,6 +811,7 @@ function AchievementDetailModal({ achievement, onClose }) {
                     galleryImages[(idx + 1) % galleryImages.length]
                   );
                 }}
+                aria-label="Next photo"
                 className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -832,7 +849,7 @@ function AchievementDetailModal({ achievement, onClose }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -868,16 +885,29 @@ function ParticipationDetailModal({ record, onClose }) {
   }, [onClose, activePhoto]);
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-2xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/75 backdrop-blur-2xl"
+      />
 
       {/* Sheet */}
-      <div
-        className="animate-slide-up relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={record.contest_name || 'Participation details'}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Cover image ── */}
@@ -893,6 +923,7 @@ function ParticipationDetailModal({ record, onClose }) {
 
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -1103,7 +1134,7 @@ function ParticipationDetailModal({ record, onClose }) {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Photo lightbox (nested above the sheet) ── */}
       {activePhoto && (
@@ -1113,6 +1144,7 @@ function ParticipationDetailModal({ record, onClose }) {
         >
           <button
             onClick={() => setActivePhoto(null)}
+            aria-label="Close photo viewer"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -1129,6 +1161,7 @@ function ParticipationDetailModal({ record, onClose }) {
                     photos[(idx - 1 + photos.length) % photos.length]
                   );
                 }}
+                aria-label="Previous photo"
                 className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -1149,6 +1182,7 @@ function ParticipationDetailModal({ record, onClose }) {
                   const idx = photos.findIndex((p) => p.id === activePhoto.id);
                   setActivePhoto(photos[(idx + 1) % photos.length]);
                 }}
+                aria-label="Next photo"
                 className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -1186,7 +1220,7 @@ function ParticipationDetailModal({ record, onClose }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -1209,7 +1243,16 @@ function AchievementCard({ achievement, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)]"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={`View details for ${achievement.title}`}
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Cover image */}
       <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-2xl">
@@ -1317,7 +1360,16 @@ function ParticipationRecordCard({ record, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)]"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={`View details for ${record.contest_name}`}
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Cover */}
       <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
@@ -1851,7 +1903,7 @@ export default function AchievementsClient({
                 </div>
                 <div className="pl-3 sm:pl-6 lg:pl-8">
                   <StatTile
-                    value={<><AnimatedCounter value={yearsActive > 0 ? yearsActive : 5} />+</>}
+                    value={<><AnimatedCounter value={yearsActive} />+</>}
                     label="Years Active"
                     mobileLabel="Years"
                   />
@@ -1892,8 +1944,8 @@ export default function AchievementsClient({
         <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
           <SectionHeading
             tag="Operations Log / 002"
-            title="History"
-            accent="/Archieve"
+            title="The"
+            accent="Archive"
           />
 
           {/* Search + Tab + Filters */}
@@ -1923,6 +1975,7 @@ export default function AchievementsClient({
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
                     className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-full p-0.5 text-zinc-500 transition-colors hover:text-zinc-300"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -2123,7 +2176,7 @@ export default function AchievementsClient({
           <SectionHeading
             tag="Performance Index / 003"
             title="Top"
-            accent="Participations"
+            accent="Performances"
           />
 
           {/* Leaderboard Panel */}
@@ -2164,8 +2217,15 @@ export default function AchievementsClient({
               </span>
             </div>
 
-            {/* Rows list */}
-            <div className="space-y-4">
+            {/* Rows list — self-animating + re-keyed per page (mirrors the
+                Archive grid) so paginated rows always render, never blank */}
+            <motion.div
+              key={`lb-${leaderboardYearFilter}-${leaderboardCatFilter}-${leaderboardCurrentPage}`}
+              variants={stagger}
+              initial="hidden"
+              animate="visible"
+              className="space-y-4"
+            >
               {paginatedLeaderboardEntries.length > 0 ? (
                 paginatedLeaderboardEntries.map((entry, index) => {
                   const absoluteIndex = (leaderboardCurrentPage - 1) * LEADERBOARD_PAGE_SIZE + index;
@@ -2269,7 +2329,7 @@ export default function AchievementsClient({
                   </p>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Pagination */}
             {leaderboardTotalPages > 1 && (
