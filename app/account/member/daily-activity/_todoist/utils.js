@@ -191,3 +191,84 @@ export function getFeedItemUrl(task) {
   }
   return '';
 }
+
+export function isTaskOnDate(task, dateStr) {
+  if (!task.dueDate) return false;
+  
+  const rec = task.recurrence;
+  if (!rec || rec === 'none' || !rec.freq) {
+    return task.dueDate === dateStr;
+  }
+
+  const startDates = (rec.freq !== 'custom_dates' && Array.isArray(rec.dates) && rec.dates.length > 0)
+    ? rec.dates
+    : [task.dueDate];
+
+  if (rec.freq === 'custom_dates') {
+    return Array.isArray(rec.dates) && rec.dates.includes(dateStr);
+  }
+
+  // Check until date if present
+  if (rec.end?.type === 'until' && rec.end.untilKey && dateStr > rec.end.untilKey) {
+    return false;
+  }
+
+  const target = new Date(dateStr + 'T00:00:00');
+  const interval = Math.max(1, rec.interval || 1);
+
+  // Check if target recurs from any of the start dates
+  for (const sDate of startDates) {
+    const start = new Date(sDate + 'T00:00:00');
+    if (target < start) continue;
+
+    const diffTime = target.getTime() - start.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (rec.freq === 'daily') {
+      if (rec.end?.type === 'count' && rec.end.count) {
+        const occurrenceIndex = Math.floor(diffDays / interval);
+        if (occurrenceIndex >= rec.end.count) continue;
+      }
+      if (diffDays % interval === 0) return true;
+    }
+
+    if (rec.freq === 'weekly') {
+      const weekDiff = Math.floor(diffDays / 7);
+      if (weekDiff % interval !== 0) continue;
+
+      const targetDay = target.getDay();
+      if (rec.byWeekday && rec.byWeekday.length > 0) {
+        if (rec.byWeekday.includes(targetDay)) return true;
+      } else {
+        if (targetDay === start.getDay()) return true;
+      }
+    }
+
+    if (rec.freq === 'monthly') {
+      const monthsDiff = (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth());
+      if (monthsDiff % interval !== 0) continue;
+      
+      if (rec.end?.type === 'count' && rec.end.count) {
+        const occurrenceIndex = Math.floor(monthsDiff / interval);
+        if (occurrenceIndex >= rec.end.count) continue;
+      }
+      if (target.getDate() === start.getDate()) return true;
+    }
+  }
+
+  return false;
+}
+
+export function isTaskInDateRange(task, startStr, endStr) {
+  let cur = new Date(startStr + 'T00:00:00');
+  const end = new Date(endStr + 'T00:00:00');
+  let safety = 0;
+  while (cur <= end && safety < 100) {
+    const dStr = formatDateString(cur);
+    if (isTaskOnDate(task, dStr)) return true;
+    cur.setDate(cur.getDate() + 1);
+    safety++;
+  }
+  return false;
+}
+

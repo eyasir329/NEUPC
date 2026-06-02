@@ -25,8 +25,9 @@ function mapRowToTask(row) {
     projectId: row.list_id || undefined,
     sectionId: row.section_id || undefined,
     labels: row.labels || [],
-    subtasks: [],
-    comments: [],
+    recurrence: row.recurrence || null,
+    subtasks: row.subtasks || [],
+    comments: row.comments || [],
     isArchived: false,
   };
 }
@@ -65,7 +66,7 @@ export async function POST(request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { title, description, priority, dueDate, projectId, sectionId, labels } = body;
+    const { title, description, priority, dueDate, time, projectId, sectionId, labels, recurrence, subtasks, comments } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -78,9 +79,13 @@ export async function POST(request) {
       notes: description || null,
       priority: PRIORITY_TO_DB[priority] || 'low',
       start_date: dueDate || null,
+      due_time: time || null,
       list_id: projectId || null,
       section_id: sectionId || null,
       labels: labels || [],
+      recurrence: recurrence || null,
+      subtasks: subtasks || [],
+      comments: comments || [],
       completed: false,
     };
 
@@ -117,9 +122,13 @@ export async function PATCH(request) {
     }
     if (fields.priority !== undefined) updates.priority = PRIORITY_TO_DB[fields.priority] || 'low';
     if (fields.dueDate !== undefined) updates.start_date = fields.dueDate || null;
+    if (fields.time !== undefined) updates.due_time = fields.time || null;
     if (fields.projectId !== undefined) updates.list_id = fields.projectId || null;
     if (fields.sectionId !== undefined) updates.section_id = fields.sectionId || null;
     if (fields.labels !== undefined) updates.labels = fields.labels;
+    if (fields.recurrence !== undefined) updates.recurrence = fields.recurrence;
+    if (fields.subtasks !== undefined) updates.subtasks = fields.subtasks;
+    if (fields.comments !== undefined) updates.comments = fields.comments;
     if (fields.completed !== undefined) {
       updates.completed = fields.completed;
       updates.completed_at = fields.completed ? new Date().toISOString() : null;

@@ -8,10 +8,10 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ChevronRight, Calendar, Check, Link, Plus, CalendarDays, CheckCircle2, RefreshCw, Info, Layers, LayoutGrid, ListTodo, Tag, Sparkles,
-  Compass, Flame, ShieldAlert, HelpCircle, X, Flag, Activity,
+  Compass, Flame, ShieldAlert, HelpCircle, X, Flag, Activity, GitPullRequest,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Priority, getTodayDateString, formatDateString, addDays, getPlatformClass, parseNaturalLanguage, getFriendlyDate, getFeedItemUrl } from './utils';
+import { Priority, getTodayDateString, formatDateString, addDays, getPlatformClass, parseNaturalLanguage, getFriendlyDate, getFeedItemUrl, isTaskOnDate } from './utils';
 
 // Per-bootcamp checkbox list shared by the Tasks and Sessions layers.
 function BootcampSubFilters({ bootcamps, state, onToggle, accent, emptyLabel }) {
@@ -52,10 +52,11 @@ function BootcampSubFilters({ bootcamps, state, onToggle, accent, emptyLabel }) 
   );
 }
 
-export default function CalendarView({ tasks, projects, labels = [], onAddTask, onToggleComplete, onSelectTask }) {
+export default function CalendarView({ tasks, projects, sections = [], labels = [], onAddTask, onToggleComplete, onSelectTask }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 5, 1));
   const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateString());
   const [viewMode, setViewMode] = useState('grid');
+  const activeSections = sections.filter((s) => s.projectId === modalProjectId);
 
   const [isGCalConnected, setIsGCalConnected] = useState(true);
   const [gCalMirror, setGCalMirror] = useState(true);
@@ -71,6 +72,8 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
   const [modalDesc, setModalDesc] = useState('');
   const [modalPriority, setModalPriority] = useState(Priority.P3);
   const [modalProjectId, setModalProjectId] = useState('');
+  const [modalSectionId, setModalSectionId] = useState('');
+  const [modalRecurrence, setModalRecurrence] = useState('none');
   const [modalLabelStr, setModalLabelStr] = useState('Personal');
   const [nlpCommand, setNlpCommand] = useState('');
 
@@ -250,7 +253,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
   };
 
   const getFilteredTasksForDate = (dateStr) => {
-    return tasks.filter((t) => !t.isArchived && t.dueDate === dateStr && checkTaskMatchesFilters(t));
+    return tasks.filter((t) => !t.isArchived && isTaskOnDate(t, dateStr) && checkTaskMatchesFilters(t));
   };
 
   const openCustomAddTask = (e, dateStr) => {
@@ -260,6 +263,8 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
     setModalDesc('');
     setModalPriority(Priority.P3);
     if (projects.length > 0) setModalProjectId(projects[0].id);
+    setModalSectionId('');
+    setModalRecurrence('none');
     setModalLabelStr('Personal');
     setNlpCommand('');
     setShowAddModal(true);
@@ -275,11 +280,15 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
       priority: modalPriority,
       dueDate: modalDateStr,
       projectId: modalProjectId || projects[0]?.id || 'proj_personal',
+      sectionId: modalSectionId || undefined,
+      recurrence: modalRecurrence === 'none' ? undefined : modalRecurrence,
       labels: modalLabelStr.split(',').map((s) => s.trim().replace(/^@/, '')).filter(Boolean),
     });
 
     setModalTitle('');
     setModalDesc('');
+    setModalSectionId('');
+    setModalRecurrence('none');
     setNlpCommand('');
     setShowAddModal(false);
   };
@@ -510,7 +519,8 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                             style={{ borderLeftColor: projColor }}
                             className={`text-[8.5px] font-bold font-mono truncate px-1.5 py-0.5 rounded-md leading-none bg-slate-800/40 hover:bg-slate-800 transition duration-150 flex items-center gap-1 border-l-2 ${task.completed ? 'text-slate-500 line-through opacity-50' : 'text-slate-300'}`}
                           >
-                            <span className="truncate">{task.title}</span>
+                            <span className="truncate flex-1">{task.title}</span>
+                            {task.time && <span className="text-[7.5px] text-indigo-400 shrink-0 font-black">🕒{task.time}</span>}
                           </div>
                         );
                       })}
@@ -1182,70 +1192,80 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
 
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              initial={{ opacity: 0, scale: 0.96, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="bg-[#0f1425]/95 border border-white/10 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden text-slate-200"
+              exit={{ opacity: 0, scale: 0.96, y: 15 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#0b0f1d]/98 border border-white/[0.08] w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden text-slate-200"
             >
-              <div className="grid grid-cols-1 md:grid-cols-12">
+              <div className="grid grid-cols-1 md:grid-cols-12 text-left">
                 {/* Left Column - Inputs Form (col-span-7) */}
-                <div className="md:col-span-7 p-6 md:p-8 flex flex-col gap-5 border-r border-white/5 max-h-[85vh] overflow-y-auto">
-                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg">
+                <div className="md:col-span-7 p-6 md:p-8 flex flex-col gap-6 border-r border-white/[0.05] max-h-[85vh] overflow-y-auto">
+                  <div className="flex justify-between items-center pb-4 border-b border-white/[0.05]">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
                         <Sparkles className="w-4 h-4 animate-pulse" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-black font-mono tracking-widest text-indigo-400 uppercase leading-none">Spawn Calendar Goal</h3>
-                        <span className="text-[10px] text-slate-400 font-mono tracking-wide mt-1 block">STARK DYNAMIC PLANNING WORKBENCH</span>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs font-black font-mono tracking-widest text-indigo-400 uppercase leading-none">Spawn Calendar Goal</h3>
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-mono text-emerald-400 uppercase font-bold">
+                            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                            Active Radar
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-mono tracking-wide mt-1 block">STARK DYNAMIC PLANNING WORKBENCH v2.4</span>
                       </div>
                     </div>
-                    <button type="button" onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition duration-200 hover:scale-105"
+                    >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
                   <form onSubmit={handleFormSubmit} className="space-y-4 text-xs">
                     {/* Natural Language Prompt Command bar */}
-                    <div className="p-3.5 bg-slate-950/60 border border-indigo-500/20 rounded-2xl flex flex-col gap-2 focus-within:border-indigo-500/50 transition">
+                    <div className="p-4 bg-slate-950/60 border border-indigo-500/20 rounded-2xl flex flex-col gap-2.5 focus-within:border-indigo-500/50 focus-within:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all duration-300">
                       <div className="flex items-center justify-between text-[9px] font-mono tracking-widest text-indigo-400 font-black uppercase">
                         <span className="flex items-center gap-1.5">
-                          <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
+                          <Compass className="w-3.5 h-3.5 animate-spin text-indigo-400" style={{ animationDuration: '6s' }} />
                           Natural Language Command Bar
                         </span>
-                        <span className="text-[8px] bg-indigo-500/10 text-indigo-300 px-1 rounded">Smart Fill</span>
+                        <span className="text-[8px] bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md font-mono border border-indigo-500/20">Smart Fill</span>
                       </div>
                       <input
                         type="text"
                         placeholder="e.g. Solve 3 AVL problems tomorrow p1 #personal @practice"
                         value={nlpCommand}
                         onChange={(e) => handleNlpChange(e.target.value)}
-                        className="w-full text-[11.5px] p-0.5 bg-transparent border-none outline-none focus:ring-0 text-white placeholder:text-slate-600 font-medium font-sans"
+                        className="w-full text-xs p-1 bg-transparent border-none outline-none focus:ring-0 text-white placeholder:text-slate-600 font-medium font-sans"
                       />
                       {nlpCommand.trim() && (
-                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-white/5">
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/[0.04]">
                           <span className="text-[8px] text-slate-500 font-mono tracking-widest uppercase font-black mr-1 flex items-center">Detected:</span>
                           {modalTitle && (
-                            <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-[8px] font-mono text-slate-300 truncate max-w-[150px]">
+                            <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded-md text-[8.5px] font-mono text-slate-300 truncate max-w-[150px]">
                               📝 "{modalTitle}"
                             </span>
                           )}
-                          <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-[8px] font-mono text-slate-300">
+                          <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded-md text-[8.5px] font-mono text-emerald-400">
                             📅 {modalDateStr}
                           </span>
-                          <span className={`px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-[8px] font-mono ${modalPriority === Priority.P1 ? 'text-rose-400' : modalPriority === Priority.P2 ? 'text-amber-400' : 'text-sky-400'}`}>
-                            🔥 Priority {modalPriority}
+                          <span className={`px-2 py-0.5 bg-slate-900 border border-white/5 rounded-md text-[8.5px] font-mono ${modalPriority === Priority.P1 ? 'text-rose-400' : modalPriority === Priority.P2 ? 'text-amber-400' : 'text-sky-400'}`}>
+                            🔥 P{modalPriority}
                           </span>
                           {modalProjectId && (
-                            <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-[8px] font-mono text-indigo-300">
+                            <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded-md text-[8.5px] font-mono text-indigo-300">
                               📁 #{projects.find(p => p.id === modalProjectId)?.name?.replace(/\s+.*$/, '') || 'Space'}
                             </span>
                           )}
                           {modalLabelStr.trim() && modalLabelStr.split(',').map((lbl, idx) => (
-                            <span key={`detected-lbl-${idx}`} className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-[8px] font-mono text-slate-400">
+                            <span key={`detected-lbl-${idx}`} className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded-md text-[8.5px] font-mono text-slate-400">
                               @{lbl.trim()}
                             </span>
                           ))}
@@ -1254,33 +1274,33 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                     </div>
 
                     {/* Goal Title */}
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Goal Description Title</label>
                       <input
                         type="text"
                         placeholder="e.g. Codechef dynamic greedy algorithms challenge"
                         value={modalTitle}
                         onChange={(e) => setModalTitle(e.target.value)}
-                        className="w-full p-3 bg-slate-950/60 border border-white/5 rounded-2xl focus:outline-none focus:border-indigo-500 text-white font-medium placeholder:text-slate-600 transition"
+                        className="w-full p-3.5 bg-slate-950/40 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-indigo-500/80 focus:bg-slate-950/80 text-white font-medium placeholder:text-slate-600 transition-all duration-200"
                         required
                       />
                     </div>
 
                     {/* Detailed context description */}
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Detailed context description (Optional)</label>
                       <textarea
                         placeholder="Add exact instructions, compiler dependencies or platform links..."
                         value={modalDesc}
                         onChange={(e) => setModalDesc(e.target.value)}
-                        className="w-full p-3 bg-slate-950/60 border border-white/5 rounded-2xl focus:outline-none focus:border-indigo-500 text-white font-medium placeholder:text-slate-600 h-16 resize-none transition"
+                        className="w-full p-3.5 bg-slate-950/40 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-indigo-500/80 focus:bg-slate-950/80 text-white font-medium placeholder:text-slate-600 h-16 resize-none transition-all duration-200"
                       />
                     </div>
 
                     {/* Visual Interactive Date Strip Picker & presets */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Scheduled Date Planning Block</label>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2.5">
                         {/* 7 day slider */}
                         <div className="grid grid-cols-7 gap-1.5">
                           {Array.from({ length: 7 }, (_, i) => {
@@ -1293,51 +1313,45 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                                 key={`date-strip-${i}`}
                                 type="button"
                                 onClick={() => setModalDateStr(dStr)}
-                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition ${
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-300 relative ${
                                   isSelected
-                                    ? 'bg-indigo-600 border-indigo-500 text-white font-extrabold shadow-lg shadow-indigo-600/20 scale-[1.03]'
-                                    : 'bg-slate-950/40 border-white/5 text-slate-400 hover:text-slate-200 hover:bg-slate-950/60'
+                                    ? 'bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-400 text-white font-extrabold shadow-[0_4px_18px_rgba(99,102,241,0.3)] scale-[1.03]'
+                                    : 'bg-slate-950/40 border-white/[0.04] text-slate-400 hover:text-slate-200 hover:bg-slate-950/80 hover:border-white/10'
                                 }`}
                               >
                                 <span className="text-[8px] font-mono font-black tracking-wider uppercase block leading-none">{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                                <span className={`text-[11px] font-mono font-black mt-1 block leading-none ${isToday && !isSelected ? 'text-indigo-400 font-black' : ''}`}>{d.getDate()}</span>
+                                <span className={`text-[11px] font-mono font-black mt-1.5 block leading-none ${isToday && !isSelected ? 'text-indigo-400 font-black' : ''}`}>{d.getDate()}</span>
+                                {isToday && (
+                                  <span className={`w-1 h-1 rounded-full absolute bottom-1 ${isSelected ? 'bg-white' : 'bg-indigo-500'}`} />
+                                )}
                               </button>
                             );
                           })}
                         </div>
                         {/* Quick preset badges & manual input */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 mt-0.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setModalDateStr(getTodayDateString())}
-                              className={`px-3 py-1.5 text-[9px] font-black font-mono border rounded-xl transition ${
-                                modalDateStr === getTodayDateString() ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-slate-950/20 border-white/5 text-slate-400 hover:text-slate-200'
-                              }`}
-                            >
-                              TODAY
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setModalDateStr(formatDateString(addDays(new Date(), 1)))}
-                              className={`px-3 py-1.5 text-[9px] font-black font-mono border rounded-xl transition ${
-                                modalDateStr === formatDateString(addDays(new Date(), 1)) ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-slate-950/20 border-white/5 text-slate-400 hover:text-slate-200'
-                              }`}
-                            >
-                              TOMORROW
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setModalDateStr(formatDateString(addDays(new Date(), 7)))}
-                              className={`px-3 py-1.5 text-[9px] font-black font-mono border rounded-xl transition ${
-                                modalDateStr === formatDateString(addDays(new Date(), 7)) ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-slate-950/20 border-white/5 text-slate-400 hover:text-slate-200'
-                              }`}
-                            >
-                              NEXT WEEK
-                            </button>
+                            {[
+                              { label: 'TODAY', value: getTodayDateString() },
+                              { label: 'TOMORROW', value: formatDateString(addDays(new Date(), 1)) },
+                              { label: 'NEXT WEEK', value: formatDateString(addDays(new Date(), 7)) }
+                            ].map((preset) => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => setModalDateStr(preset.value)}
+                                className={`px-3 py-1.5 text-[8.5px] font-black font-mono border rounded-xl transition-all duration-200 ${
+                                  modalDateStr === preset.value
+                                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                                    : 'bg-slate-950/20 border-white/[0.04] text-slate-400 hover:text-slate-200 hover:bg-slate-950/40'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
                           </div>
                           
-                          <div className="flex items-center gap-1 bg-slate-950/60 p-1 border border-white/5 rounded-xl">
+                          <div className="flex items-center gap-1.5 bg-slate-950/60 p-1 border border-white/[0.06] rounded-xl hover:border-white/10 transition duration-200">
                             <Calendar className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
                             <input
                               type="date"
@@ -1351,13 +1365,13 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                     </div>
 
                     {/* Priority Classification */}
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Priority Classification</label>
                       <div className="grid grid-cols-3 gap-2">
                         {[
-                          { level: Priority.P1, text: 'CRITICAL (P1)', icon: Flame, color: 'border-rose-500/20 text-rose-400 bg-rose-500/5', activeColor: 'bg-rose-500 text-slate-950 font-black border-rose-500 shadow-lg shadow-rose-500/20' },
-                          { level: Priority.P2, text: 'MEDIUM (P2)', icon: ShieldAlert, color: 'border-amber-500/20 text-amber-400 bg-amber-500/5', activeColor: 'bg-amber-500 text-slate-950 font-black border-amber-500 shadow-lg shadow-amber-500/20' },
-                          { level: Priority.P3, text: 'GENERAL (P3)', icon: HelpCircle, color: 'border-indigo-500/20 text-indigo-400 bg-indigo-500/5', activeColor: 'bg-indigo-600 text-white font-black border-indigo-500 shadow-lg shadow-indigo-600/20' },
+                          { level: Priority.P1, text: 'CRITICAL (P1)', icon: Flame, color: 'border-rose-500/20 text-rose-400 bg-rose-500/5', activeColor: 'bg-gradient-to-r from-rose-600 to-red-600 text-white font-black border-rose-500 shadow-lg shadow-rose-500/20 scale-[1.01]' },
+                          { level: Priority.P2, text: 'MEDIUM (P2)', icon: ShieldAlert, color: 'border-amber-500/20 text-amber-400 bg-amber-500/5', activeColor: 'bg-gradient-to-r from-amber-600 to-orange-600 text-slate-950 font-black border-amber-500 shadow-lg shadow-amber-500/20 scale-[1.01]' },
+                          { level: Priority.P3, text: 'GENERAL (P3)', icon: HelpCircle, color: 'border-indigo-500/20 text-indigo-400 bg-indigo-500/5', activeColor: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black border-indigo-500 shadow-lg shadow-indigo-600/20 scale-[1.01]' },
                         ].map((p) => {
                           const IconComponent = p.icon;
                           const isActive = modalPriority === p.level;
@@ -1366,11 +1380,11 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                               key={p.level}
                               type="button"
                               onClick={() => setModalPriority(p.level)}
-                              className={`py-2.5 px-2 text-[9px] font-black font-mono rounded-xl border flex items-center justify-center gap-1.5 transition-all ${
+                              className={`py-2.5 px-2 text-[9px] font-black font-mono rounded-xl border flex items-center justify-center gap-1.5 transition-all duration-300 ${
                                 isActive ? p.activeColor : `${p.color} hover:bg-white/5`
                               }`}
                             >
-                              <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'animate-bounce' : ''}`} />
+                              <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'animate-pulse' : ''}`} />
                               <span>{p.text}</span>
                             </button>
                           );
@@ -1379,9 +1393,9 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                     </div>
 
                     {/* Associated Space List Category */}
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Associated Space List Category</label>
-                      <div className="flex flex-wrap gap-2 max-h-[85px] overflow-y-auto p-2 bg-slate-950/40 rounded-2xl border border-white/5">
+                      <div className="flex flex-wrap gap-2 max-h-[85px] overflow-y-auto p-2 bg-slate-950/40 rounded-2xl border border-white/[0.06]">
                         {projects.map((p) => {
                           const isSelected = modalProjectId === p.id;
                           return (
@@ -1389,13 +1403,13 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                               key={p.id}
                               type="button"
                               onClick={() => setModalProjectId(p.id)}
-                              className={`px-3 py-1.5 text-[9.5px] font-bold rounded-xl border transition flex items-center gap-1.5 cursor-pointer ${
+                              className={`px-3 py-1.5 text-[9.5px] font-bold rounded-xl border transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                                 isSelected
-                                  ? 'bg-indigo-600 border-indigo-500 text-white font-extrabold shadow-md'
-                                  : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-slate-200'
+                                  ? 'bg-indigo-600/15 border-indigo-500 text-white font-extrabold shadow-md shadow-indigo-600/5'
+                                  : 'bg-slate-900/40 border-white/[0.04] text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                               }`}
                             >
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                              <span className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}` }} />
                               <span className="truncate">{p.name}</span>
                             </button>
                           );
@@ -1403,8 +1417,48 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                       </div>
                     </div>
 
+                    {/* Section & Recurrence Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Section Selector */}
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Project Section</label>
+                        <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200">
+                          <GitPullRequest className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <select
+                            value={modalSectionId}
+                            onChange={(e) => setModalSectionId(e.target.value)}
+                            disabled={activeSections.length === 0}
+                            className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-zinc-300 w-full font-medium disabled:opacity-40"
+                          >
+                            <option value="" className="bg-slate-950 text-slate-300">(None)</option>
+                            {activeSections.map((s) => (
+                              <option key={s.id} value={s.id} className="bg-slate-950 text-slate-200">{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Recurrence Selector */}
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Recurrence Block</label>
+                        <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200">
+                          <RefreshCw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <select
+                            value={modalRecurrence}
+                            onChange={(e) => setModalRecurrence(e.target.value)}
+                            className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-zinc-300 w-full font-medium"
+                          >
+                            <option value="none" className="bg-slate-950 text-slate-300">No Recurrence</option>
+                            <option value="daily" className="bg-slate-950 text-slate-200">Daily</option>
+                            <option value="weekly" className="bg-slate-950 text-slate-200">Weekly</option>
+                            <option value="monthly" className="bg-slate-950 text-slate-200">Monthly</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Custom tags (comma-separated) */}
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Custom tags (comma-separated)</label>
                       <div className="relative">
                         <input
@@ -1412,7 +1466,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                           placeholder="e.g. Dynamic-Greedy, Hackathon, High-XP"
                           value={modalLabelStr}
                           onChange={(e) => setModalLabelStr(e.target.value)}
-                          className="w-full pl-9 pr-3 py-3 bg-slate-950/60 border border-white/5 rounded-2xl focus:outline-none focus:border-indigo-500 text-white font-mono placeholder:text-slate-600 transition"
+                          className="w-full pl-9 pr-3 py-3 bg-slate-950/40 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-indigo-500/80 text-white font-mono placeholder:text-slate-600 transition-all duration-200"
                         />
                         <Tag className="w-3.5 h-3.5 absolute left-3 top-3.5 text-slate-500" />
                       </div>
@@ -1430,7 +1484,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                                 setModalLabelStr([...existing, item].join(', '));
                               }
                             }}
-                            className="px-2 py-0.5 bg-slate-950/40 border border-white/5 rounded text-[8px] font-mono text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                            className="px-2 py-0.5 bg-slate-950/40 border border-white/[0.04] rounded text-[8px] font-mono text-slate-400 hover:text-white hover:bg-slate-800 transition duration-200"
                           >
                             +{item}
                           </button>
@@ -1442,7 +1496,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                       <button
                         type="button"
                         onClick={() => setShowAddModal(false)}
-                        className="px-4 py-2 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition rounded-xl text-[10px]"
+                        className="px-4 py-2.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition rounded-xl text-[10px]"
                       >
                         DISMISS
                       </button>
@@ -1457,35 +1511,42 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                 </div>
 
                 {/* Right Column - Live Interactive Preview Panel (col-span-5) */}
-                <div className="md:col-span-5 p-6 bg-slate-950/30 flex flex-col justify-between max-h-[85vh] overflow-y-auto">
-                  <div className="space-y-4">
+                <div className="md:col-span-5 p-6 md:p-8 bg-slate-950/30 flex flex-col justify-between max-h-[85vh] overflow-y-auto">
+                  <div className="space-y-5">
                     <div>
-                      <span className="text-[8px] text-indigo-400 font-mono tracking-widest uppercase block font-black">REAL-TIME VISUALIZER</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                        <span className="text-[8px] text-indigo-400 font-mono tracking-widest uppercase block font-black">REAL-TIME VISUALIZER</span>
+                      </div>
                       <h4 className="text-[12px] font-extrabold text-white mt-1 uppercase tracking-tight flex items-center gap-1.5">
                         <Activity className="w-4 h-4 text-emerald-400" />
                         Live Goal Card Preview
                       </h4>
-                      <p className="text-[9px] text-slate-500 font-mono mt-1">This represents exactly how your calendar cell & daily activity schedule item will render dynamically.</p>
+                      <p className="text-[9px] text-slate-500 font-mono mt-1 leading-relaxed">This represents exactly how your daily activity schedule item will render dynamically.</p>
                     </div>
 
                     {/* Dynamic card simulation */}
-                    <div className="relative mt-2 p-4 bg-[#0a0d16] border border-white/5 rounded-2xl shadow-2xl overflow-hidden group">
+                    <div className="relative mt-2 p-4 bg-[#0a0d16] border border-white/[0.05] rounded-2xl shadow-2xl overflow-hidden group">
                       {/* Priority left colored block */}
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[4px]"
                         style={{
                           backgroundColor:
                             modalPriority === Priority.P1 ? '#ef4444' :
-                            modalPriority === Priority.P2 ? '#f59e0b' : '#3b82f6'
+                            modalPriority === Priority.P2 ? '#f59e0b' : '#3b82f6',
+                          boxShadow: `0 0 10px ${
+                            modalPriority === Priority.P1 ? 'rgba(239,68,68,0.5)' :
+                            modalPriority === Priority.P2 ? 'rgba(245,158,11,0.5)' : 'rgba(59,130,246,0.5)'
+                          }`
                         }}
                       />
 
-                      <div className="space-y-3.5">
+                      <div className="space-y-4">
                         <div className="flex justify-between items-start pl-1">
                           <div className="flex items-start gap-2.5 min-w-0">
                             {/* Simulator custom checkbox */}
                             <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
                                 modalPriority === Priority.P1 ? 'border-rose-500/50 bg-rose-500/5' :
                                 modalPriority === Priority.P2 ? 'border-amber-500/50 bg-amber-500/5' : 'border-sky-500/50 bg-sky-500/5'
                               }`}
@@ -1498,7 +1559,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                                 {modalTitle.trim() || 'Untitled Goal'}
                               </span>
                               {modalDesc.trim() && (
-                                <p className="text-[9px] text-slate-400 mt-1 block break-words font-medium leading-relaxed bg-slate-950/20 p-2 rounded-lg border border-white/[0.02]">
+                                <p className="text-[9px] text-slate-400 mt-2 block break-words font-medium leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-white/[0.02]">
                                   {modalDesc}
                                 </p>
                               )}
@@ -1528,7 +1589,7 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                               <span
                                 className="px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase flex items-center gap-1 border bg-slate-900 text-slate-300 border-white/5"
                               >
-                                <span className="w-1.5 h-1 rounded-full shrink-0" style={{ backgroundColor: matchedProj.color }} />
+                                <span className="w-1.5 h-1 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: matchedProj.color, boxShadow: `0 0 6px ${matchedProj.color}` }} />
                                 <span>{matchedProj.name?.replace(/\s+.*$/, '') || 'Space'}</span>
                               </span>
                             );
@@ -1542,6 +1603,26 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                             <Flag className="w-2.5 h-2.5 fill-current" />
                             <span>{modalPriority === Priority.P1 ? 'CRITICAL' : modalPriority === Priority.P2 ? 'MEDIUM' : 'GENERAL'}</span>
                           </span>
+
+                          {/* Section Badge */}
+                          {(() => {
+                            const matchedSec = sections.find(s => s.id === modalSectionId);
+                            if (!matchedSec) return null;
+                            return (
+                              <span className="px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase flex items-center gap-1 border bg-slate-900 text-indigo-300 border-indigo-500/10">
+                                <GitPullRequest className="w-2.5 h-2.5" />
+                                <span>{matchedSec.name}</span>
+                              </span>
+                            );
+                          })()}
+
+                          {/* Recurrence Badge */}
+                          {modalRecurrence !== 'none' && (
+                            <span className="px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase flex items-center gap-1 border bg-slate-900 text-emerald-300 border-emerald-500/10">
+                              <RefreshCw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: '6s' }} />
+                              <span>{modalRecurrence}</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Labels Badges strip */}
@@ -1562,18 +1643,82 @@ export default function CalendarView({ tasks, projects, labels = [], onAddTask, 
                     </div>
                   </div>
 
-                  {/* Dynamic suggestions tip box */}
-                  <div className="mt-8 bg-slate-950/60 p-4 rounded-2xl border border-white/5 space-y-2">
-                    <h5 className="text-[9px] font-black font-mono tracking-widest text-indigo-400 uppercase flex items-center gap-1">
-                      <Info className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
-                      Pro Planning Tips
-                    </h5>
-                    <ul className="list-disc list-inside text-[8.5px] font-mono text-slate-400 space-y-1.5 leading-normal">
-                      <li>Type <code className="text-white bg-slate-900 px-1 py-0.5 rounded">p1</code> or <code className="text-white bg-slate-900 px-1 py-0.5 rounded">p2</code> in the Smart bar to set priority instantly.</li>
-                      <li>Use <code className="text-white bg-slate-900 px-1 py-0.5 rounded">#name</code> to dynamically categorize this item into projects.</li>
-                      <li>Include <code className="text-white bg-slate-900 px-1 py-0.5 rounded">tomorrow</code> or <code className="text-white bg-slate-900 px-1 py-0.5 rounded">friday</code> to dynamically target dates.</li>
-                      <li>Tap suggestion presets below tags to add labels.</li>
-                    </ul>
+                  {/* Dynamic Telemetry Console */}
+                  <div className="mt-6 bg-slate-950/80 p-4 rounded-2xl border border-white/[0.05] space-y-3 font-mono text-[9px] shadow-inner text-left">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/[0.04]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">NLP PARAMETER REGISTRY</span>
+                      </div>
+                      <span className="text-[8px] text-slate-500 bg-slate-900 border border-white/[0.04] px-1.5 py-0.5 rounded uppercase">Engine v2.4</span>
+                    </div>
+
+                    {!nlpCommand.trim() ? (
+                      <div className="py-4 text-center text-slate-600 flex flex-col items-center justify-center gap-1.5">
+                        <span className="animate-pulse">_ WAITING FOR NATURAL LANGUAGE COMMAND STRING...</span>
+                        <span className="text-[8px] text-slate-700 text-center">Type in the command bar above to start compiling parameters</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        <div className="grid grid-cols-2 gap-2 text-slate-400 text-left">
+                          <div className="bg-slate-900/50 p-2 rounded border border-white/[0.02] flex flex-col gap-0.5">
+                            <span className="text-slate-600 text-[7px] uppercase tracking-wider font-bold">Confidence Score</span>
+                            <span className="text-emerald-400 font-bold font-mono">99.42%</span>
+                          </div>
+                          <div className="bg-slate-900/50 p-2 rounded border border-white/[0.02] flex flex-col gap-0.5">
+                            <span className="text-slate-600 text-[7px] uppercase tracking-wider font-bold">Compiler Status</span>
+                            <span className="text-indigo-400 font-bold uppercase font-mono">COMPILED</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-900/40 p-2.5 rounded-lg border border-white/[0.03] space-y-2 text-left">
+                          <div className="flex justify-between text-[8.5px] items-center border-b border-white/[0.02] pb-1.5">
+                            <span className="text-slate-500 font-medium">SYS.TITLE</span>
+                            <span className="text-slate-200 truncate max-w-[170px] font-medium">{modalTitle || 'N/A'}</span>
+                          </div>
+                          
+                          <div className="flex justify-between text-[8.5px] items-center border-b border-white/[0.02] pb-1.5">
+                            <span className="text-slate-500 font-medium">SYS.DATE</span>
+                            <span className="text-emerald-400 font-bold">{modalDateStr || 'N/A'}</span>
+                          </div>
+
+                          <div className="flex justify-between text-[8.5px] items-center border-b border-white/[0.02] pb-1.5">
+                            <span className="text-slate-500 font-medium">SYS.PRIORITY</span>
+                            <span className={`font-bold ${modalPriority === Priority.P1 ? 'text-rose-400' : modalPriority === Priority.P2 ? 'text-amber-400' : 'text-sky-400'}`}>
+                              P{modalPriority}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between text-[8.5px] items-center border-b border-white/[0.02] pb-1.5">
+                            <span className="text-slate-500 font-medium">SYS.SPACE</span>
+                            <span className="text-slate-300 font-bold truncate max-w-[130px]">
+                              {projects.find(p => p.id === modalProjectId)?.name || 'Inbox'}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between text-[8.5px] items-center border-b border-white/[0.02] pb-1.5">
+                            <span className="text-slate-500 font-medium">SYS.SECTION</span>
+                            <span className="text-indigo-400 font-bold truncate max-w-[130px]">
+                              {sections.find(s => s.id === modalSectionId)?.name || 'N/A'}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between text-[8.5px] items-center pb-0.5">
+                            <span className="text-slate-500 font-medium">SYS.RECURRENCE</span>
+                            <span className="text-emerald-400 font-bold uppercase">
+                              {modalRecurrence !== 'none' ? modalRecurrence : 'N/A'}
+                            </span>
+                          </div>
+
+                          {modalLabelStr.trim() ? (
+                            <div className="flex justify-between text-[8.5px] items-start pt-1.5 border-t border-white/[0.02]">
+                              <span className="text-slate-500 font-medium shrink-0">SYS.LABELS</span>
+                              <span className="text-slate-400 text-right truncate max-w-[150px]">{modalLabelStr}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

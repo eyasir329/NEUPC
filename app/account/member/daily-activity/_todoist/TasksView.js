@@ -7,9 +7,9 @@
 
 import { useState } from 'react';
 import {
-  Plus, List, Kanban, Check, Tag, Bookmark, ChevronRight, ArrowLeft, ArrowRight, Trash2, Edit2, Link, Trash, Clipboard,
+  Plus, List, Kanban, Check, Tag, Bookmark, ChevronRight, ArrowLeft, ArrowRight, Trash2, Edit2, Link, Trash, Clipboard, Clock,
 } from 'lucide-react';
-import { Priority, getPlatformClass, getFeedItemUrl } from './utils';
+import { Priority, getPlatformClass, getFeedItemUrl, isTaskOnDate, isTaskInDateRange } from './utils';
 
 export default function TasksView({
   tasks,
@@ -17,6 +17,7 @@ export default function TasksView({
   sections,
   labels,
   onAddTask,
+  onOpenCreate,
   onToggleComplete,
   onDeleteTask,
   onUpdateTask,
@@ -36,6 +37,7 @@ export default function TasksView({
   const itemsPerPage = 15;
 
   const [inlineSearch, setInlineSearch] = useState('');
+  const [quickTitle, setQuickTitle] = useState('');
 
   const getTodayDateString = () => {
     const d = new Date();
@@ -79,10 +81,10 @@ export default function TasksView({
     }
 
     if (activeFilter === 'today') {
-      result = result.filter((t) => t.dueDate === todayStr || (t.dueDate && t.dueDate < todayStr && !t.completed));
+      result = result.filter((t) => isTaskOnDate(t, todayStr) || (t.dueDate && t.dueDate < todayStr && !t.completed));
     } else if (activeFilter === 'upcoming') {
       const d7 = formatDateString(addDays(new Date(), 7));
-      result = result.filter((t) => t.dueDate && t.dueDate > todayStr && t.dueDate <= d7);
+      result = result.filter((t) => isTaskInDateRange(t, todayStr, d7));
     } else if (activeFilter === 'contests') {
       result = result.filter((t) => t.isContest === true);
     } else if (activeFilter === 'completed') {
@@ -121,9 +123,9 @@ export default function TasksView({
     paginatedTasks.forEach((t) => {
       let groupKey = 'Inbox (No due date)';
       if (t.dueDate) {
-        if (t.dueDate === todayStr) {
+        if (isTaskOnDate(t, todayStr)) {
           groupKey = 'Today';
-        } else if (t.dueDate < todayStr) {
+        } else if (t.dueDate < todayStr && !t.completed) {
           groupKey = 'Overdue / Inbox';
         } else {
           const valDate = new Date(t.dueDate + 'T12:00:00');
@@ -355,7 +357,7 @@ export default function TasksView({
         <div>
           <div className="bg-[#0c1221] rounded-2xl border border-white/[0.04] p-4.5 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-sm" id="filters-header">
             <div className="flex flex-wrap gap-1.5 text-xs">
-              {['all', 'today', 'upcoming', 'contests', 'completed'].map((f) => (
+              {['all', 'today', 'upcoming', 'completed'].map((f) => (
                 <button
                   key={`pill-filter-${f}`}
                   onClick={() => {
@@ -403,6 +405,62 @@ export default function TasksView({
               </div>
             </div>
           </div>
+
+          {/* Quick Task Spawner */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!quickTitle.trim()) return;
+              onOpenCreate(quickTitle.trim());
+              setQuickTitle('');
+            }}
+            className="bg-[#0c1221] rounded-2xl border border-white/[0.04] p-3 flex items-center gap-3.5 mb-6 group focus-within:border-violet-500/40 focus-within:ring-1 focus-within:ring-violet-500/10 transition-all duration-200"
+          >
+            <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+              <Plus className="w-4 h-4" />
+            </div>
+
+            <input
+              type="text"
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              placeholder={
+                activeProjectId === 'all'
+                  ? "Quick add task to Inbox (Press Enter)..."
+                  : `Quick add task to ${selectedProjectObj?.name || 'Category'} (Press Enter)...`
+              }
+              className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-slate-100 placeholder:text-slate-500 text-xs md:text-sm font-bold min-w-0"
+            />
+
+            <div className="flex items-center gap-2.5 shrink-0 select-none">
+              {activeProjectId === 'all' ? (
+                <span className="px-2.5 py-1 bg-slate-500/10 border border-slate-500/20 text-slate-300 text-[10px] font-mono font-bold rounded-lg flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                  INBOX
+                </span>
+              ) : (
+                <span
+                  style={{
+                    backgroundColor: `${selectedProjectObj?.color}15`,
+                    borderColor: `${selectedProjectObj?.color}30`,
+                    color: selectedProjectObj?.color,
+                  }}
+                  className="px-2.5 py-1 border text-[10px] font-mono font-bold rounded-lg flex items-center gap-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: selectedProjectObj?.color }} />
+                  {selectedProjectObj?.name?.toUpperCase()}
+                </span>
+              )}
+
+              <button
+                type="submit"
+                disabled={!quickTitle.trim()}
+                className="px-3.5 py-1.5 text-xs font-bold font-mono tracking-wider rounded-xl transition duration-150 flex items-center gap-1 cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-30 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed shadow-md"
+              >
+                SPAWN
+              </button>
+            </div>
+          </form>
 
           {activeLayout === 'list' ? (
             <div className="space-y-6" id="list-tasks-wrapper">
@@ -471,7 +529,6 @@ export default function TasksView({
                                   {task.description && <p className="text-[10px] opacity-80 truncate mt-0.5 leading-snug">{task.description}</p>}
                                   <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
                                     <span className="px-1.5 py-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 text-emerald-400">📣 EVENT</span>
-                                    {task.dueDate && <span>📅 {task.dueDate}</span>}
                                     {task.time && <span>🕒 {task.time}</span>}
                                   </div>
                                 </div>
@@ -508,7 +565,6 @@ export default function TasksView({
                                   <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
                                     <span className="px-1.5 py-0.5 rounded border border-indigo-500/25 bg-indigo-500/10 text-indigo-400">📅 DEADLINE</span>
                                     {task.bootcampTitle && <span>{task.bootcampTitle}</span>}
-                                    {task.dueDate && <span>📅 {task.dueDate}</span>}
                                     {task.time && <span>🕒 {task.time}</span>}
                                   </div>
                                 </div>
@@ -545,7 +601,6 @@ export default function TasksView({
                                   <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
                                     <span className="px-1.5 py-0.5 rounded border border-sky-500/25 bg-sky-500/10 text-sky-400">🎓 SESSION</span>
                                     {task.bootcampTitle && <span>{task.bootcampTitle}</span>}
-                                    {task.dueDate && <span>📅 {task.dueDate}</span>}
                                     {task.time && <span>🕒 {task.time}</span>}
                                   </div>
                                 </div>
@@ -594,6 +649,22 @@ export default function TasksView({
                                   {task.title}
                                 </span>
                                 {task.description && <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-snug">{task.description}</p>}
+                                {((task.labels && task.labels.length > 0) || task.time) && (
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                    {task.time && (
+                                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-mono text-[8.5px] font-black flex items-center gap-1 shrink-0">
+                                        <Clock className="w-2.5 h-2.5 text-indigo-400" />
+                                        <span>{task.time}</span>
+                                      </span>
+                                    )}
+                                    {task.labels && task.labels.map((lbl) => (
+                                      <span key={lbl} className="px-1.5 py-0.5 rounded-md bg-white/[0.02] border border-white/[0.04] text-slate-400 font-mono text-[8.5px] font-semibold flex items-center gap-0.5 shrink-0">
+                                        <Tag className="w-2 h-2 text-slate-500" />
+                                        <span>{lbl}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
 

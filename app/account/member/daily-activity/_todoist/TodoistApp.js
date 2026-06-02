@@ -8,7 +8,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Search, X, ChevronRight, TrendingUp, Activity, Info, RotateCcw, CheckCircle2, Calendar, Target, Award, ShieldAlert, CalendarDays, ListChecks } from 'lucide-react';
+import {
+  Plus, Search, X, ChevronRight, TrendingUp, Activity, Info, RotateCcw,
+  CheckCircle2, Calendar, Target, Award, ShieldAlert, CalendarDays, ListChecks,
+} from 'lucide-react';
 
 import {
   PageShell,
@@ -20,7 +23,6 @@ import {
 import { StatGrid } from '@/app/account/_components/ui/StatCard';
 
 import {
-  Priority,
   getTodayDateString,
   formatDateString,
   addDays,
@@ -56,16 +58,10 @@ export default function TodoistApp({ userId }) {
 
   const [showProductivityModal, setShowProductivityModal] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
-  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [showCreatePane, setShowCreatePane] = useState(false);
+  const [createPrefillTitle, setCreatePrefillTitle] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDesc, setNewTaskDesc] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState(Priority.P3);
-  const [newTaskDueDate, setNewTaskDueDate] = useState(() => getTodayDateString());
-  const [newTaskProjectId, setNewTaskProjectId] = useState('');
-  const [newTaskLabels, setNewTaskLabels] = useState('Personal');
 
   const [toast, setToast] = useState(null);
 
@@ -149,12 +145,6 @@ export default function TodoistApp({ userId }) {
 
     initData();
   }, []);
-
-  useEffect(() => {
-    if (projects.length > 0 && !newTaskProjectId) {
-      setNewTaskProjectId(projects[0].id);
-    }
-  }, [projects, newTaskProjectId]);
 
   const showToast = (text, type = 'info', actionLabel, onAction) => {
     const id = generateId();
@@ -410,26 +400,10 @@ export default function TodoistApp({ userId }) {
     setSearchQuery('');
   };
 
-  const handleNewTaskSubmit = (e) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-
-    handleAddTask({
-      title: newTaskTitle.trim(),
-      description: newTaskDesc.trim(),
-      priority: newTaskPriority,
-      dueDate: newTaskDueDate || undefined,
-      projectId: newTaskProjectId || projects[0]?.id || undefined,
-      labels: newTaskLabels.split(',').map((s) => s.trim().replace(/^@/, '')).filter(Boolean),
-    });
-
-    setNewTaskTitle('');
-    setNewTaskDesc('');
-    setNewTaskPriority(Priority.P3);
-    setNewTaskDueDate(getTodayDateString());
-    setNewTaskProjectId(projects[0]?.id || '');
-    setNewTaskLabels('Personal');
-    setShowNewTaskModal(false);
+  const openCreatePane = (prefillTitle = '') => {
+    setCreatePrefillTitle(prefillTitle);
+    setSelectedTaskId(null);
+    setShowCreatePane(true);
   };
 
   const activeTask = tasks.find((t) => t.id === selectedTaskId) || null;
@@ -477,7 +451,15 @@ export default function TodoistApp({ userId }) {
           title="Daily Activity"
           subtitle={`Plan your day, track your goals, and keep your streak alive · ${todayStr}`}
           actions={
-            <>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => openCreatePane()}
+                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold font-mono tracking-wider transition flex items-center gap-1 cursor-pointer shadow-lg shadow-indigo-600/10 hover:scale-[1.01]"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>SPAWN GOAL</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setShowProductivityModal(true)}
@@ -486,23 +468,7 @@ export default function TodoistApp({ userId }) {
                 <Award className="h-3.5 w-3.5" />
                 {karma.score} XP · {karma.level}
               </button>
-              <ActionButton
-                tone="ghost"
-                icon={Search}
-                onClick={() => setShowSearchOverlay(true)}
-                title="Search tasks (S)"
-              >
-                Search
-              </ActionButton>
-              <ActionButton
-                tone="violet"
-                icon={Plus}
-                onClick={() => setShowNewTaskModal(true)}
-                title="New task (Q)"
-              >
-                New Task
-              </ActionButton>
-            </>
+            </div>
           }
         />
 
@@ -549,11 +515,12 @@ export default function TodoistApp({ userId }) {
 
           {activeTab === 'tasks' && (
             <TasksView
-              tasks={tasks}
+              tasks={tasks.filter((t) => !t.readOnly)}
               projects={projects}
               sections={sections}
               labels={labels}
               onAddTask={handleAddTask}
+              onOpenCreate={openCreatePane}
               onToggleComplete={handleToggleComplete}
               onDeleteTask={handleDeleteTask}
               onUpdateTask={handleUpdateTask}
@@ -567,13 +534,26 @@ export default function TodoistApp({ userId }) {
           )}
 
           {activeTab === 'calendar' && (
-            <CalendarView tasks={tasks} projects={projects} labels={labels} onAddTask={handleAddTask} onToggleComplete={handleToggleComplete} onSelectTask={setSelectedTaskId} />
+            <CalendarView tasks={tasks} projects={projects} sections={sections} labels={labels} onAddTask={handleAddTask} onToggleComplete={handleToggleComplete} onSelectTask={setSelectedTaskId} />
           )}
         </div>
       </PageShell>
 
       <AnimatePresence>
-        {selectedTaskId && activeTask && (
+        {showCreatePane && (
+          <TaskDetailPane
+            mode="create"
+            initialTitle={createPrefillTitle}
+            defaultProjectId={projects[0]?.id}
+            onClose={() => setShowCreatePane(false)}
+            projects={projects}
+            sections={sections}
+            labels={labels}
+            onCreateTask={handleAddTask}
+          />
+        )}
+
+        {!showCreatePane && selectedTaskId && activeTask && (
           <TaskDetailPane
             task={activeTask}
             onClose={() => setSelectedTaskId(null)}
@@ -618,80 +598,6 @@ export default function TodoistApp({ userId }) {
                   </div>
                 )}
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showNewTaskModal && (
-          <div className="fixed inset-0 bg-black/65 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 15 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 15 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="bg-gray-900 border border-white/[0.08] w-full max-w-lg rounded-2xl shadow-2xl p-5 flex flex-col gap-4 text-gray-200">
-              <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
-                <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/10 p-2 text-violet-400">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-base font-semibold text-white">New Task</h3>
-                </div>
-                <button onClick={() => setShowNewTaskModal(false)} className="hover:bg-white/5 p-1 rounded-lg text-gray-500 hover:text-white transition"><X className="w-4 h-4" /></button>
-              </div>
-
-              <form onSubmit={handleNewTaskSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-400 block">Title</label>
-                  <input type="text" placeholder="e.g. Solve 3 graph problems on Codeforces" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} className="w-full text-sm p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl focus:outline-none focus:border-violet-500/50 text-white placeholder:text-gray-600 transition" autoFocus required />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-400 block">Description <span className="text-gray-600">(optional)</span></label>
-                  <textarea placeholder="Add details, instructions, or links..." value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} className="w-full text-sm p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl focus:outline-none focus:border-violet-500/50 text-white placeholder:text-gray-600 h-20 resize-none transition" />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-400 block">Due date</label>
-                    <input type="date" value={newTaskDueDate} onChange={(e) => setNewTaskDueDate(e.target.value)} className="w-full text-sm p-2.5 bg-white/[0.02] border border-white/[0.08] rounded-xl focus:outline-none focus:border-violet-500/50 text-white transition [color-scheme:dark]" />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-400 block">List</label>
-                    <select value={newTaskProjectId} onChange={(e) => setNewTaskProjectId(e.target.value)} className="w-full text-gray-100 text-sm p-2.5 bg-white/[0.02] border border-white/[0.08] rounded-xl focus:outline-none focus:border-violet-500/50 transition">
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id} className="bg-gray-900 text-white">{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-400 block">Priority</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: Priority.P1, label: 'High', activeBg: 'border-red-500/40 bg-red-500/20 text-red-300', inactiveBg: 'border-white/[0.08] bg-white/[0.02] text-gray-400 hover:bg-white/[0.05]' },
-                      { value: Priority.P2, label: 'Medium', activeBg: 'border-amber-500/40 bg-amber-500/20 text-amber-300', inactiveBg: 'border-white/[0.08] bg-white/[0.02] text-gray-400 hover:bg-white/[0.05]' },
-                      { value: Priority.P3, label: 'Low', activeBg: 'border-blue-500/40 bg-blue-500/20 text-blue-300', inactiveBg: 'border-white/[0.08] bg-white/[0.02] text-gray-400 hover:bg-white/[0.05]' },
-                    ].map((prio) => {
-                      const isActive = newTaskPriority === prio.value;
-                      return (
-                        <button key={prio.value} type="button" onClick={() => setNewTaskPriority(prio.value)} className={`py-2 px-3 border rounded-xl text-xs font-semibold transition ${isActive ? prio.activeBg : prio.inactiveBg}`}>
-                          {prio.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-400 block">Labels <span className="text-gray-600">(comma separated)</span></label>
-                  <input type="text" placeholder="e.g. Personal, Practice, Focus" value={newTaskLabels} onChange={(e) => setNewTaskLabels(e.target.value)} className="w-full text-sm p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl focus:outline-none focus:border-violet-500/50 text-white placeholder:text-gray-600 transition" />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.06]">
-                  <ActionButton tone="ghost" type="button" onClick={() => setShowNewTaskModal(false)}>Cancel</ActionButton>
-                  <ActionButton tone="violet" type="submit" icon={Plus}>Add Task</ActionButton>
-                </div>
-              </form>
             </motion.div>
           </div>
         )}
