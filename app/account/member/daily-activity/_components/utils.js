@@ -1,15 +1,16 @@
 /**
- * @file Pure utility functions for the Daily Activity Todoist-style UI.
- *   All static seed data and localStorage helpers have been removed —
- *   data is now fetched from Supabase via API routes.
- * @module daily-activity/_todoist/utils
+ * @file Pure helpers shared across the Daily Activity views: date math,
+ *   natural-language task parsing, the recurrence engine, the karma/rank
+ *   ladder, and feed-item presentation metadata. No component state or
+ *   data fetching lives here.
+ * @module daily-activity/utils
  */
 
 export const Priority = {
-  P1: 1, // Red
-  P2: 2, // Orange
-  P3: 3, // Blue
-  P4: 4, // Gray/Default
+  P1: 1, // Critical (rose)
+  P2: 2, // Medium (amber)
+  P3: 3, // General (sky/violet)
+  P4: 4, // Trivial / default (slate)
 };
 
 // Format YYYY-MM-DD
@@ -89,6 +90,17 @@ export function parsePriority(word) {
   return null;
 }
 
+/**
+ * Parse a quick-add string into structured task fields. Recognizes inline
+ * tokens anywhere in the text: `p1`–`p4` (priority), `@label`, `#project`
+ * (matched against existing projects), and the words `today` / `tomorrow` /
+ * weekday names (next occurrence). Everything else becomes the title.
+ *
+ * @param {string} input
+ * @param {{id:string,name:string}[]} existingProjects
+ * @param {{name:string}[]} existingLabels
+ * @returns {{cleanTitle:string,dueDate?:string,priority:number,projectId?:string,labels:string[]}}
+ */
 export function parseNaturalLanguage(input, existingProjects, existingLabels) {
   let titleWords = input.split(' ');
   const labels = [];
@@ -173,10 +185,6 @@ export function generateId() {
   return 'td_' + Math.random().toString(36).substr(2, 9);
 }
 
-export function getPlatformClass(_platform) {
-  return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-}
-
 export function getFeedItemUrl(task) {
   if (!task) return '';
   if (task.contestUrl) return task.contestUrl;
@@ -192,6 +200,18 @@ export function getFeedItemUrl(task) {
   return '';
 }
 
+/**
+ * Whether a task occurs on a given calendar day. Non-recurring tasks match
+ * only their exact `dueDate`. Recurring tasks (`task.recurrence` object with
+ * a `freq`) are expanded on the fly:
+ *   - `custom_dates`: explicit list in `recurrence.dates`.
+ *   - `daily` / `weekly` / `monthly`: stepped by `recurrence.interval` from
+ *     each start date, honoring `byWeekday`, an `until` end key, or a `count`.
+ *
+ * @param {object} task     A task with `dueDate` and optional `recurrence`.
+ * @param {string} dateStr  Target day as `YYYY-MM-DD`.
+ * @returns {boolean}
+ */
 export function isTaskOnDate(task, dateStr) {
   if (!task.dueDate) return false;
   
@@ -259,6 +279,15 @@ export function isTaskOnDate(task, dateStr) {
   return false;
 }
 
+/**
+ * Whether a task occurs on any day within `[startStr, endStr]` (inclusive).
+ * Walks the range day by day via {@link isTaskOnDate}, capped at 100 days.
+ *
+ * @param {object} task
+ * @param {string} startStr  `YYYY-MM-DD`
+ * @param {string} endStr    `YYYY-MM-DD`
+ * @returns {boolean}
+ */
 export function isTaskInDateRange(task, startStr, endStr) {
   let cur = new Date(startStr + 'T00:00:00');
   const end = new Date(endStr + 'T00:00:00');
@@ -270,5 +299,117 @@ export function isTaskInDateRange(task, startStr, endStr) {
     safety++;
   }
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// Karma / rank ladder — single source of truth for the XP → level mapping.
+// Score is computed client-side as 100 + 10 per completed todo. The same
+// thresholds drive the header pill, Insights standing card, and the
+// productivity modal.
+// ---------------------------------------------------------------------------
+
+const KARMA_TIERS = [
+  { level: 'Novice', max: 500 },
+  { level: 'Amateur', max: 1000 },
+  { level: 'Intermediate', max: 1500 },
+  { level: 'Professional', max: 2500 },
+  { level: 'Expert', max: 4000 },
+  { level: 'Master', max: 6000 },
+  { level: 'Grandmaster', max: 15000 },
+];
+
+/**
+ * Map a karma score to its rank tier and progress within that tier.
+ *
+ * @param {number} score
+ * @returns {{level:string,minXP:number,maxXP:number,nextLevel:string,
+ *   progress:number,nextGoal:number}} `progress` is 0–100 within the tier;
+ *   `nextGoal` is XP remaining to the next tier.
+ */
+export function getKarmaLevel(score) {
+  let minXP = 0;
+  for (let i = 0; i < KARMA_TIERS.length; i++) {
+    const tier = KARMA_TIERS[i];
+    if (score < tier.max || i === KARMA_TIERS.length - 1) {
+      const next = KARMA_TIERS[i + 1];
+      const progress = Math.max(0, Math.min(100, ((score - minXP) / (tier.max - minXP)) * 100));
+      return {
+        level: tier.level,
+        minXP,
+        maxXP: tier.max,
+        nextLevel: next ? next.level : 'Ascended',
+        progress,
+        nextGoal: Math.max(0, tier.max - score),
+      };
+    }
+    minXP = tier.max;
+  }
+  // Unreachable, but keeps the return type total.
+  const last = KARMA_TIERS[KARMA_TIERS.length - 1];
+  return { level: last.level, minXP, maxXP: last.max, nextLevel: 'Ascended', progress: 100, nextGoal: 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Feed-item presentation — read-only activity items (contests, events,
+// bootcamp deadlines, sessions, Google Calendar) share one set of category
+// styles so the list rows and calendar chips stay visually consistent.
+// ---------------------------------------------------------------------------
+
+/**
+ * @typedef {object} FeedMeta
+ * @property {string} kind     One of 'contest' | 'event' | 'task' | 'session' | 'gcal'.
+ * @property {string} emoji    Leading glyph for the category.
+ * @property {string} label    Short uppercase category label.
+ * @property {string} accent   Tailwind border/bg/text classes for the chip.
+ * @property {string} title    Tailwind text color for the title.
+ * @property {string} dot      Tailwind background for the status dot.
+ */
+
+const FEED_META = {
+  contest: {
+    kind: 'contest', emoji: '🏆', label: 'Contest',
+    accent: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    title: 'text-amber-300', dot: 'bg-amber-400',
+  },
+  event: {
+    kind: 'event', emoji: '📣', label: 'Event',
+    accent: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    title: 'text-emerald-300', dot: 'bg-emerald-400',
+  },
+  task: {
+    kind: 'task', emoji: '📅', label: 'Deadline',
+    accent: 'border-violet-500/30 bg-violet-500/10 text-violet-400',
+    title: 'text-violet-300', dot: 'bg-violet-400',
+  },
+  session: {
+    kind: 'session', emoji: '🎓', label: 'Session',
+    accent: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
+    title: 'text-sky-300', dot: 'bg-sky-400',
+  },
+};
+
+/**
+ * Classify a task as a read-only feed item and return its presentation
+ * metadata, or `null` for an ordinary editable todo.
+ *
+ * @param {object} task
+ * @returns {FeedMeta|null}
+ */
+export function getFeedMeta(task) {
+  if (!task) return null;
+  if (task.isContest) return FEED_META.contest;
+  if (task.feedCategory && FEED_META[task.feedCategory]) return FEED_META[task.feedCategory];
+  return null;
+}
+
+/**
+ * Whether a task is a read-only feed item (contest/event/deadline/session)
+ * that the user may view but not edit, complete, or delete.
+ *
+ * @param {object} task
+ * @returns {boolean}
+ */
+export function isFeedItem(task) {
+  return !!task && (task.readOnly || task.isContest || ['event', 'task', 'session'].includes(task.feedCategory));
 }
 

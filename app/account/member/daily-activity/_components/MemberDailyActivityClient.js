@@ -1,12 +1,31 @@
 /**
- * @file Root of the Todoist app connected to the local Supabase DB.
- *   Removes localStorage and references the custom DB APIs.
- * @module daily-activity/_todoist/TodoistApp
+ * @file Root client for the member Daily Activity page — a Todoist-style
+ *   planner backed by Supabase. Loads the member's todos plus a read-only
+ *   activity feed (events, contests, bootcamp sessions/deadlines, Google
+ *   Calendar) and presents three tabs:
+ *
+ *     • Insights  — productivity standing, focus tasks, completion heatmap,
+ *                   and velocity chart (InsightsView).
+ *     • Tasks     — list / kanban board of editable todos with filters,
+ *                   labels, sections, and pagination (TasksView).
+ *     • Calendar  — month grid + weekly agenda with layer filters and an
+ *                   inline add-task workbench (CalendarView).
+ *
+ *   Data flow: each piece of state maps to one API route —
+ *     todos    → /api/member/daily-activity/todos     (CRUD, editable)
+ *     feed     → /api/member/daily-activity/feed       (read-only)
+ *     projects → /api/member/daily-activity/projects
+ *     sections → /api/member/daily-activity/sections
+ *     labels   → /api/member/daily-activity/labels
+ *   Karma (XP / rank) is computed client-side from completed todos and is
+ *   not persisted. Feed items are never editable.
+ *
+ * @module daily-activity/MemberDailyActivityClient
  */
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Plus, Search, X, ChevronRight, TrendingUp, Activity, Info, RotateCcw,
@@ -18,7 +37,6 @@ import {
   PageHeader,
   StatCard,
   TabBar,
-  ActionButton,
 } from '@/app/account/_components/ui';
 import { StatGrid } from '@/app/account/_components/ui/StatCard';
 
@@ -27,6 +45,8 @@ import {
   formatDateString,
   addDays,
   generateId,
+  getKarmaLevel,
+  isFeedItem,
 } from './utils';
 
 import InsightsView from './InsightsView';
@@ -35,7 +55,7 @@ import TasksView from './TasksView';
 import TaskDetailPane from './TaskDetailPane';
 import ProductivityModal from './ProductivityModal';
 
-export default function TodoistApp({ userId }) {
+export default function MemberDailyActivityClient({ userId }) {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [sections, setSections] = useState([]);
@@ -65,7 +85,6 @@ export default function TodoistApp({ userId }) {
 
   const [toast, setToast] = useState(null);
 
-  const previousTasksRef = useRef(null);
   const todayStr = getTodayDateString();
 
   // Load all user data on mount
@@ -102,14 +121,7 @@ export default function TodoistApp({ userId }) {
         // Compute client Karma from completed tasks history
         const completedTasks = allTasks.filter(t => t.completed && t.completedAt);
         const score = 100 + (completedTasks.length * 10);
-        let levelName = 'Novice';
-        if (score < 500) levelName = 'Novice';
-        else if (score < 1000) levelName = 'Amateur';
-        else if (score < 1500) levelName = 'Intermediate';
-        else if (score < 2500) levelName = 'Professional';
-        else if (score < 4000) levelName = 'Expert';
-        else if (score < 6000) levelName = 'Master';
-        else levelName = 'Grandmaster';
+        const levelName = getKarmaLevel(score).level;
 
         // Group past 7 days completion
         const historyMap = {};
@@ -194,7 +206,7 @@ export default function TodoistApp({ userId }) {
 
   const isReadOnlyTask = (taskId) => {
     const t = tasks.find((x) => x.id === taskId);
-    return !!(t && (t.readOnly || t.isContest));
+    return isFeedItem(t);
   };
 
   const handleDeleteTask = async (taskId) => {
@@ -266,17 +278,9 @@ export default function TodoistApp({ userId }) {
 
       setTasks((curr) => curr.map((t) => (t.id === taskId ? updated : t)));
 
-      // XP modifications
-      let karmaDiff = nextCompleted ? 10 : -10;
-      let updatedScore = Math.max(0, karma.score + karmaDiff);
-      let levelName = 'Novice';
-      if (updatedScore < 500) levelName = 'Novice';
-      else if (updatedScore < 1000) levelName = 'Amateur';
-      else if (updatedScore < 1500) levelName = 'Intermediate';
-      else if (updatedScore < 2500) levelName = 'Professional';
-      else if (updatedScore < 4000) levelName = 'Expert';
-      else if (updatedScore < 6000) levelName = 'Master';
-      else levelName = 'Grandmaster';
+      // XP modifications (+10 on complete, -10 on reopen)
+      const updatedScore = Math.max(0, karma.score + (nextCompleted ? 10 : -10));
+      const levelName = getKarmaLevel(updatedScore).level;
 
       setKarma((curr) => ({ ...curr, score: updatedScore, level: levelName }));
 
@@ -435,8 +439,8 @@ export default function TodoistApp({ userId }) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-          <span className="text-sm font-semibold tracking-wide">Connecting workspace to Supabase...</span>
+          <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          <span className="text-sm font-semibold tracking-wide">Loading your activity…</span>
         </div>
       </div>
     );
@@ -455,10 +459,10 @@ export default function TodoistApp({ userId }) {
               <button
                 type="button"
                 onClick={() => openCreatePane()}
-                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold font-mono tracking-wider transition flex items-center gap-1 cursor-pointer shadow-lg shadow-indigo-600/10 hover:scale-[1.01]"
+                className="px-3 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold tracking-wide transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-violet-600/10 hover:scale-[1.01]"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>SPAWN GOAL</span>
+                <span>New goal</span>
               </button>
               <button
                 type="button"
@@ -534,7 +538,7 @@ export default function TodoistApp({ userId }) {
           )}
 
           {activeTab === 'calendar' && (
-            <CalendarView tasks={tasks} projects={projects} sections={sections} labels={labels} onAddTask={handleAddTask} onToggleComplete={handleToggleComplete} onSelectTask={setSelectedTaskId} />
+            <CalendarView tasks={tasks} projects={projects} sections={sections} labels={labels} onAddTask={handleAddTask} onToggleComplete={handleToggleComplete} onSelectTask={setSelectedTaskId} onToast={showToast} />
           )}
         </div>
       </PageShell>
@@ -562,7 +566,6 @@ export default function TodoistApp({ userId }) {
             labels={labels}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
-            allTasks={tasks}
           />
         )}
       </AnimatePresence>

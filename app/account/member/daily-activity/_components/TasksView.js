@@ -1,15 +1,26 @@
 /**
- * @file Ported verbatim from the Todoist reference app. Types stripped.
- * @module daily-activity/_todoist/TasksView
+ * @file Tasks tab for Daily Activity — the working task list. A left rail
+ *   filters by project (space category) and label; the main column offers
+ *   all/today/upcoming/completed pills, an inline search, a quick-add box,
+ *   and two layouts: a date-grouped list and a kanban board (Inbox column
+ *   plus per-section columns). Editable todos render with priority accent,
+ *   complete/delete controls; read-only feed items render via
+ *   {@link FeedItemCard}. Paginated at 15 items.
+ *
+ * @module daily-activity/TasksView
  */
 
 'use client';
 
 import { useState } from 'react';
 import {
-  Plus, List, Kanban, Check, Tag, Bookmark, ChevronRight, ArrowLeft, ArrowRight, Trash2, Edit2, Link, Trash, Clipboard, Clock,
+  Plus, List, Kanban, Check, Tag, Bookmark, ChevronRight, ArrowLeft, ArrowRight, Trash2, Edit2, Trash, Clipboard, Clock,
 } from 'lucide-react';
-import { Priority, getPlatformClass, getFeedItemUrl, isTaskOnDate, isTaskInDateRange } from './utils';
+import {
+  Priority, isTaskOnDate, isTaskInDateRange, getFeedMeta,
+  getTodayDateString, formatDateString, addDays,
+} from './utils';
+import FeedItemCard from './FeedItemCard';
 
 export default function TasksView({
   tasks,
@@ -38,25 +49,6 @@ export default function TasksView({
 
   const [inlineSearch, setInlineSearch] = useState('');
   const [quickTitle, setQuickTitle] = useState('');
-
-  const getTodayDateString = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
-  const formatDateString = (date) => {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
-  const addDays = (date, days) => {
-    const res = new Date(date);
-    res.setDate(res.getDate() + days);
-    return res;
-  };
 
   const todayStr = getTodayDateString();
 
@@ -168,47 +160,25 @@ export default function TasksView({
   };
 
   const renderKanbanCard = (t) => {
-    const isFeedItem = t.isContest || ['event', 'task', 'session'].includes(t.feedCategory);
+    const feedMeta = getFeedMeta(t);
 
-    if (isFeedItem) {
-      let kanbanStyle = 'border-white/5 bg-[#111625]';
-      let emoji = '✔';
-      let labelText = '';
-
-      if (t.isContest) {
-        kanbanStyle = 'border-amber-500/30 bg-amber-500/[0.03] hover:border-amber-500/50';
-        emoji = '🏆';
-        labelText = 'CONTEST';
-      } else if (t.feedCategory === 'event') {
-        kanbanStyle = 'border-emerald-500/30 bg-emerald-500/[0.03] hover:border-emerald-500/50';
-        emoji = '📣';
-        labelText = 'EVENT';
-      } else if (t.feedCategory === 'task') {
-        kanbanStyle = 'border-indigo-500/30 bg-indigo-500/[0.03] hover:border-indigo-500/50';
-        emoji = '📅';
-        labelText = 'DEADLINE';
-      } else if (t.feedCategory === 'session') {
-        kanbanStyle = 'border-sky-500/30 bg-sky-500/[0.03] hover:border-sky-500/50';
-        emoji = '🎓';
-        labelText = 'SESSION';
-      }
-
+    if (feedMeta) {
       return (
         <div
           key={`kanban-task-${t.id}`}
           onClick={() => onSelectTask(t.id)}
-          className={`p-3 border rounded-lg transition cursor-pointer select-none space-y-2 relative group ${kanbanStyle}`}
+          className={`group relative cursor-pointer space-y-2 rounded-lg border p-3 transition select-none hover:brightness-110 ${feedMeta.accent}`}
         >
-          <div className="flex items-start gap-2 justify-between">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 mb-1 text-slate-300">
-                <span className="text-[10px]">{emoji}</span>
-                <span className="text-[7.5px] font-black font-mono tracking-wider opacity-80">{labelText}</span>
+              <div className="mb-1 flex items-center gap-1">
+                <span className="text-[10px]">{feedMeta.emoji}</span>
+                <span className="text-[9px] font-bold tracking-wider opacity-80">{feedMeta.label.toUpperCase()}</span>
               </div>
-              <span className="text-xs font-bold text-slate-100 leading-snug truncate block">{t.title}</span>
+              <span className={`block truncate text-xs font-bold leading-snug ${feedMeta.title}`}>{t.title}</span>
             </div>
           </div>
-          {t.description && <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{t.description}</p>}
+          {t.description && <p className="line-clamp-2 text-[10px] leading-relaxed text-gray-400">{t.description}</p>}
         </div>
       );
     }
@@ -217,7 +187,7 @@ export default function TasksView({
       <div
         key={`kanban-task-${t.id}`}
         onClick={() => onSelectTask(t.id)}
-        className="p-3 bg-[#111625] border border-white/5 rounded-lg hover:border-indigo-400/30 transition cursor-pointer select-none space-y-2 relative group"
+        className="group relative space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 transition cursor-pointer select-none hover:border-violet-400/30"
       >
         <div className="flex items-start gap-2 justify-between">
           <span className={`text-xs font-bold leading-snug truncate block w-4/5 ${t.completed ? 'line-through text-slate-500' : 'text-slate-100'}`}>{t.title}</span>
@@ -241,13 +211,13 @@ export default function TasksView({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="tasks-layout-view">
-      <div className="bg-[#0c1221] rounded-2xl border border-white/[0.04] p-5 col-span-1 lg:col-span-3 h-full flex flex-col justify-between" id="lists-sidebar-col">
+      <div className="bg-gray-900 rounded-2xl border border-white/[0.04] p-5 col-span-1 lg:col-span-3 h-full flex flex-col justify-between" id="lists-sidebar-col">
         <div className="space-y-6">
           <div>
             <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
               <span className="text-[10px] text-slate-400 font-mono tracking-widest font-bold uppercase block">CATEGORIES</span>
-              <button onClick={handleAddNewList} className="p-1 hover:bg-[#121a2e] text-indigo-400 hover:text-indigo-300 rounded-lg transition" title="Create New List">
-                <Plus className="w-4 h-4 text-indigo-300" />
+              <button onClick={handleAddNewList} className="p-1 hover:bg-white/[0.06] text-violet-400 hover:text-violet-300 rounded-lg transition" title="Create New List">
+                <Plus className="w-4 h-4 text-violet-300" />
               </button>
             </div>
 
@@ -260,15 +230,15 @@ export default function TasksView({
                 }}
                 className={`w-full text-left px-3 py-2 text-xs rounded-xl flex justify-between items-center transition duration-150 font-bold ${
                   activeProjectId === 'all' && !activeLabelName
-                    ? 'bg-indigo-600/15 border border-indigo-500/25 text-indigo-300 shadow-sm'
-                    : 'text-slate-300 hover:bg-[#121a2e]'
+                    ? 'bg-violet-600/15 border border-violet-500/25 text-violet-300 shadow-sm'
+                    : 'text-slate-300 hover:bg-white/[0.06]'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <Clipboard className="w-4 h-4 text-slate-400 group-hover:text-white" />
                   <span>All Tasks</span>
                 </div>
-                <span className="px-2 py-0.5 bg-[#121a2e] border border-white/[0.04] text-[9.5px] font-mono rounded font-black text-slate-300">
+                <span className="px-2 py-0.5 bg-white/[0.04] border border-white/[0.04] text-[9.5px] font-mono rounded font-black text-slate-300">
                   {getProjectIncompleteCount('all')}
                 </span>
               </button>
@@ -283,15 +253,15 @@ export default function TasksView({
                     }}
                     className={`flex-1 text-left px-3 py-2 text-xs rounded-xl flex justify-between items-center transition duration-150 font-bold truncate ${
                       activeProjectId === p.id && !activeLabelName
-                        ? 'bg-indigo-600/15 border border-indigo-500/25 text-indigo-300'
-                        : 'text-slate-300 hover:bg-[#121a2e]'
+                        ? 'bg-violet-600/15 border border-violet-500/25 text-violet-300'
+                        : 'text-slate-300 hover:bg-white/[0.06]'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                       <span className="truncate">{p.name}</span>
                     </div>
-                    <span className="px-2 py-0.5 bg-[#121a2e] border border-white/[0.04] text-[9.5px] font-mono rounded font-black text-slate-300">
+                    <span className="px-2 py-0.5 bg-white/[0.04] border border-white/[0.04] text-[9.5px] font-mono rounded font-black text-slate-300">
                       {getProjectIncompleteCount(p.id)}
                     </span>
                   </button>
@@ -304,7 +274,7 @@ export default function TasksView({
                           onDeleteProject(p.id);
                         }
                       }}
-                      className="absolute right-8 opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:bg-[#121a2e] rounded-lg transition"
+                      className="absolute right-8 opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:bg-white/[0.06] rounded-lg transition"
                       title="Delete List"
                     >
                       <Trash2 className="w-3 h-3 text-red-400" />
@@ -331,15 +301,15 @@ export default function TasksView({
                   }}
                   className={`w-full text-left px-3 py-2 text-xs rounded-xl flex justify-between items-center transition duration-150 font-bold ${
                     activeLabelName === lbl.name
-                      ? 'bg-indigo-600/15 border border-indigo-500/25 text-indigo-300'
-                      : 'text-slate-300 hover:bg-[#121a2e]'
+                      ? 'bg-violet-600/15 border border-violet-500/25 text-violet-300'
+                      : 'text-slate-300 hover:bg-white/[0.06]'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Bookmark className="w-3 h-3 shrink-0" style={{ color: lbl.color }} />
                     <span className="truncate">@{lbl.name}</span>
                   </div>
-                  <span className="px-1.5 py-0.5 text-[8.5px] text-slate-400 bg-[#121a2e] rounded font-mono font-bold">
+                  <span className="px-1.5 py-0.5 text-[8.5px] text-slate-400 bg-white/[0.04] rounded font-mono font-bold">
                     {tasks.filter((t) => !t.isArchived && !t.completed && t.labels.includes(lbl.name)).length}
                   </span>
                 </button>
@@ -355,7 +325,7 @@ export default function TasksView({
 
       <div className="col-span-1 lg:col-span-9 flex flex-col justify-between" id="tasks-main-column">
         <div>
-          <div className="bg-[#0c1221] rounded-2xl border border-white/[0.04] p-4.5 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-sm" id="filters-header">
+          <div className="bg-gray-900 rounded-2xl border border-white/[0.04] p-4.5 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-sm" id="filters-header">
             <div className="flex flex-wrap gap-1.5 text-xs">
               {['all', 'today', 'upcoming', 'completed'].map((f) => (
                 <button
@@ -366,8 +336,8 @@ export default function TasksView({
                   }}
                   className={`px-3.5 py-1.5 font-bold rounded-xl transition duration-150 text-xs capitalize tracking-wide cursor-pointer ${
                     activeFilter === f
-                      ? 'bg-indigo-600 text-white shadow shadow-indigo-900/15'
-                      : 'bg-[#121a2e] hover:bg-[#16213a] border border-white/[0.04] text-slate-300 hover:text-white'
+                      ? 'bg-violet-600 text-white shadow shadow-violet-900/15'
+                      : 'bg-white/[0.04] hover:bg-white/[0.06] border border-white/[0.04] text-slate-300 hover:text-white'
                   }`}
                 >
                   {f === 'all' ? 'All Tasks' : f}
@@ -384,20 +354,20 @@ export default function TasksView({
                   setInlineSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="px-3.5 py-1.5 text-xs bg-[#121a2e] border border-white/[0.04] focus:border-indigo-500 rounded-xl text-white focus:outline-none w-full md:w-44 font-bold placeholder:text-slate-500 transition-all duration-150"
+                className="px-3.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.04] focus:border-violet-500 rounded-xl text-white focus:outline-none w-full md:w-44 font-bold placeholder:text-slate-500 transition-all duration-150"
               />
 
-              <div className="flex bg-[#121a2e] border border-white/[0.04] rounded-xl p-0.5">
+              <div className="flex bg-white/[0.04] border border-white/[0.04] rounded-xl p-0.5">
                 <button
                   onClick={() => setActiveLayout('list')}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${activeLayout === 'list' ? 'bg-[#070b13] text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition cursor-pointer ${activeLayout === 'list' ? 'bg-gray-900 text-white' : 'text-slate-400 hover:text-white'}`}
                   title="List Display Layout"
                 >
                   <List className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setActiveLayout('board')}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${activeLayout === 'board' ? 'bg-[#070b13] text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition cursor-pointer ${activeLayout === 'board' ? 'bg-gray-900 text-white' : 'text-slate-400 hover:text-white'}`}
                   title="Kanban Board Layout"
                 >
                   <Kanban className="w-4 h-4" />
@@ -414,7 +384,7 @@ export default function TasksView({
               onOpenCreate(quickTitle.trim());
               setQuickTitle('');
             }}
-            className="bg-[#0c1221] rounded-2xl border border-white/[0.04] p-3 flex items-center gap-3.5 mb-6 group focus-within:border-violet-500/40 focus-within:ring-1 focus-within:ring-violet-500/10 transition-all duration-200"
+            className="bg-gray-900 rounded-2xl border border-white/[0.04] p-3 flex items-center gap-3.5 mb-6 group focus-within:border-violet-500/40 focus-within:ring-1 focus-within:ring-violet-500/10 transition-all duration-200"
           >
             <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
               <Plus className="w-4 h-4" />
@@ -455,7 +425,7 @@ export default function TasksView({
               <button
                 type="submit"
                 disabled={!quickTitle.trim()}
-                className="px-3.5 py-1.5 text-xs font-bold font-mono tracking-wider rounded-xl transition duration-150 flex items-center gap-1 cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-30 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed shadow-md"
+                className="px-3.5 py-1.5 text-xs font-bold font-mono tracking-wider rounded-xl transition duration-150 flex items-center gap-1 cursor-pointer bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-30 disabled:hover:bg-violet-600 disabled:cursor-not-allowed shadow-md"
               >
                 SPAWN
               </button>
@@ -465,8 +435,8 @@ export default function TasksView({
           {activeLayout === 'list' ? (
             <div className="space-y-6" id="list-tasks-wrapper">
               {totalItems === 0 ? (
-                <div className="bg-[#111625] rounded-xl border border-white/5 p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
-                  <Clipboard className="w-10 h-10 text-indigo-400/40" />
+                <div className="bg-gray-900 rounded-xl border border-white/5 p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
+                  <Clipboard className="w-10 h-10 text-violet-400/40" />
                   <span className="text-sm font-semibold text-white">No synchronized goals found!</span>
                   <span className="text-xs">Adjust your active navigation list categories, or tap &quot;+&quot; inline to spawn reminders.</span>
                 </div>
@@ -479,146 +449,14 @@ export default function TasksView({
 
                     <div className="space-y-2">
                       {groupedTasks[groupName].map((task) => {
-                        if (task.isContest) {
+                        if (getFeedMeta(task)) {
                           return (
-                            <div
+                            <FeedItemCard
                               key={`task-list-card-${task.id}`}
-                              className={`px-4 py-3 border border-l-4 hover:brightness-125 rounded-xl shadow-sm flex items-center justify-between select-none cursor-pointer transition gap-3 ${getPlatformClass(task.contestPlatform)}`}
-                              onClick={() => onSelectTask(task.id)}
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-base shrink-0 leading-none">🏆</span>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-black leading-tight block truncate font-display">{task.title}</span>
-                                  {task.description && <p className="text-[10px] opacity-80 truncate mt-0.5 leading-snug">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
-                                    <span className={`px-1 rounded border capitalize ${getPlatformClass(task.contestPlatform)}`}>{task.contestPlatform}</span>
-                                    <span>🕒 {task.contestTime}</span>
-                                    <span>⏳ {task.contestDuration}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {getFeedItemUrl(task) && (
-                                <a
-                                  href={getFeedItemUrl(task)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="px-2.5 py-1 border border-white/20 hover:border-white/40 text-[10px] font-black rounded-lg flex items-center gap-1 transition"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Link className="w-3 h-3" />
-                                  <span>Open</span>
-                                </a>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        if (task.feedCategory === 'event') {
-                          return (
-                            <div
-                              key={`task-list-card-${task.id}`}
-                              className="px-4 py-3 border border-emerald-500/30 hover:brightness-125 rounded-xl shadow-sm flex items-center justify-between select-none cursor-pointer transition gap-3 bg-emerald-500/10 text-white"
-                              onClick={() => onSelectTask(task.id)}
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-base shrink-0 leading-none">📣</span>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-black leading-tight block truncate font-display text-emerald-300">{task.title}</span>
-                                  {task.description && <p className="text-[10px] opacity-80 truncate mt-0.5 leading-snug">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
-                                    <span className="px-1.5 py-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 text-emerald-400">📣 EVENT</span>
-                                    {task.time && <span>🕒 {task.time}</span>}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {getFeedItemUrl(task) && (
-                                <a
-                                  href={getFeedItemUrl(task)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black rounded-lg flex items-center gap-1 transition"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Link className="w-3 h-3" />
-                                  <span>Open</span>
-                                </a>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        if (task.feedCategory === 'task') {
-                          return (
-                            <div
-                              key={`task-list-card-${task.id}`}
-                              className="px-4 py-3 border border-indigo-500/30 hover:brightness-125 rounded-xl shadow-sm flex items-center justify-between select-none cursor-pointer transition gap-3 bg-indigo-500/10 text-white"
-                              onClick={() => onSelectTask(task.id)}
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-base shrink-0 leading-none">📅</span>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-black leading-tight block truncate font-display text-indigo-300">{task.title}</span>
-                                  {task.description && <p className="text-[10px] opacity-80 truncate mt-0.5 leading-snug">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
-                                    <span className="px-1.5 py-0.5 rounded border border-indigo-500/25 bg-indigo-500/10 text-indigo-400">📅 DEADLINE</span>
-                                    {task.bootcampTitle && <span>{task.bootcampTitle}</span>}
-                                    {task.time && <span>🕒 {task.time}</span>}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {getFeedItemUrl(task) && (
-                                <a
-                                  href={getFeedItemUrl(task)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="px-2.5 py-1 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-black rounded-lg flex items-center gap-1 transition"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Link className="w-3 h-3" />
-                                  <span>Open</span>
-                                </a>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        if (task.feedCategory === 'session') {
-                          return (
-                            <div
-                              key={`task-list-card-${task.id}`}
-                              className="px-4 py-3 border border-sky-500/30 hover:brightness-125 rounded-xl shadow-sm flex items-center justify-between select-none cursor-pointer transition gap-3 bg-sky-500/10 text-white"
-                              onClick={() => onSelectTask(task.id)}
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-base shrink-0 leading-none">🎓</span>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-black leading-tight block truncate font-display text-sky-300">{task.title}</span>
-                                  {task.description && <p className="text-[10px] opacity-80 truncate mt-0.5 leading-snug">{task.description}</p>}
-                                  <div className="flex flex-wrap gap-x-2 gap-y-1 items-center text-[9px] font-black mt-1 opacity-80">
-                                    <span className="px-1.5 py-0.5 rounded border border-sky-500/25 bg-sky-500/10 text-sky-400">🎓 SESSION</span>
-                                    {task.bootcampTitle && <span>{task.bootcampTitle}</span>}
-                                    {task.time && <span>🕒 {task.time}</span>}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {getFeedItemUrl(task) && (
-                                <a
-                                  href={getFeedItemUrl(task)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="px-2.5 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 text-[10px] font-black rounded-lg flex items-center gap-1 transition"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Link className="w-3 h-3" />
-                                  <span>Open</span>
-                                </a>
-                              )}
-                            </div>
+                              task={task}
+                              variant="row"
+                              onSelect={onSelectTask}
+                            />
                           );
                         }
 
@@ -626,7 +464,7 @@ export default function TasksView({
                           <div
                             key={`task-list-card-${task.id}`}
                             onClick={() => onSelectTask(task.id)}
-                            className={`flex items-center justify-between p-3.5 bg-[#0e1424] border border-white/[0.04] hover:border-white/[0.08] hover:bg-[#121930] rounded-xl transition cursor-pointer select-none gap-3 group relative ${task.completed ? 'opacity-40' : ''} ${getPriorityBorderClass(task.priority)}`}
+                            className={`flex items-center justify-between p-3.5 bg-gray-900 border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.06] rounded-xl transition cursor-pointer select-none gap-3 group relative ${task.completed ? 'opacity-40' : ''} ${getPriorityBorderClass(task.priority)}`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <button
@@ -637,8 +475,8 @@ export default function TasksView({
                                 }}
                                 className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
                                   task.completed
-                                    ? 'bg-indigo-600 border-indigo-400 text-white'
-                                    : 'border-white/20 hover:border-indigo-400 text-transparent hover:bg-indigo-500/10'
+                                    ? 'bg-violet-600 border-violet-400 text-white'
+                                    : 'border-white/20 hover:border-violet-400 text-transparent hover:bg-violet-500/10'
                                 }`}
                               >
                                 {task.completed && <Check className="w-3 h-3 stroke-[3]" />}
@@ -652,8 +490,8 @@ export default function TasksView({
                                 {((task.labels && task.labels.length > 0) || task.time) && (
                                   <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                     {task.time && (
-                                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-mono text-[8.5px] font-black flex items-center gap-1 shrink-0">
-                                        <Clock className="w-2.5 h-2.5 text-indigo-400" />
+                                      <span className="px-1.5 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-300 font-mono text-[8.5px] font-black flex items-center gap-1 shrink-0">
+                                        <Clock className="w-2.5 h-2.5 text-violet-400" />
                                         <span>{task.time}</span>
                                       </span>
                                     )}
@@ -680,7 +518,7 @@ export default function TasksView({
                               )}
 
                               {task.projectId !== 'all' && (
-                                <span className="px-1.5 py-0.5 bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-[9px] font-mono font-bold rounded-lg block shrink-0 max-w-[50px] truncate">
+                                <span className="px-1.5 py-0.5 bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[9px] font-mono font-bold rounded-lg block shrink-0 max-w-[50px] truncate">
                                   {projects.find((p) => p.id === task.projectId)?.name.toUpperCase() || 'LIST'}
                                 </span>
                               )}
@@ -711,10 +549,10 @@ export default function TasksView({
           ) : (
             <div className="overflow-x-auto pb-4" id="board-layout-wrapper">
               <div className="flex gap-4 min-w-[800px]">
-                <div className="bg-[#111625]/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px]">
+                <div className="bg-gray-900/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px]">
                   <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3">
                     <span className="text-xs font-bold text-white uppercase tracking-wider font-display">Inbox Column</span>
-                    <span className="px-2 py-0.5 bg-[#182032] text-[10px] text-indigo-400 font-mono font-bold rounded-full">
+                    <span className="px-2 py-0.5 bg-white/[0.04] text-[10px] text-violet-400 font-mono font-bold rounded-full">
                       {paginatedTasks.filter((t) => !t.sectionId).length}
                     </span>
                   </div>
@@ -738,7 +576,7 @@ export default function TasksView({
                         });
                       }
                     }}
-                    className="w-full mt-2.5 py-1.5 bg-[#182032] hover:bg-[#1c263c] text-slate-300 hover:text-white text-[11px] font-bold rounded-lg border border-dashed border-white/10 transition flex items-center justify-center gap-1 cursor-pointer"
+                    className="w-full mt-2.5 py-1.5 bg-white/[0.04] hover:bg-white/[0.06] text-slate-300 hover:text-white text-[11px] font-bold rounded-lg border border-dashed border-white/10 transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>ADD ITEM</span>
@@ -749,11 +587,11 @@ export default function TasksView({
                   const secTasks = paginatedTasks.filter((t) => t.sectionId === sec.id);
 
                   return (
-                    <div key={`section-col-${sec.id}`} className="bg-[#111625]/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px] relative group/col">
+                    <div key={`section-col-${sec.id}`} className="bg-gray-900/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px] relative group/col">
                       <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3">
                         <span className="text-xs font-bold text-white uppercase tracking-wider font-display truncate max-w-[160px]">{sec.name}</span>
                         <div className="flex items-center gap-1">
-                          <span className="px-2 py-0.5 bg-[#182032] text-[10px] text-indigo-400 font-mono font-bold rounded-full mr-1">{secTasks.length}</span>
+                          <span className="px-2 py-0.5 bg-white/[0.04] text-[10px] text-violet-400 font-mono font-bold rounded-full mr-1">{secTasks.length}</span>
 
                           <button
                             onClick={() => {
@@ -762,7 +600,7 @@ export default function TasksView({
                                 onUpdateSection(sec.id, newName.trim());
                               }
                             }}
-                            className="p-1 opacity-0 group-hover/col:opacity-100 hover:bg-[#182032] text-slate-400 rounded cursor-pointer transition"
+                            className="p-1 opacity-0 group-hover/col:opacity-100 hover:bg-white/[0.06] text-slate-400 rounded cursor-pointer transition"
                             title="Rename Section"
                           >
                             <Edit2 className="w-3 h-3" />
@@ -774,7 +612,7 @@ export default function TasksView({
                                 onDeleteSection(sec.id);
                               }
                             }}
-                            className="p-1 opacity-0 group-hover/col:opacity-100 hover:bg-[#182032] text-red-400 rounded cursor-pointer transition"
+                            className="p-1 opacity-0 group-hover/col:opacity-100 hover:bg-white/[0.06] text-red-400 rounded cursor-pointer transition"
                             title="Delete Column"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -800,7 +638,7 @@ export default function TasksView({
                             });
                           }
                         }}
-                        className="w-full mt-2.5 py-1.5 bg-[#182032] hover:bg-[#1c263c] text-slate-300 hover:text-white text-[11px] font-bold rounded-lg border border-dashed border-white/10 transition flex items-center justify-center gap-1 cursor-pointer"
+                        className="w-full mt-2.5 py-1.5 bg-white/[0.04] hover:bg-white/[0.06] text-slate-300 hover:text-white text-[11px] font-bold rounded-lg border border-dashed border-white/10 transition flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>ADD ITEM</span>
@@ -811,7 +649,7 @@ export default function TasksView({
 
                 <button
                   onClick={handleAddNewSection}
-                  className="bg-[#111625]/20 hover:bg-[#111625]/40 border border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 w-72 shrink-0 h-[500px] flex flex-col justify-center items-center text-slate-400 hover:text-indigo-400 cursor-pointer transition gap-2 font-mono font-bold text-xs"
+                  className="bg-gray-900/20 hover:bg-white/[0.06]/40 border border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 w-72 shrink-0 h-[500px] flex flex-col justify-center items-center text-slate-400 hover:text-violet-400 cursor-pointer transition gap-2 font-mono font-bold text-xs"
                 >
                   <Plus className="w-6 h-6 stroke-[3]" />
                   <span>ADD COLUMN</span>
@@ -821,14 +659,14 @@ export default function TasksView({
           )}
         </div>
 
-        <div className="bg-[#111625] rounded-xl border border-white/5 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-xs text-slate-300 mt-6" id="pagination-footer">
+        <div className="bg-gray-900 rounded-xl border border-white/5 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-xs text-slate-300 mt-6" id="pagination-footer">
           <div>
             <span>Showing </span>
             <span className="font-bold text-white">{totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span>
             <span> - </span>
             <span className="font-bold text-white">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
             <span> of </span>
-            <span className="font-bold text-indigo-400">{totalItems} items</span>
+            <span className="font-bold text-violet-400">{totalItems} items</span>
             {activeProjectId !== 'all' && (
               <span> in <strong className="text-white">#{selectedProjectObj?.name}</strong></span>
             )}
@@ -836,11 +674,11 @@ export default function TasksView({
 
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] text-slate-400 tracking-wider">PAGE {currentPage} OF {totalPages}</span>
-            <div className="flex border border-white/5 rounded-lg bg-[#182032] p-0.5">
+            <div className="flex border border-white/5 rounded-lg bg-white/[0.04] p-0.5">
               <button
                 disabled={currentPage === 1}
                 onClick={prevPage}
-                className="p-1 px-2 hover:bg-[#0b0f19] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
+                className="p-1 px-2 hover:bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -848,7 +686,7 @@ export default function TasksView({
               <button
                 disabled={currentPage === totalPages}
                 onClick={nextPage}
-                className="p-1 px-2 hover:bg-[#0b0f19] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
+                className="p-1 px-2 hover:bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>

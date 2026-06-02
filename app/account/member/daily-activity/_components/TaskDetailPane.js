@@ -1,8 +1,16 @@
 /**
- * @file Right-side task panel. Serves both "create" (new goal) and "edit"
- *   (existing goal) modes so spawning and editing share identical data flow
- *   while keeping every control each mode previously had.
- * @module daily-activity/_todoist/TaskDetailPane
+ * @file Right-side slide-over panel for a single goal. One component serves
+ *   three modes:
+ *     • create — a draft buffered locally and committed via onCreateTask.
+ *     • edit   — an existing editable todo; every field change is persisted
+ *                immediately through onUpdateTask.
+ *     • read-only — feed items (contests/events/deadlines/sessions), shown
+ *                with a category banner and a portal link; no editing.
+ *   Shared controls cover the title/description, a 7-day date strip with
+ *   multi-day & recurrence support, start/end time, priority, project &
+ *   section, labels, subtasks, and a comment timeline.
+ *
+ * @module daily-activity/TaskDetailPane
  */
 
 'use client';
@@ -12,11 +20,11 @@ import { motion } from 'framer-motion';
 import {
   X, Trash2, Archive, Calendar, Flag, CheckSquare, Plus, MessageSquare,
   Send, GitPullRequest, RefreshCw, Paperclip, Sparkles, Flame, ShieldAlert,
-  HelpCircle, Tag, CalendarDays, Activity, Clock,
+  HelpCircle, Tag, Clock,
 } from 'lucide-react';
 import {
   Priority, generateId, getFeedItemUrl, getTodayDateString, formatDateString,
-  addDays, getFriendlyDate,
+  addDays, isFeedItem,
 } from './utils';
 
 export default function TaskDetailPane({
@@ -30,7 +38,6 @@ export default function TaskDetailPane({
   onUpdateTask,
   onDeleteTask,
   onCreateTask,
-  allTasks = [],
 }) {
   const isCreate = mode === 'create';
 
@@ -65,7 +72,7 @@ export default function TaskDetailPane({
   }
 
   // Read-only feed items (contests, events, sessions, deadlines) — view only.
-  const isReadOnly = !isCreate && (task.readOnly || task.isContest || ['event', 'task', 'session'].includes(task.feedCategory));
+  const isReadOnly = !isCreate && isFeedItem(task);
 
   if (isReadOnly) {
     const totalSubs = task.subtasks?.length || 0;
@@ -83,7 +90,7 @@ export default function TaskDetailPane({
     } else if (task.feedCategory === 'task') {
       themeColor = '#6366f1'; // Indigo
       categoryLabel = '📅 DEADLINE';
-      bgGradient = 'from-indigo-500/[0.08] to-purple-500/[0.02] border-indigo-500/20';
+      bgGradient = 'from-violet-500/[0.08] to-purple-500/[0.02] border-violet-500/20';
     } else if (task.feedCategory === 'session') {
       themeColor = '#0ea5e9'; // Sky
       categoryLabel = '🎓 SESSION';
@@ -95,13 +102,13 @@ export default function TaskDetailPane({
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%', transition: { duration: 0.2 } }}
-        className="w-full md:w-[480px] bg-[#0e1017] border-l border-zinc-800/80 h-full flex flex-col shadow-2xl z-40 fixed right-0 top-0 select-none"
+        className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-2xl z-40 fixed right-0 top-0 select-none"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#12141c] border-b border-zinc-800/80">
+        <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-white/[0.08]">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: themeColor }} />
-            <span className="text-[10px] font-black font-mono tracking-widest text-zinc-400 uppercase">{categoryLabel}</span>
+            <span className="text-[10px] font-black font-mono tracking-widest text-gray-400 uppercase">{categoryLabel}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -110,12 +117,12 @@ export default function TaskDetailPane({
                 href={getFeedItemUrl(task)}
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 text-[9px] font-black font-mono tracking-wider bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg flex items-center gap-1 transition"
+                className="px-2.5 py-1 text-[9px] font-black font-mono tracking-wider bg-violet-600 hover:bg-violet-500 text-white rounded-lg flex items-center gap-1 transition"
               >
                 <span>VISIT PORTAL</span>
               </a>
             )}
-            <button onClick={onClose} className="p-1.5 hover:bg-zinc-800/80 rounded-lg text-zinc-400 transition cursor-pointer">
+            <button onClick={onClose} className="p-1.5 hover:bg-white/[0.06] rounded-lg text-gray-400 transition cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -131,16 +138,16 @@ export default function TaskDetailPane({
           {/* Description */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Details / Instructions</label>
-            <div className="text-xs text-zinc-300 bg-[#12141c] border border-zinc-800/60 p-3.5 rounded-xl leading-relaxed select-text whitespace-pre-wrap">
-              {task.description || <span className="italic text-zinc-650">No additional description or timeline details specified.</span>}
+            <div className="text-xs text-gray-300 bg-white/[0.02] border border-white/[0.06] p-3.5 rounded-xl leading-relaxed select-text whitespace-pre-wrap">
+              {task.description || <span className="italic text-gray-500">No additional description or timeline details specified.</span>}
             </div>
           </div>
 
           {/* Properties Grid */}
-          <div className="bg-[#12141c] p-3.5 rounded-xl border border-zinc-800/60 grid grid-cols-2 gap-4 text-[11px]">
+          <div className="bg-white/[0.02] p-3.5 rounded-xl border border-white/[0.06] grid grid-cols-2 gap-4 text-[11px]">
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Scheduled Date</span>
-              <div className="flex items-center gap-1.5 text-zinc-300 font-bold">
+              <div className="flex items-center gap-1.5 text-gray-300 font-bold">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 <span>{task.dueDate ? new Date(task.dueDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Continuous'}</span>
               </div>
@@ -148,39 +155,39 @@ export default function TaskDetailPane({
 
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Assigned Priority</span>
-              <div className="flex items-center gap-1.5 text-zinc-300 font-bold">
+              <div className="flex items-center gap-1.5 text-gray-300 font-bold">
                 <Flag className={`w-3.5 h-3.5 ${task.priority === Priority.P1 ? 'text-red-500 fill-current' : task.priority === Priority.P2 ? 'text-amber-500 fill-current' : task.priority === Priority.P3 ? 'text-blue-500 fill-current' : 'text-slate-400'}`} />
                 <span>{task.priority === Priority.P1 ? 'Critical (P1)' : task.priority === Priority.P2 ? 'High (P2)' : task.priority === Priority.P3 ? 'Medium (P3)' : 'Low (P4)'}</span>
               </div>
             </div>
 
             {task.bootcampTitle && (
-              <div className="flex flex-col gap-1 col-span-2 border-t border-zinc-800/50 pt-2.5">
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Associated Bootcamp/Track</span>
-                <span className="text-indigo-300 font-extrabold">{task.bootcampTitle}</span>
+                <span className="text-violet-300 font-extrabold">{task.bootcampTitle}</span>
               </div>
             )}
 
             {task.time && (
-              <div className="flex flex-col gap-1 col-span-2 border-t border-zinc-800/50 pt-2.5">
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Start Time</span>
-                <span className="text-zinc-300 font-bold">🕒 {task.time}</span>
+                <span className="text-gray-300 font-bold">🕒 {task.time}</span>
               </div>
             )}
           </div>
 
           {/* Attachments Section */}
           {task.attachments && task.attachments.length > 0 && (
-            <div className="bg-[#12141c] p-3.5 rounded-xl border border-zinc-800/60 space-y-2 text-[11px] w-full">
+            <div className="bg-white/[0.02] p-3.5 rounded-xl border border-white/[0.06] space-y-2 text-[11px] w-full">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
                 <Paperclip className="w-3.5 h-3.5 text-slate-400" /> Reference Resources ({task.attachments.length})
               </span>
               <div className="space-y-1.5 mt-2">
                 {task.attachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between p-2 rounded-lg bg-[#0e1017] border border-zinc-800/40">
+                  <div key={att.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-900 border border-white/[0.04]">
                     <div className="flex items-center gap-2 min-w-0">
                       <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate font-bold text-zinc-300">{att.name}</span>
+                      <span className="truncate font-bold text-gray-300">{att.name}</span>
                       <span className="text-[9px] text-slate-500 shrink-0 font-mono">({att.size})</span>
                     </div>
                   </div>
@@ -194,18 +201,18 @@ export default function TaskDetailPane({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="font-black text-[9px] text-slate-500 uppercase tracking-wider">Progress Subgoals ({completedSubs}/{totalSubs})</span>
-                <span className="text-[10px] font-mono text-indigo-400 font-bold">{progressPercent}% complete</span>
+                <span className="text-[10px] font-mono text-violet-400 font-bold">{progressPercent}% complete</span>
               </div>
 
-              <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+              <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <div className="h-full bg-violet-500 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
               </div>
 
               <div className="space-y-1">
                 {task.subtasks.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-[#12141c] border border-zinc-800/60">
-                    <input type="checkbox" checked={s.completed} disabled className="rounded text-indigo-500 border-zinc-700 h-3.5 w-3.5 opacity-60 cursor-not-allowed" />
-                    <span className={`text-xs text-zinc-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
+                  <div key={s.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                    <input type="checkbox" checked={s.completed} disabled className="rounded text-violet-500 border-white/20 h-3.5 w-3.5 opacity-60 cursor-not-allowed" />
+                    <span className={`text-xs text-gray-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
                   </div>
                 ))}
               </div>
@@ -214,16 +221,16 @@ export default function TaskDetailPane({
 
           {/* Static Log / Comments Section */}
           {task.comments && task.comments.length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-zinc-800/60">
+            <div className="space-y-3 pt-3 border-t border-white/[0.06]">
               <span className="font-black text-[9px] text-slate-500 uppercase tracking-wider block">Activity Logs / System Notes ({task.comments.length})</span>
               <div className="space-y-2.5">
                 {task.comments.map((c) => (
-                  <div key={c.id} className="p-3 bg-[#12141c] rounded-xl border border-zinc-800/60 flex flex-col gap-1">
+                  <div key={c.id} className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.06] flex flex-col gap-1">
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="font-black text-zinc-400">{c.authorName}</span>
-                      <span className="text-zinc-500 font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
+                      <span className="font-black text-gray-400">{c.authorName}</span>
+                      <span className="text-gray-500 font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-xs text-zinc-300 break-words leading-relaxed">{c.content}</p>
+                    <p className="text-xs text-gray-300 break-words leading-relaxed">{c.content}</p>
                   </div>
                 ))}
               </div>
@@ -321,7 +328,7 @@ export default function TaskDetailPane({
   const priorityCards = [
     { level: Priority.P1, text: 'CRITICAL (P1)', icon: Flame, color: 'border-rose-500/20 text-rose-400 bg-rose-500/5', activeColor: 'bg-gradient-to-r from-rose-600 to-red-600 text-white font-black border-rose-500 shadow-[0_4px_18px_rgba(244,63,94,0.35)] scale-[1.03]' },
     { level: Priority.P2, text: 'MEDIUM (P2)', icon: ShieldAlert, color: 'border-amber-500/20 text-amber-400 bg-amber-500/5', activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black border-amber-400 shadow-[0_4px_18px_rgba(245,158,11,0.35)] scale-[1.03]' },
-    { level: Priority.P3, text: 'GENERAL (P3)', icon: HelpCircle, color: 'border-indigo-500/20 text-indigo-400 bg-indigo-500/5', activeColor: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black border-indigo-500 shadow-[0_4px_18px_rgba(99,102,241,0.35)] scale-[1.03]' },
+    { level: Priority.P3, text: 'GENERAL (P3)', icon: HelpCircle, color: 'border-violet-500/20 text-violet-400 bg-violet-500/5', activeColor: 'bg-gradient-to-r from-violet-600 to-violet-600 text-white font-black border-violet-500 shadow-[0_4px_18px_rgba(99,102,241,0.35)] scale-[1.03]' },
   ];
 
   const datePresets = [
@@ -335,21 +342,21 @@ export default function TaskDetailPane({
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%', transition: { duration: 0.2 } }}
-      className="w-full md:w-[480px] bg-gradient-to-b from-[#0a0b16]/98 to-[#04050a]/98 backdrop-blur-2xl border-l border-white/[0.08] h-full flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] z-40 fixed right-0 top-0 select-none transition-all duration-300"
+      className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] z-40 fixed right-0 top-0 select-none transition-all duration-300"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-950/40 to-indigo-950/10 border-b border-white/[0.06] backdrop-blur-md">
+      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-950/40 to-violet-950/10 border-b border-white/[0.06] backdrop-blur-md">
         {isCreate ? (
           <div className="flex items-center gap-2 min-w-0">
-            <span className="p-1.5 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 text-indigo-400 rounded-lg border border-indigo-500/20">
+            <span className="p-1.5 bg-gradient-to-br from-violet-500/10 to-violet-500/10 text-violet-400 rounded-lg border border-violet-500/20">
               <Sparkles className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[11px] font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 uppercase">Spawn New Goal</span>
+            <span className="text-[11px] font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-violet-400 to-purple-400 uppercase">Spawn New Goal</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: activeProject?.color }} />
-            <span className="text-xs font-bold truncate text-zinc-300 font-mono uppercase tracking-wider">{activeProject?.name} {activeSection ? `/ ${activeSection.name}` : ''}</span>
+            <span className="text-xs font-bold truncate text-gray-300 font-mono uppercase tracking-wider">{activeProject?.name} {activeSection ? `/ ${activeSection.name}` : ''}</span>
           </div>
         )}
 
@@ -359,7 +366,7 @@ export default function TaskDetailPane({
               <button
                 onClick={() => { onUpdateTask(task.id, { isArchived: !task.isArchived }); onClose(); }}
                 title={task.isArchived ? 'Unarchive task' : 'Archive task'}
-                className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-indigo-400 transition cursor-pointer"
+                className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-violet-400 transition cursor-pointer"
               >
                 <Archive className="w-4 h-4" />
               </button>
@@ -376,7 +383,7 @@ export default function TaskDetailPane({
             </>
           )}
 
-          <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition cursor-pointer">
+          <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -390,7 +397,7 @@ export default function TaskDetailPane({
             onChange={(e) => patch({ title: e.target.value })}
             placeholder={isCreate ? 'What needs to be done?' : 'Step Title'}
             rows={2}
-            className="w-full text-lg font-black text-white bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.1] focus:border-indigo-500/80 focus:bg-white/[0.03] p-3.5 rounded-2xl outline-none transition-all duration-300 resize-none break-words tracking-tight placeholder:text-zinc-600"
+            className="w-full text-lg font-black text-white bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.1] focus:border-violet-500/80 focus:bg-white/[0.03] p-3.5 rounded-2xl outline-none transition-all duration-300 resize-none break-words tracking-tight placeholder:text-gray-600"
           />
 
           <div className="space-y-1.5">
@@ -400,14 +407,24 @@ export default function TaskDetailPane({
               onChange={(e) => patch({ description: e.target.value })}
               placeholder="Add more details, links, or specific instructions..."
               rows={4}
-              className="w-full text-xs text-zinc-300 bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.1] focus:border-indigo-500/80 focus:bg-slate-950/60 p-3.5 rounded-2xl outline-none transition-all duration-300 resize-none break-words leading-relaxed placeholder:text-zinc-600"
+              className="w-full text-xs text-gray-300 bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.1] focus:border-violet-500/80 focus:bg-slate-950/60 p-3.5 rounded-2xl outline-none transition-all duration-300 resize-none break-words leading-relaxed placeholder:text-gray-600"
             />
           </div>
         </div>
 
         {/* === Shared controls (identical in create + edit) === */}
         <div className="space-y-5">
-            {/* Date strip + presets + manual */}
+            {/*
+              Date + recurrence block. Two scheduling modes share one UI:
+                - single day: `dueDate` holds the one date; `recurrence` stays
+                  'none' (or a freq object whose `dates` mirror `dueDate`).
+                - multi-day (`multiDayActive`): the date strip toggles a set of
+                  dates held in `recurrence.dates`; with no chosen freq this is
+                  stored as `{ freq: 'custom_dates', dates }`, otherwise the
+                  chosen freq (daily/weekly/monthly) is kept and `dates` seeds
+                  the recurrence start. `dueDate` always tracks `dates[0]` so
+                  list grouping and the calendar agree on a primary day.
+            */}
             <div className="space-y-2">
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Scheduled Date Planning Block</label>
@@ -476,13 +493,13 @@ export default function TaskDetailPane({
                       }}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all duration-300 relative ${
                         isSelected
-                          ? 'bg-gradient-to-br from-indigo-650 via-indigo-500 to-violet-650 border-indigo-400 text-white font-extrabold shadow-[0_8px_25px_rgba(99,102,241,0.35)] scale-[1.04]'
-                          : 'bg-white/[0.02] border-white/[0.04] text-slate-400 hover:text-slate-250 hover:bg-white/[0.06] hover:border-white/10 hover:scale-[1.02]'
+                          ? 'bg-gradient-to-br from-violet-600 via-violet-500 to-violet-600 border-violet-400 text-white font-extrabold shadow-[0_8px_25px_rgba(99,102,241,0.35)] scale-[1.04]'
+                          : 'bg-white/[0.02] border-white/[0.04] text-slate-400 hover:text-slate-300 hover:bg-white/[0.06] hover:border-white/10 hover:scale-[1.02]'
                       }`}
                     >
                       <span className="text-[8px] font-mono font-black tracking-wider uppercase block leading-none">{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                      <span className={`text-[11px] font-mono font-black mt-1.5 block leading-none ${isToday && !isSelected ? 'text-indigo-400' : ''}`}>{d.getDate()}</span>
-                      {isToday && <span className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-white' : 'bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.8)]'}`} />}
+                      <span className={`text-[11px] font-mono font-black mt-1.5 block leading-none ${isToday && !isSelected ? 'text-violet-400' : ''}`}>{d.getDate()}</span>
+                      {isToday && <span className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-white' : 'bg-violet-500 shadow-[0_0_6px_rgba(99,102,241,0.8)]'}`} />}
                     </button>
                   );
                 })}
@@ -518,7 +535,7 @@ export default function TaskDetailPane({
                       }}
                       className={`px-3 py-1.5 text-[8.5px] font-black font-mono border rounded-xl transition-all duration-300 ${
                         (!multiDayActive && values.dueDate === preset.value) || (multiDayActive && Array.isArray(values.recurrence?.dates) && values.recurrence.dates.includes(preset.value))
-                          ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
+                          ? 'bg-violet-500/20 border-violet-500 text-violet-300 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
                           : 'bg-white/[0.01] border-white/[0.04] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                       }`}
                     >
@@ -526,7 +543,7 @@ export default function TaskDetailPane({
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-1.5 bg-slate-950/60 p-1.5 border border-white/[0.06] rounded-xl focus-within:border-indigo-500/60 transition duration-150">
+                <div className="flex items-center gap-1.5 bg-slate-950/60 p-1.5 border border-white/[0.06] rounded-xl focus-within:border-violet-500/60 transition duration-150">
                   <Calendar className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
                   <input
                     type="date"
@@ -563,10 +580,10 @@ export default function TaskDetailPane({
             <div className="space-y-2">
               <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Scheduled Time Period Block</label>
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-1.5 bg-slate-950/60 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                <div className="flex items-center gap-1.5 bg-slate-950/60 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
                   <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <div className="flex-1 min-w-0 flex flex-col items-start leading-none">
-                    <span className="text-[7.5px] font-mono text-zinc-500 font-bold uppercase tracking-wider mb-0.5">Start Time</span>
+                    <span className="text-[7.5px] font-mono text-gray-500 font-bold uppercase tracking-wider mb-0.5">Start Time</span>
                     <input
                       type="time"
                       value={(() => {
@@ -591,10 +608,10 @@ export default function TaskDetailPane({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 bg-slate-950/60 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                <div className="flex items-center gap-1.5 bg-slate-950/60 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
                   <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <div className="flex-1 min-w-0 flex flex-col items-start leading-none">
-                    <span className="text-[7.5px] font-mono text-zinc-500 font-bold uppercase tracking-wider mb-0.5">End Time</span>
+                    <span className="text-[7.5px] font-mono text-gray-500 font-bold uppercase tracking-wider mb-0.5">End Time</span>
                     <input
                       type="time"
                       value={(() => {
@@ -697,7 +714,7 @@ export default function TaskDetailPane({
                       onClick={() => patch({ projectId: p.id, sectionId: undefined })}
                       className={`px-3 py-1.5 text-[9.5px] font-bold rounded-xl border transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-650/20 border-indigo-500 text-white font-extrabold shadow-md shadow-indigo-650/10'
+                          ? 'bg-violet-600/20 border-violet-500 text-white font-extrabold shadow-md shadow-violet-600/10'
                           : 'bg-white/[0.02] border-white/[0.04] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                       }`}
                     >
@@ -713,13 +730,13 @@ export default function TaskDetailPane({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Project Section</label>
-                <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
                   <GitPullRequest className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <select
                     value={values.sectionId || ''}
                     onChange={(e) => patch({ sectionId: e.target.value || undefined })}
                     disabled={activeSections.length === 0}
-                    className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-zinc-300 w-full font-medium disabled:opacity-40"
+                    className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-gray-300 w-full font-medium disabled:opacity-40"
                   >
                     <option value="" className="bg-slate-950 text-slate-300">(None)</option>
                     {activeSections.map((s) => (
@@ -731,7 +748,7 @@ export default function TaskDetailPane({
 
               <div className="space-y-1.5">
                 <label className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block font-black">Recurrence Block</label>
-                <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-indigo-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                <div className="flex items-center gap-1.5 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]">
                   <RefreshCw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <select
                     value={values.recurrence?.freq || (typeof values.recurrence === 'string' ? values.recurrence : 'none')}
@@ -754,7 +771,7 @@ export default function TaskDetailPane({
                         });
                       }
                     }}
-                    className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-zinc-300 w-full font-medium"
+                    className="bg-transparent border-none outline-none text-xs focus:ring-0 cursor-pointer p-0 text-gray-300 w-full font-medium"
                   >
                     <option value="none" className="bg-slate-950 text-slate-300">No Recurrence</option>
                     <option value="daily" className="bg-slate-950 text-slate-200">Daily</option>
@@ -775,14 +792,14 @@ export default function TaskDetailPane({
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleTagKeyDown}
-                  className="w-full pl-9 pr-3 py-3 bg-slate-950/40 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-indigo-500/80 text-white font-mono text-xs placeholder:text-slate-600 transition-all duration-200 focus:shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                  className="w-full pl-9 pr-3 py-3 bg-slate-950/40 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-violet-500/80 text-white font-mono text-xs placeholder:text-slate-600 transition-all duration-200 focus:shadow-[0_0_15px_rgba(99,102,241,0.1)]"
                 />
                 <Tag className="w-3.5 h-3.5 absolute left-3 top-3.5 text-slate-500" />
               </div>
               {values.labels.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {values.labels.map((lbl) => (
-                    <span key={`tag-${lbl}`} className="px-2.5 py-1 bg-indigo-650/15 border border-indigo-500/40 text-indigo-300 text-[10.5px] font-semibold rounded-lg flex items-center gap-1.5">
+                    <span key={`tag-${lbl}`} className="px-2.5 py-1 bg-violet-600/15 border border-violet-500/40 text-violet-300 text-[10.5px] font-semibold rounded-lg flex items-center gap-1.5">
                       #{lbl}
                       <button type="button" onClick={() => patch({ labels: values.labels.filter((l) => l !== lbl) })} className="hover:text-white cursor-pointer">
                         <X className="w-2.5 h-2.5" />
@@ -811,15 +828,15 @@ export default function TaskDetailPane({
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5">
-              <CheckSquare className="w-4 h-4 text-zinc-400" />
-              <span className="font-bold text-xs text-zinc-300 uppercase tracking-wider">Subtasks ({completedSubs}/{totalSubs})</span>
+              <CheckSquare className="w-4 h-4 text-gray-400" />
+              <span className="font-bold text-xs text-gray-300 uppercase tracking-wider">Subtasks ({completedSubs}/{totalSubs})</span>
             </div>
-            {totalSubs > 0 && <span className="text-[11px] font-mono text-slate-450 font-black">{progressPercent}% done</span>}
+            {totalSubs > 0 && <span className="text-[11px] font-mono text-slate-400 font-black">{progressPercent}% done</span>}
           </div>
 
           {totalSubs > 0 && (
-            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden shadow-inner">
-              <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden shadow-inner">
+              <div className="h-full bg-gradient-to-r from-violet-500 to-violet-500 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
           )}
 
@@ -827,8 +844,8 @@ export default function TaskDetailPane({
             {values.subtasks.map((s) => (
               <div key={s.id} className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-white/[0.01] to-transparent border border-white/[0.03] hover:from-white/[0.03] transition-all duration-200 group">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <input type="checkbox" checked={s.completed} onChange={() => handleToggleSubtask(s.id)} className="rounded text-indigo-500 border-zinc-700 bg-slate-950 focus:ring-indigo-500 focus:ring-offset-0 h-3.5 w-3.5 cursor-pointer" />
-                  <span className={`text-xs text-zinc-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
+                  <input type="checkbox" checked={s.completed} onChange={() => handleToggleSubtask(s.id)} className="rounded text-violet-500 border-white/20 bg-slate-950 focus:ring-violet-500 focus:ring-offset-0 h-3.5 w-3.5 cursor-pointer" />
+                  <span className={`text-xs text-gray-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
                 </div>
                 <button type="button" onClick={() => handleDeleteSubtask(s.id)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-white/5 rounded-md text-slate-400 hover:text-red-500 transition cursor-pointer">
                   <Trash2 className="w-3.5 h-3.5" />
@@ -838,8 +855,8 @@ export default function TaskDetailPane({
           </div>
 
           <form onSubmit={handleAddSubtask} className="flex gap-2">
-            <input type="text" value={newSubtaskTitle} onChange={(e) => setNewSubtaskTitle(e.target.value)} placeholder="Add subtask goal..." className="flex-1 text-xs px-3.5 py-2 bg-slate-950/60 border border-white/[0.06] rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-slate-950 text-white transition-all duration-200" />
-            <button type="submit" disabled={!newSubtaskTitle.trim()} className="px-3.5 bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1] disabled:opacity-40 rounded-xl cursor-pointer transition text-zinc-200 flex items-center">
+            <input type="text" value={newSubtaskTitle} onChange={(e) => setNewSubtaskTitle(e.target.value)} placeholder="Add subtask goal..." className="flex-1 text-xs px-3.5 py-2 bg-slate-950/60 border border-white/[0.06] rounded-xl focus:outline-none focus:border-violet-500 focus:bg-slate-950 text-white transition-all duration-200" />
+            <button type="submit" disabled={!newSubtaskTitle.trim()} className="px-3.5 bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1] disabled:opacity-40 rounded-xl cursor-pointer transition text-gray-200 flex items-center">
               <Plus className="w-4 h-4" />
             </button>
           </form>
@@ -848,13 +865,13 @@ export default function TaskDetailPane({
         {/* Comments / Timeline */}
         <div className="space-y-4">
             <div className="flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-zinc-450" />
-              <span className="font-bold text-xs text-zinc-300 uppercase tracking-wider">Timeline / Comments ({values.comments.length})</span>
+              <MessageSquare className="w-4 h-4 text-gray-400" />
+              <span className="font-bold text-xs text-gray-300 uppercase tracking-wider">Timeline / Comments ({values.comments.length})</span>
             </div>
 
             <form onSubmit={handleAddComment} className="flex flex-col gap-2">
-              <textarea value={newCommentText} onChange={(e) => setNewCommentText(e.target.value)} placeholder="Type activity message log or note..." rows={2} className="w-full text-xs p-3 bg-slate-950/60 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-indigo-500 focus:bg-slate-950 text-white resize-none transition-all duration-200 leading-relaxed placeholder:text-zinc-600" />
-              <button type="submit" disabled={!newCommentText.trim()} className="self-end px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(99,102,241,0.2)] disabled:opacity-40 cursor-pointer transition active:scale-[0.98]">
+              <textarea value={newCommentText} onChange={(e) => setNewCommentText(e.target.value)} placeholder="Type activity message log or note..." rows={2} className="w-full text-xs p-3 bg-slate-950/60 border border-white/[0.06] rounded-2xl focus:outline-none focus:border-violet-500 focus:bg-slate-950 text-white resize-none transition-all duration-200 leading-relaxed placeholder:text-gray-600" />
+              <button type="submit" disabled={!newCommentText.trim()} className="self-end px-4 py-2 bg-gradient-to-r from-violet-500 to-violet-500 hover:brightness-110 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(99,102,241,0.2)] disabled:opacity-40 cursor-pointer transition active:scale-[0.98]">
                 <span>Comment</span>
                 <Send className="w-3 h-3" />
               </button>
@@ -864,21 +881,21 @@ export default function TaskDetailPane({
               {values.comments.map((c) => {
                 const initials = c.authorName ? c.authorName.charAt(0).toUpperCase() : 'Y';
                 return (
-                  <div key={c.id} className="flex gap-3 p-3.5 bg-gradient-to-br from-indigo-500/[0.02] to-violet-500/[0.01] rounded-2xl border border-white/[0.04] relative group/comment">
-                    <div className="w-8 h-8 rounded-full bg-indigo-650 flex items-center justify-center text-xs font-black text-white shrink-0 shadow-md">
+                  <div key={c.id} className="flex gap-3 p-3.5 bg-gradient-to-br from-violet-500/[0.02] to-violet-500/[0.01] rounded-2xl border border-white/[0.04] relative group/comment">
+                    <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-xs font-black text-white shrink-0 shadow-md">
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center text-[10px] mb-1">
-                        <span className="font-extrabold text-zinc-200">{c.authorName}</span>
-                        <div className="flex items-center gap-1.5 text-zinc-500 font-mono">
+                        <span className="font-extrabold text-gray-200">{c.authorName}</span>
+                        <div className="flex items-center gap-1.5 text-gray-500 font-mono">
                           <span>{new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                           <button type="button" onClick={() => handleDeleteComment(c.id)} className="opacity-0 group-hover/comment:opacity-100 hover:text-red-500 p-0.5 transition rounded" title="Delete comment">
                             <X className="w-2.5 h-2.5 cursor-pointer" />
                           </button>
                         </div>
                       </div>
-                      <p className="text-[11.5px] text-zinc-350 break-words leading-relaxed select-text font-medium">{c.content}</p>
+                      <p className="text-[11.5px] text-gray-300 break-words leading-relaxed select-text font-medium">{c.content}</p>
                     </div>
                   </div>
                 );
@@ -889,7 +906,7 @@ export default function TaskDetailPane({
 
       {/* Footer actions — create mode only */}
       {isCreate && (
-        <div className="px-5 py-4 border-t border-white/[0.06] bg-[#070913]/90 backdrop-blur-md flex justify-end gap-3 rounded-b-2xl">
+        <div className="px-5 py-4 border-t border-white/[0.06] bg-gray-900 backdrop-blur-md flex justify-end gap-3 rounded-b-2xl">
           <button
             type="button"
             onClick={onClose}
@@ -901,7 +918,7 @@ export default function TaskDetailPane({
             type="button"
             onClick={handleSpawn}
             disabled={!draft.title.trim()}
-            className="px-5.5 py-2.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:brightness-100 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 shadow-[0_4px_20px_rgba(99,102,241,0.25)] text-[10px] uppercase font-black font-mono tracking-widest flex items-center gap-1.5 cursor-pointer"
+            className="px-5.5 py-2.5 bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:brightness-100 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 shadow-[0_4px_20px_rgba(99,102,241,0.25)] text-[10px] uppercase font-black font-mono tracking-widest flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             Spawn Goal

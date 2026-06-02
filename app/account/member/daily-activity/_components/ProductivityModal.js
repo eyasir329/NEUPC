@@ -1,13 +1,18 @@
 /**
- * @file Ported verbatim from the Todoist reference app. Types stripped.
- * @module daily-activity/_todoist/ProductivityModal
+ * @file Productivity & Karma modal — a focused summary of the member's
+ *   standing: current rank with progress to the next tier, lifetime/today
+ *   completion counts and day streak, an adjustable daily goal, and a
+ *   five-day completion bar chart. Rank thresholds come from the shared
+ *   {@link getKarmaLevel} ladder. Opened from the header XP pill.
+ *
+ * @module daily-activity/ProductivityModal
  */
 
 'use client';
 
 import { motion } from 'framer-motion';
 import { X, Award, Flame, CheckCircle2, Target, Sparkles } from 'lucide-react';
-import { getTodayDateString, addDays, formatDateString } from './utils';
+import { getTodayDateString, addDays, formatDateString, getKarmaLevel } from './utils';
 
 export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarmaGoals }) {
   const totalCompletedCount = tasks.filter((t) => t.completed && !t.isArchived).length;
@@ -24,16 +29,8 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
 
   const maxCompleted = Math.max(1, ...lastFiveDays.map((d) => d.count), karma.dailyGoal);
 
-  const getNextLevelScore = (score) => {
-    if (score < 500) return { next: 500, label: 'Amateur' };
-    if (score < 1000) return { next: 1000, label: 'Intermediate' };
-    if (score < 1500) return { next: 1500, label: 'Professional' };
-    if (score < 2500) return { next: 2500, label: 'Expert' };
-    if (score < 4000) return { next: 4000, label: 'Master' };
-    return { next: 8000, label: 'Grandmaster' };
-  };
-
-  const nextLevel = getNextLevelScore(karma.score);
+  const tier = getKarmaLevel(karma.score);
+  const nextLevel = { next: tier.maxXP, label: tier.nextLevel };
   const karmaRatio = Math.min(1, karma.score / nextLevel.next);
 
   return (
@@ -42,19 +39,19 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="w-full max-w-lg bg-[#141414] rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-gray-900 rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden flex flex-col"
       >
-        <div className="flex justify-between items-center px-5 py-4 border-b border-zinc-850 bg-[#181818]">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-white/[0.06] bg-white/[0.02]">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-amber-500 fill-amber-500/20" />
             <span className="font-bold text-white">Productivity & Karma Status</span>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-zinc-800 rounded-lg text-slate-500 hover:text-white transition cursor-pointer">
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-white/[0.06] rounded-lg text-slate-500 hover:text-white transition cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh] text-zinc-200">
+        <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh] text-gray-200">
           <div className="bg-gradient-to-tr from-amber-950/10 to-rose-950/10 p-5 rounded-xl border border-amber-900/10 text-center space-y-3.5 relative overflow-hidden">
             <div className="absolute top-2 right-2 flex items-center gap-1 bg-amber-500/10 text-amber-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">
               <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse" />
@@ -64,14 +61,14 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
             <div className="space-y-1">
               <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest block">Your Level</span>
               <h2 className="text-3xl font-extrabold text-white tracking-tight">{karma.level}</h2>
-              <span className="font-mono text-xs font-bold text-zinc-400">{karma.score} pts</span>
+              <span className="font-mono text-xs font-bold text-gray-400">{karma.score} pts</span>
             </div>
 
             <div className="space-y-1 max-w-xs mx-auto">
-              <div className="w-full h-1.5 bg-zinc-850 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-amber-500 to-rose-500 transition-all duration-300" style={{ width: `${karmaRatio * 100}%` }} />
               </div>
-              <div className="flex justify-between items-center text-[10px] text-zinc-500 font-medium">
+              <div className="flex justify-between items-center text-[10px] text-gray-500 font-medium">
                 <span>Next Rank: {nextLevel.label}</span>
                 <span>{karma.score} / {nextLevel.next}</span>
               </div>
@@ -79,38 +76,38 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-xl border border-zinc-800 text-center space-y-1">
+            <div className="p-3.5 rounded-xl border border-white/[0.08] text-center space-y-1">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Total Done</span>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Total Done</span>
               <strong className="text-xl font-extrabold text-white font-mono">{totalCompletedCount}</strong>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-zinc-800 text-center space-y-1">
+            <div className="p-3.5 rounded-xl border border-white/[0.08] text-center space-y-1">
               <Flame className="w-5 h-5 text-orange-500 fill-orange-500/20 mx-auto animate-bounce" />
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Day Streak</span>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Day Streak</span>
               <strong className="text-xl font-extrabold text-white font-mono">{karma.dailyStreak} days</strong>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-zinc-800 text-center space-y-1">
-              <Target className="w-5 h-5 text-[#cc4b3e] mx-auto" />
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Today Check</span>
+            <div className="p-3.5 rounded-xl border border-white/[0.08] text-center space-y-1">
+              <Target className="w-5 h-5 text-violet-400 mx-auto" />
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Today Check</span>
               <strong className="text-xl font-extrabold text-white font-mono">{completedTodayCount}/{karma.dailyGoal}</strong>
             </div>
           </div>
 
-          <div className="space-y-3.5 p-4 border border-zinc-850 rounded-xl bg-zinc-950/40">
-            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Adjust Daily Goals</span>
+          <div className="space-y-3.5 p-4 border border-white/[0.06] rounded-xl bg-white/[0.02]">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Adjust Daily Goals</span>
             <div className="flex items-center justify-between text-xs gap-4">
-              <div className="flex-1 flex flex-col gap-1 text-zinc-400">
-                <span className="font-semibold text-zinc-300">Daily Task Goal Target</span>
-                <p className="text-[10.5px] text-zinc-500">How many tasks you target to complete today</p>
+              <div className="flex-1 flex flex-col gap-1 text-gray-400">
+                <span className="font-semibold text-gray-300">Daily Task Goal Target</span>
+                <p className="text-[10.5px] text-gray-500">How many tasks you target to complete today</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button type="button" onClick={() => onUpdateKarmaGoals(Math.max(1, karma.dailyGoal - 1), karma.weeklyGoal)} className="w-7 h-7 rounded border border-zinc-800 hover:bg-zinc-900 flex items-center justify-center font-bold font-mono text-xs cursor-pointer text-white">
+                <button type="button" onClick={() => onUpdateKarmaGoals(Math.max(1, karma.dailyGoal - 1), karma.weeklyGoal)} className="w-7 h-7 rounded border border-white/[0.08] hover:bg-white/[0.06] flex items-center justify-center font-bold font-mono text-xs cursor-pointer text-white">
                   -
                 </button>
                 <span className="w-6 text-center font-bold font-mono text-sm text-white">{karma.dailyGoal}</span>
-                <button type="button" onClick={() => onUpdateKarmaGoals(karma.dailyGoal + 1, karma.weeklyGoal)} className="w-7 h-7 rounded border border-zinc-800 hover:bg-zinc-900 flex items-center justify-center font-bold font-mono text-xs cursor-pointer text-white">
+                <button type="button" onClick={() => onUpdateKarmaGoals(karma.dailyGoal + 1, karma.weeklyGoal)} className="w-7 h-7 rounded border border-white/[0.08] hover:bg-white/[0.06] flex items-center justify-center font-bold font-mono text-xs cursor-pointer text-white">
                   +
                 </button>
               </div>
@@ -118,9 +115,9 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
           </div>
 
           <div className="space-y-4">
-            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Weekly Velocity Profile</span>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Weekly Velocity Profile</span>
 
-            <div className="flex items-end justify-between h-32 px-4 pt-4 pb-2 border border-zinc-850 p-3 rounded-2xl bg-[#1a1a1a]">
+            <div className="flex items-end justify-between h-32 px-4 pt-4 pb-2 border border-white/[0.06] p-3 rounded-2xl bg-white/[0.02]">
               {lastFiveDays.map((item) => {
                 const heightRatio = item.count / maxCompleted;
                 const isTargetPassed = item.count >= karma.dailyGoal;
@@ -130,7 +127,7 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
                       {item.count} tasks done
                     </div>
 
-                    <div className="w-7 bg-zinc-800 rounded-t-lg h-24 flex items-end overflow-hidden justify-center relative">
+                    <div className="w-7 bg-white/[0.06] rounded-t-lg h-24 flex items-end overflow-hidden justify-center relative">
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: `${heightRatio * 100}%` }}
@@ -139,7 +136,7 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
                       />
                     </div>
 
-                    <span className="text-[10px] text-zinc-500 font-semibold font-mono uppercase truncate max-w-full">{item.label}</span>
+                    <span className="text-[10px] text-gray-500 font-semibold font-mono uppercase truncate max-w-full">{item.label}</span>
                   </div>
                 );
               })}
@@ -152,9 +149,9 @@ export default function ProductivityModal({ karma, tasks, onClose, onUpdateKarma
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-[#181818] border-t border-zinc-850 flex justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2 bg-[#cc4b3e] hover:bg-[#b03d32] text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer">
-            Acknowledge & Continue
+        <div className="px-6 py-4 bg-white/[0.02] border-t border-white/[0.06] flex justify-end">
+          <button type="button" onClick={onClose} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer">
+            Done
           </button>
         </div>
       </motion.div>

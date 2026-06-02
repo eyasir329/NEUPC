@@ -1,6 +1,12 @@
 /**
- * @file Ported verbatim from the Todoist reference app. Types stripped.
- * @module daily-activity/_todoist/InsightsView
+ * @file Insights tab for Daily Activity — the productivity dashboard.
+ *   Renders four panels: the rank/XP standing card (driven by the shared
+ *   {@link getKarmaLevel} ladder), today's focus tasks (overdue + due-today
+ *   + undated), a 53-week completion heatmap, and a daily/weekly velocity
+ *   chart. All figures derive from the `tasks` and `karma` props; this view
+ *   is read-only apart from toggling a focus task complete.
+ *
+ * @module daily-activity/InsightsView
  */
 
 'use client';
@@ -8,63 +14,14 @@
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { CheckCircle2, ChevronRight, Award, Trophy } from 'lucide-react';
-import { Priority } from './utils';
+import { Priority, getKarmaLevel } from './utils';
 import { getTodayDateString, formatDateString, addDays } from './utils';
 
 export default function InsightsView({ tasks, karma, labels, onSelectTask, onToggleComplete }) {
   const [velocityMode, setVelocityMode] = useState('daily');
   const todayStr = getTodayDateString();
 
-  const getLevelInfo = (score) => {
-    let level = 'Novice';
-    let minXP = 0;
-    let maxXP = 500;
-    let nextLevel = 'Amateur';
-
-    if (score < 500) {
-      level = 'Novice';
-      minXP = 0;
-      maxXP = 500;
-      nextLevel = 'Amateur';
-    } else if (score < 1000) {
-      level = 'Amateur';
-      minXP = 500;
-      maxXP = 1000;
-      nextLevel = 'Intermediate';
-    } else if (score < 1500) {
-      level = 'Intermediate';
-      minXP = 1000;
-      maxXP = 1500;
-      nextLevel = 'Professional';
-    } else if (score < 2500) {
-      level = 'Professional';
-      minXP = 1500;
-      maxXP = 2500;
-      nextLevel = 'Expert';
-    } else if (score < 4000) {
-      level = 'Expert';
-      minXP = 2500;
-      maxXP = 4000;
-      nextLevel = 'Master';
-    } else if (score < 6000) {
-      level = 'Master';
-      minXP = 4000;
-      maxXP = 6000;
-      nextLevel = 'Grandmaster';
-    } else {
-      level = 'Grandmaster';
-      minXP = 6000;
-      maxXP = 15000;
-      nextLevel = 'Ascended';
-    }
-
-    const progress = Math.max(0, Math.min(100, ((score - minXP) / (maxXP - minXP)) * 100));
-    const nextGoal = maxXP - score;
-
-    return { level, progress, nextGoal, maxXP };
-  };
-
-  const levelInfo = getLevelInfo(karma.score);
+  const levelInfo = getKarmaLevel(karma.score);
 
   const completedTodayCount = tasks.filter(
     (t) => t.completed && t.completedAt && t.completedAt.startsWith(todayStr)
@@ -126,7 +83,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
   }
 
   const getHeatmapColor = (count) => {
-    if (count === 0) return 'bg-[#121824] border border-white/5';
+    if (count === 0) return 'bg-white/[0.04] border border-white/5';
     if (count === 1) return 'bg-emerald-500/20';
     if (count === 2) return 'bg-emerald-500/40';
     if (count === 3) return 'bg-emerald-500/70';
@@ -194,21 +151,21 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
   return (
     <div className="space-y-6" id="insights-view">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="bg-[#111625] rounded-xl border border-white/5 p-6 flex flex-col justify-between col-span-1 lg:col-span-5" id="prod-standing">
+        <div className="bg-gray-900 rounded-xl border border-white/5 p-6 flex flex-col justify-between col-span-1 lg:col-span-5" id="prod-standing">
           <div>
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase block">PRODUCTIVITY STATUS</span>
                 <h3 className="text-xl font-bold font-display text-white mt-1">Productivity Standing</h3>
               </div>
-              <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-510/20 text-indigo-400">
+              <div className="p-2.5 bg-violet-500/10 rounded-xl border border-violet-500/20 text-violet-400">
                 <Trophy className="w-5 h-5" />
               </div>
             </div>
 
             <div className="mt-6">
               <span className="text-[11px] text-slate-400 block font-mono">RANK CLASS</span>
-              <span className="text-3xl font-black font-display text-indigo-400 block tracking-tight mt-1">
+              <span className="text-3xl font-black font-display text-violet-400 block tracking-tight mt-1">
                 {levelInfo.level}
               </span>
             </div>
@@ -218,11 +175,11 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                 <span className="text-slate-400">XP Progress</span>
                 <span className="text-white font-bold">{karma.score} / {levelInfo.maxXP} XP</span>
               </div>
-              <div className="w-full bg-[#182032] rounded-full h-3 overflow-hidden border border-white/5">
-                <div className="bg-indigo-500 h-full rounded-full transition-all duration-500" style={{ width: `${levelInfo.progress}%` }} />
+              <div className="w-full bg-white/[0.04] rounded-full h-3 overflow-hidden border border-white/5">
+                <div className="bg-violet-500 h-full rounded-full transition-all duration-500" style={{ width: `${levelInfo.progress}%` }} />
               </div>
-              <span className="text-[10px] text-indigo-400 block text-right">
-                ✨ {levelInfo.nextGoal} XP to {levelInfo.level === 'Grandmaster' ? 'Ascension' : getLevelInfo(levelInfo.maxXP + 10).level}
+              <span className="text-[10px] text-violet-400 block text-right">
+                ✨ {levelInfo.nextGoal} XP to {levelInfo.level === 'Grandmaster' ? 'Ascension' : levelInfo.nextLevel}
               </span>
             </div>
           </div>
@@ -234,7 +191,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                   <span>DAILY GOAL</span>
                   <span className="text-emerald-400 font-semibold">{completedTodayCount} / {karma.dailyGoal}</span>
                 </div>
-                <div className="w-full bg-[#182032] rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
                   <div className="bg-emerald-400 h-full rounded-full" style={{ width: `${dailyGoalProgress}%` }} />
                 </div>
               </div>
@@ -244,7 +201,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                   <span>WEEKLY GOAL</span>
                   <span className="text-sky-400 font-semibold">{completedThisWeekCount} / {karma.weeklyGoal}</span>
                 </div>
-                <div className="w-full bg-[#182032] rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
                   <div className="bg-sky-400 h-full rounded-full" style={{ width: `${weeklyGoalProgress}%` }} />
                 </div>
               </div>
@@ -257,7 +214,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
           </div>
         </div>
 
-        <div className="bg-[#111625] rounded-xl border border-white/5 p-6 flex flex-col col-span-1 lg:col-span-7" id="today-focus">
+        <div className="bg-gray-900 rounded-xl border border-white/5 p-6 flex flex-col col-span-1 lg:col-span-7" id="today-focus">
           <div className="flex justify-between items-center pb-4 border-b border-white/5">
             <div>
               <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase block">CRITICAL & OVERDUE ACTIONS</span>
@@ -279,7 +236,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                 <div
                   key={task.id}
                   onClick={() => onSelectTask(task.id)}
-                  className="flex items-center gap-3 p-3 bg-[#182032] rounded-lg border border-white/5 hover:border-white/10 hover:bg-[#1c263c] transition duration-150 cursor-pointer"
+                  className="flex items-center gap-3 p-3 bg-white/[0.04] rounded-lg border border-white/5 hover:border-white/10 hover:bg-white/[0.06] transition duration-150 cursor-pointer"
                 >
                   <button
                     type="button"
@@ -287,7 +244,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                       e.stopPropagation();
                       onToggleComplete(task.id);
                     }}
-                    className="w-4 h-4 rounded-full border-2 border-indigo-400/40 hover:border-indigo-400 transition shrink-0"
+                    className="w-4 h-4 rounded-full border-2 border-violet-400/40 hover:border-violet-400 transition shrink-0"
                   />
 
                   <div className="min-w-0 flex-1">
@@ -300,7 +257,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
                       <span className="px-1.5 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-bold rounded">HIGH</span>
                     )}
                     {task.labels[0] && (
-                      <span className="px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[9px] font-bold rounded truncate max-w-[70px]">
+                      <span className="px-1.5 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[9px] font-bold rounded truncate max-w-[70px]">
                         {task.labels[0]}
                       </span>
                     )}
@@ -313,7 +270,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
         </div>
       </div>
 
-      <div className="bg-[#111625] rounded-xl border border-white/5 p-6" id="heatmap-panel">
+      <div className="bg-gray-900 rounded-xl border border-white/5 p-6" id="heatmap-panel">
         <div className="flex justify-between items-center pb-4 border-b border-white/5">
           <div>
             <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase block">365 DAYS CONTRIBUTIONS</span>
@@ -347,7 +304,7 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
           <span>{heatmapGrid[0]?.date} to Present</span>
           <div className="flex items-center gap-1.5">
             <span>Velocity Index: Less</span>
-            <div className="w-[9px] h-[9px] rounded-[1.5px] bg-[#121824] border border-white/5" />
+            <div className="w-[9px] h-[9px] rounded-[1.5px] bg-white/[0.04] border border-white/5" />
             <div className="w-[9px] h-[9px] rounded-[1.5px] bg-emerald-500/20" />
             <div className="w-[9px] h-[9px] rounded-[1.5px] bg-emerald-500/40" />
             <div className="w-[9px] h-[9px] rounded-[1.5px] bg-emerald-500/70" />
@@ -357,22 +314,22 @@ export default function InsightsView({ tasks, karma, labels, onSelectTask, onTog
         </div>
       </div>
 
-      <div className="bg-[#111625] rounded-xl border border-white/5 p-6" id="velocity-analysis">
+      <div className="bg-gray-900 rounded-xl border border-white/5 p-6" id="velocity-analysis">
         <div className="flex justify-between items-center pb-4 border-b border-white/5">
           <div>
             <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase block">ACTIVITY FLOW & MOMENTUM</span>
             <h3 className="text-lg font-bold text-white mt-1">Velocity Analysis</h3>
           </div>
-          <div className="flex bg-[#182032] p-0.5 border border-white/5 rounded-lg text-xs">
+          <div className="flex bg-white/[0.04] p-0.5 border border-white/5 rounded-lg text-xs">
             <button
               onClick={() => setVelocityMode('daily')}
-              className={`px-3 py-1 font-mono rounded-md font-bold transition ${velocityMode === 'daily' ? 'bg-[#0b0f19] text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1 font-mono rounded-md font-bold transition ${velocityMode === 'daily' ? 'bg-gray-900 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               DAILY FLOW
             </button>
             <button
               onClick={() => setVelocityMode('weekly')}
-              className={`px-3 py-1 font-mono rounded-md font-bold transition ${velocityMode === 'weekly' ? 'bg-[#0b0f19] text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1 font-mono rounded-md font-bold transition ${velocityMode === 'weekly' ? 'bg-gray-900 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               WEEKLY MOMENTUM
             </button>
