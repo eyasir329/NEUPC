@@ -195,6 +195,9 @@ export default function ExpandedCalendarModal({
   });
   const gridRef  = useRef(null);
   const [now, setNow] = useState(() => new Date());
+  // Week view: expand the all-day/spanning header bar to show every row instead
+  // of the 5-row cap + "+N more". Reset whenever the visible week changes.
+  const [allDayExpanded, setAllDayExpanded] = useState(false);
 
   // Layer visibility + colors (persisted to localStorage)
   const [showLayers, setShowLayers] = useState(() => {
@@ -276,16 +279,19 @@ export default function ExpandedCalendarModal({
 
   // ── nav ──
   const prev = () => {
+    setAllDayExpanded(false);
     if (viewMode === 'day')   setDayAnchor((d) => addDays(d, -1));
     else if (viewMode === 'week') setAnchor((d) => addDays(d, -7));
     else setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   };
   const next = () => {
+    setAllDayExpanded(false);
     if (viewMode === 'day')   setDayAnchor((d) => addDays(d, 1));
     else if (viewMode === 'week') setAnchor((d) => addDays(d, 7));
     else setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   };
   const goToday = () => {
+    setAllDayExpanded(false);
     const d = new Date();
     const today = new Date(d); today.setHours(0,0,0,0);
     setDayAnchor(today);
@@ -713,7 +719,9 @@ export default function ExpandedCalendarModal({
 
                     {/* Spanning multi-day tasks + single-day all-day chips — hard-capped at 5 rows */}
                     {(() => {
-                      const MAX_ROWS = 5;
+                      // Collapsed: cap at 5 rows with a "+N more" toggle. Expanded:
+                      // show every row (click "+N more" to expand the bar in place).
+                      const MAX_ROWS = allDayExpanded ? 99 : 5;
                       const CHIP_H   = 18; // px per row
                       const ROW_GAP  = 2;  // px between rows
 
@@ -823,8 +831,9 @@ export default function ExpandedCalendarModal({
                               className="px-0.5 flex items-center"
                             >
                               <button
-                                onClick={() => { const day = new Date(d); day.setHours(0,0,0,0); setDayAnchor(day); setViewMode('day'); }}
+                                onClick={() => setAllDayExpanded(true)}
                                 className="text-[7px] font-mono font-black text-violet-400 hover:text-violet-300 px-1 transition"
+                                title="Expand the bar to show all items"
                               >
                                 +{hidden} more
                               </button>
@@ -836,7 +845,17 @@ export default function ExpandedCalendarModal({
                       const totalRows = usedRows + (hasOverflow ? 1 : 0);
                       return (
                         <div className="flex">
-                          <div className="w-13 shrink-0 border-r border-white/6" />
+                          <div className="w-13 shrink-0 border-r border-white/6 flex items-start justify-center pt-0.5">
+                            {allDayExpanded && (
+                              <button
+                                onClick={() => setAllDayExpanded(false)}
+                                className="text-[7px] font-mono font-black text-violet-400 hover:text-violet-300 transition"
+                                title="Collapse the bar"
+                              >
+                                less
+                              </button>
+                            )}
+                          </div>
                           <div
                             className="flex-1 grid grid-cols-7 pb-1"
                             style={{

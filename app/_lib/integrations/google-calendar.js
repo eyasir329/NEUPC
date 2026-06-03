@@ -596,7 +596,7 @@ function feedItemToEvent(item) {
       description: desc || undefined,
       location: item.location || undefined,
       start: { dateTime: start.toISOString() },
-      end:   { dateTime: endISO(120) },
+      end:   { dateTime: endISO(60) },
       source: item.url ? { title: 'Contest Link', url: item.url } : undefined,
       colorId,
       extendedProperties: { private: marker },
@@ -659,11 +659,15 @@ export async function pushFeedItem(userId, item) {
 
   // A multi-day task/event is split into one timed sub-event per day so Google
   // draws each in the time grid (it parks multi-day events in the all-day strip).
+  // Only `task`/`event` span days in the expand calendar; contests & sessions are
+  // single-block (never sliced), even if they cross midnight — matching expand.
   // Dedup is marker-based: clear this feed item's prior events, then insert the
   // fresh slice set — idempotent, never duplicates.
   const body = feedItemToEvent(item);
   if (!body) return false;
-  const bodies = explodeToSlices(body);
+  const bodies = (item.category === 'task' || item.category === 'event')
+    ? explodeToSlices(body)
+    : [body];
 
   try {
     await deleteEventsByMarker(client, item.id).catch(() => {});
@@ -689,6 +693,24 @@ async function deleteEventsByMarker(client, markerId) {
     const { data } = await client.calendar.events.list({
       calendarId: client.calendarId,
       privateExtendedProperty: `${FEED_MARKER}=${markerId}`,
+      maxResults: 250,
+      showDeleted: false,
+      pageToken,
+    });
+    for (const ev of data.items || []) {
+      await client.calendar.events.delete({ calendarId: client.calendarId, eventId: ev.id }).catch(() => {});
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+}
+
+/** Delete every event carrying `PERSONAL_MARKER=personalId` (incl. all slices). */
+async function deletePersonalMarkerEvents(client, personalId) {
+  let pageToken;
+  do {
+    const { data } = await client.calendar.events.list({
+      calendarId: client.calendarId,
+      privateExtendedProperty: `${PERSONAL_MARKER}=${personalId}`,
       maxResults: 250,
       showDeleted: false,
       pageToken,
@@ -1286,59 +1308,31 @@ export async function pushPersonalEvent(userId, row, { overrideColor = null } = 
     extendedProperties: { private: { [PERSONAL_MARKER]: row.id } },
   };
 
-  try {
-    let eventData;
-    if (row.gcal_event_id) {
-      try {
-        const { data } = await client.calendar.events.update({
-          calendarId: client.calendarId,
-          eventId: row.gcal_event_id,
-          requestBody: { ...body, id: row.gcal_event_id },
-        });
-        eventData = data;
-      } catch (err) {
-        if (err?.code !== 404 && err?.code !== 410) throw err;
-        // Stale id — recreate.
-        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
-        eventData = data;
-      }
-    } else {
-      // No stored event id — search by PERSONAL_MARKER to avoid creating a duplicate
-      // when a previous push succeeded but the write-back to DB failed.
-      let existingId = null;
-      try {
-        const { data: found } = await client.calendar.events.list({
-          calendarId: client.calendarId,
-          privateExtendedProperty: `${PERSONAL_MARKER}=${row.id}`,
-          maxResults: 10,
-          showDeleted: false,
-        });
-        const matches = found.items || [];
-        if (matches.length > 0) {
-          existingId = matches[0].id;
-          // Clean up any duplicates beyond the first.
-          for (const dup of matches.slice(1)) {
-            await client.calendar.events.delete({ calendarId: client.calendarId, eventId: dup.id }).catch(() => {});
-          }
-        }
-      } catch { /* search not critical */ }
+  // A multi-day *timed* event is sliced into one sub-event per day so Google
+  // draws each in the time grid like the expand day view (it banners multi-day
+  // events otherwise). All-day, single-day, and recurring events stay one event.
+  const multiDayTimed = !allDay && !row.recurrence
+    && dhakaDate(startObj.dateTime) !== dhakaDate(endObj.dateTime);
+  const bodies = multiDayTimed
+    ? sliceTimedRange(startObj.dateTime, endObj.dateTime).map((s) => ({ ...body, ...s }))
+    : [body];
 
-      if (existingId) {
-        const { data } = await client.calendar.events.update({
-          calendarId: client.calendarId,
-          eventId: existingId,
-          requestBody: { ...body, id: existingId },
-        });
-        eventData = data;
-      } else {
-        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
-        eventData = data;
+  try {
+    // Marker-based full replace: clear any prior mirror(s) of this event (single
+    // or sliced), then insert the fresh set — handles edits and multi-day↔single
+    // transitions without duplicating.
+    await deletePersonalMarkerEvents(client, row.id).catch(() => {});
+
+    let firstId = null;
+    let conferenceLink = null;
+    for (const b of bodies) {
+      const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: b });
+      if (!firstId) {
+        firstId = data.id;
+        conferenceLink = data.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri || null;
       }
     }
-    return {
-      eventId: eventData.id || null,
-      conferenceLink: eventData.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri || null,
-    };
+    return { eventId: firstId, conferenceLink };
   } catch (err) {
     if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return null; }
     console.error('pushPersonalEvent:', err?.message);
@@ -1346,12 +1340,20 @@ export async function pushPersonalEvent(userId, row, { overrideColor = null } = 
   }
 }
 
-/** Delete a personal event from Google Calendar. Best-effort. */
-export async function deletePersonalEvent(userId, gcalEventId) {
-  if (!gcalEventId) return;
+/**
+ * Delete a personal event's Google mirror. Best-effort. When `personalId` is
+ * given, removes *every* slice carrying its marker (multi-day events are sliced
+ * into several Google events); otherwise deletes the single stored event id.
+ */
+export async function deletePersonalEvent(userId, gcalEventId, { personalId = null } = {}) {
   const client = await getCalendarClient(userId);
   if (!client) return;
   try {
+    if (personalId) {
+      await deletePersonalMarkerEvents(client, personalId);
+      return;
+    }
+    if (!gcalEventId) return;
     await client.calendar.events.delete({ calendarId: client.calendarId, eventId: gcalEventId });
   } catch (err) {
     if (err?.code === 404 || err?.code === 410) return;

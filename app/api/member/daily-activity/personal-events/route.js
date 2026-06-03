@@ -188,7 +188,8 @@ export async function DELETE(request) {
   if (existing?.gcal_event_id) {
     try {
       const { deletePersonalEvent } = await import('@/app/_lib/integrations/google-calendar');
-      await deletePersonalEvent(userId, existing.gcal_event_id);
+      // Pass the personal id so all per-day slices of a multi-day event are removed.
+      await deletePersonalEvent(userId, existing.gcal_event_id, { personalId: id });
     } catch { /* non-fatal */ }
   }
 
