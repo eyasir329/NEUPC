@@ -21,6 +21,7 @@ function mapRowToTask(row) {
     createdAt: row.created_at,
     dueDate: row.start_date || undefined,
     time: row.due_time || null,
+    endTime: row.end_time || null,
     priority: DB_TO_PRIORITY[row.priority] || 3,
     projectId: row.list_id || undefined,
     sectionId: row.section_id || undefined,
@@ -140,7 +141,7 @@ export async function POST(request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { title, description, priority, dueDate, time, projectId, sectionId, labels, recurrence, subtasks, comments, location, url, colorId, status, visibility, reminders, attendees } = body;
+    const { title, description, priority, dueDate, time, endTime, projectId, sectionId, labels, recurrence, subtasks, comments, location, url, colorId, status, visibility, reminders, attendees } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -154,6 +155,7 @@ export async function POST(request) {
       priority: PRIORITY_TO_DB[priority] || 'low',
       start_date: dueDate || null,
       due_time: time || null,
+      end_time: endTime || null,
       list_id: projectId || null,
       section_id: sectionId || null,
       labels: labels || [],
@@ -206,6 +208,7 @@ export async function PATCH(request) {
     if (fields.priority !== undefined) updates.priority = PRIORITY_TO_DB[fields.priority] || 'low';
     if (fields.dueDate !== undefined) updates.start_date = fields.dueDate || null;
     if (fields.time !== undefined) updates.due_time = fields.time || null;
+    if (fields.endTime !== undefined) updates.end_time = fields.endTime || null;
     if (fields.projectId !== undefined) updates.list_id = fields.projectId || null;
     if (fields.sectionId !== undefined) updates.section_id = fields.sectionId || null;
     if (fields.labels !== undefined) updates.labels = fields.labels;

@@ -6,6 +6,40 @@
  * @module daily-activity/utils
  */
 
+// Google Calendar colour id → hex — single source of truth used by
+// CalendarView, ExpandedCalendarModal, TaskDetailPane, and GoogleItemPane.
+export const GCAL_COLOR_MAP = {
+  '1': '#d50000', '2': '#e67c73', '3': '#f4511e', '4': '#f6bf26',
+  '5': '#33b679', '6': '#0b8043', '7': '#039be5', '8': '#3f51b5',
+  '9': '#7986cb', '10': '#8e24aa', '11': '#616161',
+};
+
+// Default layer colours shared between CalendarView and ExpandedCalendarModal.
+export const LAYER_DEFAULTS = {
+  todo:     '#7c3aed',
+  personal: '#e11d48',
+  events:   '#059669',
+  contests: '#d97706',
+  tasks:    '#6366f1',
+  sessions: '#0ea5e9',
+};
+
+// Colour palette for layer / sub-item pickers (matches Google Calendar IDs).
+export const PALETTE = [
+  '#4285f4', '#d50000', '#e67c73', '#f4511e', '#f6bf26',
+  '#33b679', '#0b8043', '#039be5', '#3f51b5', '#7986cb',
+  '#8e24aa', '#616161', '#f09300', '#ad1457', '#0097a7', '#795548',
+];
+
+/** Convert "HH:MM" (24-hour) → "H:MM AM/PM". Returns empty string for falsy input. */
+export function fmt24(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
 export const Priority = {
   P1: 1, // Critical (rose)
   P2: 2, // Medium (amber)

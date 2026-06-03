@@ -195,9 +195,14 @@ export async function getDailyActivityFeed(userId) {
   ]);
 
   const personalItems = (personalRows || []).map((r) => {
+    // start_time / end_time are bare HH:MM Dhaka wall-clock (see personal_events
+    // schema). Anchor the start instant to the Dhaka offset (+06:00) so the feed
+    // route's isoToHHMM() returns that same wall-clock regardless of server TZ —
+    // otherwise a UTC server shifts the start by +6h while the bare end_time
+    // stays put, mis-positioning the block in the day/week time grids.
     const startStr = r.start_time
-      ? `${r.event_date}T${r.start_time}:00`
-      : `${r.event_date}T00:00:00`;
+      ? `${r.event_date}T${r.start_time}:00+06:00`
+      : `${r.event_date}T00:00:00+06:00`;
     return {
       id: `personal-${r.id}`,
       category: 'personal',

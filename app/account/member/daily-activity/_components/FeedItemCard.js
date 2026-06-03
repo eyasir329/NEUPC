@@ -18,7 +18,7 @@
 'use client';
 
 import { Link as LinkIcon, Video, BookOpen, MapPin } from 'lucide-react';
-import { getFeedMeta, getFeedItemUrl } from './utils';
+import { getFeedMeta, getFeedItemUrl, fmt24 } from './utils';
 
 /**
  * @param {object}  props
@@ -27,13 +27,6 @@ import { getFeedMeta, getFeedItemUrl } from './utils';
  * @param {boolean} [props.link]          Show the open-link affordance (chip).
  * @param {(id:string)=>void} [props.onSelect]  Click handler (opens detail).
  */
-function fmt24(t) {
-  if (!t) return null;
-  const [h, m] = t.split(':').map(Number);
-  const ap = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
-}
 
 const DHAKA_TZ = 'Asia/Dhaka';
 
@@ -69,8 +62,8 @@ export default function FeedItemCard({ task, variant = 'row', link = false, onSe
 
   const timeRange = task.time
     ? task.endTime
-      ? `${task.time} – ${fmt24(task.endTime)}`
-      : task.time
+      ? `${fmt24(task.time)} – ${fmt24(task.endTime)}`
+      : fmt24(task.time)
     : null;
 
   const url = getFeedItemUrl(task);

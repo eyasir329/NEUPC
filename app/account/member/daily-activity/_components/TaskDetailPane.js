@@ -39,7 +39,7 @@ const GCAL_COLORS = [
 ];
 import {
   Priority, generateId, getFeedItemUrl, getTodayDateString, formatDateString,
-  addDays, isFeedItem,
+  addDays, isFeedItem, fmt24,
 } from './utils';
 
 export default function TaskDetailPane({
@@ -62,6 +62,8 @@ export default function TaskDetailPane({
   const [tagInput, setTagInput] = useState('');
   const [multiDayActive, setMultiDayActive] = useState(false);
   const [prevRecFreq, setPrevRecFreq] = useState(null);
+  // endDate for todos (optional, for multi-day scheduling)
+  const [endDate, setEndDate] = useState(() => (mode !== 'create' ? task?.endDate || '' : ''));
 
   // Draft backs both create and edit. Edit initializes from the live task
   // and only calls onUpdateTask when Save is clicked — no autosave.
@@ -72,6 +74,8 @@ export default function TaskDetailPane({
         description: '',
         priority: Priority.P3,
         dueDate: defaultDueDate || getTodayDateString(),
+        time: '',
+        endTime: '',
         projectId: defaultProjectId || projects[0]?.id || '',
         sectionId: '',
         recurrence: 'none',
@@ -92,6 +96,8 @@ export default function TaskDetailPane({
       description: task?.description || '',
       priority: task?.priority ?? Priority.P3,
       dueDate: task?.dueDate || getTodayDateString(),
+      time: task?.time || '',
+      endTime: task?.endTime || '',
       projectId: task?.projectId || defaultProjectId || projects[0]?.id || '',
       sectionId: task?.sectionId || '',
       recurrence: task?.recurrence || 'none',
@@ -125,14 +131,6 @@ export default function TaskDetailPane({
   // Read-only feed items (contests, events, sessions, deadlines) — view only.
   const isReadOnly = !isCreate && isFeedItem(task);
 
-  function fmt24(t) {
-    if (!t) return null;
-    const [h, m] = t.split(':').map(Number);
-    const ap = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
-  }
-
   if (isReadOnly) {
     const totalSubs = task.subtasks?.length || 0;
     const completedSubs = task.subtasks?.filter((s) => s.completed).length || 0;
@@ -161,7 +159,7 @@ export default function TaskDetailPane({
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%', transition: { duration: 0.2 } }}
-        className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-2xl z-40 fixed right-0 top-0 select-none"
+        className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-2xl z-250 fixed right-0 top-0 select-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-white/[0.08]">
@@ -433,6 +431,8 @@ export default function TaskDetailPane({
           description: draft.description.trim(),
           priority: draft.priority,
           dueDate: draft.dueDate || undefined,
+          time: draft.time || undefined,
+          endTime: draft.endTime || undefined,
           projectId: draft.projectId || projects[0]?.id || undefined,
           sectionId: draft.sectionId || undefined,
           recurrence: draft.recurrence === 'none' ? undefined : draft.recurrence,
@@ -451,6 +451,8 @@ export default function TaskDetailPane({
           description: draft.description.trim(),
           priority: draft.priority,
           dueDate: draft.dueDate || undefined,
+          time: draft.time || undefined,
+          endTime: draft.endTime || undefined,
           projectId: draft.projectId || undefined,
           sectionId: draft.sectionId || undefined,
           recurrence: draft.recurrence === 'none' ? undefined : draft.recurrence,
@@ -532,7 +534,7 @@ export default function TaskDetailPane({
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%', transition: { duration: 0.2 } }}
-      className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] z-40 fixed right-0 top-0 select-none transition-all duration-300"
+      className="w-full md:w-[480px] bg-gray-900 border-l border-white/[0.08] h-full flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] z-250 fixed right-0 top-0 select-none transition-all duration-300"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-950/40 to-violet-950/10 border-b border-white/[0.06] backdrop-blur-md">
@@ -776,23 +778,8 @@ export default function TaskDetailPane({
                     <span className="text-[7.5px] font-mono text-gray-500 font-bold uppercase tracking-wider mb-0.5">Start Time</span>
                     <input
                       type="time"
-                      value={(() => {
-                        const timeStr = values.time || '';
-                        const [startTime = ''] = timeStr.includes(' - ') ? timeStr.split(' - ') : [timeStr];
-                        return startTime;
-                      })()}
-                      onChange={(e) => {
-                        const newStart = e.target.value;
-                        const timeStr = values.time || '';
-                        const [, endTime = ''] = timeStr.includes(' - ') ? timeStr.split(' - ') : ['', ''];
-                        if (!newStart) {
-                          patch({ time: null });
-                        } else if (!endTime) {
-                          patch({ time: newStart });
-                        } else {
-                          patch({ time: `${newStart} - ${endTime}` });
-                        }
-                      }}
+                      value={values.time || ''}
+                      onChange={(e) => patch({ time: e.target.value || null })}
                       className="bg-transparent border-none outline-none focus:ring-0 text-[11px] text-white p-0 w-full font-mono [color-scheme:dark] cursor-pointer"
                     />
                   </div>
@@ -804,22 +791,11 @@ export default function TaskDetailPane({
                     <span className="text-[7.5px] font-mono text-gray-500 font-bold uppercase tracking-wider mb-0.5">End Time</span>
                     <input
                       type="time"
-                      value={(() => {
-                        const timeStr = values.time || '';
-                        const [, endTime = ''] = timeStr.includes(' - ') ? timeStr.split(' - ') : ['', ''];
-                        return endTime;
-                      })()}
+                      value={values.endTime || ''}
                       onChange={(e) => {
                         const newEnd = e.target.value;
-                        const timeStr = values.time || '';
-                        const [startTime = ''] = timeStr.includes(' - ') ? timeStr.split(' - ') : [timeStr];
-                        if (!startTime) {
-                          if (newEnd) patch({ time: `12:00 - ${newEnd}` });
-                        } else if (!newEnd) {
-                          patch({ time: startTime });
-                        } else {
-                          patch({ time: `${startTime} - ${newEnd}` });
-                        }
+                        if (newEnd && !values.time) patch({ time: '12:00', endTime: newEnd });
+                        else patch({ endTime: newEnd || null });
                       }}
                       className="bg-transparent border-none outline-none focus:ring-0 text-[11px] text-white p-0 w-full font-mono [color-scheme:dark] cursor-pointer"
                     />
@@ -840,31 +816,34 @@ export default function TaskDetailPane({
                     key={`time-dur-${item.label}`}
                     type="button"
                     onClick={() => {
-                      const timeStr = values.time || '';
-                      const [startTime = '12:00'] = timeStr.includes(' - ') ? timeStr.split(' - ') : [timeStr || '12:00'];
+                      const startTime = values.time || '12:00';
                       const [h, m] = startTime.split(':').map(Number);
                       const d = new Date();
                       d.setHours(h, m + item.mins, 0, 0);
                       const resH = String(d.getHours()).padStart(2, '0');
                       const resM = String(d.getMinutes()).padStart(2, '0');
-                      const newEndTime = `${resH}:${resM}`;
-                      patch({ time: `${startTime} - ${newEndTime}` });
+                      patch({ time: startTime, endTime: `${resH}:${resM}` });
                     }}
                     className="px-2 py-0.5 bg-white/[0.02] border border-white/[0.04] rounded text-[8px] font-mono text-slate-400 hover:text-white hover:bg-slate-800 transition duration-200 cursor-pointer"
                   >
                     {item.label}
                   </button>
                 ))}
-                {values.time && (
+                {(values.time || values.endTime) && (
                   <button
                     type="button"
-                    onClick={() => patch({ time: null })}
+                    onClick={() => patch({ time: null, endTime: null })}
                     className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded text-[8px] font-mono text-rose-400 hover:text-white hover:bg-rose-500 transition duration-200 ml-auto cursor-pointer"
                   >
                     Clear Time
                   </button>
                 )}
               </div>
+              {(values.time || values.endTime) && (
+                <div className="text-[9px] font-mono text-violet-400 font-black mt-0.5">
+                  {fmt24(values.time)}{values.endTime ? ` – ${fmt24(values.endTime)}` : ''}
+                </div>
+              )}
             </div>
 
             {/* Priority cards */}

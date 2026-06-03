@@ -423,7 +423,7 @@ export default function GoogleItemPane({ item, mode = 'edit-personal', onClose, 
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%', transition: { duration: 0.2 } }}
-      className="w-full md:w-[440px] bg-gray-900 border-l border-white/8 h-full flex flex-col shadow-2xl z-40 fixed right-0 top-0 select-none"
+      className="w-full md:w-[440px] bg-gray-900 border-l border-white/8 h-full flex flex-col shadow-2xl z-250 fixed right-0 top-0 select-none"
     >
       <PersonalEventPane
         item={item}

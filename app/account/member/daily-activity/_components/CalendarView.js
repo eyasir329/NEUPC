@@ -15,47 +15,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// Colour palette for layer pickers — matches Google Calendar colour IDs.
-const PALETTE = [
-  '#4285f4', // Blueberry (default)
-  '#d50000', // Tomato
-  '#e67c73', // Flamingo
-  '#f4511e', // Tangerine
-  '#f6bf26', // Banana
-  '#33b679', // Sage
-  '#0b8043', // Basil
-  '#039be5', // Peacock
-  '#3f51b5', // Blueberry dark
-  '#7986cb', // Lavender
-  '#8e24aa', // Grape
-  '#616161', // Graphite
-  '#f09300', // Pumpkin
-  '#ad1457', // Wisteria
-  '#0097a7', // Teal
-  '#795548', // Cocoa
-];
-
-// Google Calendar colour id → hex (same palette used in TaskDetailPane + GoogleItemPane).
-const GCAL_COLOR_MAP = {
-  '1': '#d50000', '2': '#e67c73', '3': '#f4511e', '4': '#f6bf26',
-  '5': '#33b679', '6': '#0b8043', '7': '#039be5', '8': '#3f51b5',
-  '9': '#7986cb', '10': '#8e24aa', '11': '#616161',
-};
-
-const LAYER_DEFAULTS = {
-  todo:      '#7c3aed', // violet
-  personal:  '#e11d48', // rose
-  events:    '#059669', // emerald
-  contests:  '#d97706', // amber
-  tasks:     '#6366f1', // indigo
-  sessions:  '#0ea5e9', // sky
-};
 import {
   ChevronLeft, ChevronRight, Calendar, Check, Plus, CalendarDays, CheckCircle2, RefreshCw, Info, Layers, LayoutGrid, ListTodo, Tag,
   X, Flag, Expand,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate } from './utils';
+import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
 import FeedItemCard from './FeedItemCard';
 import GoogleCalendarPanel from './GoogleCalendarPanel';
 import ExpandedCalendarModal from './ExpandedCalendarModal';
@@ -1045,12 +1010,8 @@ export default function CalendarView({ tasks, projects, sections = [], labels = 
         open={expandedCalOpen}
         tasks={tasks}
         projects={projects}
-        sections={sections}
         onClose={() => setExpandedCalOpen(false)}
         onSelectTask={onSelectTask}
-        onAddTask={onAddTask}
-        onUpdateTask={onUpdateTask}
-        onDeleteTask={onDeleteTask}
         onToggleComplete={onToggleComplete}
         onOpenCreatePane={onOpenCreatePane}
       />

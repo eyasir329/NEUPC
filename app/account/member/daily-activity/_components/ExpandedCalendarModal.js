@@ -9,35 +9,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft, ChevronRight, X, Calendar, Check, Trash2,
-  Flag, Clock, Tag, MapPin, Link2, BookOpen, Flame, ShieldAlert, HelpCircle,
-  ExternalLink,
-} from 'lucide-react';
-import { formatDateString, addDays, getTodayDateString, isTaskOnDate, Priority, getFeedItemUrl, isFeedItem } from './utils';
+import { ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
+import { formatDateString, addDays, getTodayDateString, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-const GCAL_COLOR_MAP = {
-  '1': '#d50000', '2': '#e67c73', '3': '#f4511e', '4': '#f6bf26',
-  '5': '#33b679', '6': '#0b8043', '7': '#039be5', '8': '#3f51b5',
-  '9': '#7986cb', '10': '#8e24aa', '11': '#616161',
-};
-
-const CATEGORY_COLOR = {
-  todo:     '#7c3aed',
-  personal: '#e11d48',
-  events:   '#059669',
-  contests: '#d97706',
-  tasks:    '#6366f1',
-  sessions: '#0ea5e9',
-};
-
-function taskColor(task) {
-  if (task.colorId && GCAL_COLOR_MAP[task.colorId]) return GCAL_COLOR_MAP[task.colorId];
-  const cat = task.feedCategory || 'todo';
-  return CATEGORY_COLOR[cat] || CATEGORY_COLOR.todo;
-}
 
 /** Parse "HH:MM" → minutes-from-midnight. Returns null if not parseable. */
 function toMinutes(hhmm) {
@@ -45,6 +20,15 @@ function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return null;
   return h * 60 + m;
+}
+
+/**
+ * The start-of-event wall clock ("HH:MM") for a task. Bootcamp deadlines keep
+ * their available-from time in `startTime`; every other type (todos, personal
+ * events, sessions, contests) keeps the scheduled start in `time`.
+ */
+function startClockField(t) {
+  return t.feedCategory === 'task' ? t.startTime : t.time;
 }
 
 /** Format minutes-from-midnight to "H:MM AM/PM". */
@@ -163,517 +147,6 @@ function AllDayChip({ task, color, onSelect, timeLabel }) {
   );
 }
 
-// ── Inline event/task panel ───────────────────────────────────────────────────
-
-const GCAL_COLORS_LIST = [
-  { id: null,  hex: '#4285f4', name: 'Default'  },
-  { id: '1',   hex: '#d50000', name: 'Tomato'   },
-  { id: '2',   hex: '#e67c73', name: 'Flamingo' },
-  { id: '3',   hex: '#f4511e', name: 'Tangerine'},
-  { id: '4',   hex: '#f6bf26', name: 'Banana'   },
-  { id: '5',   hex: '#33b679', name: 'Sage'     },
-  { id: '6',   hex: '#0b8043', name: 'Basil'    },
-  { id: '7',   hex: '#039be5', name: 'Peacock'  },
-  { id: '8',   hex: '#3f51b5', name: 'Blueberry'},
-  { id: '9',   hex: '#7986cb', name: 'Lavender' },
-  { id: '10',  hex: '#8e24aa', name: 'Grape'    },
-  { id: '11',  hex: '#616161', name: 'Graphite' },
-];
-
-const PRIORITY_CFG = [
-  { level: Priority.P1, label: 'Critical', Icon: Flame,       cls: 'text-rose-400 border-rose-500/30 bg-rose-500/10'   },
-  { level: Priority.P2, label: 'Medium',   Icon: ShieldAlert, cls: 'text-amber-400 border-amber-500/30 bg-amber-500/10'},
-  { level: Priority.P3, label: 'General',  Icon: HelpCircle,  cls: 'text-sky-400 border-sky-500/30 bg-sky-500/10'      },
-];
-
-function fmt24(t) {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-}
-
-/**
- * Slide-in right panel inside the expanded modal.
- * mode = 'view' | 'edit' | 'create'
- */
-function EventPanel({ panelState, projects, onClose, onSave, onDelete, onToggleComplete }) {
-  const { mode, task, date, startMin: initStart } = panelState;
-  const isReadOnly = mode === 'view' && task && isFeedItem(task);
-  const isCreate   = mode === 'create';
-
-  // ── draft state ──
-  const [title,    setTitle]    = useState(() => isCreate ? '' : (task?.title || ''));
-  const [desc,     setDesc]     = useState(() => task?.description || '');
-  const [dueDate,  setDueDate]  = useState(() => task?.dueDate || date || getTodayDateString());
-  const [time,     setTime]     = useState(() => task?.time || (initStart != null ? `${String(Math.floor(initStart / 60)).padStart(2,'0')}:${String(initStart % 60).padStart(2,'0')}` : ''));
-  const [endTime,  setEndTime]  = useState(() => task?.endTime || '');
-  const [priority, setPriority] = useState(() => task?.priority || Priority.P3);
-  const [projectId,setProjectId]= useState(() => task?.projectId || projects[0]?.id || '');
-  const [labels,   setLabels]   = useState(() => (task?.labels || []).join(', '));
-  const [colorId,  setColorId]  = useState(() => task?.colorId || null);
-  const [saving,   setSaving]   = useState(false);
-
-  const accentColor = GCAL_COLOR_MAP[colorId] || taskColor(task || { feedCategory: 'todo', colorId });
-
-  async function handleSave() {
-    if (!title.trim()) return;
-    setSaving(true);
-    const payload = {
-      title: title.trim(),
-      description: desc.trim() || undefined,
-      dueDate: dueDate || undefined,
-      time: time || undefined,
-      endTime: endTime || undefined,
-      priority,
-      projectId: projectId || undefined,
-      labels: labels.split(',').map((s) => s.trim().replace(/^@/, '')).filter(Boolean),
-      colorId: colorId || undefined,
-    };
-    await onSave(payload);
-    setSaving(false);
-  }
-
-  // Read-only feed item view
-  if (isReadOnly && task) {
-    const catColors = {
-      event:   { color: '#10b981', label: '📣 EVENT',    grad: 'from-emerald-500/10 to-teal-500/5 border-emerald-500/20' },
-      task:    { color: '#6366f1', label: '📅 DEADLINE', grad: 'from-violet-500/10 to-purple-500/5 border-violet-500/20' },
-      session: { color: '#0ea5e9', label: '🎓 SESSION',  grad: 'from-sky-500/10 to-blue-500/5 border-sky-500/20'         },
-      contest: { color: '#d97706', label: '🏆 CONTEST',  grad: 'from-amber-500/10 to-yellow-500/5 border-amber-500/20'   },
-    };
-    const cfg = catColors[task.feedCategory] || catColors.contest;
-    const feedUrl = getFeedItemUrl(task);
-
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.color }} />
-            <span className="text-[9px] font-black font-mono tracking-widest text-slate-400 uppercase">{cfg.label}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {feedUrl && (
-              <a href={feedUrl} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-black font-mono bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition">
-                <ExternalLink className="w-3 h-3" /><span>PORTAL</span>
-              </a>
-            )}
-            <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
-          {/* Title card */}
-          <div className={`p-4 rounded-2xl border bg-gradient-to-br ${cfg.grad}`}>
-            <h2 className="text-sm font-extrabold text-white break-words leading-snug">{task.title}</h2>
-            {task.bootcampTitle && (
-              <span className="mt-1.5 inline-block text-[9px] font-black font-mono text-white/60 uppercase tracking-wider">{task.bootcampTitle}</span>
-            )}
-          </div>
-
-          {task.description && (
-            <div className="text-xs text-slate-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap">
-              {task.description}
-            </div>
-          )}
-
-          {/* ── Bootcamp task fields ── */}
-          {task.feedCategory === 'task' && (
-            <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl space-y-2 text-[11px]">
-              {task.availableFrom && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Available from</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {new Date(task.availableFrom + 'T12:00:00+06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {task.startTime && <span className="text-slate-400 font-mono ml-1">{fmt24(task.startTime)}</span>}
-                  </span>
-                </div>
-              )}
-              {task.dueDate && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Deadline</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    {new Date(
-                      task.endTime ? `${task.dueDate}T${task.endTime}:00+06:00` : `${task.dueDate}T00:00:00+06:00`
-                    ).toLocaleString('en-US', { timeZone: 'Asia/Dhaka', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                  </span>
-                </div>
-              )}
-              {task.difficulty && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Difficulty</span>
-                  <span className="capitalize text-slate-200 font-bold">{task.difficulty}</span>
-                </div>
-              )}
-              {typeof task.points === 'number' && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Points</span>
-                  <span className="text-slate-200 font-bold">
-                    {typeof task.pointsEarned === 'number' ? `${task.pointsEarned} / ${task.points}` : task.points}
-                  </span>
-                </div>
-              )}
-              {task.submissionStatus && task.submissionStatus !== 'pending' && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Submission</span>
-                  <span className={`capitalize font-bold ${task.submissionStatus === 'accepted' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {task.submissionStatus}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Session fields ── */}
-          {task.feedCategory === 'session' && (
-            <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl space-y-2 text-[11px]">
-              {task.dueDate && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Date</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {new Date(task.dueDate + 'T12:00:00+06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-              )}
-              {(task.time || task.endTime) && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Time</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    {fmt24(task.time)}{task.endTime ? ` – ${fmt24(task.endTime)}` : ''}
-                    {typeof task.durationMin === 'number' && (
-                      <span className="text-slate-400 font-mono ml-1">
-                        ({task.durationMin >= 60 ? `${Math.floor(task.durationMin / 60)}h${task.durationMin % 60 ? ` ${task.durationMin % 60}m` : ''}` : `${task.durationMin}m`})
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {task.location && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Location</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-400" />{task.location}
-                  </span>
-                </div>
-              )}
-              {task.status && task.status !== 'scheduled' && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Status</span>
-                  <span className="capitalize text-slate-200 font-bold">{task.status}</span>
-                </div>
-              )}
-              <div className="flex gap-2 pt-1">
-                {task.url && (
-                  <a href={task.url} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-black font-mono bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-400 rounded-lg transition">
-                    <ExternalLink className="w-3 h-3" /><span>JOIN</span>
-                  </a>
-                )}
-                {task.recordingUrl && (
-                  <a href={task.recordingUrl} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-black font-mono bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 text-violet-400 rounded-lg transition">
-                    <ExternalLink className="w-3 h-3" /><span>RECORDING</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Contest fields ── */}
-          {task.feedCategory === 'contest' && (
-            <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl space-y-2 text-[11px]">
-              {task.contestPlatform && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Platform</span>
-                  <span className="capitalize text-slate-200 font-bold">{task.contestPlatform}</span>
-                </div>
-              )}
-              {(task.dueDate || task.contestTime) && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Date / Time</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    {task.dueDate && new Date(task.dueDate + 'T12:00:00+06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {task.contestTime && <span className="font-mono ml-1">{fmt24(task.contestTime)}</span>}
-                  </span>
-                </div>
-              )}
-              {task.contestDuration && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Duration</span>
-                  <span className="text-slate-200 font-bold">{task.contestDuration}</span>
-                </div>
-              )}
-              {task.location && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Location</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-400" />{task.location}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Event / personal fields ── */}
-          {(task.feedCategory === 'event' || task.feedCategory === 'personal') && (
-            <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl space-y-2 text-[11px]">
-              {task.dueDate && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Date</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {new Date(task.dueDate + 'T12:00:00+06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {task.endDate && task.endDate !== task.dueDate && (
-                      <span className="text-slate-400"> – {new Date(task.endDate + 'T12:00:00+06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {(task.time || task.endTime) && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Time</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    {fmt24(task.time)}{task.endTime ? ` – ${fmt24(task.endTime)}` : ''}
-                  </span>
-                </div>
-              )}
-              {task.location && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Location</span>
-                  <span className="text-slate-200 font-bold flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-400" />{task.location}
-                  </span>
-                </div>
-              )}
-              {task.eventCategory && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Category</span>
-                  <span className="capitalize text-slate-200 font-bold">{task.eventCategory}</span>
-                </div>
-              )}
-              {task.url && (
-                <div className="pt-1">
-                  <a href={task.url} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-black font-mono bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg transition w-fit">
-                    <Link2 className="w-3 h-3" /><span>OPEN LINK</span>
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Create / Edit form ──
-  return (
-    <div className="flex flex-col h-full">
-      {/* Panel header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accentColor }} />
-          <span className="text-[9px] font-black font-mono tracking-widest text-slate-400 uppercase">
-            {isCreate ? 'NEW GOAL' : 'EDIT GOAL'}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {!isCreate && task && (
-            <>
-              <button
-                onClick={() => onToggleComplete?.(task.id)}
-                title={task.completed ? 'Mark incomplete' : 'Mark complete'}
-                className={`p-1.5 rounded-lg transition ${task.completed ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-white/5 text-slate-400 hover:text-emerald-400'}`}
-              >
-                <Check className="w-4 h-4 stroke-[2.5]" />
-              </button>
-              <button
-                onClick={() => onDelete?.(task.id)}
-                className="p-1.5 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 rounded-lg transition"
-                title="Delete"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          <button onClick={onClose} className="p-1.5 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg transition">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Form body */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
-        {/* Title */}
-        <input
-          autoFocus
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Goal title…"
-          className="w-full bg-transparent border-b border-white/10 focus:border-violet-500 outline-none text-sm font-bold text-white placeholder:text-slate-600 py-1.5 transition"
-        />
-
-        {/* Description */}
-        <textarea
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          placeholder="Description (optional)…"
-          rows={3}
-          className="w-full bg-white/[0.02] border border-white/5 focus:border-violet-500/50 outline-none rounded-xl text-xs text-slate-300 placeholder:text-slate-600 p-2.5 resize-none transition"
-        />
-
-        {/* Date + time row */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Calendar className="w-2.5 h-2.5" />Date
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full bg-white/[0.02] border border-white/5 rounded-lg text-[10px] text-white px-2 py-1.5 outline-none focus:border-violet-500/50 transition [color-scheme:dark]"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />Start time
-            </label>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-white/[0.02] border border-white/5 rounded-lg text-[10px] text-white px-2 py-1.5 outline-none focus:border-violet-500/50 transition [color-scheme:dark]"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5" />End time
-          </label>
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-full bg-white/[0.02] border border-white/5 rounded-lg text-[10px] text-white px-2 py-1.5 outline-none focus:border-violet-500/50 transition [color-scheme:dark]"
-          />
-        </div>
-
-        {/* Priority */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <Flag className="w-2.5 h-2.5" />Priority
-          </label>
-          <div className="flex gap-1.5">
-            {PRIORITY_CFG.map(({ level, label, Icon, cls }) => (
-              <button
-                key={level}
-                onClick={() => setPriority(level)}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[9px] font-black font-mono transition ${priority === level ? cls : 'border-white/5 text-slate-500 hover:text-slate-300'}`}
-              >
-                <Icon className="w-3 h-3" />{label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Project */}
-        {projects.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <BookOpen className="w-2.5 h-2.5" />List
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {projects.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setProjectId(p.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold border transition ${projectId === p.id ? 'border-violet-500/50 bg-violet-600/15 text-white' : 'border-white/5 text-slate-500 hover:text-slate-300'}`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Labels */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <Tag className="w-2.5 h-2.5" />Labels
-          </label>
-          <input
-            value={labels}
-            onChange={(e) => setLabels(e.target.value)}
-            placeholder="practice, contest, urgent…"
-            className="w-full bg-white/[0.02] border border-white/5 rounded-lg text-[10px] text-white placeholder:text-slate-600 px-2.5 py-1.5 outline-none focus:border-violet-500/50 transition"
-          />
-        </div>
-
-        {/* Colour swatch */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Colour</label>
-          <div className="flex flex-wrap gap-1.5">
-            {GCAL_COLORS_LIST.map(({ id, hex, name }) => (
-              <button
-                key={id ?? 'default'}
-                onClick={() => setColorId(id)}
-                title={name}
-                style={{ backgroundColor: hex }}
-                className={`w-5 h-5 rounded-full border-2 transition hover:scale-110 ${colorId === id ? 'border-white scale-110' : 'border-transparent'}`}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/5 flex gap-2 shrink-0">
-        <button
-          onClick={onClose}
-          className="flex-1 py-2 text-[10px] font-black font-mono text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition border border-white/5"
-        >
-          CANCEL
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving || !title.trim()}
-          className="flex-1 py-2 text-[10px] font-black font-mono bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl transition shadow-lg shadow-violet-600/20"
-        >
-          {saving ? 'SAVING…' : isCreate ? 'ADD GOAL' : 'SAVE'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── layer config ─────────────────────────────────────────────────────────────
-
-const LAYER_DEFAULTS = {
-  todo:     '#7c3aed',
-  personal: '#e11d48',
-  events:   '#059669',
-  contests: '#d97706',
-  tasks:    '#6366f1',
-  sessions: '#0ea5e9',
-};
-
-const PALETTE = [
-  '#4285f4','#d50000','#e67c73','#f4511e','#f6bf26',
-  '#33b679','#0b8043','#039be5','#3f51b5','#7986cb',
-  '#8e24aa','#616161','#f09300','#ad1457','#0097a7','#795548',
-];
-
 const LAYERS_CFG = [
   { key: 'todo',     label: 'Todos',    emoji: '✔' },
   { key: 'personal', label: 'Events',   emoji: '📌' },
@@ -734,7 +207,7 @@ function layerVisible(task, showLayers, subVis) {
 export default function ExpandedCalendarModal({
   open, tasks = [], projects = [],
   onClose,
-  onAddTask, onUpdateTask, onDeleteTask, onToggleComplete,
+  onSelectTask, onOpenCreatePane,
 }) {
   const [viewMode, setViewMode] = useState('week'); // 'day' | 'week' | 'month'
   const [anchor,   setAnchor]   = useState(() => weekStart(new Date()));
@@ -744,7 +217,6 @@ export default function ExpandedCalendarModal({
   });
   const gridRef  = useRef(null);
   const [now, setNow] = useState(() => new Date());
-  const [panelState, setPanelState] = useState(null);
 
   // Layer visibility + colors (persisted to localStorage)
   const [showLayers, setShowLayers] = useState(() => {
@@ -843,19 +315,9 @@ export default function ExpandedCalendarModal({
     setMonthAnchor(new Date(d.getFullYear(), d.getMonth(), 1));
   };
 
-  // ── panel handlers ──
-  const openTask   = useCallback((t) => setPanelState({ mode: isFeedItem(t) ? 'view' : 'edit', task: t, date: t.dueDate }), []);
-  const closePanel = useCallback(() => setPanelState(null), []);
-
-  const handlePanelSave = useCallback(async (payload) => {
-    if (!panelState || !panelState.task) return;
-    await onUpdateTask?.(panelState.task.id, payload);
-    closePanel();
-  }, [panelState, onUpdateTask, closePanel]);
-
-  const handlePanelDelete = useCallback(async (taskId) => {
-    await onDeleteTask?.(taskId); closePanel();
-  }, [onDeleteTask, closePanel]);
+  // ── task interaction ──
+  const openTask = useCallback((t) => onSelectTask?.(t.id), [onSelectTask]);
+  const openCreate = useCallback((dateStr) => onOpenCreatePane?.(dateStr), [onOpenCreatePane]);
 
   // ── derived sub-item lists ──
   const availablePlatforms = useMemo(() =>
@@ -913,9 +375,7 @@ export default function ExpandedCalendarModal({
     const timed = [], allDay = [];
     for (const t of matching) {
       const isTodo = !t.feedCategory && !t.isContest;
-      // Bootcamp tasks store their start in startTime, not time (time is always null for tasks)
-      const timeField = t.feedCategory === 'task' ? t.startTime : t.time;
-      const startMin  = toMinutes(timeField);
+      const startMin  = toMinutes(startClockField(t));
       if (startMin !== null) {
         const endMin = toMinutes(t.endTime);
         const dur = endMin !== null && endMin > startMin ? endMin - startMin : (t.durationMin ?? 60);
@@ -1146,23 +606,25 @@ export default function ExpandedCalendarModal({
                   !t.isArchived && isSpanning(t) && layerVisible(t, showLayers, subVis) && isTaskOnDate(t, dayStr)
                 );
 
-                // Spanning tasks with a startTime go into the time grid; date-only ones go to header
+                // Spanning tasks with a start clock go into the time grid; date-only ones go to header.
+                // Each day shows only its slice of the span: the start day runs from the start clock to
+                // midnight, the end day from midnight to the end clock, and any middle day is full-height —
+                // so the start and end edges land on the correct hour for the day being viewed.
                 const spanningTimed = daySpanning
-                  .filter((t) => {
-                    const tf = t.feedCategory === 'task' ? t.startTime : t.time;
-                    return toMinutes(tf) !== null;
-                  })
+                  .filter((t) => toMinutes(startClockField(t)) !== null)
                   .map((t) => {
-                    const tf = t.feedCategory === 'task' ? t.startTime : t.time;
-                    const startMin = toMinutes(tf);
-                    const endMin = toMinutes(t.endTime);
-                    const dur = endMin !== null && endMin > startMin ? endMin - startMin : (t.durationMin ?? 60);
-                    return { task: t, startMin, durationMin: Math.max(dur, 15), isAllDay: false };
+                    const spanStartDate = t.availableFrom || t.dueDate;
+                    const spanEndDate = (t.endDate && t.endDate > t.dueDate) ? t.endDate : t.dueDate;
+                    const sMin = toMinutes(startClockField(t));
+                    const eMin = toMinutes(t.endTime);
+                    const isStartDay = dayStr === spanStartDate;
+                    const isEndDay = dayStr === spanEndDate;
+                    const startMin = isStartDay ? sMin : 0;
+                    const endMin = isEndDay ? (eMin ?? 24 * 60) : 24 * 60;
+                    const dur = Math.max(endMin - startMin, 15);
+                    return { task: t, startMin, durationMin: dur, isAllDay: false };
                   });
-                const spanningAllDay = daySpanning.filter((t) => {
-                  const tf = t.feedCategory === 'task' ? t.startTime : t.time;
-                  return toMinutes(tf) === null;
-                });
+                const spanningAllDay = daySpanning.filter((t) => toMinutes(startClockField(t)) === null);
 
                 const allTimedBlocks = layoutBlocks([...timed, ...spanningTimed]);
                 const timedSorted = [...allTimedBlocks].sort((a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin));
@@ -1177,11 +639,22 @@ export default function ExpandedCalendarModal({
                     <div className="flex flex-col shrink-0 bg-[#161b22] border-b border-white/[0.07]">
                       <div className="flex">
                         <div className="w-13 shrink-0 border-r border-white/6" />
-                        <div className={`flex-1 flex flex-col items-center py-2 ${isToday ? 'text-violet-400' : 'text-slate-400'}`}>
-                          <span className="text-[8px] font-black font-mono tracking-widest uppercase">{DAY_ABBR[dayAnchor.getDay()]}</span>
-                          <span className={`text-[18px] font-extrabold mt-0.5 leading-none ${isToday ? 'bg-violet-600 text-white w-9 h-9 rounded-full flex items-center justify-center' : ''}`}>
-                            {dayAnchor.getDate()}
-                          </span>
+                        <div className={`flex-1 flex items-center justify-between px-3 py-2 ${isToday ? 'text-violet-400' : 'text-slate-400'}`}>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[8px] font-black font-mono tracking-widest uppercase">{DAY_ABBR[dayAnchor.getDay()]}</span>
+                            <span className={`text-[18px] font-extrabold mt-0.5 leading-none ${isToday ? 'bg-violet-600 text-white w-9 h-9 rounded-full flex items-center justify-center' : ''}`}>
+                              {dayAnchor.getDate()}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openCreate(dayStr)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-black font-mono bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 hover:border-violet-500 rounded-lg text-violet-300 hover:text-white transition"
+                            title="New goal"
+                          >
+                            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                            <span>NEW GOAL</span>
+                          </button>
                         </div>
                       </div>
                       {allItems.length > 0 && (
@@ -1240,12 +713,20 @@ export default function ExpandedCalendarModal({
                         const dStr = formatDateString(d);
                         const isToday = dStr === todayStr;
                         return (
-                          <div key={`whdr-${idx}`} className="flex-1 min-w-0 border-r border-white/5 last:border-r-0">
-                            <div className={`flex flex-col items-center py-1.5 ${isToday ? 'text-violet-400' : 'text-slate-400'}`}>
+                          <div key={`whdr-${idx}`} className="flex-1 min-w-0 border-r border-white/5 last:border-r-0 group">
+                            <div className={`flex flex-col items-center py-1.5 relative ${isToday ? 'text-violet-400' : 'text-slate-400'}`}>
                               <span className="text-[8px] font-black font-mono tracking-widest uppercase">{DAY_ABBR[d.getDay()]}</span>
                               <span className={`text-[14px] font-extrabold mt-0.5 leading-none ${isToday ? 'bg-violet-600 text-white w-7 h-7 rounded-full flex items-center justify-center' : ''}`}>
                                 {d.getDate()}
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => openCreate(dStr)}
+                                className="opacity-0 group-hover:opacity-100 absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-violet-600 text-slate-400 hover:text-white rounded-md transition"
+                                title={`New goal on ${dStr}`}
+                              >
+                                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                              </button>
                             </div>
                           </div>
                         );
@@ -1318,7 +799,8 @@ export default function ExpandedCalendarModal({
 
                       for (const { task: t, startCol, endCol, clipsLeft, clipsRight, row } of spanRows) {
                         const color = getColor(t);
-                        const startLabel = t.startTime ? fmtMin(toMinutes(t.startTime)) : null;
+                        const startClock = startClockField(t);
+                        const startLabel = startClock ? fmtMin(toMinutes(startClock)) : null;
                         const endLabel   = t.endTime   ? fmtMin(toMinutes(t.endTime))   : null;
                         gridItems.push(
                           <div
@@ -1454,18 +936,19 @@ export default function ExpandedCalendarModal({
                           // startMin − durationMin_equivalent (higher = shorter span + later start = in front).
                           // Convert day-columns to minutes so both are on the same scale.
                           const DAY_MINS = 24 * 60;
-                          const scoreA = (toMinutes(a.task.startTime) ?? 0) - (a.endCol - a.startCol) * DAY_MINS;
-                          const scoreB = (toMinutes(b.task.startTime) ?? 0) - (b.endCol - b.startCol) * DAY_MINS;
+                          const scoreA = (toMinutes(startClockField(a.task)) ?? 0) - (a.endCol - a.startCol) * DAY_MINS;
+                          const scoreB = (toMinutes(startClockField(b.task)) ?? 0) - (b.endCol - b.startCol) * DAY_MINS;
                           return scoreA - scoreB; // ascending: lowest score = behind
                         });
                         const total = sorted.length;
                         return sorted.flatMap(({ task: t, startCol, endCol, clipsLeft, clipsRight }, zIdx) => {
                         const color = getColor(t);
                         const TOTAL_MINS = 24 * 60;
-                        const startMin = toMinutes(t.startTime) ?? 0;
+                        const startClock = startClockField(t);
+                        const startMin = toMinutes(startClock) ?? 0;
                         const endMin   = toMinutes(t.endTime)   ?? TOTAL_MINS;
                         const colW     = 100 / 7;
-                        const startLabel = t.startTime ? fmtMin(startMin) : null;
+                        const startLabel = startClock ? fmtMin(startMin) : null;
                         const endLabel   = t.endTime   ? fmtMin(endMin)   : null;
                         // Longest (behind) = most transparent; shortest (on top) = most opaque.
                         // zIdx 0 = longest/deepest, zIdx total-1 = shortest/topmost.
@@ -1556,16 +1039,27 @@ export default function ExpandedCalendarModal({
                         return (
                           <div
                             key={`mc-${idx}`}
-                            className={`border-r border-b border-white/[0.06] flex flex-col min-h-0 ${!isThisMonth ? 'opacity-25' : ''}`}
+                            onDoubleClick={() => isThisMonth && openCreate(dStr)}
+                            className={`border-r border-b border-white/6 flex flex-col min-h-0 group ${!isThisMonth ? 'opacity-25' : ''}`}
                           >
-                            {/* Date number */}
-                            <div className="px-2 pt-1.5 pb-1 shrink-0">
+                            {/* Date number + new goal button */}
+                            <div className="px-2 pt-1.5 pb-1 shrink-0 flex items-center justify-between">
                               <button
                                 onClick={(e) => { e.stopPropagation(); const d = new Date(dateObj); d.setHours(0,0,0,0); setDayAnchor(d); setViewMode('day'); }}
                                 className={`text-[11px] font-extrabold font-mono leading-none transition hover:opacity-70 ${isToday ? 'bg-violet-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : isThisMonth ? 'text-slate-300' : 'text-slate-500'}`}
                               >
                                 {dateObj.getDate()}
                               </button>
+                              {isThisMonth && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); openCreate(dStr); }}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-violet-600 text-slate-500 hover:text-white rounded transition"
+                                  title="New goal"
+                                >
+                                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                </button>
+                              )}
                             </div>
                             {/* Events — scrollable within fixed cell */}
                             <div className="flex-1 overflow-y-auto no-scrollbar px-1 pb-1 space-y-0.5 min-h-0">
@@ -1595,28 +1089,6 @@ export default function ExpandedCalendarModal({
               )}
             </div>
 
-            {/* ── Right panel ── */}
-            <AnimatePresence>
-              {panelState && (
-                <motion.div
-                  key="event-panel"
-                  initial={{ x: '100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '100%' }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="w-85 shrink-0 bg-[#161b22] border-l border-white/8 flex flex-col overflow-hidden"
-                >
-                  <EventPanel
-                    panelState={panelState}
-                    projects={projects}
-                    onClose={closePanel}
-                    onSave={handlePanelSave}
-                    onDelete={handlePanelDelete}
-                    onToggleComplete={onToggleComplete}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
 
           </div>
         </motion.div>
