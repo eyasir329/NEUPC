@@ -90,7 +90,12 @@ function feedItemToTask(item) {
     personalEventId: item.personalEventId || null,
     location: item.location || null,
     url: item.url || null,
-    endDate: item.endDate || null,
+    // Events carry their end as a timestamptz; derive the span-end DATE in Dhaka
+    // local so it shares dueDate's basis (otherwise a late-UTC end clips a day
+    // early). Personal events already pass a bare Dhaka date in endDate.
+    endDate: item.category === 'event' && item.endTime
+      ? isoToLocalDate(item.endTime)
+      : item.endDate || null,
     recurrence: item.recurrence || null,
     colorId: item.colorId || null,
     status: item.status || null,

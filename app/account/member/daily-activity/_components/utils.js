@@ -289,8 +289,8 @@ export function isTaskOnDate(task, dateStr) {
     if (task.feedCategory === 'task' && task.availableFrom) {
       return dateStr >= task.availableFrom && dateStr <= task.dueDate;
     }
-    // Multi-day personal events span from dueDate to endDate.
-    if (task.feedCategory === 'personal' && task.endDate && task.endDate > task.dueDate) {
+    // Multi-day personal events and published events span from dueDate to endDate.
+    if ((task.feedCategory === 'personal' || task.feedCategory === 'event') && task.endDate && task.endDate > task.dueDate) {
       return dateStr >= task.dueDate && dateStr <= task.endDate;
     }
     return task.dueDate === dateStr;

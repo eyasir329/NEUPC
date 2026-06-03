@@ -334,7 +334,7 @@ export default function ExpandedCalendarModal({
   // Spanning tasks: cover multiple days → rendered as a single header chip, not per-column.
   const isSpanning = useCallback((t) => {
     if (t.feedCategory === 'task' && t.availableFrom && t.dueDate && t.availableFrom !== t.dueDate) return true;
-    if (t.feedCategory === 'personal' && t.endDate && t.endDate > t.dueDate) return true;
+    if ((t.feedCategory === 'personal' || t.feedCategory === 'event') && t.endDate && t.endDate > t.dueDate) return true;
     return false;
   }, []);
 
@@ -1034,7 +1034,13 @@ export default function ExpandedCalendarModal({
                         const isThisMonth = dateObj.getMonth() === monthMonth;
                         const isToday = dStr === todayStr;
                         const { timed, allDay } = dayTasksFiltered(dateObj);
-                        const allItems = [...allDay, ...timed.map((b) => b.task)];
+                        // dayTasksFiltered excludes spanning (multi-day) items; the month grid has no
+                        // separate span renderer like day/week, so gather them here too — otherwise
+                        // multi-day events/deadlines never show up in month view.
+                        const spanning = tasks.filter((t) =>
+                          !t.isArchived && isSpanning(t) && isTaskOnDate(t, dStr) && layerVisible(t, showLayers, subVis)
+                        );
+                        const allItems = [...spanning, ...allDay, ...timed.map((b) => b.task)];
                         const unique = [...new Map(allItems.map((t) => [t.id, t])).values()];
                         return (
                           <div
@@ -1065,7 +1071,8 @@ export default function ExpandedCalendarModal({
                             <div className="flex-1 overflow-y-auto no-scrollbar px-1 pb-1 space-y-0.5 min-h-0">
                               {unique.map((t) => {
                                 const c = getColor(t);
-                                const timeStr = t.time ? fmt24(t.time) : (t.startTime ? fmt24(t.startTime) : null);
+                                const startClock = startClockField(t);
+                                const timeStr = startClock ? fmt24(startClock) : null;
                                 return (
                                   <div
                                     key={`mc-ev-${t.id}`}
