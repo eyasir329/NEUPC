@@ -79,17 +79,40 @@ const MONTH_NAME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct',
  * Returns each block with { col, totalCols } for width/offset calculation.
  */
 function layoutBlocks(blocks) {
-  const sorted = [...blocks].sort(
-    (a, b) => (a.startMin - a.durationMin) - (b.startMin - b.durationMin)
+  if (blocks.length === 0) return [];
+
+  // Sort by start time, longer duration first on tie — all block types participate.
+  const sorted = [...blocks].sort((a, b) =>
+    a.startMin !== b.startMin ? a.startMin - b.startMin : b.durationMin - a.durationMin
   );
-  return sorted.map((b, i) => ({ ...b, zOffset: i }));
+
+  // Greedy side-by-side lane assignment: overlapping events go into adjacent lanes.
+  const colEnds = [];
+  const withCol = sorted.map((b) => {
+    const end = b.startMin + b.durationMin;
+    let col = colEnds.findIndex((e) => e <= b.startMin);
+    if (col === -1) { col = colEnds.length; colEnds.push(end); }
+    else colEnds[col] = end;
+    return { ...b, col };
+  });
+
+  // totalCols = max lane among all blocks that overlap this one, + 1.
+  return withCol.map((b, i) => {
+    const end = b.startMin + b.durationMin;
+    const maxCol = Math.max(...withCol
+      .filter((o) => o.startMin < end && o.startMin + o.durationMin > b.startMin)
+      .map((o) => o.col));
+    return { ...b, totalCols: maxCol + 1, zOffset: i };
+  });
 }
 
 /** A timed event block rendered inside the time-grid column. */
-function TimedBlock({ task, color, startMin, durationMin, zOffset, isAllDay, onSelect }) {
-  const top = startMin * PX_PER_MIN;
+function TimedBlock({ task, color, startMin, durationMin, zOffset, isAllDay, onSelect, col = 0, totalCols = 1, renderStart }) {
+  const top = (renderStart ?? startMin) * PX_PER_MIN;
   const height = Math.max(durationMin * PX_PER_MIN, 18);
   const short = height < 36;
+  const leftPct  = (col / totalCols) * 100;
+  const widthPct = (1  / totalCols) * 100;
 
   return (
     <div
@@ -98,8 +121,8 @@ function TimedBlock({ task, color, startMin, durationMin, zOffset, isAllDay, onS
       style={{
         position: 'absolute',
         top,
-        left: 2,
-        right: 2,
+        left: `calc(${leftPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
         height,
         backgroundColor: isAllDay ? color + '55' : color + 'cc',
         borderLeft: `3px solid ${color}`,
@@ -108,7 +131,7 @@ function TimedBlock({ task, color, startMin, durationMin, zOffset, isAllDay, onS
         cursor: 'pointer',
         zIndex: isAllDay ? 1 : 2 + zOffset,
       }}
-      className="flex flex-col justify-start px-1.5 py-0.5 hover:brightness-110 transition select-none"
+      className="flex flex-col justify-start px-1.5 py-0.5 hover:brightness-110 transition select-none pointer-events-auto"
     >
       <span className={`font-bold leading-tight truncate ${short ? 'text-[8px]' : 'text-[9px]'} ${isAllDay ? 'text-white/70' : 'text-white'}`}>
         {task.title}
@@ -1168,10 +1191,11 @@ export default function ExpandedCalendarModal({
                             <div className="h-px flex-1 bg-red-500" />
                           </div>
                         )}
-                        {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay }) => (
+                        {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay, col, totalCols, renderStart }) => (
                           <TimedBlock key={`dtb-${t.id}`} task={t} color={getColor(t)}
                             startMin={startMin} durationMin={durationMin}
                             zOffset={zOffset} isAllDay={isAllDay}
+                            col={col} totalCols={totalCols} renderStart={renderStart}
                             onSelect={openTask}
                           />
                         ))}
@@ -1364,7 +1388,7 @@ export default function ExpandedCalendarModal({
                         return (
                           <div
                             key={`dcol-${ci}`}
-                            className="absolute top-0 bottom-0 border-r border-white/4"
+                            className="absolute top-0 bottom-0 border-r border-white/4 pointer-events-none"
                             style={{ left: colLeft, width: colWidth, zIndex: 10 }}
                           >
                             {HOURS.map((h) => (
@@ -1379,10 +1403,11 @@ export default function ExpandedCalendarModal({
                                 <div className="h-px flex-1 bg-red-500" />
                               </div>
                             )}
-                            {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay }) => (
+                            {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay, col, totalCols, renderStart }) => (
                               <TimedBlock key={`tb-${t.id}-${dStr}`} task={t} color={getColor(t)}
                                 startMin={startMin} durationMin={durationMin}
                                 zOffset={zOffset} isAllDay={isAllDay}
+                                col={col} totalCols={totalCols} renderStart={renderStart}
                                 onSelect={openTask}
                               />
                             ))}
