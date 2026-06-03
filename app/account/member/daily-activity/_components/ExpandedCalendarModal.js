@@ -1140,10 +1140,36 @@ export default function ExpandedCalendarModal({
                 const dayStr = formatDateString(dayAnchor);
                 const isToday = dayStr === todayStr;
                 const { timed, allDay } = dayTasksFiltered(dayAnchor);
-                const timedSorted = [...timed].sort((a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin));
+
+                // Spanning tasks that cover this day → header chips + time-grid overlays
+                const daySpanning = tasks.filter((t) =>
+                  !t.isArchived && isSpanning(t) && layerVisible(t, showLayers, subVis) && isTaskOnDate(t, dayStr)
+                );
+
+                // Spanning tasks with a startTime go into the time grid; date-only ones go to header
+                const spanningTimed = daySpanning
+                  .filter((t) => {
+                    const tf = t.feedCategory === 'task' ? t.startTime : t.time;
+                    return toMinutes(tf) !== null;
+                  })
+                  .map((t) => {
+                    const tf = t.feedCategory === 'task' ? t.startTime : t.time;
+                    const startMin = toMinutes(tf);
+                    const endMin = toMinutes(t.endTime);
+                    const dur = endMin !== null && endMin > startMin ? endMin - startMin : (t.durationMin ?? 60);
+                    return { task: t, startMin, durationMin: Math.max(dur, 15), isAllDay: false };
+                  });
+                const spanningAllDay = daySpanning.filter((t) => {
+                  const tf = t.feedCategory === 'task' ? t.startTime : t.time;
+                  return toMinutes(tf) === null;
+                });
+
+                const allTimedBlocks = layoutBlocks([...timed, ...spanningTimed]);
+                const timedSorted = [...allTimedBlocks].sort((a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin));
                 const allItems = [
-                  ...timedSorted.map((b) => ({ task: b.task, timeLabel: fmtMin(b.startMin) })),
+                  ...timedSorted.filter((b) => b.isAllDay).map((b) => ({ task: b.task, timeLabel: null })),
                   ...allDay.map((t) => ({ task: t, timeLabel: null })),
+                  ...spanningAllDay.map((t) => ({ task: t, timeLabel: null })),
                 ];
                 return (
                   <>
@@ -1191,7 +1217,7 @@ export default function ExpandedCalendarModal({
                             <div className="h-px flex-1 bg-red-500" />
                           </div>
                         )}
-                        {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay, col, totalCols, renderStart }) => (
+                        {allTimedBlocks.map(({ task: t, startMin, durationMin, zOffset, isAllDay, col, totalCols, renderStart }) => (
                           <TimedBlock key={`dtb-${t.id}`} task={t} color={getColor(t)}
                             startMin={startMin} durationMin={durationMin}
                             zOffset={zOffset} isAllDay={isAllDay}
