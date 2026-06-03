@@ -35,6 +35,7 @@ export async function createWeeklyTaskAction(formData) {
     const description = formData.get('description')?.trim();
     const difficulty = formData.get('difficulty') || 'medium';
     const deadline = formData.get('deadline');
+    const start_time = formData.get('start_time') || null;
     const problem_links = formData.get('problem_links')
       ? formData
           .get('problem_links')
@@ -48,6 +49,8 @@ export async function createWeeklyTaskAction(formData) {
 
     if (!title || !deadline)
       return { error: 'Title and deadline are required' };
+    if (start_time && new Date(start_time) >= new Date(deadline))
+      return { error: 'Start time must be before the deadline' };
 
     const { data: inserted, error } = await supabase
       .from('weekly_tasks')
@@ -56,6 +59,7 @@ export async function createWeeklyTaskAction(formData) {
           title,
           description,
           difficulty,
+          start_time: start_time ? new Date(start_time).toISOString() : null,
           deadline: new Date(deadline).toISOString(),
           assigned_by: mentor.id,
           problem_links,
@@ -93,6 +97,7 @@ export async function updateWeeklyTaskAction(formData) {
     const description = formData.get('description')?.trim();
     const difficulty = formData.get('difficulty') || 'medium';
     const deadline = formData.get('deadline');
+    const start_time = formData.get('start_time') || null;
     const task_type = formData.get('task_type')?.trim() || 'Exercise';
     const points = parseInt(formData.get('points') || '10', 10);
     const problem_links = formData.get('problem_links')
@@ -104,6 +109,8 @@ export async function updateWeeklyTaskAction(formData) {
       : [];
 
     if (!id || !title || !deadline) return { error: 'Missing required fields' };
+    if (start_time && new Date(start_time) >= new Date(deadline))
+      return { error: 'Start time must be before the deadline' };
 
     // Only allow editing own tasks
     const { data: existing } = await supabase
@@ -120,6 +127,7 @@ export async function updateWeeklyTaskAction(formData) {
         title,
         description,
         difficulty,
+        start_time: start_time ? new Date(start_time).toISOString() : null,
         deadline: new Date(deadline).toISOString(),
         problem_links,
         task_type,
@@ -401,6 +409,7 @@ export async function scheduleSessionAction(formData) {
 
     let meetLink = null;
     let meetEventId = null;
+    let meetErrorReason = null;
     if (!location) {
       try {
         const meet = await createMeetEvent({
@@ -413,8 +422,10 @@ export async function scheduleSessionAction(formData) {
         meetLink = meet.meetLink;
         meetEventId = meet.eventId;
       } catch (meetErr) {
-        // Non-fatal: persist the session without a Meet link so the mentor sees the error
         console.error('Google Meet creation failed:', meetErr.message);
+        meetErrorReason = meetErr.message.includes('invalid_grant')
+          ? 'Google OAuth token expired — run scripts/get-meet-refresh-token.mjs to refresh it.'
+          : meetErr.message;
       }
     }
 
@@ -459,7 +470,9 @@ export async function scheduleSessionAction(formData) {
         ? null
         : meetLink
           ? null
-          : 'Session saved but Google Meet link could not be created.',
+          : meetErrorReason
+            ? `Meet link failed: ${meetErrorReason}`
+            : 'Session saved but Google Meet link could not be created.',
     };
   } catch (err) {
     return { error: err.message };

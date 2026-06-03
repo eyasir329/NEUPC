@@ -54,6 +54,7 @@ import CalendarView from './CalendarView';
 import TasksView from './TasksView';
 import TaskDetailPane from './TaskDetailPane';
 import ProductivityModal from './ProductivityModal';
+import GoogleItemPane from './GoogleItemPane';
 
 export default function MemberDailyActivityClient({ userId }) {
   const [tasks, setTasks] = useState([]);
@@ -80,6 +81,10 @@ export default function MemberDailyActivityClient({ userId }) {
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [showCreatePane, setShowCreatePane] = useState(false);
   const [createPrefillTitle, setCreatePrefillTitle] = useState('');
+  const [createPrefillDate, setCreatePrefillDate] = useState(null);
+
+  // Google item pane: { item, mode } where mode is 'view'|'create-event'
+  const [googlePane, setGooglePane] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -166,6 +171,21 @@ export default function MemberDailyActivityClient({ userId }) {
     }, 5500);
   };
 
+  // Re-pull todos + feed (e.g. after a two-way Google sync changed completion
+  // state server-side) and merge them back into the combined task list.
+  const refreshTasks = async () => {
+    try {
+      const [todosRes, feedRes] = await Promise.all([
+        fetch('/api/member/daily-activity/todos'),
+        fetch('/api/member/daily-activity/feed'),
+      ]);
+      const [todosData, feedData] = await Promise.all([todosRes.json(), feedRes.json()]);
+      setTasks([...(todosData || []), ...(feedData || [])]);
+    } catch (err) {
+      console.error('refreshTasks:', err);
+    }
+  };
+
   const handleAddTask = async (taskData) => {
     try {
       const response = await fetch('/api/member/daily-activity/todos', {
@@ -181,7 +201,7 @@ export default function MemberDailyActivityClient({ userId }) {
       showToast('Goal spawned and stored.', 'success');
 
       // Create new labels if they weren't in catalog
-      const newLabelsToRegister = taskData.labels.filter(
+      const newLabelsToRegister = (taskData.labels || []).filter(
         (lName) => !labels.some((l) => l.name.toLowerCase() === lName.toLowerCase())
       );
 
@@ -201,6 +221,7 @@ export default function MemberDailyActivityClient({ userId }) {
     } catch (err) {
       console.error(err);
       showToast('Failed to add goal.', 'error');
+      throw err;
     }
   };
 
@@ -225,7 +246,7 @@ export default function MemberDailyActivityClient({ userId }) {
       if (selectedTaskId === taskId) {
         setSelectedTaskId(null);
       }
-      showToast('Goal deleted from DB.', 'error');
+      showToast('Goal deleted from DB.', 'info');
     } catch (err) {
       console.error(err);
       showToast('Failed to delete goal.', 'error');
@@ -252,6 +273,7 @@ export default function MemberDailyActivityClient({ userId }) {
     } catch (err) {
       console.error(err);
       showToast('Failed to update task.', 'error');
+      throw err;
     }
   };
 
@@ -404,10 +426,22 @@ export default function MemberDailyActivityClient({ userId }) {
     setSearchQuery('');
   };
 
-  const openCreatePane = (prefillTitle = '') => {
+  const openCreatePane = (prefillTitle = '', prefillDate = null) => {
     setCreatePrefillTitle(prefillTitle);
+    setCreatePrefillDate(prefillDate);
     setSelectedTaskId(null);
     setShowCreatePane(true);
+  };
+
+  const handleSelectTask = (taskId) => {
+    const t = tasks.find((x) => x.id === taskId);
+    if (t?.feedCategory === 'personal') {
+      setSelectedTaskId(null);
+      setGooglePane({ item: t, mode: 'edit-personal' });
+    } else {
+      setGooglePane(null);
+      setSelectedTaskId(taskId);
+    }
   };
 
   const activeTask = tasks.find((t) => t.id === selectedTaskId) || null;
@@ -514,12 +548,12 @@ export default function MemberDailyActivityClient({ userId }) {
 
         <div id="viewport-workspace">
           {activeTab === 'insights' && (
-            <InsightsView tasks={tasks} karma={karma} labels={labels} onSelectTask={setSelectedTaskId} onToggleComplete={handleToggleComplete} />
+            <InsightsView tasks={tasks} karma={karma} labels={labels} onSelectTask={handleSelectTask} onToggleComplete={handleToggleComplete} />
           )}
 
           {activeTab === 'tasks' && (
             <TasksView
-              tasks={tasks.filter((t) => !t.readOnly)}
+              tasks={tasks.filter((t) => !t.readOnly && !t.feedCategory)}
               projects={projects}
               sections={sections}
               labels={labels}
@@ -528,7 +562,7 @@ export default function MemberDailyActivityClient({ userId }) {
               onToggleComplete={handleToggleComplete}
               onDeleteTask={handleDeleteTask}
               onUpdateTask={handleUpdateTask}
-              onSelectTask={setSelectedTaskId}
+              onSelectTask={handleSelectTask}
               onAddProject={handleAddProject}
               onDeleteProject={handleDeleteProject}
               onAddSection={handleAddSection}
@@ -538,7 +572,21 @@ export default function MemberDailyActivityClient({ userId }) {
           )}
 
           {activeTab === 'calendar' && (
-            <CalendarView tasks={tasks} projects={projects} sections={sections} labels={labels} onAddTask={handleAddTask} onToggleComplete={handleToggleComplete} onSelectTask={setSelectedTaskId} onToast={showToast} />
+            <CalendarView
+              tasks={tasks}
+              projects={projects}
+              sections={sections}
+              labels={labels}
+              onAddTask={handleAddTask}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleComplete={handleToggleComplete}
+              onSelectTask={handleSelectTask}
+              onToast={showToast}
+              onSynced={refreshTasks}
+              onCreatePersonal={() => setGooglePane({ item: null, mode: 'create-personal' })}
+              onOpenCreatePane={(date) => openCreatePane('', date || null)}
+            />
           )}
         </div>
       </PageShell>
@@ -549,7 +597,8 @@ export default function MemberDailyActivityClient({ userId }) {
             mode="create"
             initialTitle={createPrefillTitle}
             defaultProjectId={projects[0]?.id}
-            onClose={() => setShowCreatePane(false)}
+            defaultDueDate={createPrefillDate}
+            onClose={() => { setShowCreatePane(false); setCreatePrefillDate(null); }}
             projects={projects}
             sections={sections}
             labels={labels}
@@ -559,6 +608,7 @@ export default function MemberDailyActivityClient({ userId }) {
 
         {!showCreatePane && selectedTaskId && activeTask && (
           <TaskDetailPane
+            key={selectedTaskId}
             task={activeTask}
             onClose={() => setSelectedTaskId(null)}
             projects={projects}
@@ -568,13 +618,23 @@ export default function MemberDailyActivityClient({ userId }) {
             onDeleteTask={handleDeleteTask}
           />
         )}
+
+        {googlePane && (
+          <GoogleItemPane
+            item={googlePane.item}
+            mode={googlePane.mode}
+            onClose={() => setGooglePane(null)}
+            onSaved={refreshTasks}
+            onToast={showToast}
+          />
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
         {showSearchOverlay && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] p-4 select-none">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-gray-900 border border-white/[0.08] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/[0.06]">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-gray-900 border border-white/8 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+              <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/6">
                 <Search className="w-4 h-4 text-gray-500" />
                 <input type="text" placeholder="Search tasks, descriptions, labels..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 text-sm bg-transparent border-none outline-none focus:ring-0 text-white placeholder:text-gray-600" autoFocus />
                 <button onClick={() => setShowSearchOverlay(false)} className="hover:bg-white/5 p-1 rounded-md text-gray-500 hover:text-white">
@@ -590,7 +650,7 @@ export default function MemberDailyActivityClient({ userId }) {
                 ) : (
                   <div className="space-y-1">
                     {searchResults.map((t) => (
-                      <div key={`spotlight-res-${t.id}`} onClick={() => handleSearchItemSelect(t)} className="p-2.5 w-full text-left rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition flex justify-between items-center cursor-pointer">
+                      <div key={`spotlight-res-${t.id}`} onClick={() => handleSearchItemSelect(t)} className="p-2.5 w-full text-left rounded-lg bg-white/2 hover:bg-white/5 border border-transparent hover:border-white/8 transition flex justify-between items-center cursor-pointer">
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <span className="text-sm font-semibold text-gray-200 truncate">{t.title}</span>
                           {t.description && <span className="text-xs text-gray-500 block truncate">{t.description}</span>}
@@ -618,12 +678,12 @@ export default function MemberDailyActivityClient({ userId }) {
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
-            className={`fixed bottom-6 left-6 z-[55] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm max-w-sm backdrop-blur-xl ${
+            className={`fixed bottom-6 left-6 z-55 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm max-w-sm backdrop-blur-xl ${
               toast.type === 'success'
                 ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-200'
                 : toast.type === 'error'
                 ? 'bg-rose-950/80 border-rose-500/30 text-rose-200'
-                : 'bg-gray-900 border-white/[0.08] text-gray-200'
+                : 'bg-gray-900 border-white/8 text-gray-200'
             }`}
           >
             <Info className="w-4 h-4 shrink-0 opacity-85" />

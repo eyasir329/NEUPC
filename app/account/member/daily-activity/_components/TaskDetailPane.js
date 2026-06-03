@@ -20,8 +20,23 @@ import { motion } from 'framer-motion';
 import {
   X, Trash2, Archive, Calendar, Flag, CheckSquare, Plus, MessageSquare,
   Send, GitPullRequest, RefreshCw, Paperclip, Sparkles, Flame, ShieldAlert,
-  HelpCircle, Tag, Clock,
+  HelpCircle, Tag, Clock, MapPin, Link, Users, Bell, Eye, ChevronDown,
 } from 'lucide-react';
+
+const GCAL_COLORS = [
+  { id: null,  name: 'Default', hex: '#4285f4' },
+  { id: '1',   name: 'Tomato',  hex: '#d50000' },
+  { id: '2',   name: 'Flamingo',hex: '#e67c73' },
+  { id: '3',   name: 'Tangerine',hex:'#f4511e' },
+  { id: '4',   name: 'Banana',  hex: '#f6bf26' },
+  { id: '5',   name: 'Sage',    hex: '#33b679' },
+  { id: '6',   name: 'Basil',   hex: '#0b8043' },
+  { id: '7',   name: 'Peacock', hex: '#039be5' },
+  { id: '8',   name: 'Blueberry',hex:'#3f51b5' },
+  { id: '9',   name: 'Lavender',hex: '#7986cb' },
+  { id: '10',  name: 'Grape',   hex: '#8e24aa' },
+  { id: '11',  name: 'Graphite',hex: '#616161' },
+];
 import {
   Priority, generateId, getFeedItemUrl, getTodayDateString, formatDateString,
   addDays, isFeedItem,
@@ -32,6 +47,7 @@ export default function TaskDetailPane({
   mode = 'edit',
   initialTitle = '',
   defaultProjectId,
+  defaultDueDate,
   onClose,
   projects,
   sections,
@@ -47,23 +63,58 @@ export default function TaskDetailPane({
   const [multiDayActive, setMultiDayActive] = useState(false);
   const [prevRecFreq, setPrevRecFreq] = useState(null);
 
-  // Draft state backs "create" mode; edit mode reads/writes the live task.
-  const [draft, setDraft] = useState(() => ({
-    title: initialTitle,
-    description: '',
-    priority: Priority.P3,
-    dueDate: getTodayDateString(),
-    projectId: defaultProjectId || projects[0]?.id || '',
-    sectionId: '',
-    recurrence: 'none',
-    labels: [],
-    subtasks: [],
-    comments: [],
-  }));
+  // Draft backs both create and edit. Edit initializes from the live task
+  // and only calls onUpdateTask when Save is clicked — no autosave.
+  const [draft, setDraft] = useState(() => {
+    if (mode === 'create') {
+      return {
+        title: initialTitle,
+        description: '',
+        priority: Priority.P3,
+        dueDate: defaultDueDate || getTodayDateString(),
+        projectId: defaultProjectId || projects[0]?.id || '',
+        sectionId: '',
+        recurrence: 'none',
+        labels: [],
+        subtasks: [],
+        comments: [],
+        location: '',
+        url: '',
+        colorId: null,
+        status: 'confirmed',
+        visibility: 'default',
+        reminders: [],
+        attendees: [],
+      };
+    }
+    return {
+      title: task?.title || '',
+      description: task?.description || '',
+      priority: task?.priority ?? Priority.P3,
+      dueDate: task?.dueDate || getTodayDateString(),
+      projectId: task?.projectId || defaultProjectId || projects[0]?.id || '',
+      sectionId: task?.sectionId || '',
+      recurrence: task?.recurrence || 'none',
+      labels: task?.labels || [],
+      subtasks: task?.subtasks || [],
+      comments: task?.comments || [],
+      location: task?.location || '',
+      url: task?.url || '',
+      colorId: task?.colorId || null,
+      status: task?.status || 'confirmed',
+      visibility: task?.visibility || 'default',
+      reminders: task?.reminders || [],
+      attendees: task?.attendees || [],
+    };
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [attendeeInput, setAttendeeInput] = useState('');
 
   if (!task && !isCreate) return null;
 
-  const values = isCreate ? draft : task;
+  // Always read from local draft — never directly from the live task prop.
+  const values = draft;
 
   // React state synchronization pattern (effect-like render-phase update)
   if (values && values.recurrence?.freq !== prevRecFreq) {
@@ -73,6 +124,14 @@ export default function TaskDetailPane({
 
   // Read-only feed items (contests, events, sessions, deadlines) — view only.
   const isReadOnly = !isCreate && isFeedItem(task);
+
+  function fmt24(t) {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
+  }
 
   if (isReadOnly) {
     const totalSubs = task.subtasks?.length || 0;
@@ -146,12 +205,27 @@ export default function TaskDetailPane({
           {/* Properties Grid */}
           <div className="bg-white/[0.02] p-3.5 rounded-xl border border-white/[0.06] grid grid-cols-2 gap-4 text-[11px]">
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Scheduled Date</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                {task.feedCategory === 'task' ? 'Deadline' : 'Scheduled Date'}
+              </span>
               <div className="flex items-center gap-1.5 text-gray-300 font-bold">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>{task.dueDate ? new Date(task.dueDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Continuous'}</span>
+                <span>{task.dueDate ? new Date(task.dueDate + 'T12:00:00+06:00').toLocaleDateString('en-US', { timeZone: 'Asia/Dhaka', month: 'short', day: 'numeric', year: 'numeric' }) : 'Continuous'}</span>
               </div>
             </div>
+
+            {task.feedCategory === 'task' && task.availableFrom && (
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Available From</span>
+                <div className="flex items-center gap-1.5 text-gray-300 font-bold">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>
+                    {new Date(task.availableFrom + 'T12:00:00+06:00').toLocaleDateString('en-US', { timeZone: 'Asia/Dhaka', month: 'short', day: 'numeric', year: 'numeric' })}
+                    {task.startTime && <span className="ml-1 text-slate-400 font-normal">{fmt24(task.startTime)}</span>}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Assigned Priority</span>
@@ -163,15 +237,98 @@ export default function TaskDetailPane({
 
             {task.bootcampTitle && (
               <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Associated Bootcamp/Track</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Bootcamp / Track</span>
                 <span className="text-violet-300 font-extrabold">{task.bootcampTitle}</span>
               </div>
             )}
 
-            {task.time && (
+            {task.eventCategory && (
               <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Start Time</span>
-                <span className="text-gray-300 font-bold">🕒 {task.time}</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Event Category</span>
+                <span className="text-gray-300 font-bold capitalize">{task.eventCategory}</span>
+              </div>
+            )}
+
+            {task.feedCategory === 'task' && task.endTime && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Deadline Time</span>
+                <span className="text-red-400 font-bold">🔴 {fmt24(task.endTime)}</span>
+              </div>
+            )}
+            {task.feedCategory !== 'task' && (task.time || task.endTime) && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Time</span>
+                <span className="text-gray-300 font-bold">
+                  🕒 {task.time}{task.endTime ? ` – ${fmt24(task.endTime)}` : ''}
+                  {typeof task.durationMin === 'number' && (
+                    <span className="ml-2 text-slate-400 font-normal">
+                      ({task.durationMin >= 60 ? `${Math.floor(task.durationMin / 60)}h${task.durationMin % 60 ? ` ${task.durationMin % 60}m` : ''}` : `${task.durationMin}m`})
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+
+            {task.location && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Location / Venue</span>
+                <span className="text-gray-300 font-bold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-slate-400" /> {task.location}
+                </span>
+              </div>
+            )}
+
+            {task.feedCategory === 'session' && task.url && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Meeting Link</span>
+                <a href={task.url} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline font-bold truncate">{task.url}</a>
+              </div>
+            )}
+
+            {task.feedCategory === 'session' && task.recordingUrl && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Recording</span>
+                <a href={task.recordingUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline font-bold truncate">{task.recordingUrl}</a>
+              </div>
+            )}
+
+            {task.feedCategory === 'event' && task.url && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Registration / Info</span>
+                <a href={task.url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline font-bold truncate">{task.url}</a>
+              </div>
+            )}
+
+            {task.feedCategory === 'task' && (task.difficulty || typeof task.points === 'number') && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Task Info</span>
+                <div className="flex items-center gap-3 text-gray-300 font-bold">
+                  {task.difficulty && <span className="capitalize">{task.difficulty}</span>}
+                  {typeof task.points === 'number' && (
+                    <span>
+                      {typeof task.pointsEarned === 'number' ? `${task.pointsEarned} / ${task.points}` : task.points} pts
+                    </span>
+                  )}
+                  {task.submissionStatus && (
+                    <span className={task.submissionStatus === 'accepted' ? 'text-emerald-400' : task.submissionStatus === 'pending' ? 'text-amber-400' : 'text-gray-400'}>
+                      {task.submissionStatus}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {task.feedCategory === 'contest' && task.contestDuration && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Duration</span>
+                <span className="text-gray-300 font-bold">⏳ {task.contestDuration}</span>
+              </div>
+            )}
+
+            {task.isContest && task.contestPlatform && (
+              <div className="flex flex-col gap-1 col-span-2 border-t border-white/[0.06] pt-2.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Platform</span>
+                <span className="text-gray-300 font-bold capitalize">{task.contestPlatform}</span>
               </div>
             )}
           </div>
@@ -243,11 +400,8 @@ export default function TaskDetailPane({
 
   // --- Shared editable model (create draft OR live task) ---
 
-  // Apply a field patch: buffered locally in create mode, persisted in edit mode.
-  const patch = (changes) => {
-    if (isCreate) setDraft((d) => ({ ...d, ...changes }));
-    else onUpdateTask(task.id, changes);
-  };
+  // Buffer all field changes locally — never autosave.
+  const patch = (changes) => setDraft((d) => ({ ...d, ...changes }));
 
   const activeProject = projects.find((p) => p.id === values.projectId) || projects[0];
   const activeSections = sections.filter((s) => s.projectId === values.projectId);
@@ -269,19 +423,55 @@ export default function TaskDetailPane({
     }
   };
 
-  const handleSpawn = () => {
+  const handleSave = async () => {
     if (!draft.title.trim()) return;
-    onCreateTask({
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      priority: draft.priority,
-      dueDate: draft.dueDate || undefined,
-      projectId: draft.projectId || projects[0]?.id || undefined,
-      sectionId: draft.sectionId || undefined,
-      recurrence: draft.recurrence === 'none' ? undefined : draft.recurrence,
-      labels: draft.labels,
-    });
-    onClose();
+    setSaving(true);
+    try {
+      if (isCreate) {
+        await onCreateTask({
+          title: draft.title.trim(),
+          description: draft.description.trim(),
+          priority: draft.priority,
+          dueDate: draft.dueDate || undefined,
+          projectId: draft.projectId || projects[0]?.id || undefined,
+          sectionId: draft.sectionId || undefined,
+          recurrence: draft.recurrence === 'none' ? undefined : draft.recurrence,
+          labels: draft.labels,
+          location: draft.location || undefined,
+          url: draft.url || undefined,
+          colorId: draft.colorId || undefined,
+          status: draft.status,
+          visibility: draft.visibility,
+          reminders: draft.reminders,
+          attendees: draft.attendees,
+        });
+      } else {
+        await onUpdateTask(task.id, {
+          title: draft.title.trim(),
+          description: draft.description.trim(),
+          priority: draft.priority,
+          dueDate: draft.dueDate || undefined,
+          projectId: draft.projectId || undefined,
+          sectionId: draft.sectionId || undefined,
+          recurrence: draft.recurrence === 'none' ? undefined : draft.recurrence,
+          labels: draft.labels,
+          subtasks: draft.subtasks,
+          comments: draft.comments,
+          location: draft.location || undefined,
+          url: draft.url || undefined,
+          colorId: draft.colorId || undefined,
+          status: draft.status,
+          visibility: draft.visibility,
+          reminders: draft.reminders,
+          attendees: draft.attendees,
+        });
+      }
+      onClose();
+    } catch {
+      // parent already showed error toast; keep pane open
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddSubtask = (e) => {
@@ -824,6 +1014,178 @@ export default function TaskDetailPane({
             </div>
           </div>
 
+        {/* ── Location & URL ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 border-t border-white/[0.05] pt-4">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase font-black">Location & Link</span>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200">
+            <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <input
+              type="text"
+              value={values.location || ''}
+              onChange={(e) => patch({ location: e.target.value })}
+              placeholder="Add location or address"
+              className="bg-transparent border-none outline-none text-xs text-white font-medium placeholder:text-slate-600 flex-1"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200">
+            <Link className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <input
+              type="url"
+              value={values.url || ''}
+              onChange={(e) => patch({ url: e.target.value })}
+              placeholder="https://"
+              className="bg-transparent border-none outline-none text-xs text-white font-medium placeholder:text-slate-600 flex-1"
+            />
+          </div>
+        </div>
+
+        {/* ── Guests ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase font-black">Guests</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl focus-within:border-violet-500/80 transition-all duration-200">
+              <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <input
+                type="email"
+                value={attendeeInput}
+                onChange={(e) => setAttendeeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const email = attendeeInput.trim();
+                    if (email && !(values.attendees || []).some((a) => a.email === email)) {
+                      patch({ attendees: [...(values.attendees || []), { email, name: '', optional: false }] });
+                      setAttendeeInput('');
+                    }
+                  }
+                }}
+                placeholder="Add guest email, press Enter"
+                className="bg-transparent border-none outline-none text-xs text-white font-medium placeholder:text-slate-600 flex-1"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const email = attendeeInput.trim();
+                if (email && !(values.attendees || []).some((a) => a.email === email)) {
+                  patch({ attendees: [...(values.attendees || []), { email, name: '', optional: false }] });
+                  setAttendeeInput('');
+                }
+              }}
+              className="px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-slate-300 rounded-xl transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {(values.attendees || []).length > 0 && (
+            <div className="space-y-1.5">
+              {(values.attendees || []).map((a) => (
+                <div key={a.email} className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-900/50 rounded-xl border border-white/[0.04]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-5 h-5 rounded-full bg-violet-700 flex items-center justify-center text-[8px] font-black text-white shrink-0 uppercase">{a.email[0]}</div>
+                    <span className="text-[10px] text-slate-300 truncate">{a.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button type="button"
+                      onClick={() => patch({ attendees: (values.attendees || []).map((x) => x.email === a.email ? { ...x, optional: !x.optional } : x) })}
+                      className={`text-[8px] font-mono px-1.5 py-0.5 rounded border cursor-pointer transition ${a.optional ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-white/10 text-slate-500'}`}
+                    >optional</button>
+                    <button type="button" onClick={() => patch({ attendees: (values.attendees || []).filter((x) => x.email !== a.email) })}
+                      className="text-slate-500 hover:text-rose-400 transition cursor-pointer">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Reminders ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase font-black">Reminders</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: '10 min', method: 'popup', minutes: 10 },
+              { label: '30 min', method: 'popup', minutes: 30 },
+              { label: '1 hr',  method: 'popup', minutes: 60 },
+              { label: '1 day', method: 'popup', minutes: 1440 },
+              { label: 'Email 1d', method: 'email', minutes: 1440 },
+            ].map((preset) => {
+              const active = (values.reminders || []).some((r) => r.method === preset.method && r.minutes === preset.minutes);
+              const idx = (values.reminders || []).findIndex((r) => r.method === preset.method && r.minutes === preset.minutes);
+              return (
+                <button key={`${preset.method}-${preset.minutes}`} type="button"
+                  onClick={() => active
+                    ? patch({ reminders: (values.reminders || []).filter((_, i) => i !== idx) })
+                    : patch({ reminders: [...(values.reminders || []), { method: preset.method, minutes: preset.minutes }] })
+                  }
+                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black font-mono border transition cursor-pointer ${active ? 'bg-violet-500/15 border-violet-500/40 text-violet-300' : 'bg-slate-900/40 border-white/[0.06] text-slate-500 hover:text-slate-300'}`}
+                >
+                  {active ? '✓ ' : ''}{preset.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Colour & Privacy ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase font-black">Colour & Privacy</span>
+          </div>
+
+          {/* Colour */}
+          <div className="space-y-1.5">
+            <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Event colour</span>
+            <div className="flex flex-wrap gap-2">
+              {GCAL_COLORS.map((c) => (
+                <button key={c.id ?? 'default'} type="button" title={c.name}
+                  onClick={() => patch({ colorId: c.id })}
+                  className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${values.colorId === c.id ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                  style={{ backgroundColor: c.hex }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Status</span>
+              <div className="flex items-center gap-2 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl">
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <select value={values.status || 'confirmed'} onChange={(e) => patch({ status: e.target.value })}
+                  className="bg-transparent border-none outline-none text-xs text-white font-medium flex-1 cursor-pointer">
+                  <option value="confirmed" className="bg-slate-900">Confirmed</option>
+                  <option value="tentative" className="bg-slate-900">Tentative</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Visibility</span>
+              <div className="flex items-center gap-2 bg-slate-950/40 p-2.5 border border-white/[0.06] rounded-2xl">
+                <Eye className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <select value={values.visibility || 'default'} onChange={(e) => patch({ visibility: e.target.value })}
+                  className="bg-transparent border-none outline-none text-xs text-white font-medium flex-1 cursor-pointer">
+                  <option value="default" className="bg-slate-900">Default</option>
+                  <option value="public" className="bg-slate-900">Public</option>
+                  <option value="private" className="bg-slate-900">Private</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Subtasks — both modes */}
         <div className="space-y-3">
           <div className="flex justify-between items-center">
@@ -904,8 +1266,8 @@ export default function TaskDetailPane({
           </div>
       </div>
 
-      {/* Footer actions — create mode only */}
-      {isCreate && (
+      {/* Footer actions — create and edit mode */}
+      {!isReadOnly && (
         <div className="px-5 py-4 border-t border-white/[0.06] bg-gray-900 backdrop-blur-md flex justify-end gap-3 rounded-b-2xl">
           <button
             type="button"
@@ -916,12 +1278,12 @@ export default function TaskDetailPane({
           </button>
           <button
             type="button"
-            onClick={handleSpawn}
-            disabled={!draft.title.trim()}
+            onClick={handleSave}
+            disabled={saving || !draft.title.trim()}
             className="px-5.5 py-2.5 bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:brightness-100 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 shadow-[0_4px_20px_rgba(99,102,241,0.25)] text-[10px] uppercase font-black font-mono tracking-widest flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            Spawn Goal
+            {saving ? 'Saving…' : isCreate ? 'Spawn Goal' : 'Save'}
           </button>
         </div>
       )}

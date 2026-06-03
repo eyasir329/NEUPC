@@ -213,10 +213,52 @@ export function getFeedItemUrl(task) {
  * @returns {boolean}
  */
 export function isTaskOnDate(task, dateStr) {
-  if (!task.dueDate) return false;
-  
+  // Personal events store their date in `start` (ISO string), not `dueDate`.
+  const effectiveDueDate = task.dueDate || (task.feedCategory === 'personal' && task.start ? task.start.split('T')[0] : null);
+  if (!effectiveDueDate) return false;
+
+  // Personal events with a RRULE recurrence string (e.g. "FREQ=DAILY"):
+  // expand simple daily/weekly/monthly rules inline; leave complex RRULEs as single-occurrence.
+  if (task.feedCategory === 'personal' && typeof task.recurrence === 'string' && task.recurrence) {
+    const rr = task.recurrence.toUpperCase();
+    const startDate = effectiveDueDate;
+    if (dateStr < startDate) return false;
+    const endDateStr = task.endDate || null;
+    if (endDateStr && dateStr > endDateStr) return false;
+
+    if (rr.includes('FREQ=DAILY')) return true;
+    if (rr.includes('FREQ=WEEKLY')) {
+      const start = new Date(startDate + 'T00:00:00');
+      const target = new Date(dateStr + 'T00:00:00');
+      const diff = Math.round((target - start) / 86400000);
+      return diff % 7 === 0;
+    }
+    if (rr.includes('FREQ=MONTHLY')) {
+      const start = new Date(startDate + 'T00:00:00');
+      const target = new Date(dateStr + 'T00:00:00');
+      return start.getDate() === target.getDate();
+    }
+    if (rr.includes('FREQ=YEARLY')) {
+      const start = new Date(startDate + 'T00:00:00');
+      const target = new Date(dateStr + 'T00:00:00');
+      return start.getMonth() === target.getMonth() && start.getDate() === target.getDate();
+    }
+    // Unknown RRULE — treat as single occurrence.
+    return dateStr === startDate;
+  }
+
+  if (!task.dueDate) return effectiveDueDate === dateStr;
+
   const rec = task.recurrence;
   if (!rec || rec === 'none' || !rec.freq) {
+    // Bootcamp tasks span from availableFrom (created_at / start_time) to dueDate (deadline).
+    if (task.feedCategory === 'task' && task.availableFrom) {
+      return dateStr >= task.availableFrom && dateStr <= task.dueDate;
+    }
+    // Multi-day personal events span from dueDate to endDate.
+    if (task.feedCategory === 'personal' && task.endDate && task.endDate > task.dueDate) {
+      return dateStr >= task.dueDate && dateStr <= task.endDate;
+    }
     return task.dueDate === dateStr;
   }
 
@@ -386,6 +428,11 @@ const FEED_META = {
     accent: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
     title: 'text-sky-300', dot: 'bg-sky-400',
   },
+  personal: {
+    kind: 'personal', emoji: '📌', label: 'Personal Event',
+    accent: 'border-rose-500/30 bg-rose-500/10 text-rose-400',
+    title: 'text-rose-300', dot: 'bg-rose-400',
+  },
 };
 
 /**
@@ -410,6 +457,7 @@ export function getFeedMeta(task) {
  * @returns {boolean}
  */
 export function isFeedItem(task) {
+  // 'personal' is intentionally excluded — personal events are editable via their own pane.
   return !!task && (task.readOnly || task.isContest || ['event', 'task', 'session'].includes(task.feedCategory));
 }
 

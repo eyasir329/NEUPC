@@ -16,38 +16,53 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, RefreshCw, ChevronRight, Check, Loader2 } from 'lucide-react';
+import { CalendarDays, RefreshCw, ChevronRight, Check, Loader2, AlertTriangle, Upload, Download } from 'lucide-react';
 import {
   getGoogleCalendarStatusAction,
   setGoogleCalendarSyncEnabledAction,
   disconnectGoogleCalendarAction,
   syncTodosToCalendarAction,
+  pullGoogleCompletionsAction,
+  pullFromGoogleAction,
 } from '@/app/_lib/actions/google-calendar-actions';
 import { isValidUUID } from '@/app/_lib/utils/validation';
 
 const CONNECT_URL = '/api/integrations/google-calendar/connect';
 
-export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
-  const [status, setStatus] = useState({ connected: false, email: null, syncEnabled: false });
+export default function GoogleCalendarPanel({ monthTasks = [], timeMin, timeMax, onToast, onSynced }) {
+  const [status, setStatus] = useState({ connected: false, email: null, syncEnabled: false, needsReconnect: false });
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const [busy, setBusy] = useState(false); // sync in flight
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pullBusy, setPullBusy] = useState(false);
   const [toggling, setToggling] = useState(false);
 
   const toast = useCallback((text, type) => onToast?.(text, type), [onToast]);
+
+  // Pull completion changes made in Google back into NEUPC, then ask the parent
+  // to refresh its task list if anything changed. Best-effort and quiet.
+  const pullCompletions = useCallback(async () => {
+    try {
+      const res = await pullGoogleCompletionsAction();
+      if (res?.updated > 0) onSynced?.();
+    } catch {
+      // ignore — pull is best-effort
+    }
+  }, [onSynced]);
 
   const refreshStatus = useCallback(async () => {
     try {
       const s = await getGoogleCalendarStatusAction();
       setStatus(s);
+      if (s?.connected) pullCompletions();
     } catch {
       setStatus({ connected: false, email: null, syncEnabled: false });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pullCompletions]);
 
-  // Initial status load.
+  // Initial status load (and a completion pull when connected).
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus]);
@@ -86,43 +101,48 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
 
   const handleDisconnect = async () => {
     if (!confirm('Disconnect Google Calendar? Mirrored events stay in Google but stop updating.')) return;
-    setBusy(true);
+    setPushBusy(true);
     const res = await disconnectGoogleCalendarAction();
-    setBusy(false);
-    if (res?.error) {
-      toast(res.error, 'error');
-      return;
-    }
+    setPushBusy(false);
+    if (res?.error) { toast(res.error, 'error'); return; }
     setStatus({ connected: false, email: null, syncEnabled: false });
     toast('Google Calendar disconnected.', 'info');
   };
 
-  const handleSyncNow = async () => {
-    if (busy) return;
-    // Split the visible month's items: real todos (uuid) go as taskIds, feed
-    // items (prefixed ids) go as feedIds. The server re-derives content.
-    const taskIds = [];
-    const feedIds = [];
-    for (const t of monthTasks) {
-      if (isValidUUID(t.id)) taskIds.push(t.id);
-      else if (typeof t.id === 'string') feedIds.push(t.id);
-    }
-    if (taskIds.length === 0 && feedIds.length === 0) {
-      toast('Nothing in this month to sync.', 'info');
-      return;
-    }
-    setBusy(true);
-    const res = await syncTodosToCalendarAction({ taskIds, feedIds });
-    setBusy(false);
-    if (res?.error) {
-      toast(res.error, 'error');
-      return;
-    }
-    toast(`Synced ${res.synced} item${res.synced === 1 ? '' : 's'} to Google.`, 'success');
+  // Push: visible month's NEUPC todos + feed items → Google (upsert, no duplicates)
+  const handlePushNow = async () => {
+    if (pushBusy) return;
+    const taskIds = monthTasks.filter((t) => isValidUUID(t.id)).map((t) => t.id);
+    const feedIds = monthTasks
+      .filter((t) => !isValidUUID(t.id) && !t.id.startsWith('gcal-') && !t.id.startsWith('gtask-') && !t.id.startsWith('personal-'))
+      .map((t) => t.id);
+    setPushBusy(true);
+    const res = await syncTodosToCalendarAction({ taskIds, feedIds, timeMin, timeMax });
+    if (res?.error) { setPushBusy(false); toast(res.error, 'error'); return; }
+    await pullCompletions();
+    setPushBusy(false);
+    toast(`Pushed ${res.synced} item${res.synced === 1 ? '' : 's'} to Google.`, 'success');
+  };
+
+  // Pull: fetch this month's Google events + tasks → merge into app state
+  const handlePullNow = async () => {
+    if (pullBusy || !timeMin || !timeMax) return;
+    setPullBusy(true);
+    const [pullRes] = await Promise.all([
+      pullFromGoogleAction({ timeMin, timeMax }),
+      pullCompletions(),
+    ]);
+    setPullBusy(false);
+    if (pullRes?.error) { toast(pullRes.error, 'error'); return; }
+    onSynced?.();
+    const tasks = pullRes.imported ?? 0;
+    const evs = pullRes.importedEvents ?? 0;
+    const total = tasks + evs;
+    toast(`Pulled ${total} item${total === 1 ? '' : 's'} from Google.`, 'success');
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+    <div className="rounded-2xl border border-white/6 bg-white/2 p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative">
@@ -145,16 +165,28 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
 
         <div className="flex items-center gap-1.5 shrink-0">
           {status.connected ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={handleSyncNow}
-              className="p-1 px-2.5 bg-violet-500/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/20 rounded-xl text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
-              title="Push this month's tasks and activity to Google"
-            >
-              {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-              <span>Sync now</span>
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={pushBusy || pullBusy}
+                onClick={handlePushNow}
+                className="p-1 px-2 bg-violet-500/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/20 rounded-xl text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                title="Push this month's NEUPC tasks to Google"
+              >
+                {pushBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                <span>Push</span>
+              </button>
+              <button
+                type="button"
+                disabled={pushBusy || pullBusy}
+                onClick={handlePullNow}
+                className="p-1 px-2 bg-blue-500/10 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/20 rounded-xl text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                title="Pull latest Google events & tasks into app"
+              >
+                {pullBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                <span>Pull</span>
+              </button>
+            </>
           ) : (
             <a
               href={CONNECT_URL}
@@ -168,7 +200,7 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="p-1.5 hover:bg-white/[0.06] text-gray-400 hover:text-white rounded-lg transition"
+              className="p-1.5 hover:bg-white/6 text-gray-400 hover:text-white rounded-lg transition"
               title={expanded ? 'Collapse settings' : 'Expand settings'}
             >
               <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
@@ -176,6 +208,16 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
           )}
         </div>
       </div>
+
+      {status.connected && status.needsReconnect && (
+        <div className="mt-2.5 flex items-start gap-2 p-2.5 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-amber-300 font-semibold leading-snug">Reconnect required to import all calendars & events.</p>
+            <a href={CONNECT_URL} className="text-[9px] text-amber-400 underline underline-offset-2 font-bold mt-0.5 block">Reconnect now →</a>
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {expanded && status.connected && (
@@ -186,7 +228,7 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="mt-3 space-y-3 overflow-hidden"
           >
-            <div className="flex justify-between items-center bg-white/[0.02] border border-white/[0.06] p-2.5 rounded-xl">
+            <div className="flex justify-between items-center bg-white/2 border border-white/6 p-2.5 rounded-xl">
               <label htmlFor="gcal-mirror" className="text-[11px] font-medium text-gray-300 select-none pr-2">
                 Auto-mirror new tasks to Google
               </label>
@@ -195,11 +237,11 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
                 type="button"
                 disabled={toggling}
                 onClick={handleToggleSync}
-                className={`w-[34px] h-5 rounded-full p-[2.5px] transition-all cursor-pointer shrink-0 ${
+                className={`w-8.5 h-5 rounded-full p-[2.5px] transition-all cursor-pointer shrink-0 ${
                   status.syncEnabled ? 'bg-violet-600 flex justify-end' : 'bg-white/10 flex justify-start'
                 } ${toggling ? 'opacity-60' : ''}`}
               >
-                <span className="w-3.5 h-3.5 rounded-full bg-white shadow-md block flex items-center justify-center">
+                <span className="w-3.5 h-3.5 rounded-full bg-white shadow-md flex items-center justify-center">
                   {status.syncEnabled && <Check className="w-2.5 h-2.5 text-violet-600" />}
                 </span>
               </button>
@@ -208,8 +250,9 @@ export default function GoogleCalendarPanel({ monthTasks = [], onToast }) {
             <button
               type="button"
               onClick={handleDisconnect}
-              disabled={busy}
-              className="w-full py-2 border border-rose-500/20 hover:bg-rose-500/10 text-rose-400 bg-rose-500/[0.02] rounded-xl cursor-pointer transition text-[11px] font-semibold disabled:opacity-40"
+              disabled={pushBusy || pullBusy}
+              className="w-full py-2 border border-rose-500/20 hover:bg-rose-500/10 text-rose-400 bg-rose-500/2 rounded-xl cursor-pointer transition text-[11px] font-semibold disabled:opacity-40"
+
             >
               Disconnect
             </button>

@@ -3,29 +3,35 @@
  * @module google-calendar
  *
  * Opt-in, two-way: a member connects their Google account (separate OAuth flow,
- * reusing the AUTH_GOOGLE_* client), we store their refresh token, then we can
- *   • read  — list their calendar events to overlay on the activity calendar, and
- *   • write — mirror their NEUPC tasks back as Google Calendar events.
+ * reusing the AUTH_GOOGLE_* client), we store their refresh token, then:
+ *   • read  — list their calendar events to overlay on the activity calendar,
+ *             and read back the done-state of mirrored Google Tasks (pull).
+ *   • write — mirror NEUPC to-dos to Google **Tasks** (title, due date,
+ *             rich notes, completion, and real child sub-tasks), and read-only
+ *             feed items (events/sessions/contests/deadlines) to Calendar.
+ *
+ * To-dos are deliberately mirrored to Google Tasks only — never a Calendar
+ * event — so a to-do is never duplicated and no time-of-day event is created.
  *
  * Required env vars (the OAuth client is shared with NextAuth sign-in):
  *   AUTH_GOOGLE_ID            – OAuth2 client ID
  *   AUTH_GOOGLE_SECRET        – OAuth2 client secret
  *   NEXTAUTH_URL              – app origin; the callback redirect URI is derived
  *                              from it (must be registered on the OAuth client)
- *   GOOGLE_CALENDAR_TIMEZONE  – IANA tz for timed task events (default Asia/Dhaka)
  *
  * Google Cloud setup (one-time):
- *   1. Enable the Google Calendar API.
+ *   1. Enable the Google Calendar API and the Google Tasks API.
  *   2. Add `${NEXTAUTH_URL}/api/integrations/google-calendar/callback` as an
  *      Authorised redirect URI on the OAuth client.
- *   3. Add the calendar.events + userinfo.email scopes on the consent screen.
+ *   3. Add the calendar.events + tasks + userinfo.email scopes on the consent
+ *      screen.
  */
 
 import { google } from 'googleapis';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 
 export const CALENDAR_SCOPES = [
-  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar',   // read + write all calendars
   'https://www.googleapis.com/auth/tasks',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
@@ -37,8 +43,8 @@ const TODO_MARKER = 'neupcTodoId';
 // id under this marker. They live in read-only tables with no place to store a
 // Google event id, so re-sync upserts by searching for this marker instead.
 const FEED_MARKER = 'neupcFeedId';
-const DEFAULT_EVENT_MINUTES = 60;
-const TIMEZONE = process.env.GOOGLE_CALENDAR_TIMEZONE || 'Asia/Dhaka';
+// Personal calendar events carry their NEUPC personal_event id under this marker.
+const PERSONAL_MARKER = 'neupcPersonalId';
 
 // ── OAuth client ──────────────────────────────────────────────────────────────
 
@@ -151,6 +157,8 @@ export async function deleteConnection(userId) {
     .update({ gcal_event_id: null, gtask_id: null })
     .eq('user_id', userId)
     .or('gcal_event_id.not.is.null,gtask_id.not.is.null');
+  // Clear feed event mappings so re-connecting pushes fresh events.
+  await supabaseAdmin.from('feed_gcal_events').delete().eq('user_id', userId);
 }
 
 export async function setSyncEnabled(userId, enabled) {
@@ -166,7 +174,7 @@ export async function setSyncEnabled(userId, enabled) {
  * Persists a rotated access token when googleapis refreshes it. A revoked
  * grant (`invalid_grant`) clears the connection and returns null.
  */
-async function getCalendarClient(userId) {
+export async function getCalendarClient(userId) {
   const conn = await getConnection(userId);
   if (!conn?.refresh_token) return null;
 
@@ -221,22 +229,39 @@ export async function listCalendarEvents(userId, timeMinISO, timeMaxISO) {
   if (!client) return [];
 
   try {
-    const { data } = await client.calendar.events.list({
-      calendarId: client.calendarId,
-      timeMin: timeMinISO,
-      timeMax: timeMaxISO,
-      singleEvents: true,
-      orderBy: 'startTime',
-      maxResults: 250,
-    });
+    // Only fetch from calendars the user owns — skip shared/other-people's calendars.
+    const { data: calList } = await client.calendar.calendarList.list({ minAccessRole: 'owner' });
+    const ownedIds = (calList.items || []).map((c) => c.id);
+    // Always include primary even if calendarList doesn't list it explicitly.
+    if (!ownedIds.includes('primary')) ownedIds.unshift('primary');
 
-    return (data.items || [])
+    const seen = new Set();
+    const allItems = [];
+    for (const calId of ownedIds) {
+      try {
+        const { data } = await client.calendar.events.list({
+          calendarId: calId,
+          timeMin: timeMinISO,
+          timeMax: timeMaxISO,
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 250,
+        });
+        for (const ev of data.items || []) {
+          if (!seen.has(ev.id)) {
+            seen.add(ev.id);
+            allItems.push(ev);
+          }
+        }
+      } catch {
+        // skip inaccessible calendars
+      }
+    }
+
+    return allItems
       .filter((ev) => ev.status !== 'cancelled')
-      .filter(
-        (ev) =>
-          !ev.extendedProperties?.private?.[TODO_MARKER] &&
-          !ev.extendedProperties?.private?.[FEED_MARKER]
-      )
+      // Skip NEUPC feed items and personal events we pushed — they're already in the DB.
+      .filter((ev) => !ev.extendedProperties?.private?.[FEED_MARKER] && !ev.extendedProperties?.private?.[PERSONAL_MARKER] && !ev.extendedProperties?.private?.[TODO_CAL_MARKER])
       .map(mapEventToFeedItem)
       .filter(Boolean);
   } catch (err) {
@@ -269,7 +294,9 @@ function mapEventToFeedItem(ev) {
     category: 'gcal',
     title: ev.summary || '(no title)',
     location: ev.location || null,
-    start: start.toISOString(),
+    // For all-day events keep the bare date string so timezone conversion in
+    // feedItemToTask doesn't shift the date when the server is not UTC+0.
+    start: allDay ? `${ev.start.date}T00:00:00` : start.toISOString(),
     durationMin,
     description: snippet(ev.description),
     url: ev.htmlLink || null,
@@ -287,161 +314,334 @@ function snippet(raw, max = 160) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
-// ── Export: NEUPC task → Google Calendar event ─────────────────────────────────
-
-/** Add `minutes` to a YYYY-MM-DD + HH:MM wall-clock pair (handles day rollover). */
-function addMinutesToWallClock(dateKey, time, minutes) {
-  const [y, mo, d] = dateKey.split('-').map(Number);
-  const [h, mi] = time.split(':').map(Number);
-  const dt = new Date(Date.UTC(y, mo - 1, d, h, mi));
-  dt.setUTCMinutes(dt.getUTCMinutes() + minutes);
-  const pad = (n) => String(n).padStart(2, '0');
-  return {
-    date: `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`,
-    time: `${pad(dt.getUTCHours())}:${pad(dt.getUTCMinutes())}`,
-  };
-}
-
-function addOneDay(dateKey) {
-  const [y, mo, d] = dateKey.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, mo - 1, d + 1));
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
-}
-
-/** Translate our recurrence model into an iCalendar RRULE string array. */
-function buildRecurrence(rec, allDay) {
-  if (!rec) return undefined;
-  const FREQ = { daily: 'DAILY', weekly: 'WEEKLY', monthly: 'MONTHLY' }[rec.freq];
-  if (!FREQ) return undefined;
-
-  const parts = [`FREQ=${FREQ}`];
-  const interval = Math.max(1, rec.interval || 1);
-  if (interval > 1) parts.push(`INTERVAL=${interval}`);
-  if (rec.freq === 'weekly' && Array.isArray(rec.byWeekday) && rec.byWeekday.length) {
-    const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-    parts.push(`BYDAY=${rec.byWeekday.map((n) => DAYS[n]).join(',')}`);
-  }
-  if (rec.end?.type === 'count' && rec.end.count) {
-    parts.push(`COUNT=${rec.end.count}`);
-  } else if (rec.end?.type === 'until' && rec.end.untilKey) {
-    const ymd = rec.end.untilKey.replace(/-/g, '');
-    parts.push(allDay ? `UNTIL=${ymd}` : `UNTIL=${ymd}T235959Z`);
-  }
-  return [`RRULE:${parts.join(';')}`];
-}
-
-/** Build the Google event body from a task row (UI-shaped: startKey/time/...). */
-function todoToEvent(todo) {
-  if (!todo.startKey) return null;
-  const allDay = !todo.time;
-
-  let start;
-  let end;
-  if (allDay) {
-    start = { date: todo.startKey };
-    end = { date: addOneDay(todo.startKey) };
-  } else {
-    const endWall = addMinutesToWallClock(
-      todo.startKey,
-      todo.time,
-      DEFAULT_EVENT_MINUTES
-    );
-    start = { dateTime: `${todo.startKey}T${todo.time}:00`, timeZone: TIMEZONE };
-    end = {
-      dateTime: `${endWall.date}T${endWall.time}:00`,
-      timeZone: TIMEZONE,
-    };
-  }
-
-  const body = {
-    summary: todo.title,
-    description: todo.notes || undefined,
-    start,
-    end,
-    extendedProperties: { private: { [TODO_MARKER]: String(todo.id) } },
-  };
-  const recurrence = buildRecurrence(todo.recurrence, allDay);
-  if (recurrence) body.recurrence = recurrence;
-  return body;
-}
-
 /**
- * Mirror a task to the member's calendar. Inserts a new event (returning its id)
- * or updates the existing one when `todo.gcalEventId` is set. Returns the event
- * id to persist, or null when sync is off / not connected / on error.
+ * The member's Google Tasks (the checkbox to-do lists), excluding any tasks
+ * we mirrored from NEUPC (identified by their notes containing the TODO_MARKER).
+ * Only tasks with a due date are returned so they can be placed on the calendar.
  *
- * @param {string} userId
- * @param {object} todo  - UI-shaped task incl. optional `gcalEventId`.
- * @param {object} [opts]
- * @param {boolean} [opts.force=false]  - Push even when the auto-mirror toggle
- *   is off (used by the on-demand "Sync this month" action).
- * @returns {Promise<string|null>}
+ * @returns {Promise<object[]>}  Feed-shaped items with category `gcal`.
  */
-export async function pushTodo(userId, todo, { force = false } = {}) {
+export async function listGoogleTasks(userId) {
   const client = await getCalendarClient(userId);
-  if (!client) return null;
-  if (!force && !client.syncEnabled) return null;
-
-  const body = todoToEvent(todo);
-  if (!body) return null;
+  if (!client) return [];
 
   try {
-    if (todo.gcalEventId) {
-      const { data } = await client.calendar.events.update({
-        calendarId: client.calendarId,
-        eventId: todo.gcalEventId,
-        requestBody: body,
-      });
-      return data.id || todo.gcalEventId;
+    // Build the set of all Google Task IDs we mirrored from NEUPC (parent tasks
+    // + child subtasks) so neither shows up twice on the calendar.
+    const { data: mirroredRows } = await supabaseAdmin
+      .from('todos')
+      .select('gtask_id, gtask_subtask_ids')
+      .eq('user_id', userId)
+      .not('gtask_id', 'is', null);
+    const mirroredIds = new Set();
+    for (const r of mirroredRows || []) {
+      if (r.gtask_id) mirroredIds.add(r.gtask_id);
+      for (const childId of Object.values(r.gtask_subtask_ids || {})) {
+        mirroredIds.add(childId);
+      }
     }
-    const { data } = await client.calendar.events.insert({
-      calendarId: client.calendarId,
-      requestBody: body,
-    });
-    return data.id || null;
+
+    const { data: listsData } = await client.tasks.tasklists.list({ maxResults: 20 });
+    const taskLists = listsData.items || [];
+
+    const results = [];
+    for (const list of taskLists) {
+      try {
+        const { data } = await client.tasks.tasks.list({
+          tasklist: list.id,
+          showCompleted: true,
+          showDeleted: false,
+          showHidden: false,
+          maxResults: 100,
+        });
+        for (const t of data.items || []) {
+          if (t.status === 'completed') continue;
+          if (mirroredIds.has(t.id)) continue; // already shown as a NEUPC todo
+          // Also skip tasks we own that have our ID_TAG in notes (covers the case
+          // where mirroredIds is stale — gtask_id not yet written back to DB).
+          if (t.notes?.includes('neupcId:')) continue;
+          if (!t.due) continue; // no date → can't place on calendar
+
+          const dateStr = t.due.split('T')[0];
+          results.push({
+            id: `gtask-${t.id}`,
+            category: 'gtask',
+            title: t.title || '(no title)',
+            start: `${dateStr}T00:00:00`,
+            durationMin: null,
+            description: t.notes ? t.notes.trim() : null,
+            url: null,
+            allDay: true,
+          });
+        }
+      } catch {
+        // skip individual list failures
+      }
+    }
+    return results;
   } catch (err) {
-    // A stale id (event deleted in Google) → recreate it once.
-    if ((err?.code === 404 || err?.code === 410) && todo.gcalEventId) {
-      return pushTodo(userId, { ...todo, gcalEventId: null });
-    }
     if (isRevoked(err)) {
       await deleteConnection(userId).catch(() => {});
-      return null;
+      return [];
     }
-    console.error('pushTodo:', err?.message);
-    return null;
+    console.error('listGoogleTasks:', err?.message);
+    return [];
   }
 }
 
 // ── Export: NEUPC feed item → Google Calendar event ────────────────────────────
 
-/** Build a Google event body from a Daily Activity feed item (real instant). */
+// Google Calendar colorId per feed category so items are visually distinct.
+const FEED_COLOR_ID = {
+  contest: '5',   // Sage (green)
+  event:   '2',   // Flamingo (pink)
+  task:    '9',   // Lavender (purple)
+  session: '7',   // Peacock (blue)
+  personal: null, // uses colorId stored on the row
+};
+
+const FEED_PREFIX = {
+  contest: '🏆 Contest: ',
+  session: '🎓 Session: ',
+  event:   '📣 Event: ',
+  task:    '📅 Deadline: ',
+};
+
+function fmtDuration(min) {
+  if (!min || min <= 0) return null;
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${h > 0 ? `${h}h` : ''}${h > 0 && m > 0 ? ' ' : ''}${m > 0 ? `${m}m` : ''}`;
+}
+
+function addDayExclusive(dateStr) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Build a Google Calendar event body from a raw Daily Activity feed item. */
 function feedItemToEvent(item) {
   const start = new Date(item.start);
   if (Number.isNaN(start.getTime())) return null;
-  const minutes = typeof item.durationMin === 'number' ? item.durationMin : 30;
-  const end = new Date(start.getTime() + Math.max(1, minutes) * 60000);
 
-  const PREFIX = {
-    contest: 'Contest: ',
-    session: 'Session: ',
-    event: 'Event: ',
-    task: 'Due: ',
-  };
-  const descParts = [];
-  if (item.description) descParts.push(item.description);
-  if (item.bootcampTitle) descParts.push(item.bootcampTitle);
+  const colorId = FEED_COLOR_ID[item.category] || undefined;
+  const marker = { [FEED_MARKER]: String(item.id) };
 
+  // Helper: end ISO — use explicit endTime if valid, else start + fallbackMin.
+  function endISO(fallbackMin) {
+    if (item.endTime) {
+      const e = new Date(item.endTime);
+      if (!Number.isNaN(e.getTime()) && e > start) return e.toISOString();
+    }
+    return new Date(start.getTime() + fallbackMin * 60000).toISOString();
+  }
+
+  // ── Session: timed event occupying the full scheduled duration ──
+  if (item.category === 'session') {
+    const desc = [
+      item.description,
+      item.bootcampTitle && `Bootcamp: ${item.bootcampTitle}`,
+      fmtDuration(item.durationMin) && `Duration: ${fmtDuration(item.durationMin)}`,
+      item.url && `Join: ${item.url}`,
+      item.recordingUrl && `Recording: ${item.recordingUrl}`,
+      item.status && item.status !== 'scheduled' && `Status: ${item.status}`,
+    ].filter(Boolean).join('\n');
+
+    return {
+      summary: `🎓 Session: ${item.title}`,
+      description: desc || undefined,
+      location: item.url || item.location || undefined,
+      start: { dateTime: start.toISOString() },
+      end:   { dateTime: endISO(60) },
+      source: item.url ? { title: 'Join Session', url: item.url } : undefined,
+      colorId,
+      extendedProperties: { private: marker },
+    };
+  }
+
+  // ── NEUPC Event: always timed (start_date is timestamptz) ──
+  if (item.category === 'event') {
+    const desc = [
+      item.description,
+      item.eventCategory && `Category: ${item.eventCategory}`,
+      fmtDuration(item.durationMin) && `Duration: ${fmtDuration(item.durationMin)}`,
+      item.location && `Location: ${item.location}`,
+      item.url && `Info: ${item.url}`,
+      item.status && `Status: ${item.status}`,
+    ].filter(Boolean).join('\n');
+
+    return {
+      summary: `📣 Event: ${item.title}`,
+      description: desc || undefined,
+      location: item.location || undefined,
+      start: { dateTime: start.toISOString() },
+      end:   { dateTime: endISO(60) },
+      source: item.url ? { title: 'NEUPC Event', url: item.url } : undefined,
+      colorId,
+      extendedProperties: { private: marker },
+    };
+  }
+
+  // ── Contest: timed event occupying the contest window ──
+  if (item.category === 'contest') {
+    const desc = [
+      item.description,
+      item.location && `Platform: ${item.location}`,
+      fmtDuration(item.durationMin) && `Duration: ${fmtDuration(item.durationMin)}`,
+      item.url && `Link: ${item.url}`,
+    ].filter(Boolean).join('\n');
+
+    return {
+      summary: `🏆 Contest: ${item.title}`,
+      description: desc || undefined,
+      location: item.location || undefined,
+      start: { dateTime: start.toISOString() },
+      end:   { dateTime: endISO(120) },
+      source: item.url ? { title: 'Contest Link', url: item.url } : undefined,
+      colorId,
+      extendedProperties: { private: marker },
+    };
+  }
+
+  // ── Bootcamp task: template body for stacked placement ──
+  // placeTasksInFreeTime builds the body once, then overrides start/end with the
+  // chosen block. _scheduledStart/_scheduledEnd seed the window bounds; the
+  // deadline fallback only applies if a task is pushed outside that path.
+  if (item.category === 'task') {
+    const deadlineDate = item.endTime ? new Date(item.endTime) : start;
+    const slotStart = item._scheduledStart
+      ? new Date(item._scheduledStart).toISOString()
+      : deadlineDate.toISOString();
+    const slotEnd = item._scheduledEnd
+      ? new Date(item._scheduledEnd).toISOString()
+      : new Date(deadlineDate.getTime() + 60 * 60000).toISOString();
+
+    const desc = [
+      item.description,
+      item.bootcampTitle && `Bootcamp: ${item.bootcampTitle}`,
+      item.taskType && `Type: ${item.taskType}`,
+      item.difficulty && `Difficulty: ${item.difficulty}`,
+      typeof item.points === 'number' && `Points: ${item.points}`,
+      item.submissionStatus && item.submissionStatus !== 'pending' && `Status: ${item.submissionStatus}`,
+    ].filter(Boolean).join('\n');
+
+    return {
+      summary: `📅 Deadline: ${item.title}`,
+      description: desc || undefined,
+      start: { dateTime: slotStart },
+      end:   { dateTime: slotEnd },
+      colorId,
+      transparency: 'transparent',
+      extendedProperties: { private: marker },
+    };
+  }
+
+  // ── Fallback ──
   return {
-    summary: `${PREFIX[item.category] || ''}${item.title}`,
-    description: descParts.join(' — ') || undefined,
+    summary: `${FEED_PREFIX[item.category] || ''}${item.title}`,
+    description: item.description || undefined,
     location: item.location || undefined,
     start: { dateTime: start.toISOString() },
-    end: { dateTime: end.toISOString() },
+    end:   { dateTime: endISO(30) },
     source: item.url ? { title: 'NEUPC', url: item.url } : undefined,
-    extendedProperties: { private: { [FEED_MARKER]: String(item.id) } },
+    colorId,
+    extendedProperties: { private: marker },
   };
+}
+
+const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000; // UTC+6, no DST
+const SLEEP_START_H   = 22; // 10 PM Dhaka
+const SLEEP_END_H     = 8;  // 8 AM Dhaka
+const MIN_GAP_MS      = 15 * 60 * 1000; // ignore gaps shorter than 15 min
+
+/**
+ * Fetch merged busy intervals from all owned calendars in [windowStart, windowEnd].
+ * Our own gap-events are `transparency: 'transparent'`, so Google already omits
+ * them from the free/busy response — no manual exclusion needed.
+ */
+async function fetchBusy(client, windowStart, windowEnd) {
+  const { data: calList } = await client.calendar.calendarList.list({ minAccessRole: 'owner' });
+  const calIds = [...new Set([
+    client.calendarId,
+    ...(calList?.items || []).map((c) => c.id),
+  ])];
+
+  const { data: fbData } = await client.calendar.freebusy.query({
+    requestBody: {
+      timeMin: windowStart.toISOString(),
+      timeMax: windowEnd.toISOString(),
+      items: calIds.map((id) => ({ id })),
+    },
+  });
+
+  const busyRaw = Object.values(fbData?.calendars || {}).flatMap((c) => c.busy || []);
+  return busyRaw
+    .map((b) => ({ s: new Date(b.start).getTime(), e: new Date(b.end).getTime() }))
+    .sort((a, b) => a.s - b.s);
+}
+
+/**
+ * Given a sorted list of busy intervals and a window [startMs, endMs],
+ * return all free gaps clipped to waking hours (08:00–22:00 Dhaka).
+ * Gaps shorter than MIN_GAP_MS are dropped.
+ */
+function computeFreeGaps(busy, startMs, endMs) {
+  const gaps = [];
+  let cursor = startMs;
+
+  // Build boundaries: busy intervals carve the window into free segments.
+  const boundaries = [
+    ...busy.map((b) => [b.s, b.e]),
+    [endMs, endMs], // sentinel
+  ];
+
+  for (const [bs, be] of boundaries) {
+    if (cursor < bs) {
+      // Free segment [cursor, bs] — clip to waking hours.
+      const freeGaps = clipToWakingHours(cursor, bs);
+      for (const g of freeGaps) {
+        if (g.e - g.s >= MIN_GAP_MS) gaps.push(g);
+      }
+    }
+    cursor = Math.max(cursor, be);
+    if (cursor >= endMs) break;
+  }
+
+  return gaps;
+}
+
+/**
+ * Split [startMs, endMs] by sleeping hours (22:00–08:00 Dhaka) into
+ * sub-intervals that fall entirely within waking hours.
+ */
+function clipToWakingHours(startMs, endMs) {
+  const result = [];
+  let cur = startMs;
+
+  while (cur < endMs) {
+    const dhakaHour = new Date(cur + DHAKA_OFFSET_MS).getUTCHours();
+
+    if (dhakaHour >= SLEEP_START_H || dhakaHour < SLEEP_END_H) {
+      // In sleep window — jump to next 08:00 Dhaka.
+      const dhakaDate = new Date(cur + DHAKA_OFFSET_MS);
+      if (dhakaHour >= SLEEP_START_H) dhakaDate.setUTCDate(dhakaDate.getUTCDate() + 1);
+      dhakaDate.setUTCHours(SLEEP_END_H, 0, 0, 0);
+      cur = dhakaDate.getTime() - DHAKA_OFFSET_MS;
+      continue;
+    }
+
+    // Find end of current waking segment (next 22:00 Dhaka).
+    const dhakaToday = new Date(cur + DHAKA_OFFSET_MS);
+    dhakaToday.setUTCHours(SLEEP_START_H, 0, 0, 0);
+    const wakingEnd = dhakaToday.getTime() - DHAKA_OFFSET_MS;
+
+    const segEnd = Math.min(wakingEnd, endMs);
+    if (segEnd > cur) result.push({ s: cur, e: segEnd });
+    cur = segEnd;
+  }
+
+  return result;
 }
 
 /**
@@ -458,38 +658,183 @@ export async function pushFeedItem(userId, item) {
   const client = await getCalendarClient(userId);
   if (!client) return false;
 
+  // Bootcamp tasks get stacked single-block placement.
+  if (item.category === 'task' && item.start && item.endTime) {
+    try {
+      const n = await placeTasksInFreeTime(client, userId, [item]);
+      return n > 0;
+    } catch (err) {
+      if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return false; }
+      console.error('pushFeedItem(task):', err?.message);
+      return false;
+    }
+  }
+
+  // ── Non-task feed items: single event upsert ──
   const body = feedItemToEvent(item);
   if (!body) return false;
 
   try {
-    const { data: existing } = await client.calendar.events.list({
-      calendarId: client.calendarId,
-      privateExtendedProperty: `${FEED_MARKER}=${item.id}`,
-      maxResults: 1,
-      showDeleted: false,
-    });
-    const found = existing.items?.[0];
+    const { data: stored } = await supabaseAdmin
+      .from('feed_gcal_events')
+      .select('gcal_event_id, calendar_id')
+      .eq('user_id', userId)
+      .eq('feed_id', item.id)
+      .maybeSingle();
 
-    if (found?.id) {
-      await client.calendar.events.update({
-        calendarId: client.calendarId,
-        eventId: found.id,
-        requestBody: body,
-      });
+    let gcalEventId = stored?.gcal_event_id || null;
+    const calId = stored?.calendar_id || client.calendarId;
+
+    if (gcalEventId) {
+      try {
+        await client.calendar.events.update({ calendarId: calId, eventId: gcalEventId, requestBody: body });
+      } catch (err) {
+        if (err?.code !== 404 && err?.code !== 410) throw err;
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        gcalEventId = data.id;
+      }
     } else {
-      await client.calendar.events.insert({
-        calendarId: client.calendarId,
-        requestBody: body,
-      });
+      const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+      gcalEventId = data.id;
+    }
+
+    if (gcalEventId) {
+      await supabaseAdmin.from('feed_gcal_events').upsert(
+        { user_id: userId, feed_id: item.id, gcal_event_id: gcalEventId, calendar_id: client.calendarId, synced_at: new Date().toISOString() },
+        { onConflict: 'user_id,feed_id' }
+      );
     }
     return true;
   } catch (err) {
-    if (isRevoked(err)) {
-      await deleteConnection(userId).catch(() => {});
-      return false;
-    }
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return false; }
     console.error('pushFeedItem:', err?.message);
     return false;
+  }
+}
+
+/**
+ * Delete every event on the calendar carrying `FEED_MARKER=markerId`.
+ * Paginates so all of a task's gap-events are removed. Best-effort.
+ */
+async function deleteEventsByMarker(client, markerId) {
+  let pageToken;
+  do {
+    const { data } = await client.calendar.events.list({
+      calendarId: client.calendarId,
+      privateExtendedProperty: `${FEED_MARKER}=${markerId}`,
+      maxResults: 250,
+      showDeleted: false,
+      pageToken,
+    });
+    for (const ev of data.items || []) {
+      await client.calendar.events.delete({ calendarId: client.calendarId, eventId: ev.id }).catch(() => {});
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS  = 24 * HOUR_MS;
+
+/** Block length for a task: 1h per remaining day, clamped to 1–8h. */
+function taskBlockMs(windowStartMs, deadlineMs) {
+  const spanDays = Math.max(1, Math.round((deadlineMs - windowStartMs) / DAY_MS));
+  return Math.min(Math.max(spanDays * HOUR_MS, HOUR_MS), 8 * HOUR_MS);
+}
+
+/**
+ * Place bootcamp tasks as single, non-overlapping blocks in the member's free
+ * time. Tasks are sorted by span (now→deadline) ascending so the tightest task
+ * takes the earliest slot ("smaller span at the top"); each placed block then
+ * counts as busy for the rest, so tasks stack rather than overlap. Block length
+ * scales with span. Dedup is marker-based (FEED_MARKER) — no DB row per task.
+ *
+ * @returns {Promise<number>} count of tasks successfully placed.
+ */
+async function placeTasksInFreeTime(client, userId, items) {
+  const now = Date.now();
+
+  // Clear every task's prior events + any legacy mapping row first.
+  for (const item of items) {
+    await deleteEventsByMarker(client, item.id);
+    await supabaseAdmin.from('feed_gcal_events').delete().eq('user_id', userId).eq('feed_id', item.id);
+  }
+
+  // Build descriptors, dropping anything already past its deadline.
+  const tasks = items
+    .map((item) => {
+      const windowStartMs = Math.max(new Date(item.start).getTime(), now);
+      const deadlineMs = new Date(item.endTime).getTime();
+      return { item, windowStartMs, deadlineMs, spanMs: deadlineMs - windowStartMs };
+    })
+    .filter((t) => t.deadlineMs > now)
+    .sort((a, b) => a.spanMs - b.spanMs); // smallest span first → earliest slot
+
+  if (tasks.length === 0) return 0;
+
+  // Real busy intervals across the union window; placed task blocks are appended
+  // so later tasks stack after earlier ones.
+  const unionStart = new Date(Math.min(...tasks.map((t) => t.windowStartMs)));
+  const unionEnd   = new Date(Math.max(...tasks.map((t) => t.deadlineMs)));
+  let occupied;
+  try {
+    occupied = await fetchBusy(client, unionStart, unionEnd);
+  } catch {
+    occupied = [];
+  }
+
+  let placed = 0;
+  for (const t of tasks) {
+    const baseBody = feedItemToEvent({
+      ...t.item,
+      _scheduledStart: new Date(t.windowStartMs).toISOString(),
+      _scheduledEnd: new Date(t.deadlineMs).toISOString(),
+    });
+    if (!baseBody) continue;
+
+    const gaps = computeFreeGaps(occupied, t.windowStartMs, t.deadlineMs);
+
+    let slot;
+    if (gaps.length > 0) {
+      // Earliest free gap; block sized by span but never larger than the gap.
+      const g = gaps[0];
+      const len = Math.min(taskBlockMs(t.windowStartMs, t.deadlineMs), g.e - g.s);
+      slot = { s: g.s, e: g.s + len };
+    } else {
+      // Fully booked → 1h before the deadline (best-effort; may overlap).
+      const s = Math.max(t.deadlineMs - HOUR_MS, t.windowStartMs);
+      slot = { s, e: s + HOUR_MS };
+    }
+
+    const body = {
+      ...baseBody,
+      start: { dateTime: new Date(slot.s).toISOString() },
+      end:   { dateTime: new Date(slot.e).toISOString() },
+    };
+    try {
+      await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+      placed++;
+      occupied.push({ s: slot.s, e: slot.e });
+      occupied.sort((a, b) => a.s - b.s);
+    } catch { /* skip individual failure */ }
+  }
+
+  return placed;
+}
+
+/**
+ * Push a batch of bootcamp task feed items as stacked single blocks.
+ * @returns {Promise<number>} count placed.
+ */
+export async function pushTasksStacked(userId, items) {
+  const client = await getCalendarClient(userId);
+  if (!client) return 0;
+  try {
+    return await placeTasksInFreeTime(client, userId, items);
+  } catch (err) {
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return 0; }
+    console.error('pushTasksStacked:', err?.message);
+    return 0;
   }
 }
 
@@ -524,18 +869,241 @@ function taskDue(dateKey) {
   return `${dateKey}T00:00:00.000Z`;
 }
 
+// Priority: DB stores numeric 1-4 OR string 'high'/'medium'/'low'.
+// Normalise to a display label and to a Google Calendar colorId.
+function normalisePriority(priority) {
+  if (priority === 1 || priority === 'high')   return { label: 'High',   colorId: '1'  }; // Tomato (red)
+  if (priority === 2 || priority === 'medium') return { label: 'Medium', colorId: '5'  }; // Banana (yellow)
+  if (priority === 3 || priority === 'low')    return { label: 'Low',    colorId: '7'  }; // Peacock (blue)
+  // 4 / anything else → no priority label, default Google color
+  return { label: null, colorId: null };
+}
+
 /**
- * Mirror a NEUPC todo to the member's Google Tasks list (the checkbox to-dos in
- * the Calendar "Tasks" panel / Google Tasks app). Inserts a new task or updates
- * the linked one when `todo.gtaskId` is set. A recurring todo maps to a single
- * task due on `todo.startKey` (caller passes the next occurrence). `completed`
- * sets the done state. Returns the task id to persist, or null.
+ * Build the Google Task `notes` body from a todo's rich fields. Google Tasks
+ * has only a free-text notes field (no time, priority, or labels of its own),
+ * so we fold the extra info into it under a stable, re-generatable layout:
+ *
+ *   <description>
+ *
+ *   Priority: High   ·   Labels: @study, @dsa   ·   Time: 14:00
+ *   Subtasks:
+ *   ☑ done one
+ *   ☐ pending two
+ *
+ * The subtask checklist is informational; real Google child-tasks are also
+ * created (see syncChildSubtasks) for those who use Google Tasks' own nesting.
+ */
+function buildTaskNotes(todo) {
+  const lines = [];
+
+  const desc = (todo.notes || todo.description || '').trim();
+  if (desc) lines.push(desc);
+
+  const meta = [];
+  const { label: priorityLabel } = normalisePriority(todo.priority);
+  if (priorityLabel) meta.push(`Priority: ${priorityLabel}`);
+  if (todo.time) meta.push(`Time: ${todo.time}`);
+  if (Array.isArray(todo.labels) && todo.labels.length) {
+    meta.push(`Labels: ${todo.labels.map((l) => `@${l}`).join(', ')}`);
+  }
+  if (todo.recurrence?.freq) {
+    meta.push(`Repeats: ${{ daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[todo.recurrence.freq] || todo.recurrence.freq}`);
+  }
+  if (meta.length) {
+    if (lines.length) lines.push('');
+    lines.push(meta.join(' · '));
+  }
+
+  if (Array.isArray(todo.subtasks) && todo.subtasks.length) {
+    if (lines.length) lines.push('');
+    for (const s of todo.subtasks) {
+      lines.push(`[${s.completed ? 'x' : ' '}] ${s.title || ''}`.trimEnd());
+    }
+  }
+
+  return lines.join('\n').trim() || undefined;
+}
+
+// Marker stored on todo calendar events so pull never re-imports them as personal events.
+const TODO_CAL_MARKER = 'neupcTodoCalId';
+
+/**
+ * Push a NEUPC todo to Google Calendar as an all-day event with priority colour,
+ * in addition to the Google Tasks push. This is what makes todos appear visually
+ * on the Google Calendar grid with the right colour. Upserts by `gcal_event_id`.
  *
  * @param {string} userId
- * @param {object} todo  - { id, title, notes, startKey, gtaskId, completed }
+ * @param {object} todo  - { id, title, notes|description, priority, labels, time, startKey, gcalEventId, completed }
+ * @param {object} [opts]
+ * @param {boolean} [opts.force=false]
+ * @returns {Promise<string|null>}  The Google Calendar event id to persist, or null.
+ */
+export async function pushTodoCalendarEvent(userId, todo, { force = false } = {}) {
+  const client = await getCalendarClient(userId);
+  if (!client) return null;
+  if (!force && !client.syncEnabled) return null;
+  if (!todo.startKey) return null;
+
+  const { colorId } = normalisePriority(todo.priority);
+
+  const descLines = [];
+  const { label: priorityLabel } = normalisePriority(todo.priority);
+  if (priorityLabel) descLines.push(`Priority: ${priorityLabel}`);
+  if (todo.time) descLines.push(`Time: ${todo.time}`);
+  if (Array.isArray(todo.labels) && todo.labels.length) {
+    descLines.push(`Labels: ${todo.labels.map((l) => `@${l}`).join(', ')}`);
+  }
+  if (todo.notes || todo.description) descLines.push((todo.notes || todo.description).trim());
+  if (Array.isArray(todo.subtasks) && todo.subtasks.length) {
+    descLines.push('Subtasks:');
+    for (const s of todo.subtasks) {
+      descLines.push(`  ${s.completed ? '☑' : '☐'} ${s.title || ''}`);
+    }
+  }
+
+  const startDate = todo.startKey; // YYYY-MM-DD
+  let startObj, endObj;
+
+  // Parse todo.time which may be:
+  //   "HH:MM"             — start only, 1h default duration
+  //   "HH:MM - HH:MM"     — explicit start–end range (stored by TaskDetailPane)
+  //   "HH:MM:SS"          — postgres time with seconds, trim to HH:MM
+  //   "H:MM AM/PM"        — legacy 12h
+  function parseHHMM(raw) {
+    if (!raw) return null;
+    const t = String(raw).trim();
+    const ampm = t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+    if (ampm) {
+      let h = parseInt(ampm[1], 10);
+      const m = ampm[2];
+      const ap = ampm[3].toUpperCase();
+      if (ap === 'PM' && h !== 12) h += 12;
+      if (ap === 'AM' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${m}`;
+    }
+    const hm = t.match(/^(\d{1,2}:\d{2})/);
+    return hm ? hm[1].padStart(5, '0') : null;
+  }
+
+  if (todo.time) {
+    const raw = String(todo.time).trim();
+    let startHHMM, endHHMM;
+
+    if (raw.includes(' - ')) {
+      const [a, b] = raw.split(' - ');
+      startHHMM = parseHHMM(a);
+      endHHMM   = parseHHMM(b);
+    } else {
+      startHHMM = parseHHMM(raw);
+    }
+
+    if (startHHMM) {
+      const startISO = `${startDate}T${startHHMM}:00`;
+      const startMs  = new Date(startISO).getTime();
+      if (!Number.isNaN(startMs)) {
+        startObj = { dateTime: startISO };
+        if (endHHMM) {
+          const endISO = `${startDate}T${endHHMM}:00`;
+          const endMs  = new Date(endISO).getTime();
+          // End must be after start; if not (e.g. crosses midnight) add 1 day.
+          endObj = { dateTime: endMs > startMs ? endISO : new Date(startMs + 60 * 60000).toISOString() };
+        } else {
+          endObj = { dateTime: new Date(startMs + 60 * 60000).toISOString() };
+        }
+      }
+    }
+  }
+
+  if (!startObj) {
+    // No valid time — all-day event on startKey date.
+    startObj = { date: startDate };
+    endObj   = { date: addDayExclusive(startDate) };
+  }
+
+  const body = {
+    summary: todo.title || '(untitled)',
+    description: descLines.join('\n').trim() || undefined,
+    start: startObj,
+    end: endObj,
+    colorId: colorId || undefined,
+    transparency: 'transparent', // "free" — doesn't block time
+    extendedProperties: { private: { [TODO_CAL_MARKER]: String(todo.id) } },
+  };
+
+  try {
+    let eventData;
+    if (todo.gcalEventId) {
+      try {
+        const { data } = await client.calendar.events.update({
+          calendarId: client.calendarId,
+          eventId: todo.gcalEventId,
+          requestBody: { ...body, id: todo.gcalEventId },
+        });
+        eventData = data;
+      } catch (err) {
+        if (err?.code !== 404 && err?.code !== 410) throw err;
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        eventData = data;
+      }
+    } else {
+      // No stored event id — search by TODO_CAL_MARKER to avoid duplicating when
+      // a previous push succeeded but the gcal_event_id write-back to DB failed.
+      let existingId = null;
+      try {
+        const { data: found } = await client.calendar.events.list({
+          calendarId: client.calendarId,
+          privateExtendedProperty: `${TODO_CAL_MARKER}=${todo.id}`,
+          maxResults: 10,
+          showDeleted: false,
+        });
+        const matches = found.items || [];
+        if (matches.length > 0) {
+          existingId = matches[0].id;
+          for (const dup of matches.slice(1)) {
+            await client.calendar.events.delete({ calendarId: client.calendarId, eventId: dup.id }).catch(() => {});
+          }
+        }
+      } catch { /* search not critical */ }
+
+      if (existingId) {
+        const { data } = await client.calendar.events.update({
+          calendarId: client.calendarId,
+          eventId: existingId,
+          requestBody: { ...body, id: existingId },
+        });
+        eventData = data;
+      } else {
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        eventData = data;
+      }
+    }
+    return eventData?.id || null;
+  } catch (err) {
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return null; }
+    console.error('pushTodoCalendarEvent:', err?.message);
+    return null;
+  }
+}
+
+/**
+ * Mirror a NEUPC todo to the member's Google Tasks list (the checkbox to-dos in
+ * the Google Tasks app / Calendar side panel). Inserts a new task or updates the
+ * linked one when `todo.gtaskId` is set. A recurring todo maps to a single task
+ * due on `todo.startKey` (caller passes the next occurrence). Rich fields
+ * (description, priority, labels, time, subtask checklist) are folded into the
+ * task notes via {@link buildTaskNotes}. `completed` sets the done state.
+ *
+ * Note: todos are intentionally pushed to Google **Tasks only** (never a
+ * Calendar event), so a to-do is never duplicated and no time-of-day event is
+ * created — matching the product decision that todos have no calendar time.
+ *
+ * @param {string} userId
+ * @param {object} todo  - { id, title, notes|description, priority, labels,
+ *                           time, subtasks, startKey, gtaskId, completed }
  * @param {object} [opts]
  * @param {boolean} [opts.force=false]  - Push even when auto-mirror is off.
- * @returns {Promise<string|null>}
+ * @returns {Promise<string|null>}  The parent task id to persist, or null.
  */
 export async function pushTodoTask(userId, todo, { force = false } = {}) {
   const client = await getCalendarClient(userId);
@@ -544,27 +1112,64 @@ export async function pushTodoTask(userId, todo, { force = false } = {}) {
 
   const body = {
     title: todo.title || '(untitled)',
-    notes: todo.notes || undefined,
+    notes: buildTaskNotes(todo),
     due: taskDue(todo.startKey),
     status: todo.completed ? 'completed' : 'needsAction',
   };
   // Clearing completion requires explicitly nulling `completed`.
   if (!todo.completed) body.completed = null;
 
+  // A stable marker we embed in the notes field to identify NEUPC-owned tasks.
+  // Format: "neupcId:<uuid>" on its own line at the very end.
+  const ID_TAG = `neupcId:${todo.id}`;
+  const notesWithTag = body.notes ? `${body.notes}\n${ID_TAG}` : ID_TAG;
+  body.notes = notesWithTag;
+
   try {
+    let parentId;
     if (todo.gtaskId) {
       const { data } = await client.tasks.tasks.update({
         tasklist: '@default',
         task: todo.gtaskId,
         requestBody: { id: todo.gtaskId, ...body },
       });
-      return data.id || todo.gtaskId;
+      parentId = data.id || todo.gtaskId;
+    } else {
+      // No stored task id — scan @default tasklist for a task whose notes contain
+      // our ID_TAG to avoid duplicating when a previous push's write-back failed.
+      let existingTaskId = null;
+      try {
+        const { data: listData } = await client.tasks.tasks.list({
+          tasklist: '@default',
+          showCompleted: true,
+          showDeleted: false,
+          showHidden: true,
+          maxResults: 100,
+        });
+        for (const t of listData.items || []) {
+          if (t.notes?.includes(ID_TAG)) {
+            existingTaskId = t.id;
+            break;
+          }
+        }
+      } catch { /* scan not critical */ }
+
+      if (existingTaskId) {
+        const { data } = await client.tasks.tasks.update({
+          tasklist: '@default',
+          task: existingTaskId,
+          requestBody: { id: existingTaskId, ...body },
+        });
+        parentId = data.id || existingTaskId;
+      } else {
+        const { data } = await client.tasks.tasks.insert({
+          tasklist: '@default',
+          requestBody: body,
+        });
+        parentId = data.id || null;
+      }
     }
-    const { data } = await client.tasks.tasks.insert({
-      tasklist: '@default',
-      requestBody: body,
-    });
-    return data.id || null;
+    return parentId;
   } catch (err) {
     // Stale id (task deleted in Google) → recreate once.
     if ((err?.code === 404 || err?.code === 410) && todo.gtaskId) {
@@ -577,6 +1182,117 @@ export async function pushTodoTask(userId, todo, { force = false } = {}) {
     console.error('pushTodoTask:', err?.message);
     return null;
   }
+}
+
+/**
+ * Create/update/delete real Google child-tasks for a todo's subtasks, nested
+ * under the parent task. Keeps a `{ neupcSubtaskId: googleTaskId }` map so the
+ * same child is reused across syncs (no duplicates) and removed subtasks are
+ * deleted from Google. Best-effort; returns the updated id map to persist.
+ *
+ * @param {string} userId
+ * @param {string} parentTaskId  - The parent Google Task id.
+ * @param {{id:string,title:string,completed:boolean}[]} subtasks
+ * @param {Record<string,string>} [existingMap]  - Prior id map.
+ * @returns {Promise<Record<string,string>>}
+ */
+export async function syncChildSubtasks(userId, parentTaskId, subtasks = [], existingMap = {}) {
+  const client = await getCalendarClient(userId);
+  if (!client || !parentTaskId) return existingMap;
+
+  const map = { ...(existingMap || {}) };
+  const liveIds = new Set();
+
+  try {
+    for (const s of subtasks) {
+      if (!s || !s.id) continue;
+      liveIds.add(s.id);
+      const childBody = {
+        title: s.title || '(subtask)',
+        status: s.completed ? 'completed' : 'needsAction',
+      };
+      if (!s.completed) childBody.completed = null;
+
+      const existingChild = map[s.id];
+      if (existingChild) {
+        try {
+          await client.tasks.tasks.update({
+            tasklist: '@default',
+            task: existingChild,
+            requestBody: { id: existingChild, ...childBody },
+          });
+          continue;
+        } catch (err) {
+          if (err?.code !== 404 && err?.code !== 410) throw err;
+          // fall through to recreate
+        }
+      }
+      const { data } = await client.tasks.tasks.insert({
+        tasklist: '@default',
+        parent: parentTaskId,
+        requestBody: childBody,
+      });
+      if (data?.id) map[s.id] = data.id;
+    }
+
+    // Remove children whose NEUPC subtask no longer exists.
+    for (const [subId, gid] of Object.entries(map)) {
+      if (!liveIds.has(subId)) {
+        try {
+          await client.tasks.tasks.delete({ tasklist: '@default', task: gid });
+        } catch (err) {
+          if (err?.code !== 404 && err?.code !== 410) {
+            console.error('syncChildSubtasks (delete):', err?.message);
+          }
+        }
+        delete map[subId];
+      }
+    }
+  } catch (err) {
+    if (isRevoked(err)) {
+      await deleteConnection(userId).catch(() => {});
+      return existingMap;
+    }
+    console.error('syncChildSubtasks:', err?.message);
+  }
+  return map;
+}
+
+/**
+ * Read the completion state of the given todos' linked Google Tasks. Used by
+ * the two-way pull: the caller passes the linked todos and applies any change
+ * where Google's done-state differs from NEUPC's. Recurring todos are skipped
+ * (no single unambiguous done-state). Best-effort — returns [] on any failure.
+ *
+ * @param {string} userId
+ * @param {{id:string,gtaskId:string}[]} linkedTodos
+ * @returns {Promise<{todoId:string, completed:boolean}[]>}
+ */
+export async function readTaskCompletions(userId, linkedTodos = []) {
+  const client = await getCalendarClient(userId);
+  if (!client) return [];
+
+  const results = [];
+  for (const t of linkedTodos) {
+    if (!t?.gtaskId) continue;
+    try {
+      const { data } = await client.tasks.tasks.get({
+        tasklist: '@default',
+        task: t.gtaskId,
+      });
+      results.push({ todoId: t.id, completed: data?.status === 'completed' });
+    } catch (err) {
+      if (isRevoked(err)) {
+        await deleteConnection(userId).catch(() => {});
+        return [];
+      }
+      // 404/410 → task gone in Google; skip (leave NEUPC as-is).
+      if (err?.code !== 404 && err?.code !== 410) {
+        console.error('readTaskCompletions:', err?.message);
+      }
+    }
+  }
+  return results;
 }
 
 /**
@@ -623,5 +1339,195 @@ export async function deleteTodoTask(userId, gtaskId) {
       return;
     }
     console.error('deleteTodoTask:', err?.message);
+  }
+}
+
+// ── Personal Calendar Events ──────────────────────────────────────────────────
+
+/**
+ * Upsert a personal_event to the member's Google Calendar. If `row.gcal_event_id`
+ * is set, update; otherwise insert. Returns the Google event id to persist.
+ *
+ * @param {string} userId
+ * @param {object} row  - personal_events row.
+ * @returns {Promise<string|null>}
+ */
+export async function pushPersonalEvent(userId, row) {
+  const client = await getCalendarClient(userId);
+  if (!client) return null;
+
+  const allDay = !row.start_time;
+
+  // End date: for multi-day all-day events Google expects end = day after last day.
+  const endDateStr = row.end_date || row.event_date;
+
+  let startObj, endObj;
+  if (allDay) {
+    // Google all-day end is exclusive — add 1 day.
+    const endExclusive = new Date(endDateStr + 'T00:00:00');
+    endExclusive.setDate(endExclusive.getDate() + 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    const endStr = `${endExclusive.getFullYear()}-${pad(endExclusive.getMonth() + 1)}-${pad(endExclusive.getDate())}`;
+    startObj = { date: row.event_date };
+    endObj = { date: endStr };
+  } else {
+    const endDate = row.end_date || row.event_date;
+    const startISO = `${row.event_date}T${row.start_time}:00`;
+    let endISO;
+    if (row.end_time) {
+      endISO = `${endDate}T${row.end_time}:00`;
+    } else {
+      // No end time set — default to start + 1 hour so it occupies the timetable.
+      endISO = new Date(new Date(startISO).getTime() + 60 * 60000).toISOString();
+    }
+    startObj = { dateTime: startISO };
+    endObj   = { dateTime: endISO };
+  }
+
+  // Build reminders
+  const remindersArr = Array.isArray(row.reminders) && row.reminders.length
+    ? { useDefault: false, overrides: row.reminders.map((r) => ({ method: r.method, minutes: r.minutes })) }
+    : { useDefault: true };
+
+  // Build attendees
+  const attendeesArr = Array.isArray(row.attendees)
+    ? row.attendees.map((a) => ({ email: a.email, displayName: a.name || undefined, optional: a.optional || false }))
+    : [];
+
+  const body = {
+    summary: row.title,
+    description: row.description || undefined,
+    location: row.location || undefined,
+    source: row.url ? { title: row.title, url: row.url } : undefined,
+    start: startObj,
+    end: endObj,
+    colorId: row.color_id || undefined,
+    status: row.status || 'confirmed',
+    visibility: row.visibility !== 'default' ? row.visibility : undefined,
+    guestsCanSeeOtherGuests: row.guests_can_see_other_guests ?? true,
+    reminders: remindersArr,
+    attendees: attendeesArr.length ? attendeesArr : undefined,
+    recurrence: row.recurrence ? [`RRULE:${row.recurrence}`] : undefined,
+    extendedProperties: { private: { [PERSONAL_MARKER]: row.id } },
+  };
+
+  try {
+    let eventData;
+    if (row.gcal_event_id) {
+      try {
+        const { data } = await client.calendar.events.update({
+          calendarId: client.calendarId,
+          eventId: row.gcal_event_id,
+          requestBody: { ...body, id: row.gcal_event_id },
+        });
+        eventData = data;
+      } catch (err) {
+        if (err?.code !== 404 && err?.code !== 410) throw err;
+        // Stale id — recreate.
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        eventData = data;
+      }
+    } else {
+      // No stored event id — search by PERSONAL_MARKER to avoid creating a duplicate
+      // when a previous push succeeded but the write-back to DB failed.
+      let existingId = null;
+      try {
+        const { data: found } = await client.calendar.events.list({
+          calendarId: client.calendarId,
+          privateExtendedProperty: `${PERSONAL_MARKER}=${row.id}`,
+          maxResults: 10,
+          showDeleted: false,
+        });
+        const matches = found.items || [];
+        if (matches.length > 0) {
+          existingId = matches[0].id;
+          // Clean up any duplicates beyond the first.
+          for (const dup of matches.slice(1)) {
+            await client.calendar.events.delete({ calendarId: client.calendarId, eventId: dup.id }).catch(() => {});
+          }
+        }
+      } catch { /* search not critical */ }
+
+      if (existingId) {
+        const { data } = await client.calendar.events.update({
+          calendarId: client.calendarId,
+          eventId: existingId,
+          requestBody: { ...body, id: existingId },
+        });
+        eventData = data;
+      } else {
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        eventData = data;
+      }
+    }
+    return {
+      eventId: eventData.id || null,
+      conferenceLink: eventData.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri || null,
+    };
+  } catch (err) {
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return null; }
+    console.error('pushPersonalEvent:', err?.message);
+    return null;
+  }
+}
+
+/** Delete a personal event from Google Calendar. Best-effort. */
+export async function deletePersonalEvent(userId, gcalEventId) {
+  if (!gcalEventId) return;
+  const client = await getCalendarClient(userId);
+  if (!client) return;
+  try {
+    await client.calendar.events.delete({ calendarId: client.calendarId, eventId: gcalEventId });
+  } catch (err) {
+    if (err?.code === 404 || err?.code === 410) return;
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return; }
+    console.error('deletePersonalEvent:', err?.message);
+  }
+}
+
+/**
+ * Fetch Google Calendar events owned by the user that don't have a NEUPC marker
+ * (i.e. created directly in Google, not pushed from NEUPC) within the given range.
+ * Returns raw event objects for the caller to import.
+ *
+ * @returns {Promise<object[]>}
+ */
+export async function pullPersonalEventsFromGoogle(userId, timeMinISO, timeMaxISO) {
+  const client = await getCalendarClient(userId);
+  if (!client) return [];
+
+  try {
+    const { data: calList } = await client.calendar.calendarList.list({ minAccessRole: 'owner' });
+    const ownedIds = (calList.items || []).map((c) => c.id);
+    if (!ownedIds.includes('primary')) ownedIds.unshift('primary');
+
+    const seen = new Set();
+    const results = [];
+    for (const calId of ownedIds) {
+      try {
+        const { data } = await client.calendar.events.list({
+          calendarId: calId,
+          timeMin: timeMinISO,
+          timeMax: timeMaxISO,
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 250,
+        });
+        for (const ev of data.items || []) {
+          if (seen.has(ev.id)) continue;
+          seen.add(ev.id);
+          if (ev.status === 'cancelled') continue;
+          // Skip anything NEUPC already owns.
+          const priv = ev.extendedProperties?.private || {};
+          if (priv[FEED_MARKER] || priv[PERSONAL_MARKER] || priv[TODO_MARKER] || priv[TODO_CAL_MARKER]) continue;
+          results.push(ev);
+        }
+      } catch { /* skip */ }
+    }
+    return results;
+  } catch (err) {
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return []; }
+    console.error('pullPersonalEventsFromGoogle:', err?.message);
+    return [];
   }
 }

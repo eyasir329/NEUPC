@@ -17,8 +17,15 @@ import {
   deleteConnection,
   setSyncEnabled,
   pushTodoTask,
+  pushTodoCalendarEvent,
+  syncChildSubtasks,
   pushFeedItem,
+  pushTasksStacked,
   deleteTodoEvent,
+  readTaskCompletions,
+  listGoogleTasks,
+  pushPersonalEvent,
+  pullPersonalEventsFromGoogle,
 } from '@/app/_lib/integrations/google-calendar';
 
 const PATH = '/account/member/daily-activity';
@@ -35,10 +42,15 @@ export async function getGoogleCalendarStatusAction() {
   const a = await memberId();
   if (a.error) return { connected: false };
   const conn = await getConnection(a.userId);
+  // Old tokens only have calendar.events; full import needs calendar scope.
+  const needsReconnect = !!conn && !(conn.scope || '').includes('auth/calendar ') &&
+    !(conn.scope || '').includes('auth/calendar\n') &&
+    !(conn.scope || '').endsWith('auth/calendar');
   return {
     connected: !!conn,
     email: conn?.google_email || null,
     syncEnabled: conn ? conn.sync_enabled !== false : false,
+    needsReconnect,
   };
 }
 
@@ -82,7 +94,17 @@ export async function setGoogleCalendarSyncEnabledAction(enabled) {
  * @param {string[]} [opts.taskIds]  - Visible to-do task ids (uuid) in the month.
  * @param {string[]} [opts.feedIds]  - Visible feed item ids (e.g. `event-123`).
  */
-export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
+/**
+ * Push the visible month's todos + NEUPC feed items to Google Tasks / Calendar.
+ * Upsert semantics — existing mirrors are updated, never duplicated.
+ *
+ * @param {object} opts
+ * @param {string[]} opts.taskIds        - UUID todo ids visible in the month.
+ * @param {string[]} opts.feedIds        - Feed item ids visible in the month (no gcal-/gtask- prefixes).
+ * @param {string}   opts.timeMin        - ISO — start of visible month (for personal events).
+ * @param {string}   opts.timeMax        - ISO — end of visible month (for personal events).
+ */
+export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], timeMin, timeMax } = {}) {
   const a = await memberId();
   if (a.error) return { error: a.error };
 
@@ -91,16 +113,12 @@ export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
 
   let synced = 0;
 
-  // ── To-do tasks: push BOTH a calendar event and a Google Task ──
-  const ids = Array.isArray(taskIds)
-    ? [...new Set(taskIds.filter(isValidUUID))]
-    : [];
+  // ── Month todos → Google Tasks (upsert) ──
+  const ids = [...new Set(taskIds.filter(isValidUUID))];
   if (ids.length > 0) {
     const { data: rows, error } = await supabaseAdmin
       .from('todos')
-      .select(
-        'id, title, notes, start_date, due_time, recurrence, gcal_event_id, gtask_id'
-      )
+      .select('id, title, notes, description, start_date, due_time, priority, labels, recurrence, gcal_event_id, gtask_id, subtasks, gtask_subtask_ids, completed')
       .eq('user_id', a.userId)
       .in('id', ids.slice(0, MAX_BACKFILL))
       .not('start_date', 'is', null);
@@ -109,67 +127,326 @@ export async function syncTodosToCalendarAction({ taskIds, feedIds } = {}) {
       return { error: 'Failed to load tasks.' };
     }
 
-    // Completed (non-recurring) todos, so the Google Task gets the right state.
     const { data: comps } = await supabaseAdmin
       .from('todo_completions')
       .select('todo_id')
       .eq('user_id', a.userId)
-      .in(
-        'todo_id',
-        (rows || []).map((r) => r.id)
-      );
+      .in('todo_id', (rows || []).map((r) => r.id));
     const completedSet = new Set((comps || []).map((c) => c.todo_id));
 
     for (const r of rows || []) {
-      // Todos mirror to Google Tasks ONLY (never a calendar event), so they're
-      // not duplicated. Clean up any calendar event from an earlier version.
-      if (r.gcal_event_id) {
-        await deleteTodoEvent(a.userId, r.gcal_event_id);
-      }
+      const isCompleted = !r.recurrence?.freq && (!!r.completed || completedSet.has(r.id));
+      const todoPayload = {
+        id: r.id,
+        title: r.title,
+        notes: r.notes || r.description,
+        priority: r.priority,
+        labels: r.labels || [],
+        time: r.due_time || null,
+        recurrence: r.recurrence || null,
+        subtasks: r.subtasks || [],
+        startKey: r.start_date,
+        gcalEventId: r.gcal_event_id || null,
+        gtaskId: r.gtask_id || null,
+        completed: isCompleted,
+      };
 
-      const taskId = await pushTodoTask(
-        a.userId,
-        {
-          id: r.id,
-          title: r.title,
-          notes: r.notes,
-          startKey: r.start_date,
-          gtaskId: r.gtask_id || null,
-          completed: !r.recurrence?.freq && completedSet.has(r.id),
-        },
-        { force: true }
-      );
+      // Push to Google Calendar (all-day event with priority colour) — this makes
+      // the todo appear on the Calendar grid with the correct colour.
+      const calEventId = await pushTodoCalendarEvent(a.userId, todoPayload, { force: true });
+
+      // Push to Google Tasks (checkbox list) — for the Tasks app / side panel.
+      const taskId = await pushTodoTask(a.userId, todoPayload, { force: true });
+
+      let subtaskMap = r.gtask_subtask_ids || {};
+      if (taskId) {
+        subtaskMap = await syncChildSubtasks(a.userId, taskId, r.subtasks || [], r.gtask_subtask_ids || {});
+      }
 
       const patch = {};
-      if (r.gcal_event_id) patch.gcal_event_id = null;
+      if (calEventId && calEventId !== r.gcal_event_id) patch.gcal_event_id = calEventId;
       if (taskId && taskId !== r.gtask_id) patch.gtask_id = taskId;
+      patch.gtask_subtask_ids = subtaskMap;
       if (Object.keys(patch).length) {
-        await supabaseAdmin
-          .from('todos')
-          .update(patch)
-          .eq('id', r.id)
-          .eq('user_id', a.userId);
+        await supabaseAdmin.from('todos').update(patch).eq('id', r.id).eq('user_id', a.userId);
       }
-      if (taskId) synced++;
+      if (calEventId || taskId) synced++;
     }
   }
 
-  // ── Feed items: events / sessions / contests / deadlines (upsert by marker) ──
-  const wantFeed = new Set(
-    Array.isArray(feedIds) ? feedIds.filter((x) => typeof x === 'string') : []
-  );
+  // ── Month feed items → Google Calendar (upsert by FEED_MARKER) ──
+  const wantFeed = new Set(feedIds.filter((x) => typeof x === 'string'));
   if (wantFeed.size > 0) {
-    // Re-derive the authoritative feed; only push the visible, selected ids.
     const feed = await getDailyActivityFeed(a.userId).catch(() => []);
     const toPush = feed
-      .filter((it) => wantFeed.has(it.id))
+      .filter((it) => wantFeed.has(it.id) && it.category !== 'gcal' && it.category !== 'gtask' && it.category !== 'personal')
       .slice(0, MAX_BACKFILL);
-    for (const item of toPush) {
+
+    // Bootcamp tasks are placed together so they stack without overlapping
+    // (smallest span first); other feed items push individually.
+    const taskItems  = toPush.filter((it) => it.category === 'task' && it.start && it.endTime);
+    const otherItems = toPush.filter((it) => !(it.category === 'task' && it.start && it.endTime));
+
+    for (const item of otherItems) {
       const ok = await pushFeedItem(a.userId, item);
       if (ok) synced++;
+    }
+    if (taskItems.length > 0) {
+      synced += await pushTasksStacked(a.userId, taskItems);
+    }
+  }
+
+  // ── Personal events for visible month → Google Calendar (upsert by gcal_event_id) ──
+  if (timeMin && timeMax) {
+    const minDate = timeMin.split('T')[0];
+    const maxDate = timeMax.split('T')[0];
+    const { data: personalRows } = await supabaseAdmin
+      .from('personal_events')
+      .select('*')
+      .eq('user_id', a.userId)
+      .gte('event_date', minDate)
+      .lte('event_date', maxDate);
+
+    for (const row of personalRows || []) {
+      const result = await pushPersonalEvent(a.userId, row);
+      if (result) {
+        const patch = { gcal_synced_at: new Date().toISOString() };
+        if (result.eventId && result.eventId !== row.gcal_event_id) patch.gcal_event_id = result.eventId;
+        if (result.conferenceLink && result.conferenceLink !== row.conference_link) patch.conference_link = result.conferenceLink;
+        if (Object.keys(patch).length > 1) {
+          await supabaseAdmin
+            .from('personal_events')
+            .update(patch)
+            .eq('id', row.id).eq('user_id', a.userId);
+        }
+        synced++;
+      }
     }
   }
 
   revalidatePath(PATH);
   return { success: true, synced };
+}
+
+const PULL_LIMIT = 200;
+// Skip applying a Google done-state to a todo that was changed locally within
+// this window of the last sync — protects a fresh local toggle from being
+// reverted by a slightly-stale Google read (last-write-wins, local-favoured).
+const LWW_GRACE_MS = 60 * 1000;
+
+/**
+ * Two-way completion pull: read the done-state of the member's mirrored Google
+ * Tasks and apply any change back to NEUPC. Non-recurring todos only (a single
+ * unambiguous done-state). Uses `gcal_synced_at` vs `updated_at` as a
+ * last-write-wins guard so a newer local edit isn't clobbered. Best-effort and
+ * idempotent — safe to call on page open and after "Sync now".
+ *
+ * @returns {Promise<{updated:number}|{error:string}>}
+ */
+export async function pullGoogleCompletionsAction() {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+
+  const conn = await getConnection(a.userId);
+  if (!conn) return { updated: 0 };
+
+  // Linked, non-recurring todos are the only ones with a 1:1 Google Task done-state.
+  const { data: rows, error } = await supabaseAdmin
+    .from('todos')
+    .select('id, completed, recurrence, updated_at, gcal_synced_at, gtask_id')
+    .eq('user_id', a.userId)
+    .not('gtask_id', 'is', null)
+    .limit(PULL_LIMIT);
+  if (error) {
+    console.error('pullGoogleCompletionsAction (load):', error.message);
+    return { error: 'Failed to load tasks.' };
+  }
+
+  const linked = (rows || []).filter((r) => !r.recurrence?.freq && r.gtask_id);
+  if (linked.length === 0) return { updated: 0 };
+
+  const states = await readTaskCompletions(
+    a.userId,
+    linked.map((r) => ({ id: r.id, gtaskId: r.gtask_id }))
+  );
+  const byId = new Map(linked.map((r) => [r.id, r]));
+
+  let updated = 0;
+  for (const { todoId, completed } of states) {
+    const row = byId.get(todoId);
+    if (!row || !!row.completed === !!completed) continue; // already in sync
+
+    // Last-write-wins: if the local row was edited more recently than our last
+    // sync (plus grace), prefer the local state and skip Google's value.
+    const localTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+    const syncTime = row.gcal_synced_at ? new Date(row.gcal_synced_at).getTime() : 0;
+    if (localTime > syncTime + LWW_GRACE_MS) continue;
+
+    const { error: updErr } = await supabaseAdmin
+      .from('todos')
+      .update({
+        completed,
+        completed_at: completed ? new Date().toISOString() : null,
+        gcal_synced_at: new Date().toISOString(),
+      })
+      .eq('id', todoId)
+      .eq('user_id', a.userId);
+    if (updErr) {
+      console.error('pullGoogleCompletionsAction (update):', updErr.message);
+      continue;
+    }
+    updated++;
+  }
+
+  if (updated > 0) revalidatePath(PATH);
+  return { updated };
+}
+
+/**
+ * Pull for the visible month:
+ *   • Google Calendar events → returned as read-only gcal feed items (no DB write).
+ *   • Google Tasks → upserted into the todos table as real editable todos
+ *     (keyed by gtask_id so re-pulling never creates duplicates).
+ *
+ * @param {object} opts
+ * @param {string} opts.timeMin  ISO string — start of visible month grid.
+ * @param {string} opts.timeMax  ISO string — end of visible month grid.
+ * @returns {{ imported: number, gcalItems: object[] }}
+ */
+export async function pullFromGoogleAction({ timeMin, timeMax }) {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+
+  const conn = await getConnection(a.userId);
+  if (!conn) return { error: 'Google Calendar is not connected.' };
+
+  try {
+    const gtaskItems = await listGoogleTasks(a.userId).catch(() => []);
+
+    // ── Google Tasks → real todos (upsert by gtask_id) ──────────────────────
+    const minDate = timeMin.split('T')[0];
+    const maxDate = timeMax.split('T')[0];
+    const monthGtasks = gtaskItems.filter((t) => {
+      const d = t.start.split('T')[0];
+      return d >= minDate && d <= maxDate;
+    });
+
+    // Load existing todos that already have a gtask_id so we skip them.
+    const { data: existing } = await supabaseAdmin
+      .from('todos')
+      .select('gtask_id')
+      .eq('user_id', a.userId)
+      .not('gtask_id', 'is', null);
+    const existingGtaskIds = new Set((existing || []).map((r) => r.gtask_id));
+
+    let imported = 0;
+    for (const t of monthGtasks) {
+      const rawId = t.id.replace(/^gtask-/, '');
+      if (existingGtaskIds.has(rawId)) continue; // already imported
+
+      const dueDate = t.start.split('T')[0];
+      await supabaseAdmin.from('todos').insert({
+        user_id: a.userId,
+        title: t.title,
+        description: t.description || null,
+        notes: t.description || null,
+        priority: 'low',
+        start_date: dueDate,
+        due_time: null,
+        labels: ['Google Tasks'],
+        subtasks: [],
+        comments: [],
+        completed: false,
+        gtask_id: rawId,
+        gtask_subtask_ids: {},
+        gcal_synced_at: new Date().toISOString(),
+      });
+      imported++;
+    }
+
+    // ── Google Calendar events (user's own, no NEUPC marker) → personal_events ──
+    const rawGoogleEvents = await pullPersonalEventsFromGoogle(a.userId, timeMin, timeMax).catch(() => []);
+
+    // Load existing personal_events — both those with a gcal_event_id (fast path)
+    // and those without (to deduplicate by date+title when write-back previously failed).
+    const { data: existingPersonal } = await supabaseAdmin
+      .from('personal_events')
+      .select('id, gcal_event_id, event_date, title')
+      .eq('user_id', a.userId);
+    const existingGcalIds = new Set(
+      (existingPersonal || []).filter((r) => r.gcal_event_id).map((r) => r.gcal_event_id)
+    );
+    // Index rows without a gcal_event_id by "date|title" for content-based dedup.
+    const existingByDateTitle = new Map(
+      (existingPersonal || [])
+        .filter((r) => !r.gcal_event_id)
+        .map((r) => [`${r.event_date}|${(r.title || '').toLowerCase()}`, r.id])
+    );
+
+    let importedEvents = 0;
+    for (const ev of rawGoogleEvents) {
+      if (existingGcalIds.has(ev.id)) {
+        // Update title/description/location in case it changed in Google.
+        const eventDate = ev.start?.date || (ev.start?.dateTime || '').split('T')[0];
+        if (!eventDate) continue;
+        await supabaseAdmin
+          .from('personal_events')
+          .update({
+            title: ev.summary || '(no title)',
+            description: ev.description ? ev.description.replace(/<[^>]+>/g, '').trim() : null,
+            location: ev.location || null,
+            event_date: eventDate,
+            gcal_synced_at: new Date().toISOString(),
+          })
+          .eq('gcal_event_id', ev.id)
+          .eq('user_id', a.userId);
+        continue;
+      }
+
+      const allDay = !ev.start?.dateTime;
+      const eventDate = allDay ? ev.start.date : (ev.start.dateTime || '').split('T')[0];
+      if (!eventDate) continue;
+
+      let startTime = null, endTime = null;
+      if (!allDay && ev.start?.dateTime) {
+        startTime = ev.start.dateTime.split('T')[1]?.slice(0, 5) || null;
+        endTime = ev.end?.dateTime ? ev.end.dateTime.split('T')[1]?.slice(0, 5) : null;
+      }
+
+      const title = ev.summary || '(no title)';
+      const dateTitleKey = `${eventDate}|${title.toLowerCase()}`;
+
+      // If a row exists with no gcal_event_id but same date+title, link it instead of inserting.
+      const orphanRowId = existingByDateTitle.get(dateTitleKey);
+      if (orphanRowId) {
+        await supabaseAdmin
+          .from('personal_events')
+          .update({ gcal_event_id: ev.id, gcal_synced_at: new Date().toISOString() })
+          .eq('id', orphanRowId)
+          .eq('user_id', a.userId);
+        existingGcalIds.add(ev.id);
+        existingByDateTitle.delete(dateTitleKey);
+        continue;
+      }
+
+      await supabaseAdmin.from('personal_events').insert({
+        user_id: a.userId,
+        title,
+        description: ev.description ? ev.description.replace(/<[^>]+>/g, '').trim() : null,
+        location: ev.location || null,
+        event_date: eventDate,
+        start_time: startTime,
+        end_time: endTime,
+        gcal_event_id: ev.id,
+        gcal_synced_at: new Date().toISOString(),
+      });
+      importedEvents++;
+    }
+
+    revalidatePath(PATH);
+    return { imported, importedEvents };
+  } catch (err) {
+    console.error('pullFromGoogleAction:', err?.message);
+    return { error: 'Failed to pull from Google.' };
+  }
 }

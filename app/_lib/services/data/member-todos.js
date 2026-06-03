@@ -7,10 +7,7 @@ import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { getPublishedEvents } from './events';
 import { getUpcomingContests } from './contests';
 import { getUpcomingExternalContests } from './external-contests';
-import {
-  getConnection,
-  listCalendarEvents,
-} from '@/app/_lib/integrations/google-calendar';
+import { getConnection } from '@/app/_lib/integrations/google-calendar';
 
 /**
  * Load a member's lists, tasks, and completions, shaped to match the
@@ -109,22 +106,21 @@ export async function getMemberTodoData(userId) {
  * @returns {Promise<object[]>}
  */
 export async function getDailyActivityFeed(userId) {
-  // Member's own Google Calendar, when connected: a window around today wide
-  // enough to cover a few months of calendar navigation.
   const now = Date.now();
   const DAY = 24 * 60 * 60 * 1000;
 
-  const [events, contests, externalContests, bootcamps, gcalItems] =
+  const [events, contests, externalContests, bootcamps, personalRows] =
     await Promise.all([
       getPublishedEvents().catch(() => []),
       getUpcomingContests(100).catch(() => []),
       getUpcomingExternalContests(100).catch(() => []),
       getEnrolledBootcamps(userId).catch(() => []),
-      listCalendarEvents(
-        userId,
-        new Date(now - 30 * DAY).toISOString(),
-        new Date(now + 120 * DAY).toISOString()
-      ).catch(() => []),
+      supabaseAdmin
+        .from('personal_events')
+        .select('*')
+        .eq('user_id', userId)
+        .then(({ data }) => data || [])
+        .catch(() => []),
     ]);
 
   const eventItems = (events || [])
@@ -139,37 +135,54 @@ export async function getDailyActivityFeed(userId) {
         id: `event-${e.id}`,
         category: 'event',
         title: e.title,
+        description: plainSnippet(e.description),
         location: e.location || null,
+        url: e.url || null,
         start: start.toISOString(),
+        endDate: e.end_date ? new Date(e.end_date).toISOString().split('T')[0] : null,
+        endTime: end ? end.toISOString() : null,
         durationMin,
+        eventCategory: e.category || null,
+        status: e.status || null,
       };
     });
 
   const contestItems = (contests || [])
     .filter((c) => c.start_time)
-    .map((c) => ({
-      id: `contest-${c.id}`,
-      category: 'contest',
-      title: c.title,
-      location: c.platform || null,
-      start: new Date(c.start_time).toISOString(),
-      durationMin: typeof c.duration === 'number' ? c.duration : null,
-    }));
+    .map((c) => {
+      const start = new Date(c.start_time);
+      const durationMin = typeof c.duration === 'number' ? c.duration : null;
+      const endTime = durationMin ? new Date(start.getTime() + durationMin * 60000).toISOString() : null;
+      return {
+        id: `contest-${c.id}`,
+        category: 'contest',
+        title: c.title,
+        description: plainSnippet(c.description),
+        location: c.platform || null,
+        url: c.url || null,
+        start: start.toISOString(),
+        endTime,
+        durationMin,
+      };
+    });
 
   const externalContestItems = (externalContests || [])
     .filter((c) => c.start_time)
-    .map((c) => ({
-      id: `ext-contest-${c.id}`,
-      category: 'contest',
-      title: c.name,
-      location: c.platform || null,
-      start: new Date(c.start_time).toISOString(),
-      durationMin:
-        typeof c.duration_seconds === 'number'
-          ? Math.round(c.duration_seconds / 60)
-          : null,
-      url: c.url || null,
-    }));
+    .map((c) => {
+      const start = new Date(c.start_time);
+      const durationMin = typeof c.duration_seconds === 'number' ? Math.round(c.duration_seconds / 60) : null;
+      const endTime = durationMin ? new Date(start.getTime() + durationMin * 60000).toISOString() : null;
+      return {
+        id: `ext-contest-${c.id}`,
+        category: 'contest',
+        title: c.name,
+        location: c.platform || null,
+        url: c.url || null,
+        start: start.toISOString(),
+        endTime,
+        durationMin,
+      };
+    });
 
   // Sessions + assignment deadlines for the member's enrolled bootcamps.
   const bootcampIds = (bootcamps || []).map((b) => b.id);
@@ -181,13 +194,47 @@ export async function getDailyActivityFeed(userId) {
     getBootcampTaskItems(userId, bootcampIds, titleMap).catch(() => []),
   ]);
 
+  const personalItems = (personalRows || []).map((r) => {
+    const startStr = r.start_time
+      ? `${r.event_date}T${r.start_time}:00`
+      : `${r.event_date}T00:00:00`;
+    return {
+      id: `personal-${r.id}`,
+      category: 'personal',
+      title: r.title,
+      description: r.description || null,
+      location: r.location || null,
+      url: r.url || null,
+      start: startStr,
+      endDate: r.end_date || null,
+      endTime: r.end_time || null,
+      allDay: !r.start_time,
+      durationMin: (r.start_time && r.end_time)
+        ? (() => {
+            const [sh, sm] = r.start_time.split(':').map(Number);
+            const [eh, em] = r.end_time.split(':').map(Number);
+            return Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+          })()
+        : null,
+      recurrence: r.recurrence || null,
+      colorId: r.color_id || null,
+      status: r.status || 'confirmed',
+      visibility: r.visibility || 'default',
+      guestsCanSeeOtherGuests: r.guests_can_see_other_guests ?? true,
+      reminders: r.reminders || [],
+      attendees: r.attendees || [],
+      conferenceLink: r.conference_link || null,
+      personalEventId: r.id,
+    };
+  });
+
   return [
     ...eventItems,
     ...contestItems,
     ...externalContestItems,
     ...sessionItems,
     ...taskItems,
-    ...(gcalItems || []),
+    ...personalItems,
   ];
 }
 
@@ -244,19 +291,25 @@ async function getBootcampSessionItems(userId, bootcampIds, titleMap) {
       return true; // all-bootcamp or unset
     })
     .filter((s) => s.scheduled_at || s.session_date)
-    .map((s) => ({
-      id: `session-${s.id}`,
-      category: 'session',
-      title: s.topic || 'Bootcamp session',
-      location: s.location || null,
-      start: new Date(s.scheduled_at || s.session_date).toISOString(),
-      durationMin: typeof s.duration === 'number' ? s.duration : null,
-      description: plainSnippet(s.description),
-      meetLink: s.meet_link || null,
-      recordingUrl: s.recording_url || null,
-      status: s.status || null,
-      bootcampTitle: titleMap[s.bootcamp_id] || null,
-    }));
+    .map((s) => {
+      const start = new Date(s.scheduled_at || s.session_date);
+      const durationMin = typeof s.duration === 'number' ? s.duration : null;
+      const endTime = durationMin ? new Date(start.getTime() + durationMin * 60000).toISOString() : null;
+      return {
+        id: `session-${s.id}`,
+        category: 'session',
+        title: s.topic || 'Bootcamp session',
+        description: plainSnippet(s.description),
+        location: s.location || null,
+        url: s.meet_link || null,
+        recordingUrl: s.recording_url || null,
+        start: start.toISOString(),
+        endTime,
+        durationMin,
+        status: s.status || null,
+        bootcampTitle: titleMap[s.bootcamp_id] || null,
+      };
+    });
 }
 
 /**
@@ -296,7 +349,7 @@ async function getBootcampTaskItems(userId, bootcampIds, titleMap) {
   const { data: tasks, error } = await supabaseAdmin
     .from('weekly_tasks')
     .select(
-      'id, title, description, difficulty, deadline, points, task_type, bootcamp_id'
+      'id, title, description, difficulty, deadline, start_time, created_at, points, task_type, bootcamp_id'
     )
     .in('bootcamp_id', bootcampIds)
     .not('deadline', 'is', null);
@@ -315,22 +368,28 @@ async function getBootcampTaskItems(userId, bootcampIds, titleMap) {
 
   return tasks.map((t) => {
     const sub = subByTask[t.id];
+    const deadlineISO = new Date(t.deadline).toISOString();
+    // Available-from = explicit start_time if mentor set one, else task created_at.
+    const availableRaw = t.start_time || t.created_at;
+    const availableISO = availableRaw ? new Date(availableRaw).toISOString() : deadlineISO;
     return {
       id: `task-${t.id}`,
       category: 'task',
       title: t.title,
+      description: plainSnippet(t.description),
       location: null,
-      start: new Date(t.deadline).toISOString(),
+      url: null,
+      start: availableISO,
+      endTime: deadlineISO,
+      availableISO,
       durationMin: null,
       isDeadline: true,
-      description: plainSnippet(t.description),
       bootcampTitle: titleMap[t.bootcamp_id] || null,
       taskType: t.task_type || null,
       difficulty: t.difficulty || null,
       points: typeof t.points === 'number' ? t.points : null,
-      pointsEarned:
-        typeof sub?.points_earned === 'number' ? sub.points_earned : null,
-      status: sub?.status || 'pending',
+      pointsEarned: typeof sub?.points_earned === 'number' ? sub.points_earned : null,
+      submissionStatus: sub?.status || 'pending',
     };
   });
 }
