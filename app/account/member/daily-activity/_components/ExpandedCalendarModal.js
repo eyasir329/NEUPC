@@ -31,8 +31,6 @@ const CATEGORY_COLOR = {
   contests: '#d97706',
   tasks:    '#6366f1',
   sessions: '#0ea5e9',
-  gcal:     '#4285f4',
-  gtask:    '#34a853',
 };
 
 function taskColor(task) {
@@ -81,9 +79,6 @@ const MONTH_NAME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct',
  * Returns each block with { col, totalCols } for width/offset calculation.
  */
 function layoutBlocks(blocks) {
-  // Combined priority score: startMin − durationMin.
-  // Higher score = later start AND/OR shorter duration = higher z-index (in front).
-  // Sort ascending: lowest score first (behind), highest score last (in front).
   const sorted = [...blocks].sort(
     (a, b) => (a.startMin - a.durationMin) - (b.startMin - b.durationMin)
   );
@@ -648,8 +643,6 @@ const LAYER_DEFAULTS = {
   contests: '#d97706',
   tasks:    '#6366f1',
   sessions: '#0ea5e9',
-  gcal:     '#4285f4',
-  gtask:    '#34a853',
 };
 
 const PALETTE = [
@@ -683,8 +676,6 @@ function resolveTaskColor(task, layerColors, subColors, projects) {
   }
   if (task.feedCategory === 'personal') return layerColors.personal;
   if (task.feedCategory === 'event')    return layerColors.events;
-  if (task.feedCategory === 'gcal')     return layerColors.gcal   || LAYER_DEFAULTS.gcal;
-  if (task.feedCategory === 'gtask')    return layerColors.gtask  || LAYER_DEFAULTS.gtask;
   // todo — per-project color
   const proj = (projects || []).find((p) => p.id === task.projectId);
   if (proj) return subColors[`project:${proj.name}`] || proj.color || layerColors.todo;
@@ -722,8 +713,9 @@ export default function ExpandedCalendarModal({
   onClose,
   onAddTask, onUpdateTask, onDeleteTask, onToggleComplete,
 }) {
-  const [viewMode, setViewMode] = useState('week'); // 'week' | 'month'
+  const [viewMode, setViewMode] = useState('week'); // 'day' | 'week' | 'month'
   const [anchor,   setAnchor]   = useState(() => weekStart(new Date()));
+  const [dayAnchor, setDayAnchor] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [monthAnchor, setMonthAnchor] = useState(() => {
     const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1);
   });
@@ -811,15 +803,19 @@ export default function ExpandedCalendarModal({
 
   // ── nav ──
   const prev = () => {
-    if (viewMode === 'week')  setAnchor((d) => addDays(d, -7));
+    if (viewMode === 'day')   setDayAnchor((d) => addDays(d, -1));
+    else if (viewMode === 'week') setAnchor((d) => addDays(d, -7));
     else setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   };
   const next = () => {
-    if (viewMode === 'week')  setAnchor((d) => addDays(d, 7));
+    if (viewMode === 'day')   setDayAnchor((d) => addDays(d, 1));
+    else if (viewMode === 'week') setAnchor((d) => addDays(d, 7));
     else setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   };
   const goToday = () => {
     const d = new Date();
+    const today = new Date(d); today.setHours(0,0,0,0);
+    setDayAnchor(today);
     setAnchor(weekStart(d));
     setMonthAnchor(new Date(d.getFullYear(), d.getMonth(), 1));
   };
@@ -882,7 +878,8 @@ export default function ExpandedCalendarModal({
           clipsRight: spanEnd   > weekEndStr,
         };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort((a, b) => (b.endCol - b.startCol) - (a.endCol - a.startCol));
   }, [tasks, showLayers, subVis, weekDays, isSpanning]);
 
   const dayTasksFiltered = useCallback((dateObj) => {
@@ -926,7 +923,9 @@ export default function ExpandedCalendarModal({
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const nowTop = nowMin * PX_PER_MIN;
 
-  const rangeLabel = viewMode === 'week'
+  const rangeLabel = viewMode === 'day'
+    ? `${DAY_ABBR[dayAnchor.getDay()]}, ${MONTH_NAME[dayAnchor.getMonth()]} ${dayAnchor.getDate()}, ${dayAnchor.getFullYear()}`
+    : viewMode === 'week'
     ? (() => { const s = weekDays[0], e = weekDays[6];
         return s.getMonth() === e.getMonth()
           ? `${MONTH_NAME[s.getMonth()]} ${s.getDate()}–${e.getDate()}, ${s.getFullYear()}`
@@ -1089,6 +1088,10 @@ export default function ExpandedCalendarModal({
 
             {/* ── View toggle ── */}
             <div className="flex bg-slate-900 border border-white/6 rounded-lg p-0.5 shrink-0 text-[9px] font-black font-mono">
+              <button onClick={() => setViewMode('day')}
+                className={`px-2.5 py-1 rounded-md transition ${viewMode === 'day' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                DAY
+              </button>
               <button onClick={() => setViewMode('week')}
                 className={`px-2.5 py-1 rounded-md transition ${viewMode === 'week' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}>
                 WEEK
@@ -1110,7 +1113,73 @@ export default function ExpandedCalendarModal({
             {/* ── Calendar area ── */}
             <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
-              {viewMode === 'week' ? (
+              {viewMode === 'day' ? (() => {
+                const dayStr = formatDateString(dayAnchor);
+                const isToday = dayStr === todayStr;
+                const { timed, allDay } = dayTasksFiltered(dayAnchor);
+                const timedSorted = [...timed].sort((a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin));
+                const allItems = [
+                  ...timedSorted.map((b) => ({ task: b.task, timeLabel: fmtMin(b.startMin) })),
+                  ...allDay.map((t) => ({ task: t, timeLabel: null })),
+                ];
+                return (
+                  <>
+                    {/* Day header */}
+                    <div className="flex flex-col shrink-0 bg-[#161b22] border-b border-white/[0.07]">
+                      <div className="flex">
+                        <div className="w-13 shrink-0 border-r border-white/6" />
+                        <div className={`flex-1 flex flex-col items-center py-2 ${isToday ? 'text-violet-400' : 'text-slate-400'}`}>
+                          <span className="text-[8px] font-black font-mono tracking-widest uppercase">{DAY_ABBR[dayAnchor.getDay()]}</span>
+                          <span className={`text-[18px] font-extrabold mt-0.5 leading-none ${isToday ? 'bg-violet-600 text-white w-9 h-9 rounded-full flex items-center justify-center' : ''}`}>
+                            {dayAnchor.getDate()}
+                          </span>
+                        </div>
+                      </div>
+                      {allItems.length > 0 && (
+                        <div className="flex">
+                          <div className="w-13 shrink-0 border-r border-white/6" />
+                          <div className="flex-1 px-1 pb-1 flex flex-wrap gap-0.5">
+                            {allItems.map(({ task: t, timeLabel }) => (
+                              <AllDayChip key={`dhdr-${t.id}`} task={t} color={getColor(t)} onSelect={openTask} timeLabel={timeLabel} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Day time grid */}
+                    <div ref={gridRef} className="flex flex-1 overflow-y-auto no-scrollbar overflow-x-hidden bg-[#0d1117]">
+                      <div className="w-13 shrink-0 relative border-r border-white/6">
+                        {HOURS.map((h) => (
+                          <div key={`hr-${h}`} style={{ height: HOUR_H }} className="relative flex items-start justify-end pr-2 pt-0.5">
+                            {h > 0 && <span className="text-[9px] font-mono text-slate-500 leading-none -translate-y-1.25">{h % 12 || 12}{h < 12 ? 'am' : 'pm'}</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 relative" style={{ height: HOUR_H * 24 }}>
+                        {HOURS.map((h) => (
+                          <div key={`dgl-${h}`} style={{ top: h * HOUR_H, height: HOUR_H }} className="absolute inset-x-0 border-t border-white/4">
+                            <div className="absolute inset-x-0 top-1/2 border-t border-white/2" />
+                          </div>
+                        ))}
+                        {isToday && <div className="absolute inset-0 bg-violet-500/2.5 pointer-events-none" />}
+                        {isToday && (
+                          <div style={{ top: nowTop }} className="absolute inset-x-0 z-50 pointer-events-none flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-red-500 -translate-x-1/2 shrink-0" />
+                            <div className="h-px flex-1 bg-red-500" />
+                          </div>
+                        )}
+                        {timed.map(({ task: t, startMin, durationMin, zOffset, isAllDay }) => (
+                          <TimedBlock key={`dtb-${t.id}`} task={t} color={getColor(t)}
+                            startMin={startMin} durationMin={durationMin}
+                            zOffset={zOffset} isAllDay={isAllDay}
+                            onSelect={openTask}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })() : viewMode === 'week' ? (
                 <>
                   {/* Week column headers + all-day */}
                   <div className="flex flex-col shrink-0 bg-[#161b22] border-b border-white/[0.07]">
@@ -1133,73 +1202,143 @@ export default function ExpandedCalendarModal({
                       })}
                     </div>
 
-                    {/* Spanning multi-day tasks + single-day all-day chips */}
-                    <div className="flex">
-                      <div className="w-13 shrink-0 border-r border-white/6" />
-                      {/* Grid overlay for spanning tasks — capped so total rows (spanning + chips) ≤ 5 */}
-                      <div className="flex-1 grid grid-cols-7 relative pb-1">
-                        {weekSpanningTasks.slice(0, 5).map(({ task: t, startCol, endCol, clipsLeft, clipsRight }) => {
-                          const color = getColor(t);
-                          const startLabel = t.startTime ? fmtMin(toMinutes(t.startTime)) : null;
-                          const endLabel   = t.endTime   ? fmtMin(toMinutes(t.endTime))   : null;
-                          return (
+                    {/* Spanning multi-day tasks + single-day all-day chips — hard-capped at 5 rows */}
+                    {(() => {
+                      const MAX_ROWS = 5;
+                      const CHIP_H   = 18; // px per row
+                      const ROW_GAP  = 2;  // px between rows
+
+                      // Greedy row packing for spanning tasks (already sorted longest-first)
+                      const rowOccupied = Array.from({ length: MAX_ROWS }, () => new Array(7).fill(false));
+                      const spanRows = [];
+                      for (const s of weekSpanningTasks) {
+                        let assigned = -1;
+                        for (let r = 0; r < MAX_ROWS; r++) {
+                          let free = true;
+                          for (let c = s.startCol; c <= s.endCol; c++) {
+                            if (rowOccupied[r][c]) { free = false; break; }
+                          }
+                          if (free) {
+                            for (let c = s.startCol; c <= s.endCol; c++) rowOccupied[r][c] = true;
+                            assigned = r;
+                            break;
+                          }
+                        }
+                        if (assigned >= 0) spanRows.push({ ...s, row: assigned });
+                      }
+
+                      // Per-column chip assignments — skip rows already occupied by spanning bars
+                      const colData = weekDays.map((d, colIdx) => {
+                        const dStr = formatDateString(d);
+                        const { timed, allDay } = dayTasksFiltered(d);
+                        const timedSorted = [...timed].sort((a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin));
+                        const allItems = [
+                          ...timedSorted.map((b) => ({ task: b.task, timeLabel: fmtMin(b.startMin) })),
+                          ...allDay.map((t) => ({ task: t, timeLabel: null })),
+                        ];
+                        // advance r past any spanning-occupied rows
+                        const nextFreeRow = (from) => {
+                          let r = from;
+                          while (r < MAX_ROWS && rowOccupied[r][colIdx]) r++;
+                          return r;
+                        };
+                        const visible = [];
+                        let hidden = 0;
+                        let r = nextFreeRow(0);
+                        for (const item of allItems) {
+                          if (r < MAX_ROWS) {
+                            visible.push({ ...item, row: r });
+                            r = nextFreeRow(r + 1);
+                          } else {
+                            hidden++;
+                          }
+                        }
+                        return { colIdx, d, dStr, visible, hidden };
+                      });
+
+                      const hasOverflow = colData.some(c => c.hidden > 0);
+                      const usedRows = Math.max(
+                        spanRows.length > 0 ? Math.max(...spanRows.map(s => s.row)) + 1 : 0,
+                        ...colData.map(c => c.visible.length > 0 ? Math.max(...c.visible.map(v => v.row)) + 1 : 0),
+                      );
+                      if (usedRows === 0 && !hasOverflow) return null;
+
+                      // Build flat grid items list (no React.Fragment needed)
+                      const gridItems = [];
+
+                      for (const { task: t, startCol, endCol, clipsLeft, clipsRight, row } of spanRows) {
+                        const color = getColor(t);
+                        const startLabel = t.startTime ? fmtMin(toMinutes(t.startTime)) : null;
+                        const endLabel   = t.endTime   ? fmtMin(toMinutes(t.endTime))   : null;
+                        gridItems.push(
+                          <div
+                            key={`span-${t.id}`}
+                            onClick={() => openTask(t)}
+                            title={t.title}
+                            style={{
+                              gridColumn: `${startCol + 1} / ${endCol + 2}`,
+                              gridRow: row + 1,
+                              backgroundColor: color + 'cc',
+                              borderLeft:  clipsLeft  ? 'none' : `3px solid ${color}`,
+                              borderRight: clipsRight ? 'none' : undefined,
+                              borderRadius: `${clipsLeft ? 0 : 5}px ${clipsRight ? 0 : 5}px ${clipsRight ? 0 : 5}px ${clipsLeft ? 0 : 5}px`,
+                            }}
+                            className="mx-0.5 px-1.5 flex items-center justify-between gap-1 overflow-hidden cursor-pointer hover:brightness-110 transition select-none min-w-0"
+                          >
+                            <span className="text-[8.5px] font-bold text-white truncate">{t.title}</span>
+                            <span className="text-[7px] text-white/60 font-mono shrink-0 hidden sm:block">
+                              {startLabel && endLabel ? `${startLabel}–${endLabel}` : startLabel || endLabel || ''}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      for (const { colIdx, d, dStr, visible, hidden } of colData) {
+                        for (const { task: t, timeLabel, row } of visible) {
+                          gridItems.push(
                             <div
-                              key={`span-${t.id}`}
-                              onClick={() => openTask(t)}
-                              title={t.title}
-                              style={{
-                                gridColumn: `${startCol + 1} / ${endCol + 2}`,
-                                backgroundColor: color + 'cc',
-                                borderLeft:  clipsLeft  ? 'none' : `3px solid ${color}`,
-                                borderRight: clipsRight ? 'none' : undefined,
-                                borderRadius: `${clipsLeft ? 0 : 6}px ${clipsRight ? 0 : 6}px ${clipsRight ? 0 : 6}px ${clipsLeft ? 0 : 6}px`,
-                              }}
-                              className="mx-0.5 mt-0.5 px-1.5 py-0.5 cursor-pointer hover:brightness-110 transition select-none flex items-center justify-between gap-1 overflow-hidden min-w-0"
+                              key={`hdr-${t.id}-${dStr}`}
+                              style={{ gridColumn: `${colIdx + 1} / ${colIdx + 2}`, gridRow: row + 1 }}
+                              className="px-0.5 min-w-0"
                             >
-                              <span className="text-[8.5px] font-bold text-white truncate">{t.title}</span>
-                              <span className="text-[7px] text-white/60 font-mono shrink-0 hidden sm:block">
-                                {startLabel && endLabel ? `${startLabel}–${endLabel}` : startLabel || endLabel || ''}
-                              </span>
+                              <AllDayChip task={t} color={getColor(t)} onSelect={openTask} timeLabel={timeLabel} />
                             </div>
                           );
-                        })}
-                        {/* All items per column — timed (sorted by startMin) + allDay */}
-                        {weekDays.map((d, idx) => {
-                          const dStr = formatDateString(d);
-                          const { timed, allDay } = dayTasksFiltered(d);
-                          // Same composite score as time grid: startMin − durationMin.
-                          // Higher score = shorter + later = shown first (top of header list).
-                          const timedSorted = [...timed].sort(
-                            (a, b) => (b.startMin - b.durationMin) - (a.startMin - a.durationMin)
-                          );
-                          const allItems = [
-                            ...timedSorted.map((b) => ({ task: b.task, timeLabel: fmtMin(b.startMin) })),
-                            ...allDay.map((t) => ({ task: t, timeLabel: null })),
-                          ];
-                          // Count only the capped spanning bars for this column.
-                          const spanCount = weekSpanningTasks.slice(0, 5).filter((s) => idx >= s.startCol && idx <= s.endCol).length;
-                          if (!allItems.length) return null;
-                          const MAX = Math.max(0, 5 - spanCount);
-                          const hidden = allItems.length - MAX;
-                          return (
-                            <div key={`ad-col-${idx}`} style={{ gridColumn: `${idx + 1} / ${idx + 2}` }} className="px-0.5 space-y-0.5">
-                              {allItems.slice(0, MAX).map(({ task: t, timeLabel }) => (
-                                <AllDayChip key={`hdr-${t.id}-${dStr}`} task={t} color={getColor(t)} onSelect={openTask} timeLabel={timeLabel} />
-                              ))}
-                              {hidden > 0 && (
-                                <button
-                                  onClick={() => { setAnchor(weekStart(d)); }}
-                                  title={`${hidden} more — view this day`}
-                                  className="text-[7px] font-mono font-black text-violet-400 hover:text-violet-300 px-1 cursor-pointer transition"
-                                >
-                                  +{hidden} more
-                                </button>
-                              )}
+                        }
+                        if (hidden > 0) {
+                          gridItems.push(
+                            <div
+                              key={`more-${colIdx}`}
+                              style={{ gridColumn: `${colIdx + 1} / ${colIdx + 2}`, gridRow: MAX_ROWS + 1 }}
+                              className="px-0.5 flex items-center"
+                            >
+                              <button
+                                onClick={() => { const day = new Date(d); day.setHours(0,0,0,0); setDayAnchor(day); setViewMode('day'); }}
+                                className="text-[7px] font-mono font-black text-violet-400 hover:text-violet-300 px-1 transition"
+                              >
+                                +{hidden} more
+                              </button>
                             </div>
                           );
-                        })}
-                      </div>
-                    </div>
+                        }
+                      }
+
+                      const totalRows = usedRows + (hasOverflow ? 1 : 0);
+                      return (
+                        <div className="flex">
+                          <div className="w-13 shrink-0 border-r border-white/6" />
+                          <div
+                            className="flex-1 grid grid-cols-7 pb-1"
+                            style={{
+                              gridTemplateRows: `repeat(${totalRows}, ${CHIP_H}px)`,
+                              rowGap: ROW_GAP,
+                            }}
+                          >
+                            {gridItems}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Week time grid */}
@@ -1354,8 +1493,8 @@ export default function ExpandedCalendarModal({
                     ))}
                   </div>
                   {/* Grid cells */}
-                  <div className="flex-1 overflow-y-auto no-scrollbar">
-                    <div className="grid grid-cols-7 h-full" style={{ gridAutoRows: 'minmax(100px, 1fr)' }}>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="grid grid-cols-7 h-full" style={{ gridAutoRows: '1fr' }}>
                       {monthGridDates.map((dateObj, idx) => {
                         const dStr = formatDateString(dateObj);
                         const isThisMonth = dateObj.getMonth() === monthMonth;
@@ -1366,35 +1505,35 @@ export default function ExpandedCalendarModal({
                         return (
                           <div
                             key={`mc-${idx}`}
-                            className={`border-r border-b border-white/4 p-1.5 flex flex-col ${!isThisMonth ? 'opacity-30' : ''}`}
+                            className={`border-r border-b border-white/[0.06] flex flex-col min-h-0 ${!isThisMonth ? 'opacity-25' : ''}`}
                           >
                             {/* Date number */}
-                            <div className="flex justify-between items-center mb-1">
-                              <span className={`text-[11px] font-extrabold leading-none font-mono ${isToday ? 'bg-violet-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : isThisMonth ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <div className="px-2 pt-1.5 pb-1 shrink-0">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); const d = new Date(dateObj); d.setHours(0,0,0,0); setDayAnchor(d); setViewMode('day'); }}
+                                className={`text-[11px] font-extrabold font-mono leading-none transition hover:opacity-70 ${isToday ? 'bg-violet-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : isThisMonth ? 'text-slate-300' : 'text-slate-500'}`}
+                              >
                                 {dateObj.getDate()}
-                              </span>
+                              </button>
                             </div>
-                            {/* Event chips */}
-                            <div className="space-y-0.5 overflow-hidden flex-1">
-                              {unique.slice(0, 5).map((t) => (
-                                <div
-                                  key={`mc-ev-${t.id}`}
-                                  onClick={(e) => { e.stopPropagation(); openTask(t); }}
-                                  title={t.title}
-                                  style={{ backgroundColor: getColor(t) + 'cc', borderLeft: `2px solid ${getColor(t)}` }}
-                                  className="text-[7.5px] font-bold text-white px-1 py-0.5 rounded truncate cursor-pointer hover:brightness-110 transition"
-                                >
-                                  {t.time && <span className="opacity-70 mr-0.5">{t.time}</span>}{t.title}
-                                </div>
-                              ))}
-                              {unique.length > 5 && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setAnchor(weekStart(dateObj)); setViewMode('week'); }}
-                                  className="text-[7px] font-mono font-black text-violet-400 hover:text-violet-300 pl-1 cursor-pointer transition"
-                                >
-                                  +{unique.length - 5} more
-                                </button>
-                              )}
+                            {/* Events — scrollable within fixed cell */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar px-1 pb-1 space-y-0.5 min-h-0">
+                              {unique.map((t) => {
+                                const c = getColor(t);
+                                const timeStr = t.time ? fmt24(t.time) : (t.startTime ? fmt24(t.startTime) : null);
+                                return (
+                                  <div
+                                    key={`mc-ev-${t.id}`}
+                                    onClick={(e) => { e.stopPropagation(); openTask(t); }}
+                                    title={t.title}
+                                    style={{ backgroundColor: c + '22', borderLeft: `2px solid ${c}` }}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md cursor-pointer hover:brightness-125 transition select-none"
+                                  >
+                                    {timeStr && <span className="text-[7px] font-mono shrink-0" style={{ color: c }}>{timeStr}</span>}
+                                    <span className="text-[8px] font-bold text-white truncate">{t.title}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
