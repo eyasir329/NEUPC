@@ -131,7 +131,7 @@ export async function pushTodosToTodoistAction(taskIds = []) {
   return { success: true, pushed: pushedCount };
 }
 
-/** Explicitly pull tasks/completions from Todoist. */
+/** Explicitly pull tasks/completions from Todoist (manual "Pull" button — imports new tasks too). */
 export async function pullFromTodoistAction() {
   const a = await memberId();
   if (a.error) return { error: a.error };
@@ -144,4 +144,25 @@ export async function pullFromTodoistAction() {
 
   revalidatePath(PATH);
   return { success: true, imported: result.imported ?? 0, updated: result.updated ?? 0 };
+}
+
+/**
+ * Quiet reconcile of already-linked Todoist tasks only (no new imports) — the
+ * Todoist counterpart to pullGoogleCompletionsAction, used by the page-load
+ * auto-sync and the unified "Sync all" control. Safe to call when disconnected.
+ *
+ * @returns {Promise<{updated:number}|{error:string}>}
+ */
+export async function pullTodoistCompletionsAction() {
+  const a = await memberId();
+  if (a.error) return { error: a.error };
+
+  const conn = await getConnection(a.userId);
+  if (!conn) return { updated: 0 };
+
+  const result = await pullFromTodoist(a.userId, { importNew: false });
+  if (result?.error) return { error: `Failed to sync Todoist: ${result.error}` };
+
+  if ((result.updated ?? 0) > 0) revalidatePath(PATH);
+  return { updated: result.updated ?? 0 };
 }

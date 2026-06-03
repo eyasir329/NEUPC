@@ -139,15 +139,10 @@ export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], ti
       for (const p of projs || []) projColorById.set(p.id, p.tone);
     }
 
-    const { data: comps } = await supabaseAdmin
-      .from('todo_completions')
-      .select('todo_id')
-      .eq('user_id', a.userId)
-      .in('todo_id', (rows || []).map((r) => r.id));
-    const completedSet = new Set((comps || []).map((c) => c.todo_id));
-
     for (const r of rows || []) {
-      const isCompleted = !r.recurrence?.freq && (!!r.completed || completedSet.has(r.id));
+      // Completion is single-source: the boolean `todos.completed` column.
+      // Recurring todos have no single done-state, so never mark them complete.
+      const isCompleted = !r.recurrence?.freq && !!r.completed;
       const todoPayload = {
         id: r.id,
         title: r.title,

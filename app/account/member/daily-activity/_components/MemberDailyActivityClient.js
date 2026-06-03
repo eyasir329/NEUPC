@@ -20,17 +20,27 @@
  *   Karma (XP / rank) is computed client-side from completed todos and is
  *   not persisted. Feed items are never editable.
  *
+ *   Integration sync: this client owns the single page-load reconcile and the
+ *   header "Sync" button, both via pullAllCompletionsAction() — which pulls
+ *   completion/changes from every connected integration (Google Calendar/Tasks
+ *   and Todoist) at once, then refreshes the task list. Per-service Push/Pull
+ *   buttons (with new-item imports) still live in their respective panels. See
+ *   docs/architecture/daily-activity.md for the full sync architecture.
+ *
  * @module daily-activity/MemberDailyActivityClient
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Plus, Search, X, ChevronRight, TrendingUp, Activity, Info, RotateCcw,
   CheckCircle2, Calendar, Target, Award, ShieldAlert, CalendarDays, ListChecks,
+  RefreshCw,
 } from 'lucide-react';
+
+import { pullAllCompletionsAction } from '@/app/_lib/actions/daily-activity-sync-actions';
 
 import {
   PageShell,
@@ -90,6 +100,11 @@ export default function MemberDailyActivityClient({ userId }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [toast, setToast] = useState(null);
+
+  // Unified integration sync ("Sync all"): busy state + a guard so the quiet
+  // page-load reconcile runs exactly once.
+  const [syncing, setSyncing] = useState(false);
+  const didAutoSync = useRef(false);
 
   const todayStr = getTodayDateString();
 
@@ -184,6 +199,42 @@ export default function MemberDailyActivityClient({ userId }) {
       setTasks([...(todosData || []), ...(feedData || [])]);
     } catch (err) {
       console.error('refreshTasks:', err);
+    }
+  };
+
+  // Once the initial load settles, quietly reconcile every connected integration
+  // (Google + Todoist) and refresh if anything changed remotely — so the page is
+  // up to date without the member pressing anything. Runs exactly once.
+  useEffect(() => {
+    if (loading || didAutoSync.current) return;
+    didAutoSync.current = true;
+    (async () => {
+      try {
+        const res = await pullAllCompletionsAction();
+        if ((res?.updated ?? 0) > 0) await refreshTasks();
+      } catch {
+        // best-effort — auto-sync never blocks the page
+      }
+    })();
+  }, [loading]);
+
+  // Unified "Sync all": reconcile Google + Todoist on demand, then refresh.
+  const handleSyncAll = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const res = await pullAllCompletionsAction();
+      await refreshTasks();
+      const n = res?.updated ?? 0;
+      showToast(
+        n > 0 ? `Synced — ${n} update${n === 1 ? '' : 's'} from your connected apps.` : 'Everything is up to date.',
+        'success'
+      );
+    } catch (err) {
+      console.error('handleSyncAll:', err);
+      showToast('Sync failed. Please try again.', 'error');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -534,6 +585,16 @@ export default function MemberDailyActivityClient({ userId }) {
           subtitle={`Plan your day, track your goals, and keep your streak alive · ${todayStr}`}
           actions={
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSyncAll}
+                disabled={syncing}
+                title="Sync completions & changes from Google Calendar and Todoist"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? 'Syncing…' : 'Sync'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => openCreatePane()}

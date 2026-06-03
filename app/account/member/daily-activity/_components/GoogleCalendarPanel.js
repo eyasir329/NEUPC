@@ -75,15 +75,16 @@ export default function GoogleCalendarPanel({ monthTasks = [], projects = [], ti
     try {
       const s = await getGoogleCalendarStatusAction();
       setStatus(s);
-      if (s?.connected) pullCompletions();
     } catch {
       setStatus({ connected: false, email: null, syncEnabled: false });
     } finally {
       setLoading(false);
     }
-  }, [pullCompletions]);
+  }, []);
 
-  // Initial status load (and a completion pull when connected).
+  // Initial status load. The page-load reconcile is owned centrally by
+  // MemberDailyActivityClient (pullAllCompletionsAction), so this panel no longer
+  // pulls on mount — that avoids double-pulling Google on every visit.
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus]);

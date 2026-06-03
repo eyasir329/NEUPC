@@ -27,6 +27,12 @@ function mapPriorityFromTodoist(p) {
   return 'low';
 }
 
+// Skip applying a remote change to a todo that was edited locally within this
+// window of the last Todoist sync — protects a fresh local edit/completion from
+// being reverted by a slightly-stale remote read (last-write-wins, local-favoured).
+// Mirrors the Google Calendar pull guard so both integrations behave the same.
+const LWW_GRACE_MS = 60 * 1000;
+
 /** Callback URL the OAuth flow returns to. */
 export function getRedirectUri() {
   const origin = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -376,21 +382,71 @@ export async function deleteTodoistTask(userId, todoistTaskId) {
 }
 
 /**
- * Pull tasks from Todoist → upsert into local `todos` table.
+ * Merge a linked todo's local subtasks with the live Todoist children.
+ *
+ * Todoist's active-tasks endpoint returns only NON-completed tasks, so a child's
+ * presence/absence is the source of completion truth:
+ *   • mapped child still in the active list  → still open (completed:false)
+ *   • mapped child missing from active list  → completed remotely (completed:true)
+ *   • remote child not yet mapped locally    → newly added subtask (completed:false)
+ * Local-only subtasks (never mirrored) are preserved untouched.
+ *
+ * @returns {{subtasks: object[], map: object}|null} next state, or null if unchanged.
+ */
+function mergeRemoteSubtasks(local, parentTodoistId, remoteMap, childrenByParent) {
+  const existingSubs = Array.isArray(local.subtasks) ? local.subtasks : [];
+  const existingMap = local.todoist_subtask_ids || {};
+  const mappedChildIds = new Set(Object.values(existingMap));
+
+  const nextSubs = [];
+  const nextMap = {};
+
+  // Carry existing subtasks, refreshing completion for the mirrored ones.
+  for (const s of existingSubs) {
+    const childId = existingMap[s.id];
+    if (childId) {
+      nextSubs.push({ ...s, completed: !remoteMap.has(childId) });
+      nextMap[s.id] = childId;
+    } else {
+      nextSubs.push(s); // local-only subtask
+    }
+  }
+
+  // Append remote children that aren't mapped to a local subtask yet.
+  for (const c of childrenByParent.get(parentTodoistId) || []) {
+    if (mappedChildIds.has(c.id)) continue;
+    const localId = `todoist-${c.id}`;
+    nextSubs.push({ id: localId, title: c.content || '(subtask)', completed: false });
+    nextMap[localId] = c.id;
+  }
+
+  // Only report a change when something actually moved (avoids needless writes).
+  const same =
+    JSON.stringify(existingSubs) === JSON.stringify(nextSubs) &&
+    JSON.stringify(existingMap) === JSON.stringify(nextMap);
+  return same ? null : { subtasks: nextSubs, map: nextMap };
+}
+
+/**
+ * Pull tasks from Todoist → reconcile/upsert into the local `todos` table.
  *
  * Mirrors the Google Calendar/Tasks pull pattern:
- *   1. Fetch all active Todoist tasks.
- *   2. Load existing local todos that have a `todoist_task_id` (already linked).
- *   3. Reconcile linked tasks — update title, description, priority, due date,
- *      completion status from the remote state.
- *   4. Import new root-level Todoist tasks that aren't linked yet,
- *      keyed by `todoist_task_id` so re-pulling never creates duplicates.
- *   5. Add a 'Todoist' label to imported tasks for traceability.
+ *   1. Fetch all active Todoist tasks (parents + children).
+ *   2. Load existing local todos already linked via `todoist_task_id`.
+ *   3. Reconcile linked tasks — title, description, priority, due date, parent
+ *      completion, and per-subtask completion — guarded by last-write-wins so a
+ *      fresh local edit is never clobbered by a stale remote read.
+ *   4. (Optional) Import new root-level Todoist tasks not linked yet, keyed by
+ *      `todoist_task_id` so re-pulling never duplicates, tagged with a 'Todoist'
+ *      label for traceability.
  *
  * @param {string} userId  The authenticated member's user_id.
- * @returns {{ imported: number, updated: number }}
+ * @param {object} [opts]
+ * @param {boolean} [opts.importNew=true]  When false, only reconciles existing
+ *   linked tasks (no new imports) — used for the quiet auto-sync on page load.
+ * @returns {{ imported: number, updated: number, error?: string }}
  */
-export async function pullFromTodoist(userId) {
+export async function pullFromTodoist(userId, { importNew = true } = {}) {
   try {
     const conn = await getConnection(userId);
     if (!conn) return { imported: 0, updated: 0 };
@@ -435,24 +491,6 @@ export async function pullFromTodoist(userId) {
       }
     }
 
-    // Helper: convert Todoist child tasks into local subtask format
-    // Local subtask shape: { id: string, title: string, completed: boolean }
-    function buildLocalSubtasks(parentTodoistId) {
-      const children = childrenByParent.get(parentTodoistId) || [];
-      const subtasks = [];
-      const subtaskIdMap = {}; // { localSubId: todoistChildId }
-      for (const c of children) {
-        const localId = `todoist-${c.id}`;
-        subtasks.push({
-          id: localId,
-          title: c.content || '(subtask)',
-          completed: false,
-        });
-        subtaskIdMap[localId] = c.id;
-      }
-      return { subtasks, subtaskIdMap };
-    }
-
     // ── 2. Load existing local todos that already have a todoist_task_id ─────
     const { data: existingLinked, error: loadErr } = await supabaseAdmin
       .from('todos')
@@ -470,58 +508,60 @@ export async function pullFromTodoist(userId) {
     let updated = 0;
 
     // ── 3. Reconcile existing linked tasks ──────────────────────────────────
+    const nowIso = () => new Date().toISOString();
     for (const local of existingLinked || []) {
+      // Last-write-wins: if the local row was edited more recently than our last
+      // sync (plus grace), prefer local and skip the remote reconcile entirely.
+      const localTime = local.updated_at ? new Date(local.updated_at).getTime() : 0;
+      const syncTime = local.todoist_synced_at ? new Date(local.todoist_synced_at).getTime() : 0;
+      if (localTime > syncTime + LWW_GRACE_MS) continue;
+
       const tid = local.todoist_task_id;
       const remote = remoteMap.get(tid);
-
       const patch = {};
 
       if (!remote) {
-        // Task no longer exists on Todoist (completed or deleted remotely).
+        // Task no longer in the active list (completed or deleted remotely).
         if (!local.completed) {
           patch.completed = true;
-          patch.completed_at = new Date().toISOString();
+          patch.completed_at = nowIso();
         }
       } else {
-        // Task still active on Todoist — sync fields.
-
+        // Task still active on Todoist — sync fields + reopen if needed.
         if (local.completed) {
           patch.completed = false;
           patch.completed_at = null;
         }
-
         if (remote.content && remote.content !== local.title) {
           patch.title = remote.content;
         }
-
         const remoteDesc = remote.description || '';
         const localDesc = local.description || local.notes || '';
         if (remoteDesc !== localDesc) {
           patch.description = remoteDesc;
           patch.notes = remoteDesc;
         }
-
         const remoteDate = remote.due?.date || null;
         if (remoteDate !== local.start_date) {
           patch.start_date = remoteDate;
         }
-
         const remotePriority = mapPriorityFromTodoist(remote.priority);
         if (remotePriority !== local.priority) {
           patch.priority = remotePriority;
         }
+      }
 
-        // Sync subtasks from Todoist children
-        const { subtasks: remoteSubtasks, subtaskIdMap } = buildLocalSubtasks(tid);
-        if (remoteSubtasks.length > 0) {
-          patch.subtasks = remoteSubtasks;
-          patch.todoist_subtask_ids = subtaskIdMap;
-        }
+      // Subtask completion merge (both when active and when the parent is gone —
+      // a vanished parent means its children completed/closed too).
+      const merged = mergeRemoteSubtasks(local, tid, remoteMap, childrenByParent);
+      if (merged) {
+        patch.subtasks = merged.subtasks;
+        patch.todoist_subtask_ids = merged.map;
       }
 
       if (Object.keys(patch).length > 0) {
-        patch.todoist_synced_at = new Date().toISOString();
-        patch.updated_at = new Date().toISOString();
+        patch.todoist_synced_at = nowIso();
+        patch.updated_at = nowIso();
         await supabaseAdmin
           .from('todos')
           .update(patch)
@@ -531,31 +571,39 @@ export async function pullFromTodoist(userId) {
       }
     }
 
-    // ── 4. Import new root-level Todoist tasks (skip subtasks & already-linked) ─
-    const newTasks = remoteTasks.filter(
-      (t) => !existingTodoistIds.has(t.id) && !t.parent_id
-    );
+    // ── 4. Import new root-level Todoist tasks (opt-in; skip already-linked) ──
+    if (importNew) {
+      const newTasks = remoteTasks.filter(
+        (t) => !existingTodoistIds.has(t.id) && !t.parent_id
+      );
 
-    for (const t of newTasks) {
-      const dueDate = t.due?.date || null;
-      const { subtasks, subtaskIdMap } = buildLocalSubtasks(t.id);
+      for (const t of newTasks) {
+        const children = childrenByParent.get(t.id) || [];
+        const subtasks = [];
+        const subtaskIdMap = {};
+        for (const c of children) {
+          const localId = `todoist-${c.id}`;
+          subtasks.push({ id: localId, title: c.content || '(subtask)', completed: false });
+          subtaskIdMap[localId] = c.id;
+        }
 
-      await supabaseAdmin.from('todos').insert({
-        user_id: userId,
-        title: t.content,
-        description: t.description || null,
-        notes: t.description || null,
-        priority: mapPriorityFromTodoist(t.priority),
-        start_date: dueDate,
-        labels: ['Todoist'],
-        subtasks,
-        comments: [],
-        completed: false,
-        todoist_task_id: t.id,
-        todoist_subtask_ids: subtaskIdMap,
-        todoist_synced_at: new Date().toISOString(),
-      });
-      imported++;
+        await supabaseAdmin.from('todos').insert({
+          user_id: userId,
+          title: t.content,
+          description: t.description || null,
+          notes: t.description || null,
+          priority: mapPriorityFromTodoist(t.priority),
+          start_date: t.due?.date || null,
+          labels: ['Todoist'],
+          subtasks,
+          comments: [],
+          completed: false,
+          todoist_task_id: t.id,
+          todoist_subtask_ids: subtaskIdMap,
+          todoist_synced_at: nowIso(),
+        });
+        imported++;
+      }
     }
 
     return { imported, updated };
