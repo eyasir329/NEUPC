@@ -37,7 +37,7 @@ import {
 import { EVENT_STATUS_CONFIG, CATEGORIES, VENUE_TYPES } from './eventConstants';
 import { driveImageUrl } from '@/app/_lib/utils/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
-import { AgendaEditor, SpeakersEditor } from './EventSubEditors';
+import { AgendaEditor, SpeakersEditor, TimelineEditor } from './EventSubEditors';
 import EventPublicContent from './EventPublicContent';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -695,6 +695,9 @@ function EditForm({
   const [speakers, setSpeakers] = useState(
     Array.isArray(event.speakers) ? event.speakers : []
   );
+  const [timeline, setTimeline] = useState(
+    Array.isArray(event.timeline) ? event.timeline : []
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -723,6 +726,7 @@ function EditForm({
     if (participationType === 'team' && teamSize) fd.set('team_size', teamSize);
     fd.set('agenda', JSON.stringify(agenda));
     fd.set('speakers', JSON.stringify(speakers));
+    fd.set('timeline', JSON.stringify(timeline));
     startTransition(async () => {
       const res = await saveAction(fd);
       if (res?.error) return setError(res.error);
@@ -1003,26 +1007,6 @@ function EditForm({
           </div>
         </Section>
 
-        {/* ── 1b. Agenda ── */}
-        <Section
-          icon={CalendarClock}
-          title="Agenda / Schedule"
-          description="Chronology timeline shown under the “Event Agenda” tab"
-          accentColor="#818cf8"
-        >
-          <AgendaEditor value={agenda} onChange={setAgenda} />
-        </Section>
-
-        {/* ── 1c. Speakers ── */}
-        <Section
-          icon={Mic2}
-          title="Panel Speakers"
-          description="Presenters shown under the “Panel Speakers” tab"
-          accentColor="#34d399"
-        >
-          <SpeakersEditor value={speakers} onChange={setSpeakers} />
-        </Section>
-
         {/* ── 2. Media Assets ── */}
         <Section
           icon={ImageIcon}
@@ -1179,6 +1163,11 @@ function EditForm({
               placeholder="e.g. CSE Auditorium, Room 301, or Zoom Meeting Link"
               className={inputCls}
             />
+          </div>
+
+          <div className="mt-4 border-t border-white/5 pt-4">
+            <Label hint="Schedule multiple sessions or day timelines">Event Multi-Timeline Sessions</Label>
+            <TimelineEditor value={timeline} onChange={setTimeline} />
           </div>
         </Section>
 

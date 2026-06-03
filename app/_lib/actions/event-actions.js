@@ -11,8 +11,7 @@ import {
   requireAdmin,
   createLogger,
   generateSlug,
-  parseEventAgenda,
-  parseEventSpeakers,
+  parseEventTimeline,
 } from '@/app/_lib/utils/helpers';
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/integrations/gdrive';
 import { generateImage } from '@/app/_lib/integrations/image-gen';
@@ -259,8 +258,7 @@ export async function createEventAction(formData) {
     tags: tags.length ? tags : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
-    agenda: parseEventAgenda(formData.get('agenda')),
-    speakers: parseEventSpeakers(formData.get('speakers')),
+    timeline: parseEventTimeline(formData.get('timeline')),
     created_by: admin.id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -371,8 +369,7 @@ export async function updateEventAction(formData) {
     tags: tags.length ? tags : null,
     prerequisites: formData.get('prerequisites')?.trim() || null,
     eligibility: formData.get('eligibility')?.trim() || 'all',
-    agenda: parseEventAgenda(formData.get('agenda')),
-    speakers: parseEventSpeakers(formData.get('speakers')),
+    timeline: parseEventTimeline(formData.get('timeline')),
     updated_at: new Date().toISOString(),
   };
 

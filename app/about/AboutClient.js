@@ -229,7 +229,7 @@ function GallerySlider({ images }) {
 function CommitteeCard({ member, accent = 'lime' }) {
   const name = member.users?.full_name || 'Member';
   const position = member.committee_positions?.title || '';
-  const avatar = member.users?.avatar_url;
+  const avatar = member.custom_avatar_url || member.users?.avatar_url;
   return (
     <motion.div
       variants={cardReveal}
@@ -356,7 +356,7 @@ export default function AboutClient({
           animate="visible"
           className="mx-auto w-full max-w-7xl"
         >
-          <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
+          <div className="max-w-3xl space-y-6 sm:max-w-5xl sm:space-y-8">
             {/* Eyebrow */}
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
@@ -391,9 +391,18 @@ export default function AboutClient({
             {description1 && (
               <motion.p
                 variants={fadeUp}
-                className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
+                className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:max-w-4xl sm:text-base lg:text-lg"
               >
                 {description1}
+              </motion.p>
+            )}
+
+            {description2 && (
+              <motion.p
+                variants={fadeUp}
+                className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:max-w-4xl sm:text-base lg:text-lg"
+              >
+                {description2}
               </motion.p>
             )}
 
@@ -561,11 +570,7 @@ export default function AboutClient({
                   Vision details coming soon.
                 </p>
               )}
-              {description2 && (
-                <p className="mt-6 border-t border-white/5 pt-5 text-sm leading-relaxed text-zinc-500 sm:text-base">
-                  {description2}
-                </p>
-              )}
+
             </motion.div>
           </motion.div>
         </div>

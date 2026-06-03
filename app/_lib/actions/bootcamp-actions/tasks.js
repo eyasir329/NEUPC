@@ -28,6 +28,19 @@ import {
   requireAdminOrBootcampMentor,
 } from './_helpers';
 
+const DHAKA_TZ = 'Asia/Dhaka'; // UTC+6, no DST
+
+/**
+ * Parse a datetime-local string (YYYY-MM-DDTHH:MM, no timezone) as
+ * Asia/Dhaka time and return a UTC ISO string for DB storage.
+ */
+function dhakaLocalToUTC(localStr) {
+  if (!localStr) return null;
+  // Intl gives us the UTC offset for Dhaka at any moment (always +0600, no DST).
+  // Easiest: append the fixed offset.
+  return new Date(localStr + ':00+06:00').toISOString();
+}
+
 /**
  * Get tasks scoped to a bootcamp.
  * Requires bootcamp_id column on weekly_tasks table.
@@ -54,6 +67,7 @@ export async function createBootcampTaskAction(formData) {
       cleanRichText(formData.get('description')?.trim() || '', 20000) || null;
     const difficulty = formData.get('difficulty') || 'medium';
     const deadline = formData.get('deadline');
+    const start_time = formData.get('start_time') || null;
     const problem_links = (() => {
       try {
         return JSON.parse(formData.get('problem_links') || '[]');
@@ -64,6 +78,10 @@ export async function createBootcampTaskAction(formData) {
 
     if (!title || !deadline)
       return { error: 'Title and deadline are required' };
+    const deadlineUTC = dhakaLocalToUTC(deadline);
+    const startTimeUTC = dhakaLocalToUTC(start_time);
+    if (startTimeUTC && startTimeUTC >= deadlineUTC)
+      return { error: 'Start time must be before the deadline' };
 
     const { data, error } = await supabaseAdmin
       .from('weekly_tasks')
@@ -72,7 +90,8 @@ export async function createBootcampTaskAction(formData) {
           title,
           description,
           difficulty,
-          deadline: new Date(deadline).toISOString(),
+          start_time: startTimeUTC,
+          deadline: deadlineUTC,
           assigned_by: mentorId,
           problem_links,
           bootcamp_id: bootcampId,
@@ -100,6 +119,7 @@ export async function updateBootcampTaskAction(formData) {
       cleanRichText(formData.get('description')?.trim() || '', 20000) || null;
     const difficulty = formData.get('difficulty') || 'medium';
     const deadline = formData.get('deadline');
+    const start_time = formData.get('start_time') || null;
     const problem_links = (() => {
       try {
         return JSON.parse(formData.get('problem_links') || '[]');
@@ -109,6 +129,10 @@ export async function updateBootcampTaskAction(formData) {
     })();
 
     if (!id || !title || !deadline) return { error: 'Missing required fields' };
+    const deadlineUTC = dhakaLocalToUTC(deadline);
+    const startTimeUTC = dhakaLocalToUTC(start_time);
+    if (startTimeUTC && startTimeUTC >= deadlineUTC)
+      return { error: 'Start time must be before the deadline' };
 
     const { data: existing } = await supabaseAdmin
       .from('weekly_tasks')
@@ -123,7 +147,8 @@ export async function updateBootcampTaskAction(formData) {
         title,
         description,
         difficulty,
-        deadline: new Date(deadline).toISOString(),
+        start_time: startTimeUTC,
+        deadline: deadlineUTC,
         problem_links,
         updated_at: new Date().toISOString(),
       })
@@ -301,7 +326,7 @@ export async function getMemberBootcampTasks(bootcampId) {
   const { data, error } = await supabaseAdmin
     .from('weekly_tasks')
     .select(
-      'id, title, description, difficulty, deadline, problem_links, task_type, points, created_at'
+      'id, title, description, difficulty, deadline, start_time, problem_links, task_type, points, created_at'
     )
     .eq('bootcamp_id', bootcampId)
     .order('created_at', { ascending: false });

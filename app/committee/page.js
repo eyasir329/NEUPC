@@ -144,7 +144,7 @@ function transformMemberData(member) {
     name: user?.full_name || 'Unknown Member',
     email: user?.email || '',
     phone: user?.phone || '',
-    avatar: user?.avatar_url || '/images/default-avatar.jpg',
+    avatar: member.custom_avatar_url || user?.avatar_url || '/images/default-avatar.jpg',
 
     // Position & role info
     role: position?.title || '',

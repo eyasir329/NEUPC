@@ -828,7 +828,7 @@ function ScheduledRoomsView({
     submitting ||
     !topic.trim() ||
     !when ||
-    (targetType === 'one-on-one' && !singleId) ||
+    (targetType === 'one-on-one' && !effectiveSingleId) ||
     (targetType === 'selected-group' && groupIds.length === 0) ||
     (mode === 'offline' && !location.trim());
 

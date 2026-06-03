@@ -5,6 +5,13 @@
 
 'use client';
 
+const DHAKA_TZ = 'Asia/Dhaka';
+
+function fmtDhaka(iso, opts) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-US', { timeZone: DHAKA_TZ, ...opts });
+}
+
 import {
   useState,
   useMemo,
@@ -2149,12 +2156,13 @@ function TaskStepper({ task, sub }) {
   const isGraded = sub?.points_earned != null || !!sub?.feedback;
   const isRedo = sub?.status === 'redo action required';
 
+  const availableDate = task.start_time || task.created_at;
   const steps = [
     {
-      label: 'Assigned',
+      label: 'Available',
       active: isAssigned,
-      desc: task.created_at
-        ? new Date(task.created_at).toLocaleDateString()
+      desc: availableDate
+        ? fmtDhaka(availableDate, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
         : 'Active',
     },
     {
@@ -2379,19 +2387,21 @@ function TaskCard({ task, onSubmitted, focusId }) {
             <Trophy className="h-3 w-3 text-amber-400" /> {task.points} pts
           </span>
         )}
+        {task.start_time && (
+          <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold text-gray-600">
+            <Calendar className="h-3 w-3 opacity-60" />
+            {fmtDhaka(task.start_time, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </span>
+        )}
         {task.deadline && (
           <span
             className={cn(
               'inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] font-bold',
-              isPastDue && !sub ? 'text-rose-455' : 'text-gray-500'
+              isPastDue && !sub ? 'text-rose-400' : 'text-gray-500'
             )}
           >
             <Clock className="h-3.5 w-3.5 opacity-60" />
-            {new Date(task.deadline).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            })}
+            {fmtDhaka(task.deadline, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
           </span>
         )}
         {sub ? (
@@ -2481,12 +2491,7 @@ function TaskCard({ task, onSubmitted, focusId }) {
                   {sub.submitted_at && (
                     <span className="font-mono text-[10.5px] font-bold text-gray-500">
                       Submitted{' '}
-                      {new Date(sub.submitted_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {fmtDhaka(sub.submitted_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                 </div>
@@ -3357,15 +3362,8 @@ function SessionCard({ session: s, userId, focusId }) {
   const [open, setOpen] = useState(isFocused);
   const dt = new Date(s.scheduled_at || s.session_date);
   const isUpcoming = s.status === 'scheduled' && dt >= new Date();
-  const dateStr = dt.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const timeStr = dt.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const dateStr = fmtDhaka(s.scheduled_at || s.session_date, { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = fmtDhaka(s.scheduled_at || s.session_date, { hour: '2-digit', minute: '2-digit' });
   const mentorName = s.mentor?.full_name || '—';
   const timeLeft = useCountdown(s.scheduled_at || s.session_date, isUpcoming);
 

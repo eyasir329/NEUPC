@@ -16,6 +16,8 @@ import {
 } from '@/app/_lib/services/data-service';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { uploadToDrive } from '@/app/_lib/integrations/gdrive';
+import crypto from 'crypto';
 
 async function requireAdminOrAdvisor() {
   const session = await auth();
@@ -177,6 +179,7 @@ export async function createCommitteeMemberAction(formData) {
     term_end: formData.get('term_end')?.toString() || null,
     is_current: formData.get('is_current')?.toString() === 'true',
     bio: formData.get('bio')?.toString().trim() || null,
+    custom_avatar_url: formData.get('custom_avatar_url')?.toString() || null,
   });
 
   // Upsert profile data
@@ -241,13 +244,19 @@ export async function updateCommitteeMemberAction(formData) {
   const positionId = formData.get('position_id')?.toString();
   if (!positionId) throw new Error('Position is required');
 
-  await updateCommitteeMember(id, {
+  const customAvatarUrl = formData.get('custom_avatar_url');
+  const updates = {
     position_id: positionId,
     term_start: termStart,
     term_end: formData.get('term_end')?.toString() || null,
     is_current: formData.get('is_current')?.toString() === 'true',
     bio: formData.get('bio')?.toString().trim() || null,
-  });
+  };
+  if (customAvatarUrl !== null) {
+    updates.custom_avatar_url = customAvatarUrl.toString().trim() || null;
+  }
+
+  await updateCommitteeMember(id, updates);
 
   // Get the user ID associated with the committee member
   const { data: memberData } = await supabaseAdmin
@@ -323,4 +332,58 @@ export async function deleteCommitteeMemberAction(formData) {
   );
 
   revalidateCommitteeViews();
+}
+
+export async function uploadCommitteeMemberAvatarAction(formData) {
+  const adminId = await requireAdminOrAdvisor();
+
+  const file = formData.get('file');
+  const memberId = formData.get('memberId');
+
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, WebP, or GIF.' };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `committee_avatar_${memberId || 'temp'}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  let url, fileId;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    ({ url, fileId } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'committee-avatars'
+    ));
+  } catch (err) {
+    console.error('Google Drive committee avatar upload error:', err);
+    return { error: 'Failed to upload image. Please try again.' };
+  }
+
+  if (memberId && !memberId.startsWith('cm_')) {
+    const { error: dbError } = await supabaseAdmin
+      .from('committee_members')
+      .update({ custom_avatar_url: url, updated_at: new Date().toISOString() })
+      .eq('id', memberId);
+
+    if (dbError) {
+      console.error('Failed to update committee avatar in database:', dbError);
+      return { error: `Image uploaded, but failed to save to database: ${dbError.message}` };
+    }
+
+    await logActivity(adminId, 'committee_member_avatar_uploaded', 'committee_member', memberId, {
+      filename: file.name,
+      fileId,
+    });
+
+    revalidateCommitteeViews();
+  }
+
+  return { success: true, url };
 }

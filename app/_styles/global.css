@@ -3,6 +3,25 @@
 
 /* ── Design System Utilities ──────────────────────────────────────────────── */
 
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Expanded calendar modal: hide scrollbars on every scroll container within it */
+.ecm-root,
+.ecm-root * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ecm-root::-webkit-scrollbar,
+.ecm-root *::-webkit-scrollbar {
+  display: none;
+}
+
 .kinetic-headline {
   letter-spacing: -0.04em;
   line-height: 0.85;

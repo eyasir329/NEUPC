@@ -246,4 +246,5 @@ Sync button → fullSyncAction()
 - [Bootcamps](./bootcamps.md) — bootcamp feature: data model, server actions, role panels, sync gaps
 - [Bootcamps — Panels](./bootcamps-panels.md) — per-role (admin/executive/advisor/mentor/member) functionality walkthrough
 - [Bootcamps — Security](./bootcamps-security.md) — auth helpers, role enforcement, audit notes
+- [Daily Activity](./daily-activity.md) — member planner: data model, read-only feed, two-way Google/Todoist sync
 - [Database Schema](../database/index.md) — table catalogue

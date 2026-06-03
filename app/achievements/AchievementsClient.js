@@ -1,8 +1,3 @@
-/**
- * @file Achievements client component
- * @module AchievementsClient
- */
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -56,7 +51,63 @@ function EmptyState({ icon, title, description, onClear }) {
 }
 
 // ---------------------------------------------------------------------------
-// Stat tile — same as events page
+// Animated counter for hero stats
+// ---------------------------------------------------------------------------
+function AnimatedCounter({ value, suffix = '' }) {
+  const [display, setDisplay] = useState(0);
+  const num = parseInt(value, 10) || 0;
+  useEffect(() => {
+    if (num === 0) return;
+    let start = 0;
+    const duration = 1200;
+    const startTime = performance.now();
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      start = Math.round(eased * num);
+      setDisplay(start);
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [num]);
+  return <>{display}{suffix}</>;
+}
+
+// ---------------------------------------------------------------------------
+// Search icon
+// ---------------------------------------------------------------------------
+function SearchIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dropdown select for filters
+// ---------------------------------------------------------------------------
+function FilterSelect({ value, onChange, options, label }) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none rounded-xl border border-white/10 bg-white/4 px-3 py-1.5 pr-7 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition-all hover:border-neon-lime/30 hover:text-neon-lime focus:border-neon-lime/40 focus:text-neon-lime focus:outline-none [&>option]:bg-gray-950 [&>option]:text-zinc-300"
+        aria-label={label}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      <svg className="pointer-events-none absolute top-1/2 right-2 h-3 w-3 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -177,6 +228,83 @@ const PARTICIPATION_CATEGORY_EMOJI = {
   Community: '🤝',
   Certification: '📜',
 };
+
+// ---------------------------------------------------------------------------
+// Percentile & Leaderboard Helpers
+// ---------------------------------------------------------------------------
+
+function getRankPercentileColor(topPercentage) {
+  if (topPercentage <= 1) return { bar: 'bg-red-500', text: 'text-red-400', border: 'border-red-500/30', bg: 'bg-red-500/10' };
+  if (topPercentage <= 5) return { bar: 'bg-orange-500', text: 'text-orange-400', border: 'border-orange-500/30', bg: 'bg-orange-500/10' };
+  if (topPercentage <= 10) return { bar: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10' };
+  if (topPercentage <= 25) return { bar: 'bg-yellow-500', text: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10' };
+  if (topPercentage <= 50) return { bar: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10' };
+  if (topPercentage <= 75) return { bar: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500/10' };
+  return { bar: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' };
+}
+
+function parseResultRankTotal(result, contestName, contestTotals) {
+  const fallback = {
+    rank: null,
+    total: contestTotals[contestName] || 100,
+    topPercentage: 100,
+    percentile: 0,
+  };
+
+  if (!result) return fallback;
+  const cleaned = result.replace(/\*/g, '');
+  
+  // 1. "X out of Y"
+  const outOfMatch = cleaned.match(/(\d+)\s+out\s+of\s+(\d+)/i);
+  if (outOfMatch) {
+    const rank = parseInt(outOfMatch[1], 10);
+    const total = parseInt(outOfMatch[2], 10);
+    if (rank > 0 && total > 0) {
+      const topPercentage = (rank / total) * 100;
+      const percentile = ((total - rank + 1) / total) * 100;
+      return { rank, total, topPercentage, percentile };
+    }
+  }
+  
+  // 2. Standalone awards
+  const lowercase = cleaned.toLowerCase();
+  let rank = null;
+  if (lowercase.includes('1st') || lowercase.includes('champion') || lowercase.includes('winner') || lowercase.includes('first')) {
+    rank = 1;
+  } else if (lowercase.includes('2nd') || lowercase.includes('second')) {
+    rank = 2;
+  } else if (lowercase.includes('3rd') || lowercase.includes('third')) {
+    rank = 3;
+  }
+  
+  if (rank !== null) {
+    const total = contestTotals[contestName] || 100;
+    const topPercentage = (rank / total) * 100;
+    const percentile = ((total - rank + 1) / total) * 100;
+    return { rank, total, topPercentage, percentile };
+  }
+  
+  return fallback;
+}
+
+function LeaderboardRankProgressBar({ topPercentage, className = '' }) {
+  const percentile = 100 - topPercentage;
+  const colors = getRankPercentileColor(topPercentage);
+  
+  return (
+    <div
+      className={cn("group/progress relative shrink-0", className)}
+      title={`Top ${topPercentage.toFixed(1)}% | Rank Percentile: ${percentile.toFixed(1)}%`}
+    >
+      <div className="relative h-10 w-2 rounded-full bg-white/10">
+        <div
+          className={cn("absolute right-0 bottom-0 left-0 transition-all duration-300 rounded-full", colors.bar)}
+          style={{ height: `${percentile}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Hero — synced with Events page pattern
@@ -398,16 +526,29 @@ function AchievementDetailModal({ achievement, onClose }) {
   }, [onClose, activePhoto]);
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-2xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/75 backdrop-blur-2xl"
+      />
 
       {/* Sheet */}
-      <div
-        className="animate-slide-up relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={achievement.title || 'Achievement details'}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Cover image ── */}
@@ -424,6 +565,7 @@ function AchievementDetailModal({ achievement, onClose }) {
           {/* Close button */}
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -613,7 +755,7 @@ function AchievementDetailModal({ achievement, onClose }) {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Gallery lightbox (nested above the sheet) ── */}
       {activePhoto && (
@@ -623,6 +765,7 @@ function AchievementDetailModal({ achievement, onClose }) {
         >
           <button
             onClick={() => setActivePhoto(null)}
+            aria-label="Close photo viewer"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -643,6 +786,7 @@ function AchievementDetailModal({ achievement, onClose }) {
                     ]
                   );
                 }}
+                aria-label="Previous photo"
                 className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -667,6 +811,7 @@ function AchievementDetailModal({ achievement, onClose }) {
                     galleryImages[(idx + 1) % galleryImages.length]
                   );
                 }}
+                aria-label="Next photo"
                 className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -704,7 +849,7 @@ function AchievementDetailModal({ achievement, onClose }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -740,16 +885,29 @@ function ParticipationDetailModal({ record, onClose }) {
   }, [onClose, activePhoto]);
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-2xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/75 backdrop-blur-2xl"
+      />
 
       {/* Sheet */}
-      <div
-        className="animate-slide-up relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={record.contest_name || 'Participation details'}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Cover image ── */}
@@ -765,6 +923,7 @@ function ParticipationDetailModal({ record, onClose }) {
 
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -975,7 +1134,7 @@ function ParticipationDetailModal({ record, onClose }) {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Photo lightbox (nested above the sheet) ── */}
       {activePhoto && (
@@ -985,6 +1144,7 @@ function ParticipationDetailModal({ record, onClose }) {
         >
           <button
             onClick={() => setActivePhoto(null)}
+            aria-label="Close photo viewer"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -1001,6 +1161,7 @@ function ParticipationDetailModal({ record, onClose }) {
                     photos[(idx - 1 + photos.length) % photos.length]
                   );
                 }}
+                aria-label="Previous photo"
                 className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -1021,6 +1182,7 @@ function ParticipationDetailModal({ record, onClose }) {
                   const idx = photos.findIndex((p) => p.id === activePhoto.id);
                   setActivePhoto(photos[(idx + 1) % photos.length]);
                 }}
+                aria-label="Next photo"
                 className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
               >
                 <svg
@@ -1058,7 +1220,7 @@ function ParticipationDetailModal({ record, onClose }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -1081,94 +1243,104 @@ function AchievementCard({ achievement, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={`View details for ${achievement.title}`}
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Cover image */}
-      <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
+      <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
           alt={achievement.featured_photo?.name ?? achievement.title}
           fill
-          className="object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
+          className="object-cover transition-transform duration-700 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
-        {achievement.year && (
-          <div className="absolute top-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
-            {achievement.year}
-          </div>
-        )}
+        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-black/30 to-transparent" />
+        {/* Top badges row */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {rs && (
+            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
+              {rs.emoji} <ResultText text={achievement.result} />
+            </span>
+          )}
+          {achievement.year && (
+            <span className="rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
+              {achievement.year}
+            </span>
+          )}
+        </div>
         {achievement.is_featured && (
-          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute top-3 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
-            ★ Featured
+          <div className="border-amber-500/30 bg-amber-500/15 text-amber-300 absolute top-3 left-3 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md">
+            ⭐ Featured
           </div>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col p-6">
-        <div className="mb-4 flex items-start justify-between gap-2">
-          <h3 className="font-heading group-hover:text-neon-lime line-clamp-2 text-xl font-black tracking-tight text-white uppercase transition-colors">
-            {achievement.title}
-          </h3>
-          {rs && <span className="mt-0.5 shrink-0 text-lg">{rs.emoji}</span>}
-        </div>
+      <div className="flex flex-1 flex-col p-5">
+        {/* Category tags */}
+        {categories.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {categories.slice(0, 2).map((cat) => (
+              <span
+                key={cat}
+                className="rounded-full border border-white/10 bg-white/4 px-2.5 py-0.5 font-mono text-[9px] font-bold text-zinc-400 uppercase"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <h3 className="font-heading group-hover:text-neon-lime mb-2 line-clamp-2 text-lg font-black tracking-tight text-white uppercase transition-colors">
+          {achievement.title}
+        </h3>
 
         {achievement.contest_name && (
-          <p className="mb-3 line-clamp-1 font-mono text-[11px] text-zinc-500">
+          <p className="mb-2 line-clamp-1 font-mono text-[11px] text-zinc-500">
             {achievement.contest_name}
           </p>
         )}
 
         {achievement.description && (
-          <p className="mb-4 line-clamp-2 text-sm leading-relaxed font-light text-zinc-500">
+          <p className="mb-3 line-clamp-2 text-sm leading-relaxed font-light text-zinc-500">
             {achievement.description}
           </p>
         )}
 
         <div className="mt-auto" />
 
-        {/* Tags */}
-        {categories.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {categories.slice(0, 2).map((cat) => (
-              <span
-                key={cat}
-                className="border-neon-lime/30 text-neon-lime rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase"
-              >
-                {cat}
-              </span>
-            ))}
-            {rs && (
-              <span className="border-neon-lime/30 text-neon-lime rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase">
-                <ResultText text={achievement.result} />
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-white/8 pt-4">
-          <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-600">
+        <div className="flex items-center justify-between border-t border-white/6 pt-3">
+          <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
             {achievement.is_team ? (
               <>
                 <span>👥</span>
-                <span className="max-w-[120px] truncate">
+                <span className="max-w-[130px] truncate">
                   {achievement.team_name ?? 'Team'}
                 </span>
               </>
             ) : participants.length > 0 ? (
               <>
                 <span>👤</span>
-                <span className="max-w-[120px] truncate">
+                <span className="max-w-[130px] truncate">
                   {participants[0]}
                 </span>
               </>
             ) : null}
           </div>
-          <span className="text-neon-lime font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
-            View →
+          <span className="text-neon-lime flex items-center gap-1 font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
+            Details
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </span>
         </div>
       </div>
@@ -1183,52 +1355,63 @@ function AchievementCard({ achievement, onClick }) {
 function ParticipationRecordCard({ record, onClick }) {
   const catEmoji = PARTICIPATION_CATEGORY_EMOJI[record.category] ?? '🎯';
   const members = record.team_members ?? [];
-  const photos = record.photos ?? [];
   const rs = getResultStyle(record.result);
 
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={`View details for ${record.contest_name}`}
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
     >
       {/* Cover */}
-      <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-t-2xl">
+      <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={record.featured_photo?.url ?? '/placeholder-event.png'}
           alt={record.featured_photo?.name ?? record.contest_name}
           fill
-          className="object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
+          className="object-cover transition-transform duration-700 group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute top-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
-          {record.year}
+        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-black/30 to-transparent" />
+        {/* Top badges */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {rs && (
+            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
+              {rs.emoji} <ResultText text={record.result} />
+            </span>
+          )}
+          <span className="rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
+            {record.year}
+          </span>
         </div>
         {record.is_team && (
-          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute top-2.5 left-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
+          <div className="border-sky-500/30 bg-sky-500/15 text-sky-300 absolute top-3 left-3 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md">
             👥 Team
-          </div>
-        )}
-        {rs && (
-          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute right-2.5 bottom-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
-            {rs.emoji} <ResultText text={record.result} />
           </div>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col p-6">
-        <div className="text-neon-lime mb-1 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
+      <div className="flex flex-1 flex-col p-5">
+        <div className="mb-2 font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
           {catEmoji} {record.category ?? 'Contest'}
         </div>
-        <h4 className="font-heading group-hover:text-neon-lime mb-3 line-clamp-2 text-lg font-black tracking-tight text-white uppercase transition-colors">
+        <h4 className="font-heading group-hover:text-neon-lime mb-2 line-clamp-2 text-lg font-black tracking-tight text-white uppercase transition-colors">
           {record.contest_name}
         </h4>
 
         {record.achievements && (
           <div className="mb-3">
-            <span className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
+            <span className="border-violet-500/20 bg-violet-500/8 text-violet-300 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
               🏆 {record.achievements.title}
             </span>
           </div>
@@ -1236,16 +1419,16 @@ function ParticipationRecordCard({ record, onClick }) {
 
         <div className="mt-auto" />
 
-        {/* Lead member / Team name */}
-        <div className="border-t border-white/8 pt-4">
+        {/* Footer */}
+        <div className="border-t border-white/6 pt-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               {record.is_team ? (
                 <>
-                  <div className="bg-neon-lime/15 ring-neon-lime/20 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1">
+                  <div className="bg-sky-500/15 ring-sky-500/20 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1">
                     <span className="text-xs">👥</span>
                   </div>
-                  <p className="truncate font-mono text-[10px] font-semibold text-zinc-400">
+                  <p className="max-w-[120px] truncate font-mono text-[10px] font-semibold text-zinc-400">
                     {record.team_name || 'Team'}
                   </p>
                 </>
@@ -1270,57 +1453,36 @@ function ParticipationRecordCard({ record, onClick }) {
                       </div>
                     )}
                   </div>
-                  <p className="truncate font-mono text-[10px] text-zinc-400">
+                  <p className="max-w-[120px] truncate font-mono text-[10px] text-zinc-400">
                     {record.users?.full_name ?? members[0]?.name ?? 'Unknown'}
                   </p>
                 </>
               )}
             </div>
-            <span className="text-neon-lime font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
-              View →
+            <span className="text-neon-lime flex items-center gap-1 font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
+              Details
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </span>
           </div>
 
-          {/* Team members */}
+          {/* Team member avatar stack */}
           {record.is_team && members.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {members.slice(0, 3).map((m, i) => (
-                <span
-                  key={i}
-                  className="rounded-full border border-white/8 px-2 py-0.5 font-mono text-[9px] text-zinc-500"
-                >
-                  {m.name}
+            <div className="mt-2.5 flex items-center">
+              <div className="flex -space-x-1.5">
+                {members.slice(0, 4).map((m, i) => (
+                  <div
+                    key={i}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border border-[#08090f] bg-white/8 font-mono text-[8px] font-bold text-zinc-400"
+                    title={m.name}
+                  >
+                    {(m.name?.[0] ?? '?').toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              {members.length > 4 && (
+                <span className="ml-1.5 font-mono text-[9px] text-zinc-600">
+                  +{members.length - 4} more
                 </span>
-              ))}
-              {members.length > 3 && (
-                <span className="rounded-full border border-[#1A1D28] px-2 py-0.5 font-mono text-[9px] text-zinc-600">
-                  +{members.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-
-          {photos.length > 0 && (
-            <div className="mt-3 flex gap-1.5">
-              {photos.slice(0, 3).map((p) => (
-                <div
-                  key={p.id}
-                  className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[#1A1D28]"
-                >
-                  <Image
-                    src={p.url}
-                    alt={p.name}
-                    fill
-                    className="object-cover"
-                    sizes="36px"
-                    unoptimized
-                  />
-                </div>
-              ))}
-              {photos.length > 3 && (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#1A1D28] font-mono text-[9px] text-zinc-600">
-                  +{photos.length - 3}
-                </div>
               )}
             </div>
           )}
@@ -1339,6 +1501,12 @@ export default function AchievementsClient({
   participations: propParticipations = [],
   settings = {},
 }) {
+  // ── Tab state ───────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('achievements');
+
+  // ── Search state ────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+
   // ── Achievement state ────────────────────────────────────────────────────
   const [activeFilter, setActiveFilter] = useState('All');
   const [achPage, setAchPage] = useState(1);
@@ -1351,34 +1519,134 @@ export default function AchievementsClient({
   const [participYearFilter, setParticipatYearFilter] = useState('All');
   const [participPage, setParticipatPage] = useState(1);
 
+  // ── Leaderboard state ────────────────────────────────────────────────────
+  const [leaderboardYearFilter, setLeaderboardYearFilter] = useState('All');
+  const [leaderboardCatFilter, setLeaderboardCatFilter] = useState('All');
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
+
   // ── Modal state ──────────────────────────────────────────────────────────
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [selectedParticipation, setSelectedParticipation] = useState(null);
 
   // ── Scroll refs & callbacks ──────────────────────────────────────────────
-  const achGridRef = useRef(null);
-  const participGridRef = useRef(null);
+  const gridRef = useRef(null);
+  const leaderboardRef = useRef(null);
 
-  const scrollToAchGrid = useCallback(() => {
-    achGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToGrid = useCallback(() => {
+    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const scrollToParticipGrid = useCallback(() => {
-    participGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const changeLeaderboardPage = useCallback((p) => {
+    setLeaderboardPage(p);
+    setTimeout(() => {
+      leaderboardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }, []);
 
   const changeAchPage = useCallback((p) => {
     setAchPage(p);
-    setTimeout(() => scrollToAchGrid(), 50);
-  }, [scrollToAchGrid]);
+    setTimeout(() => scrollToGrid(), 50);
+  }, [scrollToGrid]);
 
   const changeParticipPage = useCallback((p) => {
     setParticipatPage(p);
-    setTimeout(() => scrollToParticipGrid(), 50);
-  }, [scrollToParticipGrid]);
+    setTimeout(() => scrollToGrid(), 50);
+  }, [scrollToGrid]);
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const achievements = propAchievements;
+
+  // ── Leaderboard Calculations ─────────────────────────────────────────────
+  const contestTotals = useMemo(() => {
+    const totals = {};
+    propParticipations.forEach((p) => {
+      if (p.result) {
+        const cleaned = p.result.replace(/\*/g, '');
+        const outOfMatch = cleaned.match(/(\d+)\s+out\s+of\s+(\d+)/i);
+        if (outOfMatch) {
+          const total = parseInt(outOfMatch[2], 10);
+          if (total && (!totals[p.contest_name] || total > totals[p.contest_name])) {
+            totals[p.contest_name] = total;
+          }
+        }
+      }
+    });
+    return totals;
+  }, [propParticipations]);
+
+  const leaderboardCategories = useMemo(() => {
+    const teamCats = propParticipations
+      .filter((p) => p.is_team && p.team_name)
+      .map((p) => p.category)
+      .filter(Boolean);
+    const uniqueCats = [...new Set(teamCats)].sort();
+    return ['All', ...uniqueCats];
+  }, [propParticipations]);
+
+  const leaderboardYears = useMemo(() => {
+    const teamYears = propParticipations
+      .filter((p) => p.is_team && p.team_name)
+      .map((p) => p.year)
+      .filter(Boolean);
+    const uniqueYears = [...new Set(teamYears)].sort((a, b) => b - a);
+    return ['All', ...uniqueYears.map(String)];
+  }, [propParticipations]);
+
+  const leaderboardEntries = useMemo(() => {
+    const entries = [];
+    propParticipations.forEach((p) => {
+      if (!p.is_team || !p.team_name) return;
+      
+      const parsed = parseResultRankTotal(p.result, p.contest_name, contestTotals);
+      if (!parsed) return;
+      
+      // Only show entries that have a parsed numerical rank (e.g. 1st, 2nd, 3rd, or X out of Y) and exclude those marked as "Participated"
+      if (parsed.rank === null || !p.result || p.result.toLowerCase().includes('participat')) return;
+      
+      // Filter by Year and Category
+      if (leaderboardYearFilter !== 'All' && String(p.year) !== leaderboardYearFilter) return;
+      if (leaderboardCatFilter !== 'All' && p.category !== leaderboardCatFilter) return;
+      
+      entries.push({
+        ...p,
+        rank: parsed.rank,
+        total: parsed.total,
+        topPercentage: parsed.topPercentage,
+        percentile: parsed.percentile,
+      });
+    });
+    
+    return entries
+      .sort((a, b) => {
+        if (b.percentile !== a.percentile) {
+          return b.percentile - a.percentile;
+        }
+        if (a.rank !== null && b.rank !== null) {
+          if (a.rank !== b.rank) {
+            return a.rank - b.rank;
+          }
+        } else if (a.rank !== null) {
+          return -1;
+        } else if (b.rank !== null) {
+          return 1;
+        }
+        return b.year - a.year;
+      });
+  }, [propParticipations, contestTotals, leaderboardYearFilter, leaderboardCatFilter]);
+
+  const LEADERBOARD_PAGE_SIZE = 10;
+  
+  const leaderboardTotalPages = Math.ceil(
+    leaderboardEntries.length / LEADERBOARD_PAGE_SIZE
+  );
+  const leaderboardCurrentPage = Math.min(leaderboardPage, leaderboardTotalPages || 1);
+  
+  const paginatedLeaderboardEntries = useMemo(() => {
+    return leaderboardEntries.slice(
+      (leaderboardCurrentPage - 1) * LEADERBOARD_PAGE_SIZE,
+      leaderboardCurrentPage * LEADERBOARD_PAGE_SIZE
+    );
+  }, [leaderboardEntries, leaderboardCurrentPage]);
 
   // Featured achievements (for the carousel)
   const featuredAchievements = useMemo(
@@ -1421,9 +1689,18 @@ export default function AchievementsClient({
       .map((name) => ({ name, icon: DEFAULT_CATEGORY_ICON })),
   ];
 
-  // Filtered achievements — applies all four filters
+  // Filtered achievements — applies all filters + search
   const filteredAchievements = useMemo(() => {
     let rows = [...achievements];
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      rows = rows.filter((a) =>
+        [a.title, a.contest_name, a.team_name, a.description, ...(Array.isArray(a.participants) ? a.participants : [])]
+          .filter(Boolean)
+          .some((s) => String(s).toLowerCase().includes(q))
+      );
+    }
     if (activeFilter !== 'All')
       rows = rows.filter((a) =>
         a.category
@@ -1441,6 +1718,7 @@ export default function AchievementsClient({
     return rows;
   }, [
     achievements,
+    searchQuery,
     activeFilter,
     achYearFilter,
     achTypeFilter,
@@ -1474,12 +1752,21 @@ export default function AchievementsClient({
 
   const filteredParticipations = useMemo(() => {
     let rows = [...propParticipations];
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      rows = rows.filter((r) =>
+        [r.contest_name, r.team_name, r.category, r.notes, ...(r.team_members ?? []).map((m) => m.name)]
+          .filter(Boolean)
+          .some((s) => String(s).toLowerCase().includes(q))
+      );
+    }
     if (participCatFilter !== 'All')
       rows = rows.filter((r) => r.category === participCatFilter);
     if (participYearFilter !== 'All')
       rows = rows.filter((r) => String(r.year) === participYearFilter);
     return rows;
-  }, [propParticipations, participCatFilter, participYearFilter]);
+  }, [propParticipations, searchQuery, participCatFilter, participYearFilter]);
 
   // ── Participation pagination ─────────────────────────────────────────────
   const participTotalPages = Math.ceil(
@@ -1595,28 +1882,28 @@ export default function AchievementsClient({
               <div className="grid grid-cols-4 divide-x divide-white/8">
                 <div className="pr-3 sm:pr-6 lg:pr-8">
                   <StatTile
-                    value={`${propAchievements.length}+`}
+                    value={<><AnimatedCounter value={propAchievements.length} />+</>}
                     label="Achievements"
                     mobileLabel="Total"
                   />
                 </div>
                 <div className="px-3 sm:px-6 lg:px-8">
                   <StatTile
-                    value={`${medalistCount}+`}
+                    value={<><AnimatedCounter value={medalistCount} />+</>}
                     label="Medalists"
                     accent
                   />
                 </div>
                 <div className="px-3 sm:px-6 lg:px-8">
                   <StatTile
-                    value={`${propParticipations.length}+`}
+                    value={<><AnimatedCounter value={propParticipations.length} />+</>}
                     label="Participations"
                     mobileLabel="Events"
                   />
                 </div>
                 <div className="pl-3 sm:pl-6 lg:pl-8">
                   <StatTile
-                    value={yearsActive > 0 ? `${yearsActive}+` : '5+'}
+                    value={<><AnimatedCounter value={yearsActive} />+</>}
                     label="Years Active"
                     mobileLabel="Years"
                   />
@@ -1647,21 +1934,21 @@ export default function AchievementsClient({
         </section>
       )}
 
-      {/* ══════════════════════ VICTORY LOG (Achievements) ══════════════════════ */}
+      {/* ══════════════════════ UNIFIED TROPHY CASE ══════════════════════ */}
       <section
         id="achievements"
-        ref={achGridRef}
+        ref={gridRef}
         className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
         style={{ scrollMarginTop: '80px' }}
       >
         <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
           <SectionHeading
             tag="Operations Log / 002"
-            title="Victory"
-            accent="Log"
+            title="The"
+            accent="Archive"
           />
 
-          {/* Filter bar */}
+          {/* Search + Tab + Filters */}
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -1669,292 +1956,203 @@ export default function AchievementsClient({
             viewport={viewport}
             className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
           >
-            {/* Category tabs */}
-            <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
-              {categories.map((category) => {
-                const isActive = activeFilter === category.name;
-                return (
+            {/* Search bar + Tab toggle row */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {/* Search */}
+              <div className="relative flex-1">
+                <SearchIcon className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setAchPage(1);
+                    setParticipatPage(1);
+                  }}
+                  placeholder={activeTab === 'achievements' ? 'Search achievements, contests, teams...' : 'Search contests, teams, categories...'}
+                  className="w-full rounded-xl border border-white/8 bg-white/3 py-2 pr-3 pl-9 font-mono text-[11px] text-zinc-300 placeholder:text-zinc-600 transition-all focus:border-neon-lime/30 focus:outline-none"
+                />
+                {searchQuery && (
                   <button
-                    key={category.name}
-                    onClick={() => {
-                      setActiveFilter(category.name);
-                      setAchPage(1);
-                    }}
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                      isActive
-                        ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                        : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                    )}
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-full p-0.5 text-zinc-500 transition-colors hover:text-zinc-300"
                   >
-                    <span>{category.icon}</span>
-                    <span>{category.name}</span>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
-                );
-              })}
-            </div>
-            {/* Year + type row */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
-              {achievementYears.length > 2 && (
-                <div className="flex items-center gap-0.5 overflow-x-auto rounded-xl border border-white/8 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {achievementYears.map((yr) => (
+                )}
+              </div>
+
+              {/* Tab toggle */}
+              {propParticipations.length > 0 && (
+                <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-white/8 bg-white/2 p-0.5">
+                  {[
+                    { key: 'achievements', label: '🏆 Achievements', count: propAchievements.length },
+                    { key: 'participations', label: '📋 Participations', count: propParticipations.length },
+                  ].map(({ key, label, count }) => (
                     <button
-                      key={yr}
+                      key={key}
                       onClick={() => {
-                        setAchYearFilter(yr);
-                        setAchPage(1);
+                        setActiveTab(key);
+                        setSearchQuery('');
                       }}
                       className={cn(
-                        'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
-                        achYearFilter === yr
-                          ? 'bg-neon-lime/15 text-neon-lime'
-                          : 'text-zinc-600 hover:text-zinc-300'
+                        'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all',
+                        activeTab === key
+                          ? 'bg-neon-lime/15 text-neon-lime shadow-sm'
+                          : 'text-zinc-500 hover:text-zinc-300'
                       )}
                     >
-                      {yr}
+                      {label}
+                      <span className={cn(
+                        'rounded-full px-1.5 py-0.5 text-[8px] tabular-nums',
+                        activeTab === key ? 'bg-neon-lime/20 text-neon-lime' : 'bg-white/5 text-zinc-600'
+                      )}>
+                        {count}
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
-              <div className="flex items-center gap-0.5 rounded-xl border border-white/8 p-0.5">
-                {[
-                  { key: 'All', label: 'All' },
-                  { key: 'Team', label: 'Team' },
-                  { key: 'Individual', label: 'Solo' },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setAchTypeFilter(key);
-                      setAchPage(1);
-                    }}
-                    className={cn(
-                      'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
-                      achTypeFilter === key
-                        ? 'bg-neon-lime/15 text-neon-lime'
-                        : 'text-zinc-600 hover:text-zinc-300'
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="ml-auto flex items-center gap-3">
-                {hasActiveAchievementFilters && (
-                  <button
-                    onClick={resetAchievementFilters}
-                    className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
-                  >
-                    <svg
-                      className="h-3 w-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                    Clear
-                  </button>
-                )}
-                <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                  <span className="text-neon-lime font-bold">
-                    {filteredAchievements.length}
-                  </span>{' '}
-                  result{filteredAchievements.length !== 1 ? 's' : ''}
-                </span>
-              </div>
             </div>
-          </motion.div>
 
-          {/* Grid */}
-          {filteredAchievements.length === 0 ? (
-            <EmptyState
-              icon="🔍"
-              title="No Achievements Found"
-              description="Try different filters or clear your selection"
-              onClear={
-                hasActiveAchievementFilters
-                  ? resetAchievementFilters
-                  : undefined
-              }
-            />
-          ) : (
-            <>
-              <motion.div
-                key={`${activeFilter}-${achYearFilter}-${achTypeFilter}-${achResultFilter}-${achCurrentPage}`}
-                variants={stagger}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
-              >
-                {paginatedAchievements.map((achievement) => (
-                  <motion.div
-                    key={achievement.id}
-                    variants={cardReveal}
-                    className="h-full"
-                  >
-                    <AchievementCard
-                      achievement={achievement}
-                      onClick={() => setSelectedAchievement(achievement)}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
-              <InlinePagination
-                currentPage={achCurrentPage}
-                totalPages={achTotalPages}
-                total={filteredAchievements.length}
-                perPage={ACHIEVEMENT_PAGE_SIZE}
-                onPageChange={changeAchPage}
-                itemLabel="achievement"
-              />
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ══════════════════════ PARTICIPATION LOG ══════════════════════ */}
-      {propParticipations.length > 0 && (
-        <section
-          id="participation"
-          ref={participGridRef}
-          className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
-          style={{ scrollMarginTop: '80px' }}
-        >
-          <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
-            <SectionHeading
-              tag="Contest Records / 003"
-              title="Participation"
-              accent="History"
-            />
-
-            {/* Filter bar */}
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
-            >
-              {/* Category tabs */}
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
-                {participationCategories.map((cat) => {
-                  const isActive = participCatFilter === cat;
-                  const emoji =
-                    cat !== 'All'
-                      ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯')
-                      : '✦';
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setParticipatCatFilter(cat);
-                        setParticipatPage(1);
-                      }}
-                      className={cn(
-                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                        isActive
-                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                      )}
-                    >
-                      <span>{emoji}</span>
-                      <span>{cat}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Year row */}
-              {participationYears.length > 2 && (
-                <div className="flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
-                  <div className="flex items-center gap-0.5 overflow-x-auto rounded-xl border border-white/8 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {participationYears.map((yr) => (
+            {/* Conditional filter row */}
+            {activeTab === 'achievements' ? (
+              <div className="flex flex-wrap items-center gap-2 border-t border-white/6 pt-3">
+                {/* Category pills */}
+                <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {categories.map((category) => {
+                    const isActive = activeFilter === category.name;
+                    return (
                       <button
-                        key={yr}
-                        onClick={() => {
-                          setParticipatYearFilter(yr);
-                          setParticipatPage(1);
-                        }}
+                        key={category.name}
+                        onClick={() => { setActiveFilter(category.name); setAchPage(1); }}
                         className={cn(
-                          'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
-                          participYearFilter === yr
-                            ? 'bg-neon-lime/15 text-neon-lime'
-                            : 'text-zinc-600 hover:text-zinc-300'
+                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          isActive
+                            ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                            : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                         )}
                       >
-                        {yr}
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
                       </button>
-                    ))}
-                  </div>
-                  <div className="ml-auto flex items-center gap-3">
-                    {hasActiveParticipationFilters && (
-                      <button
-                        onClick={resetParticipationFilters}
-                        className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
-                      >
-                        <svg
-                          className="h-3 w-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2.5}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                        Clear
-                      </button>
-                    )}
-                    <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                      <span className="text-neon-lime font-bold">
-                        {filteredParticipations.length}
-                      </span>{' '}
-                      record{filteredParticipations.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
-            </motion.div>
+                {/* Compact dropdowns */}
+                <div className="flex items-center gap-2">
+                  {achievementYears.length > 2 && (
+                    <FilterSelect value={achYearFilter} onChange={(v) => { setAchYearFilter(v); setAchPage(1); }} options={achievementYears} label="Year" />
+                  )}
+                  <FilterSelect value={achTypeFilter} onChange={(v) => { setAchTypeFilter(v); setAchPage(1); }} options={['All', 'Team', 'Individual']} label="Type" />
+                  {hasActiveAchievementFilters && (
+                    <button onClick={resetAchievementFilters} className="text-neon-lime hover:bg-neon-lime/10 rounded-lg p-1.5 transition-colors" title="Clear filters">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                  <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
+                    <span className="text-neon-lime font-bold">{filteredAchievements.length}</span> result{filteredAchievements.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2 border-t border-white/6 pt-3">
+                {/* Category pills */}
+                <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {participationCategories.map((cat) => {
+                    const isActive = participCatFilter === cat;
+                    const emoji = cat !== 'All' ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯') : '✦';
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => { setParticipatCatFilter(cat); setParticipatPage(1); }}
+                        className={cn(
+                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          isActive
+                            ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                            : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
+                        )}
+                      >
+                        <span>{emoji}</span>
+                        <span>{cat}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  {participationYears.length > 2 && (
+                    <FilterSelect value={participYearFilter} onChange={(v) => { setParticipatYearFilter(v); setParticipatPage(1); }} options={participationYears} label="Year" />
+                  )}
+                  {hasActiveParticipationFilters && (
+                    <button onClick={resetParticipationFilters} className="text-neon-lime hover:bg-neon-lime/10 rounded-lg p-1.5 transition-colors" title="Clear filters">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                  <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
+                    <span className="text-neon-lime font-bold">{filteredParticipations.length}</span> record{filteredParticipations.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            )}
+          </motion.div>
 
-            {/* Grid */}
-            {filteredParticipations.length === 0 ? (
+          {/* Conditional Grid */}
+          {activeTab === 'achievements' ? (
+            filteredAchievements.length === 0 ? (
               <EmptyState
                 icon="🔍"
-                title="No Records Found"
+                title="No Achievements Found"
                 description="Try different filters or clear your selection"
-                onClear={
-                  hasActiveParticipationFilters
-                    ? resetParticipationFilters
-                    : undefined
-                }
+                onClear={hasActiveAchievementFilters ? resetAchievementFilters : undefined}
               />
             ) : (
               <>
                 <motion.div
-                  key={`${participCatFilter}-${participYearFilter}-${participCurrentPage}`}
+                  key={`ach-${activeFilter}-${achYearFilter}-${achTypeFilter}-${achResultFilter}-${achCurrentPage}-${searchQuery}`}
+                  variants={stagger}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
+                >
+                  {paginatedAchievements.map((achievement) => (
+                    <motion.div key={achievement.id} variants={cardReveal} className="h-full">
+                      <AchievementCard achievement={achievement} onClick={() => setSelectedAchievement(achievement)} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+                <InlinePagination
+                  currentPage={achCurrentPage}
+                  totalPages={achTotalPages}
+                  total={filteredAchievements.length}
+                  perPage={ACHIEVEMENT_PAGE_SIZE}
+                  onPageChange={changeAchPage}
+                  itemLabel="achievement"
+                />
+              </>
+            )
+          ) : (
+            filteredParticipations.length === 0 ? (
+              <EmptyState
+                icon="🔍"
+                title="No Records Found"
+                description="Try different filters or clear your selection"
+                onClear={hasActiveParticipationFilters ? resetParticipationFilters : undefined}
+              />
+            ) : (
+              <>
+                <motion.div
+                  key={`part-${participCatFilter}-${participYearFilter}-${participCurrentPage}-${searchQuery}`}
                   variants={stagger}
                   initial="hidden"
                   animate="visible"
                   className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
                   {paginatedParticipations.map((record) => (
-                    <motion.div
-                      key={record.id}
-                      variants={cardReveal}
-                      className="h-full"
-                    >
-                      <ParticipationRecordCard
-                        record={record}
-                        onClick={() => setSelectedParticipation(record)}
-                      />
+                    <motion.div key={record.id} variants={cardReveal} className="h-full">
+                      <ParticipationRecordCard record={record} onClick={() => setSelectedParticipation(record)} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -1967,10 +2165,186 @@ export default function AchievementsClient({
                   itemLabel="record"
                 />
               </>
+            )
+          )}
+        </div>
+      </section>
+
+        {/* ══════════════════════ TEAM LEADERBOARD ══════════════════════ */}
+      <section ref={leaderboardRef} className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8" style={{ scrollMarginTop: '80px' }}>
+        <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
+          <SectionHeading
+            tag="Performance Index / 003"
+            title="Top"
+            accent="Performances"
+          />
+
+          {/* Leaderboard Panel */}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="glass-panel space-y-6 rounded-2xl p-4 sm:p-6"
+          >
+            {/* Header / Filters row */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+                  Filters:
+                </span>
+                <FilterSelect
+                  value={leaderboardYearFilter}
+                  onChange={(v) => {
+                    setLeaderboardYearFilter(v);
+                    setLeaderboardPage(1);
+                  }}
+                  options={leaderboardYears}
+                  label="Filter by Year"
+                />
+                <FilterSelect
+                  value={leaderboardCatFilter}
+                  onChange={(v) => {
+                    setLeaderboardCatFilter(v);
+                    setLeaderboardPage(1);
+                  }}
+                  options={leaderboardCategories}
+                  label="Filter by Category"
+                />
+              </div>
+              <span className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+                {leaderboardEntries.length} Record{leaderboardEntries.length !== 1 ? 's' : ''} on Leaderboard
+              </span>
+            </div>
+
+            {/* Rows list — self-animating + re-keyed per page (mirrors the
+                Archive grid) so paginated rows always render, never blank */}
+            <motion.div
+              key={`lb-${leaderboardYearFilter}-${leaderboardCatFilter}-${leaderboardCurrentPage}`}
+              variants={stagger}
+              initial="hidden"
+              animate="visible"
+              className="space-y-4"
+            >
+              {paginatedLeaderboardEntries.length > 0 ? (
+                paginatedLeaderboardEntries.map((entry, index) => {
+                  const absoluteIndex = (leaderboardCurrentPage - 1) * LEADERBOARD_PAGE_SIZE + index;
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      variants={cardReveal}
+                      className="group/row relative flex flex-col gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.02] md:flex-row md:items-center md:justify-between md:gap-6"
+                    >
+                      {/* Left: Rank + Rank Bar + Team & Contest Info */}
+                      <div className="flex flex-1 items-center gap-4 min-w-0">
+                        {/* Leaderboard Rank */}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-heading text-lg font-black select-none bg-white/3 border border-white/5">
+                          {(() => {
+                            if (absoluteIndex === 0) return <span className="text-xl" title="1st Place">🥇</span>;
+                            if (absoluteIndex === 1) return <span className="text-xl" title="2nd Place">🥈</span>;
+                            if (absoluteIndex === 2) return <span className="text-xl" title="3rd Place">🥉</span>;
+                            return <span className="text-zinc-500 font-mono text-sm">#{absoluteIndex + 1}</span>;
+                          })()}
+                        </div>
+
+                        {/* Rank progress bar */}
+                        <LeaderboardRankProgressBar topPercentage={entry.topPercentage} />
+
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <h4 className="font-heading text-base font-black text-white group-hover/row:text-neon-lime transition-colors">
+                              {entry.team_name}
+                            </h4>
+                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
+                              {entry.category}
+                            </span>
+                            <span className="font-mono text-[10px] text-zinc-500">
+                              {entry.year}
+                            </span>
+                          </div>
+
+                          <p className="mt-1 font-mono text-[10px] tracking-wider text-zinc-400 uppercase truncate">
+                            {entry.contest_url ? (
+                              <a
+                                href={entry.contest_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-neon-lime hover:underline inline-flex items-center gap-1"
+                              >
+                                {entry.contest_name}
+                                <svg className="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            ) : (
+                              entry.contest_name
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Team Members + Result Percentile */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/5 pt-3 md:border-t-0 md:pt-0 md:justify-end md:gap-8">
+                        {/* Team members */}
+                        {Array.isArray(entry.team_members) && entry.team_members.length > 0 && (
+                          <div className="flex flex-col gap-1 md:items-end">
+                            <span className="font-mono text-[8px] tracking-[0.2em] text-zinc-500 uppercase">
+                              Team Members
+                            </span>
+                            <div className="flex flex-wrap gap-1.5 md:justify-end">
+                              {entry.team_members.map((member, idx) => (
+                                <span
+                                  key={idx}
+                                  className="rounded-lg bg-white/5 border border-white/5 px-2 py-0.5 font-mono text-[9px] text-zinc-300"
+                                >
+                                  {member.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Rank Percentile Pill */}
+                        <div className="text-right shrink-0">
+                          <div className="font-heading text-lg font-black text-neon-lime">
+                            Top {entry.topPercentage.toFixed(1)}%
+                          </div>
+                          <div className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
+                            {entry.result}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                  <div className="text-2xl">🔍</div>
+                  <p className="font-heading text-sm font-bold text-white">
+                    No leaderboard records found
+                  </p>
+                  <p className="font-mono text-[9px] tracking-wider text-zinc-600 uppercase">
+                    Try clearing or modifying the filters
+                  </p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Pagination */}
+            {leaderboardTotalPages > 1 && (
+              <InlinePagination
+                currentPage={leaderboardCurrentPage}
+                totalPages={leaderboardTotalPages}
+                total={leaderboardEntries.length}
+                perPage={LEADERBOARD_PAGE_SIZE}
+                onPageChange={changeLeaderboardPage}
+                itemLabel="team performance"
+              />
             )}
-          </div>
-        </section>
-      )}
+          </motion.div>
+        </div>
+      </section>
 
       {/* ══════════════════════ CTA ══════════════════════ */}
       <section className="relative overflow-hidden bg-[#05060B] py-20 sm:py-24 lg:py-32">
@@ -1984,26 +2358,15 @@ export default function AchievementsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="mx-auto mb-12 max-w-3xl text-center sm:mb-16"
+            className="mx-auto mb-10 max-w-2xl text-center"
           >
-            <div className="mb-4 flex items-center justify-center gap-3 sm:mb-5 sm:gap-4">
+            <div className="mb-4 flex items-center justify-center gap-3">
               <span className="bg-neon-lime h-px w-8 sm:w-10" />
-              <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
-                Membership
+              <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
+                Join Us
               </span>
               <span className="bg-neon-lime h-px w-8 sm:w-10" />
             </div>
-            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
-              {settings?.achievements_page_cta_title || (
-                <>
-                  Ready to Write Your <span className="neon-text">Legacy?</span>
-                </>
-              )}
-            </h2>
-            <p className="mx-auto mt-5 max-w-xl px-2 text-sm leading-relaxed font-light text-zinc-400 sm:mt-6 sm:px-0">
-              {settings?.achievements_page_cta_subtitle ||
-                'Join NEUPC and compete alongside the best problem solvers in the country.'}
-            </p>
           </motion.div>
 
           <motion.div
@@ -2019,11 +2382,10 @@ export default function AchievementsClient({
                   /// Next cohort
                 </p>
                 <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
-                  Ready to compete at the highest level?
+                  {settings?.achievements_page_cta_title || (<>Ready to Write Your <span className="neon-text">Legacy?</span></>)}
                 </h3>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
-                  Applications are open. Submit once, and our committee reviews
-                  within a week.
+                  {settings?.achievements_page_cta_subtitle || 'Join NEUPC and compete alongside the best problem solvers in the country. Applications are open.'}
                 </p>
               </div>
               <div className="flex flex-row flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-3">
@@ -2060,18 +2422,22 @@ export default function AchievementsClient({
 
       <ScrollToTop />
 
-      {selectedAchievement && (
-        <AchievementDetailModal
-          achievement={selectedAchievement}
-          onClose={() => setSelectedAchievement(null)}
-        />
-      )}
-      {selectedParticipation && (
-        <ParticipationDetailModal
-          record={selectedParticipation}
-          onClose={() => setSelectedParticipation(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedAchievement && (
+          <AchievementDetailModal
+            achievement={selectedAchievement}
+            onClose={() => setSelectedAchievement(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedParticipation && (
+          <ParticipationDetailModal
+            record={selectedParticipation}
+            onClose={() => setSelectedParticipation(null)}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

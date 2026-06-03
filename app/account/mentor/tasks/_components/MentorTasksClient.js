@@ -5,6 +5,29 @@
 
 'use client';
 
+const DHAKA_TZ = 'Asia/Dhaka';
+
+/** Format a UTC ISO string for display in Asia/Dhaka time. */
+function fmtDhaka(iso, opts) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-US', { timeZone: DHAKA_TZ, ...opts });
+}
+
+/** Convert a UTC ISO string to a datetime-local input value (YYYY-MM-DDTHH:MM) in Dhaka time. */
+function utcToDhakaLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  // Use Intl to get the Dhaka-local parts.
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: DHAKA_TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(d).map(({ type, value }) => [type, value]));
+  const hh = parts.hour === '24' ? '00' : parts.hour;
+  return `${parts.year}-${parts.month}-${parts.day}T${hh}:${parts.minute}`;
+}
+
 import { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardList,
@@ -309,6 +332,7 @@ export default function MentorTasksClient({
   const [taskFormDifficulty, setTaskFormDifficulty] = useState('medium');
   const [taskFormPoints, setTaskFormPoints] = useState(10);
   const [taskFormDueDate, setTaskFormDueDate] = useState('');
+  const [taskFormStartTime, setTaskFormStartTime] = useState('');
   const activeBootcamps = useMemo(
     () => bootcamps.filter((bc) => bc.status === 'published'),
     [bootcamps]
@@ -562,6 +586,7 @@ export default function MentorTasksClient({
     fd.set('description', taskFormDesc);
     fd.set('difficulty', taskFormDifficulty);
     fd.set('deadline', taskFormDueDate);
+    if (taskFormStartTime) fd.set('start_time', taskFormStartTime);
     fd.set('target_audience', taskFormBootcamp);
     fd.set('task_type', taskFormType);
     fd.set('points', String(taskFormPoints));
@@ -588,6 +613,7 @@ export default function MentorTasksClient({
       setTaskFormDifficulty('medium');
       setTaskFormPoints(10);
       setTaskFormDueDate('');
+      setTaskFormStartTime('');
     }
   };
 
@@ -612,7 +638,8 @@ export default function MentorTasksClient({
   const openEditModal = (task) => {
     setEditingTask({
       ...task,
-      deadlineFormatted: task.deadline ? task.deadline.slice(0, 16) : '',
+      deadlineFormatted: utcToDhakaLocal(task.deadline),
+      startTimeFormatted: utcToDhakaLocal(task.start_time),
     });
     setTaskDeskSubTab('assign');
   };
@@ -631,6 +658,7 @@ export default function MentorTasksClient({
     fd.set('description', editingTask.description || '');
     fd.set('difficulty', editingTask.difficulty || 'medium');
     fd.set('deadline', editingTask.deadlineFormatted);
+    if (editingTask.startTimeFormatted) fd.set('start_time', editingTask.startTimeFormatted);
     fd.set('task_type', editingTask.task_type || 'Exercise');
     fd.set('points', String(editingTask.points ?? 10));
 
@@ -652,7 +680,8 @@ export default function MentorTasksClient({
                 difficulty: editingTask.difficulty,
                 task_type: editingTask.task_type,
                 points: editingTask.points,
-                deadline: new Date(editingTask.deadlineFormatted).toISOString(),
+                start_time: editingTask.startTimeFormatted ? new Date(editingTask.startTimeFormatted + ':00+06:00').toISOString() : null,
+                deadline: new Date(editingTask.deadlineFormatted + ':00+06:00').toISOString(),
               }
         )
       );
@@ -931,15 +960,7 @@ export default function MentorTasksClient({
                             <p className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500">
                               <Clock className="h-2.5 w-2.5 text-gray-500" />
                               {sub.submitted_at
-                                ? new Date(sub.submitted_at).toLocaleDateString(
-                                    'en-US',
-                                    {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    }
-                                  )
+                                ? fmtDhaka(sub.submitted_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                                 : 'Just Now'}
                             </p>
                           </div>
@@ -1422,9 +1443,7 @@ export default function MentorTasksClient({
                                   {studentName}
                                 </span>
                                 <span className="shrink-0 font-mono text-[9px] text-gray-500">
-                                  {new Date(
-                                    sub.created_at
-                                  ).toLocaleDateString()}
+                                  {fmtDhaka(sub.created_at, { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </span>
                               </div>
                               <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-400">
@@ -2199,7 +2218,30 @@ export default function MentorTasksClient({
                         />
                       </div>
 
-                      <div className="flex flex-col gap-1.5 md:col-span-2">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+                          Available From <span className="normal-case text-gray-600">(optional)</span>
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={
+                            editingTask
+                              ? (editingTask.startTimeFormatted || '')
+                              : taskFormStartTime
+                          }
+                          onChange={(e) =>
+                            editingTask
+                              ? setEditingTask({
+                                  ...editingTask,
+                                  startTimeFormatted: e.target.value,
+                                })
+                              : setTaskFormStartTime(e.target.value)
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-xs text-gray-200 scheme-dark transition-all duration-300 outline-none hover:bg-black/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
                           Due Deadline
                         </label>
@@ -2347,10 +2389,7 @@ export default function MentorTasksClient({
                           <Clock className="h-2.5 w-2.5" />
                           Due{' '}
                           {t.deadline
-                            ? new Date(t.deadline).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                              })
+                            ? fmtDhaka(t.deadline, { month: 'short', day: 'numeric' })
                             : 'N/A'}
                         </span>
                       </div>

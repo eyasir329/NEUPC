@@ -32,7 +32,6 @@ const NAV_CONFIG = {
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
-        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {
@@ -41,6 +40,7 @@ const NAV_CONFIG = {
       items: [
         { href: '/about', label: 'About' },
         { href: '/committee', label: 'Committee' },
+        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {

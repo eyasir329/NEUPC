@@ -162,8 +162,8 @@ function About({ data = {}, settings = {} }) {
             </div>
 
             {/* Active chip */}
-            <div className="border-neon-lime/30 bg-neon-lime/10 absolute top-8 -right-3 -rotate-6 rounded-xl border px-3 py-1.5 backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
-              <span className="text-neon-lime font-mono text-[9px] font-bold tracking-[0.25em] uppercase sm:text-[10px]">
+            <div className="bg-neon-violet/90 absolute top-8 -right-3 -rotate-6 rounded-xl px-3 py-1.5 shadow-lg shadow-neon-violet/10 backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
+              <span className="text-black font-mono text-[9px] font-black tracking-[0.25em] uppercase sm:text-[10px]">
                 Active
                 {settings?.member_count ? ` · ${settings.member_count}` : ''}
               </span>
@@ -181,7 +181,7 @@ function About({ data = {}, settings = {} }) {
                 {description1}
               </p>
 
-              {description2 && !isExpanded && (
+              {/* {description2 && !isExpanded && (
                 <div className="flex w-full justify-end md:justify-start">
                   <button
                     type="button"
@@ -194,9 +194,9 @@ function About({ data = {}, settings = {} }) {
                     </span>
                   </button>
                 </div>
-              )}
+              )} */}
 
-              {description2 && isExpanded && (
+              {/* {description2 && isExpanded && (
                 <>
                   <p className="font-sans text-sm leading-[1.9] font-light text-zinc-500 sm:text-base">
                     {description2}
@@ -210,7 +210,7 @@ function About({ data = {}, settings = {} }) {
                     Collapse
                   </button>
                 </>
-              )}
+              )} */}
             </div>
 
             {/* Mission / Vision */}

@@ -1019,35 +1019,35 @@ const DEFAULT_SETTINGS = [
   },
   {
     key: 'achievements_page_badge',
-    value: 'Excellence & Achievements',
+    value: 'Achievements · NEUPC',
     category: 'page_content',
     description: 'Achievements page hero badge',
   },
   {
     key: 'achievements_page_title',
-    value: 'Our Achievements',
+    value: 'Hall of Achievements',
     category: 'page_content',
     description: 'Achievements page hero title',
   },
   {
     key: 'achievements_page_description',
     value:
-      'Celebrating excellence in competitive programming, innovation, and academic growth',
+      'Every trophy, ranking, and milestone earned by NEUPC members — a record of excellence in competitive programming.',
     category: 'page_content',
     description: 'Achievements page hero description',
   },
   {
     key: 'achievements_page_cta_title',
-    value: 'Ready to Make Your Mark?',
+    value: 'Ready to Write Your Legacy?',
     category: 'page_content',
     description: 'Achievements page CTA title',
   },
   {
-    key: 'achievements_page_cta_description',
+    key: 'achievements_page_cta_subtitle',
     value:
-      'Join NEUPC today and be part of our legacy of excellence in competitive programming and technology.',
+      'Join NEUPC and compete alongside the best problem solvers in the country. Applications are open.',
     category: 'page_content',
-    description: 'Achievements page CTA description',
+    description: 'Achievements page CTA subtitle',
   },
   {
     key: 'blogs_page_badge',
