@@ -612,6 +612,8 @@ export default function MemberDailyActivityClient({ userId }) {
               onAddSection={handleAddSection}
               onDeleteSection={handleDeleteSection}
               onUpdateSection={handleUpdateSection}
+              onToast={showToast}
+              onSynced={refreshTasks}
             />
           )}
 

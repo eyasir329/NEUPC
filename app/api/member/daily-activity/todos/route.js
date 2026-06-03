@@ -116,6 +116,65 @@ async function mirrorTodoToGoogle(userId, row) {
   }
 }
 
+/**
+ * Best-effort mirror of a saved todo row to Todoist.
+ * Never throws — a Todoist failure must not fail the CRUD response;
+ * no-op when the member hasn't connected Todoist.
+ *
+ * @param {string} userId
+ * @param {object} row  - The full todos row just written.
+ */
+async function mirrorTodoToTodoist(userId, row) {
+  try {
+    const {
+      getConnection, pushTodoistTask, syncTodoistChildSubtasks
+    } = await import('@/app/_lib/integrations/todoist');
+
+    const conn = await getConnection(userId);
+    if (!conn) return;
+
+    const todoPayload = {
+      id: row.id,
+      title: row.title,
+      notes: row.notes || row.description || '',
+      priority: row.priority,
+      dueDate: row.start_date || null,
+      completed: !!row.completed,
+      todoistTaskId: row.todoist_task_id || null,
+    };
+
+    const alreadyMirrored = !!row.todoist_task_id;
+
+    // Push task to Todoist
+    const taskId = await pushTodoistTask(userId, todoPayload, { force: alreadyMirrored });
+    if (!taskId) return;
+
+    let subtaskMap = row.todoist_subtask_ids || {};
+    if (row.subtasks && row.subtasks.length > 0) {
+      subtaskMap = await syncTodoistChildSubtasks(
+        userId,
+        taskId,
+        row.subtasks || [],
+        row.todoist_subtask_ids || {}
+      );
+    }
+
+    const patch = {
+      todoist_synced_at: new Date().toISOString(),
+      todoist_task_id: taskId,
+      todoist_subtask_ids: subtaskMap,
+    };
+
+    await supabaseAdmin
+      .from('todos')
+      .update(patch)
+      .eq('id', row.id)
+      .eq('user_id', userId);
+  } catch (err) {
+    console.error('[todos mirrorTodoToTodoist]', err?.message);
+  }
+}
+
 export async function GET() {
   try {
     const userId = await getAuthenticatedUserId();
@@ -184,6 +243,7 @@ export async function POST(request) {
     if (error) throw error;
 
     await mirrorTodoToGoogle(userId, data);
+    await mirrorTodoToTodoist(userId, data);
 
     return NextResponse.json(mapRowToTask(data), { status: 201 });
   } catch (err) {
@@ -244,6 +304,7 @@ export async function PATCH(request) {
     if (error) throw error;
 
     await mirrorTodoToGoogle(userId, data);
+    await mirrorTodoToTodoist(userId, data);
 
     return NextResponse.json(mapRowToTask(data));
   } catch (err) {
@@ -262,10 +323,10 @@ export async function DELETE(request) {
 
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    // Capture the Google mirrors before the row is gone.
+    // Capture the Google and Todoist mirrors before the row is gone.
     const { data: existing } = await supabaseAdmin
       .from('todos')
-      .select('gtask_id, gcal_event_id')
+      .select('gtask_id, gcal_event_id, todoist_task_id')
       .eq('id', id)
       .eq('user_id', userId)
       .maybeSingle();
@@ -286,6 +347,16 @@ export async function DELETE(request) {
         if (existing.gcal_event_id) await deleteTodoEvent(userId, existing.gcal_event_id);
       } catch (err) {
         console.error('[todos DELETE google]', err?.message);
+      }
+    }
+
+    // Best-effort: remove mirrored Todoist task.
+    if (existing?.todoist_task_id) {
+      try {
+        const { deleteTodoistTask } = await import('@/app/_lib/integrations/todoist');
+        await deleteTodoistTask(userId, existing.todoist_task_id);
+      } catch (err) {
+        console.error('[todos DELETE todoist]', err?.message);
       }
     }
 

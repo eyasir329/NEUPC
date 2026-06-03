@@ -200,6 +200,57 @@ async function mirrorSavedTodo(userId, todoId, fields, existingEventId, existing
   }
 }
 
+/**
+ * Best-effort mirror of a saved todo to Todoist.
+ * Never throws — Todoist problems must not fail the task save. No-op when the
+ * member hasn't connected Todoist.
+ */
+async function mirrorSavedTodoist(userId, todoId, fields, existingTodoistTaskId) {
+  try {
+    const { pushTodoistTask, deleteTodoistTask } = await import(
+      '@/app/_lib/integrations/todoist'
+    );
+
+    if (!fields.start_date) {
+      if (existingTodoistTaskId) {
+        await deleteTodoistTask(userId, existingTodoistTaskId);
+        await supabaseAdmin
+          .from('todos')
+          .update({
+            todoist_task_id: null,
+            todoist_synced_at: null,
+            todoist_subtask_ids: {},
+          })
+          .eq('id', todoId)
+          .eq('user_id', userId);
+      }
+      return;
+    }
+
+    const todoPayload = {
+      id: todoId,
+      title: fields.title,
+      notes: fields.notes || fields.description || '',
+      priority: fields.priority,
+      startKey: nextOccurrenceKey(fields),
+      completed: await isTodoCompleted(userId, todoId, fields),
+      todoistTaskId: existingTodoistTaskId || null,
+    };
+
+    const taskId = await pushTodoistTask(userId, todoPayload, { force: true });
+
+    if (taskId && taskId !== existingTodoistTaskId) {
+      await supabaseAdmin
+        .from('todos')
+        .update({ todoist_task_id: taskId, todoist_synced_at: new Date().toISOString() })
+        .eq('id', todoId)
+        .eq('user_id', userId);
+    }
+  } catch (err) {
+    console.error('mirrorSavedTodoist:', err?.message);
+  }
+}
+
 /** Validate + normalize a recurrence rule from the client. */
 function normalizeRecurrence(rec) {
   if (!rec || typeof rec !== 'object') return null;
@@ -365,20 +416,28 @@ export async function saveTodoAction(draft = {}) {
       .update({ ...fields, updated_at: new Date().toISOString() })
       .eq('id', draft.id)
       .eq('user_id', a.userId)
-      .select('id, gcal_event_id, gtask_id')
+      .select('id, gcal_event_id, gtask_id, todoist_task_id')
       .maybeSingle();
     if (updErr) {
       console.error('saveTodoAction (update):', updErr);
       return { error: 'Failed to save task.' };
     }
     if (updated) {
-      await mirrorSavedTodo(
-        a.userId,
-        draft.id,
-        fields,
-        updated.gcal_event_id,
-        updated.gtask_id
-      );
+      await Promise.all([
+        mirrorSavedTodo(
+          a.userId,
+          draft.id,
+          fields,
+          updated.gcal_event_id,
+          updated.gtask_id
+        ),
+        mirrorSavedTodoist(
+          a.userId,
+          draft.id,
+          fields,
+          updated.todoist_task_id
+        )
+      ]);
       revalidatePath(PATH);
       return { success: true, id: draft.id };
     }
@@ -390,7 +449,10 @@ export async function saveTodoAction(draft = {}) {
       console.error('saveTodoAction (insert w/ id):', insErr);
       return { error: 'Failed to create task.' };
     }
-    await mirrorSavedTodo(a.userId, draft.id, fields, null, null);
+    await Promise.all([
+      mirrorSavedTodo(a.userId, draft.id, fields, null, null),
+      mirrorSavedTodoist(a.userId, draft.id, fields, null)
+    ]);
     revalidatePath(PATH);
     return { success: true, id: draft.id };
   }
@@ -404,7 +466,10 @@ export async function saveTodoAction(draft = {}) {
     console.error('saveTodoAction (insert):', error);
     return { error: 'Failed to create task.' };
   }
-  await mirrorSavedTodo(a.userId, data.id, fields, null, null);
+  await Promise.all([
+    mirrorSavedTodo(a.userId, data.id, fields, null, null),
+    mirrorSavedTodoist(a.userId, data.id, fields, null)
+  ]);
   revalidatePath(PATH);
   return { success: true, id: data.id };
 }
@@ -414,10 +479,10 @@ export async function deleteTodoAction({ id } = {}) {
   if (a.error) return { error: a.error };
   if (!isValidUUID(id)) return { error: 'Invalid task id.' };
 
-  // Capture the linked calendar event + task before the row (and ids) are gone.
+  // Capture the linked calendar event + task + Todoist task before the row (and ids) are gone.
   const { data: existing } = await supabaseAdmin
     .from('todos')
-    .select('gcal_event_id, gtask_id')
+    .select('gcal_event_id, gtask_id, todoist_task_id')
     .eq('id', id)
     .eq('user_id', a.userId)
     .maybeSingle();
@@ -443,6 +508,17 @@ export async function deleteTodoAction({ id } = {}) {
         await deleteTodoTask(a.userId, existing.gtask_id);
     } catch (err) {
       console.error('deleteTodoAction (calendar):', err?.message);
+    }
+  }
+
+  if (existing?.todoist_task_id) {
+    try {
+      const { deleteTodoistTask } = await import(
+        '@/app/_lib/integrations/todoist'
+      );
+      await deleteTodoistTask(a.userId, existing.todoist_task_id);
+    } catch (err) {
+      console.error('deleteTodoAction (todoist):', err?.message);
     }
   }
 
@@ -489,7 +565,7 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
 
   const { data: todo } = await supabaseAdmin
     .from('todos')
-    .select('id, recurrence, gtask_id')
+    .select('id, recurrence, gtask_id, todoist_task_id')
     .eq('id', todoId)
     .eq('user_id', a.userId)
     .maybeSingle();
@@ -502,17 +578,31 @@ export async function toggleCompletionAction({ todoId, occurrenceDate } = {}) {
     .eq('occurrence_date', occurrenceDate)
     .maybeSingle();
 
-  // Reflect the done-state on the linked Google Task. Only non-recurring todos
+  // Reflect the done-state on the linked Google Task and Todoist Task. Only non-recurring todos
   // map to a single task with one unambiguous done-state (best-effort).
   async function syncTaskDone(done) {
-    if (todo.recurrence?.freq || !todo.gtask_id) return;
-    try {
-      const { setTodoTaskCompleted } = await import(
-        '@/app/_lib/integrations/google-calendar'
-      );
-      await setTodoTaskCompleted(a.userId, todo.gtask_id, done);
-    } catch (err) {
-      console.error('toggleCompletionAction (task):', err?.message);
+    if (todo.recurrence?.freq) return;
+
+    if (todo.gtask_id) {
+      try {
+        const { setTodoTaskCompleted } = await import(
+          '@/app/_lib/integrations/google-calendar'
+        );
+        await setTodoTaskCompleted(a.userId, todo.gtask_id, done);
+      } catch (err) {
+        console.error('toggleCompletionAction (gtask):', err?.message);
+      }
+    }
+
+    if (todo.todoist_task_id) {
+      try {
+        const { setTodoistTaskCompleted } = await import(
+          '@/app/_lib/integrations/todoist'
+        );
+        await setTodoistTaskCompleted(a.userId, todo.todoist_task_id, done);
+      } catch (err) {
+        console.error('toggleCompletionAction (todoist):', err?.message);
+      }
     }
   }
 

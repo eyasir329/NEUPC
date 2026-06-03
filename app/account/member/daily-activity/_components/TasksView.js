@@ -21,6 +21,7 @@ import {
   getTodayDateString, formatDateString, addDays,
 } from './utils';
 import FeedItemCard from './FeedItemCard';
+import TodoistPanel from './TodoistPanel';
 
 export default function TasksView({
   tasks,
@@ -38,6 +39,8 @@ export default function TasksView({
   onAddSection,
   onDeleteSection,
   onUpdateSection,
+  onToast,
+  onSynced,
 }) {
   const [activeProjectId, setActiveProjectId] = useState('all');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -211,11 +214,12 @@ export default function TasksView({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="tasks-layout-view">
-      <div className="bg-gray-900 rounded-2xl border border-white/[0.04] p-5 col-span-1 lg:col-span-3 h-full flex flex-col justify-between" id="lists-sidebar-col">
-        <div className="space-y-6">
+      <div className="relative bg-gray-900 rounded-3xl border border-white/[0.08] p-5 col-span-1 lg:col-span-3 h-full flex flex-col justify-between shadow-2xl shadow-slate-950/20 overflow-hidden" id="lists-sidebar-col">
+        <div className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-violet-500/[0.06] blur-[80px]" />
+        <div className="relative z-10 space-y-6">
           <div>
-            <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
-              <span className="text-[10px] text-slate-400 font-mono tracking-widest font-bold uppercase block">CATEGORIES</span>
+            <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
+              <span className="text-[10px] text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-300 font-mono tracking-wider uppercase block font-black">CATEGORIES</span>
               <button onClick={handleAddNewList} className="p-1 hover:bg-white/[0.06] text-violet-400 hover:text-violet-300 rounded-lg transition" title="Create New List">
                 <Plus className="w-4 h-4 text-violet-300" />
               </button>
@@ -285,48 +289,61 @@ export default function TasksView({
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center gap-1.5 pb-2 border-b border-white/[0.06]">
-              <Tag className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-[10px] text-slate-400 font-mono tracking-widest font-bold uppercase block">LABELS</span>
-            </div>
+          {labels.some((lbl) => lbl.name === activeLabelName || tasks.some((t) => !t.isArchived && !t.completed && t.labels?.includes(lbl.name))) && (
+            <div>
+              <div className="flex items-center gap-1.5 pb-3 border-b border-white/[0.06]">
+                <Tag className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[10px] text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-300 font-mono tracking-wider uppercase block font-black">LABELS</span>
+              </div>
 
-            <div className="mt-3.5 space-y-1">
-              {labels.map((lbl) => (
-                <button
-                  key={lbl.id}
-                  onClick={() => {
-                    setActiveLabelName(lbl.name === activeLabelName ? null : lbl.name);
-                    setCurrentPage(1);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs rounded-xl flex justify-between items-center transition duration-150 font-bold ${
-                    activeLabelName === lbl.name
-                      ? 'bg-violet-600/15 border border-violet-500/25 text-violet-300'
-                      : 'text-slate-300 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Bookmark className="w-3 h-3 shrink-0" style={{ color: lbl.color }} />
-                    <span className="truncate">@{lbl.name}</span>
-                  </div>
-                  <span className="px-1.5 py-0.5 text-[8.5px] text-slate-400 bg-white/[0.04] rounded font-mono font-bold">
-                    {tasks.filter((t) => !t.isArchived && !t.completed && t.labels.includes(lbl.name)).length}
-                  </span>
-                </button>
-              ))}
+              <div className="mt-3.5 space-y-1">
+                {labels
+                  .filter((lbl) => lbl.name === activeLabelName || tasks.some((t) => !t.isArchived && !t.completed && t.labels?.includes(lbl.name)))
+                  .map((lbl) => {
+                    const count = tasks.filter((t) => !t.isArchived && !t.completed && t.labels?.includes(lbl.name)).length;
+                    return (
+                      <button
+                        key={lbl.id}
+                        onClick={() => {
+                          setActiveLabelName(lbl.name === activeLabelName ? null : lbl.name);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs rounded-xl flex justify-between items-center transition duration-150 font-bold ${
+                          activeLabelName === lbl.name
+                            ? 'bg-violet-600/15 border border-violet-500/25 text-violet-300'
+                            : 'text-slate-300 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Bookmark className="w-3 h-3 shrink-0" style={{ color: lbl.color }} />
+                          <span className="truncate">@{lbl.name}</span>
+                        </div>
+                        <span className="px-1.5 py-0.5 text-[8.5px] text-slate-400 bg-white/[0.04] rounded font-mono font-bold">
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
+          )}
+
+          <div className="mt-6">
+            <TodoistPanel monthTasks={tasks} onToast={onToast} onSynced={onSynced} />
           </div>
         </div>
 
-        <div className="pt-4 mt-6 border-t border-white/[0.04] text-[10px] text-slate-400 text-center font-mono uppercase tracking-wider">
-          🔮 FOCUS ON PROGRESS, NOT PERFECTION.
+        <div className="pt-4 mt-6 border-t border-white/[0.06] text-[10px] text-slate-400 text-center font-mono uppercase tracking-wider flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400/80 to-slate-400 font-black">FOCUS ON PROGRESS, NOT PERFECTION.</span>
         </div>
       </div>
 
       <div className="col-span-1 lg:col-span-9 flex flex-col justify-between" id="tasks-main-column">
         <div>
-          <div className="bg-gray-900 rounded-2xl border border-white/[0.04] p-4.5 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-sm" id="filters-header">
-            <div className="flex flex-wrap gap-1.5 text-xs">
+          <div className="relative bg-gray-900 rounded-3xl border border-white/[0.08] p-5 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-xl shadow-slate-950/10 overflow-hidden" id="filters-header">
+            <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-violet-500/[0.04] blur-[60px]" />
+            <div className="relative z-10 flex flex-wrap gap-1.5 text-xs">
               {['all', 'today', 'upcoming', 'completed'].map((f) => (
                 <button
                   key={`pill-filter-${f}`}
@@ -345,7 +362,7 @@ export default function TasksView({
               ))}
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="relative z-10 flex items-center gap-3 w-full md:w-auto justify-end">
               <input
                 type="text"
                 placeholder="Lookup in list..."
@@ -384,9 +401,9 @@ export default function TasksView({
               onOpenCreate(quickTitle.trim());
               setQuickTitle('');
             }}
-            className="bg-gray-900 rounded-2xl border border-white/[0.04] p-3 flex items-center gap-3.5 mb-6 group focus-within:border-violet-500/40 focus-within:ring-1 focus-within:ring-violet-500/10 transition-all duration-200"
+            className="relative bg-gray-900 rounded-3xl border border-white/[0.08] p-3.5 flex items-center gap-3.5 mb-6 group focus-within:border-violet-500/40 focus-within:ring-1 focus-within:ring-violet-500/10 transition-all duration-200 shadow-lg shadow-slate-950/10 overflow-hidden"
           >
-            <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
               <Plus className="w-4 h-4" />
             </div>
 
@@ -435,17 +452,23 @@ export default function TasksView({
           {activeLayout === 'list' ? (
             <div className="space-y-6" id="list-tasks-wrapper">
               {totalItems === 0 ? (
-                <div className="bg-gray-900 rounded-xl border border-white/5 p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
-                  <Clipboard className="w-10 h-10 text-violet-400/40" />
-                  <span className="text-sm font-semibold text-white">No synchronized goals found!</span>
-                  <span className="text-xs">Adjust your active navigation list categories, or tap &quot;+&quot; inline to spawn reminders.</span>
+                <div className="relative bg-gray-900 rounded-3xl border border-white/[0.08] p-14 text-center text-slate-400 flex flex-col items-center justify-center space-y-3 shadow-xl overflow-hidden">
+                  <div className="pointer-events-none absolute -top-16 -right-16 h-32 w-32 rounded-full bg-violet-500/[0.06] blur-[60px]" />
+                  <div className="relative z-10 p-3.5 bg-gradient-to-br from-violet-500/10 to-slate-900 border border-violet-500/10 rounded-2xl text-violet-400/50 mb-1">
+                    <Clipboard className="w-8 h-8" />
+                  </div>
+                  <span className="relative z-10 text-sm font-bold text-white">No synchronized goals found!</span>
+                  <span className="relative z-10 text-xs text-slate-500">Adjust your active navigation list categories, or tap &quot;+&quot; inline to spawn reminders.</span>
                 </div>
               ) : (
                 Object.keys(groupedTasks).map((groupName) => (
-                  <div key={`group-${groupName}`} className="space-y-2">
-                    <h4 className="text-xs font-black font-display text-slate-400 uppercase tracking-widest pl-1">
-                      {groupName} ({groupedTasks[groupName].length})
-                    </h4>
+                  <div key={`group-${groupName}`} className="space-y-2.5">
+                    <div className="flex items-center gap-2 pl-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                      <h4 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-slate-300 uppercase tracking-widest font-mono">
+                        {groupName} ({groupedTasks[groupName].length})
+                      </h4>
+                    </div>
 
                     <div className="space-y-2">
                       {groupedTasks[groupName].map((task) => {
@@ -464,7 +487,7 @@ export default function TasksView({
                           <div
                             key={`task-list-card-${task.id}`}
                             onClick={() => onSelectTask(task.id)}
-                            className={`flex items-center justify-between p-3.5 bg-gray-900 border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.06] rounded-xl transition cursor-pointer select-none gap-3 group relative ${task.completed ? 'opacity-40' : ''} ${getPriorityBorderClass(task.priority)}`}
+                            className={`flex items-center justify-between p-3.5 bg-gray-900 border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] rounded-2xl transition-all duration-200 cursor-pointer select-none gap-3 group relative ${task.completed ? 'opacity-40' : ''} ${getPriorityBorderClass(task.priority)}`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <button
@@ -548,8 +571,8 @@ export default function TasksView({
             </div>
           ) : (
             <div className="overflow-x-auto pb-4" id="board-layout-wrapper">
-              <div className="flex gap-4 min-w-[800px]">
-                <div className="bg-gray-900/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px]">
+              <div className="flex gap-5 min-w-[800px]">
+                <div className="bg-gray-900/60 border border-white/[0.08] rounded-3xl p-5 w-72 shrink-0 flex flex-col h-[500px] shadow-xl shadow-slate-950/10">
                   <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3">
                     <span className="text-xs font-bold text-white uppercase tracking-wider font-display">Inbox Column</span>
                     <span className="px-2 py-0.5 bg-white/[0.04] text-[10px] text-violet-400 font-mono font-bold rounded-full">
@@ -587,7 +610,7 @@ export default function TasksView({
                   const secTasks = paginatedTasks.filter((t) => t.sectionId === sec.id);
 
                   return (
-                    <div key={`section-col-${sec.id}`} className="bg-gray-900/40 border border-white/5 rounded-xl p-4 w-72 shrink-0 flex flex-col h-[500px] relative group/col">
+                    <div key={`section-col-${sec.id}`} className="bg-gray-900/60 border border-white/[0.08] rounded-3xl p-5 w-72 shrink-0 flex flex-col h-[500px] relative group/col shadow-xl shadow-slate-950/10">
                       <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3">
                         <span className="text-xs font-bold text-white uppercase tracking-wider font-display truncate max-w-[160px]">{sec.name}</span>
                         <div className="flex items-center gap-1">
@@ -649,44 +672,47 @@ export default function TasksView({
 
                 <button
                   onClick={handleAddNewSection}
-                  className="bg-gray-900/20 hover:bg-white/[0.06]/40 border border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 w-72 shrink-0 h-[500px] flex flex-col justify-center items-center text-slate-400 hover:text-violet-400 cursor-pointer transition gap-2 font-mono font-bold text-xs"
+                  className="bg-gray-900/20 hover:bg-white/[0.04] border border-dashed border-white/10 hover:border-violet-500/30 rounded-3xl p-4 w-72 shrink-0 h-[500px] flex flex-col justify-center items-center text-slate-400 hover:text-violet-400 cursor-pointer transition-all duration-200 gap-2 font-mono font-bold text-xs"
                 >
-                  <Plus className="w-6 h-6 stroke-[3]" />
-                  <span>ADD COLUMN</span>
+                  <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-2xl text-violet-400 mb-1">
+                    <Plus className="w-6 h-6 stroke-[3]" />
+                  </div>
+                  <span className="text-[10px] tracking-widest">ADD COLUMN</span>
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="bg-gray-900 rounded-xl border border-white/5 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-xs text-slate-300 mt-6" id="pagination-footer">
-          <div>
-            <span>Showing </span>
+        <div className="bg-gray-900 rounded-3xl border border-white/[0.08] p-5 flex flex-col md:flex-row gap-4 justify-between items-center text-xs text-slate-300 mt-6 shadow-lg shadow-slate-950/10" id="pagination-footer">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            <span className="font-mono text-[10px] tracking-wider">Showing </span>
             <span className="font-bold text-white">{totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span>
-            <span> - </span>
+            <span className="font-mono text-[10px]"> – </span>
             <span className="font-bold text-white">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-            <span> of </span>
-            <span className="font-bold text-violet-400">{totalItems} items</span>
+            <span className="font-mono text-[10px]"> of </span>
+            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-300">{totalItems} items</span>
             {activeProjectId !== 'all' && (
-              <span> in <strong className="text-white">#{selectedProjectObj?.name}</strong></span>
+              <span className="font-mono text-[10px]"> in <strong className="text-white">#{selectedProjectObj?.name}</strong></span>
             )}
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] text-slate-400 tracking-wider">PAGE {currentPage} OF {totalPages}</span>
-            <div className="flex border border-white/5 rounded-lg bg-white/[0.04] p-0.5">
+            <span className="font-mono text-[10px] text-slate-500 tracking-widest font-black uppercase">PAGE {currentPage} OF {totalPages}</span>
+            <div className="flex border border-white/[0.08] rounded-xl bg-slate-900/60 p-1 shadow-inner">
               <button
                 disabled={currentPage === 1}
                 onClick={prevPage}
-                className="p-1 px-2 hover:bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
+                className="p-1.5 px-2.5 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded-lg cursor-pointer transition"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <div className="w-[1px] h-4 bg-white/5" />
+              <div className="w-[1px] h-5 bg-white/[0.06] my-auto" />
               <button
                 disabled={currentPage === totalPages}
                 onClick={nextPage}
-                className="p-1 px-2 hover:bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded cursor-pointer transition"
+                className="p-1.5 px-2.5 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent rounded-lg cursor-pointer transition"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>
