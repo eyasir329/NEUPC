@@ -27,6 +27,7 @@
  *      screen.
  */
 
+import { randomUUID } from 'node:crypto';
 import { google } from 'googleapis';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { GCAL_COLOR_MAP, LAYER_DEFAULTS } from '@/app/account/member/daily-activity/_components/utils';
@@ -91,6 +92,13 @@ function dhakaTime(iso) {
 function nextDhakaDate(dateStr) {
   const d = new Date(`${dateStr}T00:00:00+06:00`);
   d.setUTCDate(d.getUTCDate() + 1);
+  return dhakaDate(d.toISOString());
+}
+
+/** Previous calendar day (YYYY-MM-DD) in Dhaka. */
+function prevDhakaDate(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00+06:00`);
+  d.setUTCDate(d.getUTCDate() - 1);
   return dhakaDate(d.toISOString());
 }
 
@@ -462,10 +470,20 @@ export async function listGoogleTasks(userId) {
           tasklist: list.id,
           showCompleted: true,
           showDeleted: false,
-          showHidden: false,
+          showHidden: true, // include completed/hidden so subtask done-state is captured
           maxResults: 100,
         });
-        for (const t of data.items || []) {
+        const items = data.items || [];
+
+        // Google subtasks are separate tasks linked via `parent`. Group them so a
+        // parent task imports with its children as real NEUPC subtasks.
+        const childrenByParent = {};
+        for (const t of items) {
+          if (t.parent) (childrenByParent[t.parent] ||= []).push(t);
+        }
+
+        for (const t of items) {
+          if (t.parent) continue;              // a subtask → imported with its parent
           if (t.status === 'completed') continue;
           if (mirroredIds.has(t.id)) continue; // already shown as a NEUPC todo
           // Also skip tasks we own that have our ID_TAG in notes (covers the case
@@ -474,6 +492,18 @@ export async function listGoogleTasks(userId) {
           if (!t.due) continue; // no date → can't place on calendar
 
           const dateStr = t.due.split('T')[0];
+          // Build NEUPC subtasks + a { neupcSubId: googleChildId } map so a later
+          // push updates these same Google children instead of duplicating them.
+          const subtasks = [];
+          const gtaskSubtaskIds = {};
+          const kids = (childrenByParent[t.id] || [])
+            .sort((a, b) => String(a.position || '').localeCompare(String(b.position || '')));
+          for (const c of kids) {
+            const sid = randomUUID();
+            subtasks.push({ id: sid, title: c.title || '(subtask)', completed: c.status === 'completed', details: c.notes || '' });
+            gtaskSubtaskIds[sid] = c.id;
+          }
+
           results.push({
             id: `gtask-${t.id}`,
             category: 'gtask',
@@ -483,6 +513,8 @@ export async function listGoogleTasks(userId) {
             description: t.notes ? t.notes.trim() : null,
             url: null,
             allDay: true,
+            subtasks,
+            gtaskSubtaskIds,
           });
         }
       } catch {
@@ -771,12 +803,9 @@ function normalisePriority(priority) {
  *   <description>
  *
  *   Priority: High   ·   Labels: @study, @dsa   ·   Time: 14:00
- *   Subtasks:
- *   ☑ done one
- *   ☐ pending two
  *
- * The subtask checklist is informational; real Google child-tasks are also
- * created (see syncChildSubtasks) for those who use Google Tasks' own nesting.
+ * Subtasks are NOT folded in here — they are mirrored as real Google child-tasks
+ * (see syncChildSubtasks), so listing them in notes would duplicate them.
  */
 function buildTaskNotes(todo) {
   const lines = [];
@@ -799,12 +828,8 @@ function buildTaskNotes(todo) {
     lines.push(meta.join(' · '));
   }
 
-  if (Array.isArray(todo.subtasks) && todo.subtasks.length) {
-    if (lines.length) lines.push('');
-    for (const s of todo.subtasks) {
-      lines.push(`[${s.completed ? 'x' : ' '}] ${s.title || ''}`.trimEnd());
-    }
-  }
+  // Subtasks are mirrored as real Google child-tasks (see syncChildSubtasks), so
+  // we deliberately do NOT also list them here — that would duplicate them.
 
   return lines.join('\n').trim() || undefined;
 }
@@ -1099,35 +1124,61 @@ export async function syncChildSubtasks(userId, parentTaskId, subtasks = [], exi
   const liveIds = new Set();
 
   try {
+    // Process in order, threading each child after the previous sibling so the
+    // Google order matches NEUPC. (Google inserts a parentless/`previous`-less
+    // child at the TOP of the list, which would otherwise reverse the order.)
+    let prevGid = null;
     for (const s of subtasks) {
       if (!s || !s.id) continue;
       liveIds.add(s.id);
       const childBody = {
         title: s.title || '(subtask)',
+        notes: s.details || '',
         status: s.completed ? 'completed' : 'needsAction',
       };
       if (!s.completed) childBody.completed = null;
 
-      const existingChild = map[s.id];
-      if (existingChild) {
+      let gid = map[s.id] || null;
+      if (gid) {
         try {
           await client.tasks.tasks.update({
             tasklist: '@default',
-            task: existingChild,
-            requestBody: { id: existingChild, ...childBody },
+            task: gid,
+            requestBody: { id: gid, ...childBody },
           });
-          continue;
         } catch (err) {
           if (err?.code !== 404 && err?.code !== 410) throw err;
-          // fall through to recreate
+          gid = null; // task gone in Google → recreate below
+          delete map[s.id];
         }
       }
-      const { data } = await client.tasks.tasks.insert({
-        tasklist: '@default',
-        parent: parentTaskId,
-        requestBody: childBody,
-      });
-      if (data?.id) map[s.id] = data.id;
+
+      if (gid) {
+        // Keep it nested under the (possibly recreated) parent and in order.
+        try {
+          await client.tasks.tasks.move({
+            tasklist: '@default',
+            task: gid,
+            parent: parentTaskId,
+            previous: prevGid || undefined,
+          });
+        } catch (err) {
+          if (err?.code !== 404 && err?.code !== 410) {
+            console.error('syncChildSubtasks (move):', err?.message);
+          }
+        }
+      } else {
+        const { data } = await client.tasks.tasks.insert({
+          tasklist: '@default',
+          parent: parentTaskId,
+          previous: prevGid || undefined,
+          requestBody: childBody,
+        });
+        gid = data?.id || null;
+        if (gid) map[s.id] = gid;
+      }
+
+      if (gid) prevGid = gid;
     }
 
     // Remove children whose NEUPC subtask no longer exists.
@@ -1154,40 +1205,36 @@ export async function syncChildSubtasks(userId, parentTaskId, subtasks = [], exi
 }
 
 /**
- * Read the completion state of the given todos' linked Google Tasks. Used by
- * the two-way pull: the caller passes the linked todos and applies any change
- * where Google's done-state differs from NEUPC's. Recurring todos are skipped
- * (no single unambiguous done-state). Best-effort — returns [] on any failure.
+ * Map of every `@default` Google Task id → done-state (boolean), including
+ * completed/hidden tasks and child subtasks. One paged list call, used by the
+ * two-way pull to read both parent and subtask completion at once.
  *
- * @param {string} userId
- * @param {{id:string,gtaskId:string}[]} linkedTodos
- * @returns {Promise<{todoId:string, completed:boolean}[]>}
+ * @returns {Promise<Map<string,boolean>|null>}  null on failure/not-connected.
  */
-export async function readTaskCompletions(userId, linkedTodos = []) {
+export async function readDefaultTaskStatuses(userId) {
   const client = await getCalendarClient(userId);
-  if (!client) return [];
-
-  const results = [];
-  for (const t of linkedTodos) {
-    if (!t?.gtaskId) continue;
-    try {
-      const { data } = await client.tasks.tasks.get({
+  if (!client) return null;
+  try {
+    const map = new Map();
+    let pageToken;
+    do {
+      const { data } = await client.tasks.tasks.list({
         tasklist: '@default',
-        task: t.gtaskId,
+        showCompleted: true,
+        showHidden: true,
+        showDeleted: false,
+        maxResults: 100,
+        pageToken,
       });
-      results.push({ todoId: t.id, completed: data?.status === 'completed' });
-    } catch (err) {
-      if (isRevoked(err)) {
-        await deleteConnection(userId).catch(() => {});
-        return [];
-      }
-      // 404/410 → task gone in Google; skip (leave NEUPC as-is).
-      if (err?.code !== 404 && err?.code !== 410) {
-        console.error('readTaskCompletions:', err?.message);
-      }
-    }
+      for (const t of data.items || []) map.set(t.id, t.status === 'completed');
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+    return map;
+  } catch (err) {
+    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return null; }
+    console.error('readDefaultTaskStatuses:', err?.message);
+    return null;
   }
-  return results;
 }
 
 /**
@@ -1313,26 +1360,76 @@ export async function pushPersonalEvent(userId, row, { overrideColor = null } = 
   // events otherwise). All-day, single-day, and recurring events stay one event.
   const multiDayTimed = !allDay && !row.recurrence
     && dhakaDate(startObj.dateTime) !== dhakaDate(endObj.dateTime);
-  const bodies = multiDayTimed
-    ? sliceTimedRange(startObj.dateTime, endObj.dateTime).map((s) => ({ ...body, ...s }))
-    : [body];
 
   try {
-    // Marker-based full replace: clear any prior mirror(s) of this event (single
-    // or sliced), then insert the fresh set — handles edits and multi-day↔single
-    // transitions without duplicating.
-    await deletePersonalMarkerEvents(client, row.id).catch(() => {});
+    // ── Multi-day timed → per-day slices via full replace ──
+    // Several Google events, so we can't keep a single id: clear the prior mirror
+    // (marked slices) and the stored event id, then insert the fresh slice set.
+    if (multiDayTimed) {
+      await deletePersonalMarkerEvents(client, row.id).catch(() => {});
+      if (row.gcal_event_id) {
+        await client.calendar.events.delete({ calendarId: client.calendarId, eventId: row.gcal_event_id }).catch(() => {});
+      }
+      const slices = sliceTimedRange(startObj.dateTime, endObj.dateTime).map((s) => ({ ...body, ...s }));
+      let firstId = null;
+      for (const b of slices) {
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: b });
+        if (!firstId) firstId = data.id;
+      }
+      return { eventId: firstId, conferenceLink: null };
+    }
 
-    let firstId = null;
-    let conferenceLink = null;
-    for (const b of bodies) {
-      const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: b });
-      if (!firstId) {
-        firstId = data.id;
-        conferenceLink = data.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri || null;
+    // ── Single event → update in place ──
+    // Updating preserves an imported Google event's identity (no duplicate) and
+    // tags it with our marker so future pulls skip it. Falls back to a marker
+    // search (recovers from a failed write-back), else inserts.
+    let keptId = row.gcal_event_id || null;
+    let eventData;
+    if (keptId) {
+      try {
+        const { data } = await client.calendar.events.update({ calendarId: client.calendarId, eventId: keptId, requestBody: { ...body, id: keptId } });
+        eventData = data;
+      } catch (err) {
+        if (err?.code !== 404 && err?.code !== 410) throw err;
+        keptId = null;
       }
     }
-    return { eventId: firstId, conferenceLink };
+    if (!eventData) {
+      let existingId = null;
+      try {
+        const { data: found } = await client.calendar.events.list({
+          calendarId: client.calendarId,
+          privateExtendedProperty: `${PERSONAL_MARKER}=${row.id}`,
+          maxResults: 25, showDeleted: false,
+        });
+        existingId = (found.items || [])[0]?.id || null;
+      } catch { /* search not critical */ }
+      if (existingId) {
+        const { data } = await client.calendar.events.update({ calendarId: client.calendarId, eventId: existingId, requestBody: { ...body, id: existingId } });
+        eventData = data; keptId = existingId;
+      } else {
+        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
+        eventData = data; keptId = data.id;
+      }
+    }
+
+    // Remove leftover marker events other than the one we kept — covers a
+    // multi-day(sliced) → single-day transition that would otherwise orphan slices.
+    try {
+      const { data: found } = await client.calendar.events.list({
+        calendarId: client.calendarId,
+        privateExtendedProperty: `${PERSONAL_MARKER}=${row.id}`,
+        maxResults: 50, showDeleted: false,
+      });
+      for (const ev of found.items || []) {
+        if (ev.id !== keptId) await client.calendar.events.delete({ calendarId: client.calendarId, eventId: ev.id }).catch(() => {});
+      }
+    } catch { /* cleanup best-effort */ }
+
+    return {
+      eventId: eventData.id || null,
+      conferenceLink: eventData.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri || null,
+    };
   } catch (err) {
     if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return null; }
     console.error('pushPersonalEvent:', err?.message);
@@ -1397,7 +1494,39 @@ export async function pullPersonalEventsFromGoogle(userId, timeMinISO, timeMaxIS
           // Skip anything NEUPC already owns.
           const priv = ev.extendedProperties?.private || {};
           if (priv[FEED_MARKER] || priv[PERSONAL_MARKER] || priv[TODO_MARKER] || priv[TODO_CAL_MARKER]) continue;
-          results.push(ev);
+
+          // Normalise to Dhaka-local fields so imported times/dates match what the
+          // member sees (Google returns dateTime in the calendar's own tz/offset).
+          const allDay = !ev.start?.dateTime;
+          let eventDate, endDate = null, startTime = null, endTime = null;
+          if (allDay) {
+            if (!ev.start?.date) continue;
+            eventDate = ev.start.date;
+            // Google all-day end is exclusive → last day = end.date − 1.
+            const lastDay = ev.end?.date ? prevDhakaDate(ev.end.date) : eventDate;
+            endDate = lastDay > eventDate ? lastDay : null;
+          } else {
+            eventDate = dhakaDate(ev.start.dateTime);
+            startTime = dhakaTime(ev.start.dateTime).slice(0, 5);
+            if (ev.end?.dateTime) {
+              endTime = dhakaTime(ev.end.dateTime).slice(0, 5);
+              const ed = dhakaDate(ev.end.dateTime);
+              endDate = ed && ed > eventDate ? ed : null;
+            }
+          }
+          if (!eventDate) continue;
+
+          results.push({
+            id: ev.id,
+            title: ev.summary || '(no title)',
+            description: ev.description ? ev.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || null : null,
+            location: ev.location || null,
+            allDay,
+            eventDate,
+            endDate,
+            startTime,
+            endTime,
+          });
         }
       } catch { /* skip */ }
     }

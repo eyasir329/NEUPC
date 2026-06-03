@@ -300,7 +300,7 @@ export default function ExpandedCalendarModal({
   };
 
   // ── task interaction ──
-  const openTask = useCallback((t) => onSelectTask?.(t.id), [onSelectTask]);
+  const openTask = useCallback((t, dateStr) => onSelectTask?.(t.id, dateStr), [onSelectTask]);
   const openCreate = useCallback((dateStr) => onOpenCreatePane?.(dateStr), [onOpenCreatePane]);
 
   // ── derived sub-item lists ──
@@ -646,7 +646,7 @@ export default function ExpandedCalendarModal({
                           <div className="w-13 shrink-0 border-r border-white/6" />
                           <div className="flex-1 px-1 pb-1 flex flex-wrap gap-0.5">
                             {allItems.map(({ task: t, timeLabel }) => (
-                              <AllDayChip key={`dhdr-${t.id}`} task={t} color={getColor(t)} onSelect={openTask} timeLabel={timeLabel} />
+                              <AllDayChip key={`dhdr-${t.id}`} task={t} color={getColor(t)} onSelect={(task) => openTask(task, dayStr)} timeLabel={timeLabel} />
                             ))}
                           </div>
                         </div>
@@ -679,7 +679,7 @@ export default function ExpandedCalendarModal({
                             startMin={startMin} durationMin={durationMin}
                             zOffset={zOffset} isAllDay={isAllDay}
                             col={col} totalCols={totalCols} renderStart={renderStart}
-                            onSelect={openTask}
+                            onSelect={(task) => openTask(task, dayStr)}
                           />
                         ))}
                       </div>
@@ -819,7 +819,7 @@ export default function ExpandedCalendarModal({
                               style={{ gridColumn: `${colIdx + 1} / ${colIdx + 2}`, gridRow: row + 1 }}
                               className="px-0.5 min-w-0"
                             >
-                              <AllDayChip task={t} color={getColor(t)} onSelect={openTask} timeLabel={timeLabel} />
+                              <AllDayChip task={t} color={getColor(t)} onSelect={(task) => openTask(task, dStr)} timeLabel={timeLabel} />
                             </div>
                           );
                         }
@@ -913,7 +913,7 @@ export default function ExpandedCalendarModal({
                                 startMin={startMin} durationMin={durationMin}
                                 zOffset={zOffset} isAllDay={isAllDay}
                                 col={col} totalCols={totalCols} renderStart={renderStart}
-                                onSelect={openTask}
+                                onSelect={(task) => openTask(task, dStr)}
                               />
                             ))}
                           </div>
@@ -1073,7 +1073,7 @@ export default function ExpandedCalendarModal({
                                 return (
                                   <div
                                     key={`mc-ev-${t.id}`}
-                                    onClick={(e) => { e.stopPropagation(); openTask(t); }}
+                                    onClick={(e) => { e.stopPropagation(); openTask(t, dStr); }}
                                     title={t.title}
                                     style={{ backgroundColor: c + '22', borderLeft: `2px solid ${c}` }}
                                     className="flex items-center gap-1 px-1.5 py-0.5 rounded-md cursor-pointer hover:brightness-125 transition select-none"

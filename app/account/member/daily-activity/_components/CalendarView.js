@@ -20,7 +20,7 @@ import {
   X, Flag, Expand, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
+import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE, subtasksForDate } from './utils';
 import FeedItemCard from './FeedItemCard';
 import GoogleCalendarPanel from './GoogleCalendarPanel';
 import ExpandedCalendarModal from './ExpandedCalendarModal';
@@ -123,7 +123,7 @@ function SubItemList({ items, emptyLabel, getChecked, onToggle, getColor, onSetC
   );
 }
 
-export default function CalendarView({ tasks, projects, labels = [], onToggleComplete, onSelectTask, onToast, onSynced, onCreatePersonal, onOpenCreatePane }) {
+export default function CalendarView({ tasks, projects, labels = [], onToggleComplete, onUpdateTask, onSelectTask, onToast, onSynced, onCreatePersonal, onOpenCreatePane }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateString());
   const [viewMode, setViewMode] = useState('grid');
@@ -620,7 +620,7 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
                       return (
                         <div
                           key={`weekly-row-task-${t.id}`}
-                          onClick={(e) => { e.stopPropagation(); onSelectTask(t.id); }}
+                          onClick={(e) => { e.stopPropagation(); onSelectTask(t.id, dateStr); }}
                           style={{ borderLeftColor: projColor, backgroundColor: projColor + '14' }}
                           className={`p-2 px-3 border-y border-r border-l-2 border-white/[0.02] rounded-xl cursor-pointer transition duration-150 flex items-center gap-2 max-w-[240px] shrink-0 ${t.completed ? 'opacity-35' : ''}`}
                         >
@@ -927,17 +927,17 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
         <div className="bg-gray-900 rounded-3xl border border-white/[0.08] p-5 flex flex-col flex-1 shadow-2xl" id="calendar-day-details" style={{ minHeight: '340px', maxHeight: '640px' }}>
           {/* Header */}
           <div className="flex justify-between items-start gap-3 pb-3.5 border-b border-white/[0.05] shrink-0">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-[8px] text-violet-400 font-mono tracking-widest uppercase font-black">Schedule</span>
+                <span className="text-[8px] text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-300 font-mono tracking-widest uppercase font-black">Schedule Inbox</span>
                 {isSelectedToday && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 text-[7.5px] font-black font-mono tracking-widest uppercase leading-none">Today</span>
+                  <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-500/15 border border-violet-500/30 text-violet-300 text-[7px] font-black font-mono tracking-widest uppercase leading-none animate-pulse">Live</span>
                 )}
               </div>
-              <h4 className="text-[14px] font-extrabold text-white mt-1.5 truncate">
+              <h4 className="text-[15px] font-extrabold text-white mt-1 truncate tracking-tight">
                 {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </h4>
-              <p className="text-[9px] font-mono text-slate-500 mt-1">
+              <p className="text-[9px] font-mono text-slate-500 mt-0.5">
                 {totalCount + feedCount === 0
                   ? 'Nothing scheduled'
                   : [
@@ -948,6 +948,30 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Circular progress ring */}
+              {totalCount > 0 && (
+                <div className="relative w-10 h-10 shrink-0" title={`${completedCount}/${totalCount} goals done`}>
+                  <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+                    <circle
+                      cx="18" cy="18" r="15.5" fill="none"
+                      stroke={allGoalsDone ? '#34d399' : 'url(#progressGrad)'}
+                      strokeWidth="3" strokeLinecap="round"
+                      strokeDasharray={`${completionPercentage * 0.975} 100`}
+                      className="transition-all duration-700 ease-out"
+                    />
+                    <defs>
+                      <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#8b5cf6" />
+                        <stop offset="100%" stopColor="#34d399" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-black font-mono ${allGoalsDone ? 'text-emerald-400' : 'text-white'}`}>
+                    {allGoalsDone ? '✓' : `${completionPercentage}%`}
+                  </span>
+                </div>
+              )}
               {onCreatePersonal && (
                 <button type="button" onClick={onCreatePersonal} title="New event" className="p-2 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl transition flex items-center justify-center cursor-pointer">
                   <CalendarDays className="w-3.5 h-3.5 stroke-2" />
@@ -960,42 +984,27 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
             </div>
           </div>
 
-          {/* Completion progress */}
-          {totalCount > 0 && (
-            <div className={`mt-3.5 p-3.5 rounded-2xl shrink-0 border transition-colors ${allGoalsDone ? 'bg-emerald-500/[0.07] border-emerald-500/25' : 'bg-slate-900/50 border-white/5'}`}>
-              <div className="flex justify-between items-center text-[9px] font-mono mb-2">
-                <span className={`font-black tracking-wider ${allGoalsDone ? 'text-emerald-300' : 'text-slate-400'}`}>
-                  {allGoalsDone ? '✓ ALL GOALS DONE' : 'GOAL PROGRESS'}
-                </span>
-                <span className="text-white font-black">{completedCount}/{totalCount} · {completionPercentage}%</span>
-              </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${completionPercentage}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`h-full rounded-full ${allGoalsDone ? 'bg-emerald-400' : 'bg-gradient-to-r from-violet-500 to-emerald-400'}`}
-                />
-              </div>
-            </div>
-          )}
-
           {/* Schedule list */}
-          <div className="mt-4 flex-1 min-h-0 overflow-y-auto no-scrollbar -mx-1 px-1 space-y-2.5">
+          <div className="mt-4 flex-1 min-h-0 overflow-y-auto no-scrollbar -mx-1 px-1 space-y-2">
             {selectedDayTasks.length === 0 ? (
               <div className="h-full min-h-[170px] flex flex-col items-center justify-center text-center p-6">
-                <div className="p-3.5 bg-slate-900 border border-white/5 rounded-2xl text-slate-500 mb-3.5">
-                  <CalendarDays className="w-5 h-5 stroke-[1.5]" />
+                <div className="relative mb-4">
+                  <div className="p-4 bg-gradient-to-br from-violet-500/[0.08] to-slate-900 border border-white/[0.06] rounded-2xl text-slate-500">
+                    <CalendarDays className="w-6 h-6 stroke-[1.5]" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500/30 rounded-full animate-ping" />
                 </div>
-                <p className="text-[11px] font-bold text-slate-300">{isSelectedToday ? 'Your day is clear' : 'Nothing scheduled'}</p>
-                <p className="text-[9px] font-mono text-slate-500 mt-1 mb-3.5">Plan a goal or block out an event.</p>
+                <p className="text-[12px] font-bold text-slate-200">{isSelectedToday ? 'Your slate is clean' : 'Nothing planned'}</p>
+                <p className="text-[9px] font-mono text-slate-500 mt-1 mb-4 max-w-[200px]">
+                  {isSelectedToday ? 'Start your day with intention — add a goal or schedule an event.' : 'Block out time for focused work or upcoming events.'}
+                </p>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => onOpenCreatePane?.()} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1 cursor-pointer">
+                  <button type="button" onClick={() => onOpenCreatePane?.()} className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-violet-600/15">
                     <Plus className="w-3 h-3 stroke-[2.5]" /> ADD GOAL
                   </button>
                   {onCreatePersonal && (
-                    <button type="button" onClick={onCreatePersonal} className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1 cursor-pointer">
-                      <CalendarDays className="w-3 h-3" /> ADD EVENT
+                    <button type="button" onClick={onCreatePersonal} className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1.5 cursor-pointer">
+                      <CalendarDays className="w-3 h-3" /> EVENT
                     </button>
                   )}
                 </div>
@@ -1015,39 +1024,135 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
                 }
 
                 const tc = getTaskColor(t);
+                const subs = subtasksForDate(t, selectedDateStr);
+                const hasSubs = subs.length > 1;
+                const subsDone = subs.filter((s) => s.completed).length;
+                const proj = projects.find((p) => p.id === t.projectId);
+                const isRecurring = !!t.recurrence?.freq;
+                const priColor = t.priority === Priority.P1 ? '#ef4444' : t.priority === Priority.P2 ? '#f59e0b' : t.priority === Priority.P3 ? '#3b82f6' : null;
+
                 return (
-                  <div
-                    key={`agenda-task-line-${t.id}`}
-                    style={{ borderColor: tc + '2e', backgroundColor: tc + '0d' }}
-                    className={`relative flex items-center gap-3 pl-4 pr-3 py-3 border rounded-2xl group select-none cursor-pointer transition-all duration-150 hover:translate-x-0.5 hover:brightness-110 ${t.completed ? 'opacity-60' : ''}`}
-                    onClick={() => onSelectTask(t.id)}
-                  >
-                    {/* Left accent bar */}
-                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full" style={{ backgroundColor: tc }} />
-
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onToggleComplete(t.id); }}
-                      title={t.completed ? 'Mark incomplete' : 'Mark complete'}
-                      style={t.completed ? { backgroundColor: tc, borderColor: tc } : { borderColor: tc + '90' }}
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition hover:scale-110 ${t.completed ? 'text-white' : 'text-transparent'}`}
+                  <div key={`agenda-task-line-${t.id}`} className="space-y-0">
+                    <div
+                      style={{ borderColor: tc + '2e', backgroundColor: tc + '0d' }}
+                      className={`relative flex items-start gap-3 pl-4 pr-3 py-3 border ${hasSubs ? 'rounded-t-2xl border-b-0' : 'rounded-2xl'} group select-none cursor-pointer transition-all duration-150 hover:translate-x-0.5 hover:brightness-110 ${t.completed ? 'opacity-50' : ''}`}
+                      onClick={() => onSelectTask(t.id, selectedDateStr)}
                     >
-                      {t.completed && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
-                    </button>
+                      {/* Left accent bar */}
+                      <span className={`absolute left-0 top-2 ${hasSubs ? 'bottom-0' : 'bottom-2'} w-1 rounded-full`} style={{ backgroundColor: tc }} />
 
-                    <div className="min-w-0 flex-1">
-                      <span className={`block text-[11.5px] font-bold break-words tracking-tight leading-snug ${t.completed ? 'line-through text-slate-500' : 'text-slate-100'}`} title={t.title}>
-                        {t.title}
-                      </span>
-                      {t.time && (
-                        <span className="inline-flex items-center gap-1 mt-1 text-[8.5px] font-mono font-black" style={{ color: tc }}>
-                          <Clock className="w-2.5 h-2.5" />
-                          {fmt24(t.time)}{t.endTime ? ` – ${fmt24(t.endTime)}` : ''}
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggleComplete(t.id); }}
+                        title={t.completed ? 'Mark incomplete' : 'Mark complete'}
+                        style={t.completed ? { backgroundColor: tc, borderColor: tc } : { borderColor: tc + '90' }}
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all hover:scale-110 mt-0.5 ${t.completed ? 'text-white shadow-sm' : 'text-transparent hover:border-opacity-100'}`}
+                      >
+                        {t.completed && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        {/* Title row */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {priColor && (
+                            <Flag className="w-3 h-3 shrink-0 fill-current" style={{ color: priColor }} />
+                          )}
+                          <span className={`text-[11.5px] font-bold break-words tracking-tight leading-snug flex-1 min-w-0 ${t.completed ? 'line-through text-slate-500' : 'text-slate-100'}`} title={t.title}>
+                            {t.title}
+                          </span>
+                          {hasSubs && (
+                            <span className="text-[8px] font-mono font-black px-1.5 py-0.5 rounded-full border shrink-0" style={{ color: tc, borderColor: tc + '40', backgroundColor: tc + '15' }}>
+                              {subsDone}/{subs.length}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Meta row: time, project, labels, recurrence */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          {t.time && (
+                            <span className="inline-flex items-center gap-1 text-[8.5px] font-mono font-black rounded-md px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.06]" style={{ color: tc }}>
+                              <Clock className="w-2.5 h-2.5" />
+                              {fmt24(t.time)}{t.endTime ? ` – ${fmt24(t.endTime)}` : ''}
+                            </span>
+                          )}
+                          {proj && (
+                            <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold text-slate-400 bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded-md leading-none">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: proj.color }} />
+                              {proj.name}
+                            </span>
+                          )}
+                          {isRecurring && (
+                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black font-mono text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md leading-none">
+                              <RefreshCw className="w-2 h-2" />
+                              {t.recurrence?.freq === 'daily' ? 'Daily' : t.recurrence?.freq === 'weekly' ? 'Weekly' : t.recurrence?.freq === 'monthly' ? 'Monthly' : 'Repeat'}
+                            </span>
+                          )}
+                          {t.labels && t.labels.length > 0 && t.labels.slice(0, 2).map((lbl) => (
+                            <span key={`lbl-${t.id}-${lbl}`} className="inline-flex items-center gap-0.5 text-[8px] font-semibold text-slate-400 bg-white/[0.03] border border-white/[0.05] px-1.5 py-0.5 rounded-md leading-none">
+                              <Tag className="w-2 h-2 shrink-0 text-slate-500" />
+                              {lbl}
+                            </span>
+                          ))}
+                          {t.labels && t.labels.length > 2 && (
+                            <span className="text-[8px] text-slate-500 font-mono font-black">+{t.labels.length - 2}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-300 transition shrink-0 mt-1" />
                     </div>
 
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0" />
+                    {/* Inline subtasks for multi-subtask todos */}
+                    {hasSubs && (
+                      <div
+                        style={{ borderColor: tc + '2e', backgroundColor: tc + '06' }}
+                        className="border border-t-0 rounded-b-2xl overflow-hidden"
+                      >
+                        {/* Subtask progress bar */}
+                        <div className="mx-4 mt-2 mb-1">
+                          <div className="w-full h-[3px] bg-white/[0.06] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{ width: `${subs.length > 0 ? Math.round((subsDone / subs.length) * 100) : 0}%`, backgroundColor: tc }}
+                            />
+                          </div>
+                        </div>
+                        <div className="pb-1">
+                          {subs.map((s, si) => {
+                            const handleToggleSub = (e) => {
+                              e.stopPropagation();
+                              const isRecurring = !!t.recurrence?.freq;
+                              const toggled = subs.map((x) => x.id === s.id ? { ...x, completed: !x.completed } : x);
+                              if (isRecurring) {
+                                const nextOcc = { ...(t.occurrenceSubtasks || {}), [selectedDateStr]: toggled };
+                                onUpdateTask?.(t.id, { occurrenceSubtasks: nextOcc });
+                              } else {
+                                onUpdateTask?.(t.id, { subtasks: toggled });
+                              }
+                            };
+                            return (
+                              <div
+                                key={`agenda-sub-${t.id}-${s.id}`}
+                                className={`flex items-center gap-2.5 pl-9 pr-3 py-[5px] cursor-pointer transition-colors hover:bg-white/[0.03] ${si === subs.length - 1 ? '' : 'border-b border-white/[0.03]'}`}
+                                onClick={(e) => { e.stopPropagation(); onSelectTask(t.id, selectedDateStr); }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={handleToggleSub}
+                                  className={`w-2.5 h-2.5 rounded-sm border flex items-center justify-center shrink-0 transition-all hover:scale-125 ${s.completed ? 'text-white' : 'text-transparent'}`}
+                                  style={s.completed ? { backgroundColor: tc, borderColor: tc } : { borderColor: tc + '50' }}
+                                >
+                                  {s.completed && <Check className="w-2 h-2 stroke-[4]" />}
+                                </button>
+                                <span className={`text-[10px] truncate leading-none ${s.completed ? 'line-through text-slate-500' : 'text-slate-300 font-medium'}`} title={s.title}>
+                                  {s.title}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

@@ -39,7 +39,7 @@ const GCAL_COLORS = [
 ];
 import {
   Priority, generateId, getFeedItemUrl, getTodayDateString, formatDateString,
-  addDays, isFeedItem, fmt24,
+  addDays, isFeedItem, fmt24, subtasksForDate,
 } from './utils';
 
 export default function TaskDetailPane({
@@ -48,14 +48,20 @@ export default function TaskDetailPane({
   initialTitle = '',
   defaultProjectId,
   defaultDueDate,
+  occurrenceDate,
   onClose,
   projects,
   sections,
   onUpdateTask,
+  onUpdateOccurrence,
   onDeleteTask,
   onCreateTask,
 }) {
   const isCreate = mode === 'create';
+  // Which occurrence's subtasks this pane edits (recurring tasks keep an
+  // independent list per date). Defaults to today for a dateless open.
+  const isRecurring = !isCreate && !!task?.recurrence?.freq;
+  const occDate = occurrenceDate || task?.dueDate || getTodayDateString();
 
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
@@ -102,7 +108,18 @@ export default function TaskDetailPane({
       sectionId: task?.sectionId || '',
       recurrence: task?.recurrence || 'none',
       labels: task?.labels || [],
-      subtasks: task?.subtasks || [],
+      // For a recurring task, edit only this occurrence's list; non-recurring
+      // edits its single shared list. A brand-new occurrence is a fully
+      // independent deep copy of the template with FRESH ids — so once it exists
+      // it shares no data (not even ids) with the template or sibling dates.
+      subtasks: (() => {
+        const list = subtasksForDate(task, occDate);
+        // A recurring occurrence with no stored list yet is a fresh copy of the
+        // template — give it new ids so it shares nothing with the template/siblings.
+        const isNewOccurrence = !!task?.recurrence?.freq && !Array.isArray(task?.occurrenceSubtasks?.[occDate]);
+        return isNewOccurrence ? list.map((s) => ({ ...s, id: generateId() })) : list;
+      })(),
+      occurrenceSubtasks: task?.occurrenceSubtasks || {},
       comments: task?.comments || [],
       location: task?.location || '',
       url: task?.url || '',
@@ -446,7 +463,7 @@ export default function TaskDetailPane({
           attendees: draft.attendees,
         });
       } else {
-        await onUpdateTask(task.id, {
+        const fields = {
           title: draft.title.trim(),
           description: draft.description.trim(),
           priority: draft.priority,
@@ -466,7 +483,18 @@ export default function TaskDetailPane({
           visibility: draft.visibility,
           reminders: draft.reminders,
           attendees: draft.attendees,
-        });
+        };
+
+        // Editing a single occurrence of a recurring task detaches it into its
+        // own independent task — UNLESS the schedule itself changed, which is a
+        // series-level edit and updates the parent.
+        const draftRec = draft.recurrence === 'none' ? null : draft.recurrence;
+        const recurrenceChanged = JSON.stringify(draftRec) !== JSON.stringify(task.recurrence || null);
+        if (isRecurring && occDate && !recurrenceChanged && onUpdateOccurrence) {
+          await onUpdateOccurrence(task.id, occDate, fields);
+        } else {
+          await onUpdateTask(task.id, fields);
+        }
       }
       onClose();
     } catch {
@@ -480,7 +508,7 @@ export default function TaskDetailPane({
     e.preventDefault();
     if (!newSubtaskTitle.trim()) return;
 
-    const newSub = { id: generateId(), title: newSubtaskTitle.trim(), completed: false, priority: Priority.P4 };
+    const newSub = { id: generateId(), title: newSubtaskTitle.trim(), completed: false, details: '', priority: Priority.P4 };
     patch({ subtasks: [...values.subtasks, newSub] });
     setNewSubtaskTitle('');
   };
@@ -491,6 +519,10 @@ export default function TaskDetailPane({
 
   const handleDeleteSubtask = (subId) => {
     patch({ subtasks: values.subtasks.filter((s) => s.id !== subId) });
+  };
+
+  const handleSubtaskDetails = (subId, details) => {
+    patch({ subtasks: values.subtasks.map((s) => (s.id === subId ? { ...s, details } : s)) });
   };
 
   const handleAddComment = (e) => {
@@ -1183,14 +1215,24 @@ export default function TaskDetailPane({
 
           <div className="space-y-2">
             {values.subtasks.map((s) => (
-              <div key={s.id} className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-white/[0.01] to-transparent border border-white/[0.03] hover:from-white/[0.03] transition-all duration-200 group">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <input type="checkbox" checked={s.completed} onChange={() => handleToggleSubtask(s.id)} className="rounded text-violet-500 border-white/20 bg-slate-950 focus:ring-violet-500 focus:ring-offset-0 h-3.5 w-3.5 cursor-pointer" />
-                  <span className={`text-xs text-gray-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
+              <div key={s.id} className="p-3 rounded-2xl bg-gradient-to-r from-white/[0.01] to-transparent border border-white/[0.03] hover:from-white/[0.03] transition-all duration-200 group">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <input type="checkbox" checked={s.completed} onChange={() => handleToggleSubtask(s.id)} className="rounded text-violet-500 border-white/20 bg-slate-950 focus:ring-violet-500 focus:ring-offset-0 h-3.5 w-3.5 cursor-pointer" />
+                    <span className={`text-xs text-gray-300 truncate font-semibold ${s.completed ? 'line-through text-slate-500 font-medium' : ''}`}>{s.title}</span>
+                  </div>
+                  <button type="button" onClick={() => handleDeleteSubtask(s.id)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-white/5 rounded-md text-slate-400 hover:text-red-500 transition cursor-pointer">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button type="button" onClick={() => handleDeleteSubtask(s.id)} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-white/5 rounded-md text-slate-400 hover:text-red-500 transition cursor-pointer">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {/* Per-subtask details (mirrors a Google Task subtask's notes). */}
+                <textarea
+                  rows={1}
+                  value={s.details || ''}
+                  onChange={(e) => handleSubtaskDetails(s.id, e.target.value)}
+                  placeholder="Add details…"
+                  className="mt-2 ml-6 w-[calc(100%-1.5rem)] resize-none text-[11px] px-2.5 py-1.5 bg-slate-950/50 border border-white/[0.05] rounded-lg focus:outline-none focus:border-violet-500/60 focus:bg-slate-950 text-slate-300 placeholder:text-slate-600 transition-all duration-200"
+                />
               </div>
             ))}
           </div>

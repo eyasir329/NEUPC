@@ -76,6 +76,7 @@ export default function MemberDailyActivityClient({ userId }) {
 
   const [activeTab, setActiveTab] = useState('insights');
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [selectedOccurrenceDate, setSelectedOccurrenceDate] = useState(null);
 
   const [showProductivityModal, setShowProductivityModal] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
@@ -277,6 +278,46 @@ export default function MemberDailyActivityClient({ userId }) {
     }
   };
 
+  // Detach one occurrence of a recurring task: create a standalone (non-recurring)
+  // copy on that date with the edited fields, then exclude the date from the
+  // series so the two never share data again.
+  const handleUpdateOccurrence = async (parentTaskId, occurrenceDate, fields) => {
+    if (isReadOnlyTask(parentTaskId)) {
+      showToast('Cannot modify read-only activity items.', 'error');
+      return;
+    }
+    const parent = tasks.find((t) => t.id === parentTaskId);
+    if (!parent) return;
+
+    try {
+      // 1. Create the independent copy first (so a failure can't drop the date).
+      const createRes = await fetch('/api/member/daily-activity/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...fields, recurrence: undefined, dueDate: occurrenceDate }),
+      });
+      if (!createRes.ok) throw new Error('Create failed');
+      const newTask = await createRes.json();
+
+      // 2. Exclude this date from the recurring series.
+      const nextExclusions = [...new Set([...(parent.exclusions || []), occurrenceDate])];
+      const patchRes = await fetch('/api/member/daily-activity/todos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parentTaskId, exclusions: nextExclusions }),
+      });
+      if (!patchRes.ok) throw new Error('Exclude failed');
+      const updatedParent = await patchRes.json();
+
+      setTasks((curr) => [newTask, ...curr.map((t) => (t.id === parentTaskId ? updatedParent : t))]);
+      showToast('This occurrence is now its own task.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update this occurrence.', 'error');
+      throw err;
+    }
+  };
+
   const handleToggleComplete = async (taskId) => {
     if (isReadOnlyTask(taskId)) {
       showToast('Activity items cannot be completed here.', 'error');
@@ -433,7 +474,7 @@ export default function MemberDailyActivityClient({ userId }) {
     setShowCreatePane(true);
   };
 
-  const handleSelectTask = (taskId) => {
+  const handleSelectTask = (taskId, occurrenceDate) => {
     const t = tasks.find((x) => x.id === taskId);
     if (t?.feedCategory === 'personal') {
       setSelectedTaskId(null);
@@ -441,6 +482,9 @@ export default function MemberDailyActivityClient({ userId }) {
     } else {
       setGooglePane(null);
       setSelectedTaskId(taskId);
+      // The occurrence (date) whose subtasks the editor edits; defaults to today
+      // when opened from a dateless view.
+      setSelectedOccurrenceDate(occurrenceDate || getTodayDateString());
     }
   };
 
@@ -608,13 +652,15 @@ export default function MemberDailyActivityClient({ userId }) {
 
         {!showCreatePane && selectedTaskId && activeTask && (
           <TaskDetailPane
-            key={selectedTaskId}
+            key={`${selectedTaskId}-${selectedOccurrenceDate || ''}`}
             task={activeTask}
+            occurrenceDate={selectedOccurrenceDate}
             onClose={() => setSelectedTaskId(null)}
             projects={projects}
             sections={sections}
             labels={labels}
             onUpdateTask={handleUpdateTask}
+            onUpdateOccurrence={handleUpdateOccurrence}
             onDeleteTask={handleDeleteTask}
           />
         )}

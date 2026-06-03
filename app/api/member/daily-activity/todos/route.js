@@ -27,7 +27,9 @@ function mapRowToTask(row) {
     sectionId: row.section_id || undefined,
     labels: row.labels || [],
     recurrence: row.recurrence || null,
+    exclusions: row.exclusions || [],
     subtasks: row.subtasks || [],
+    occurrenceSubtasks: row.occurrence_subtasks || {},
     comments: row.comments || [],
     isArchived: false,
     location: row.location || null,
@@ -161,6 +163,7 @@ export async function POST(request) {
       labels: labels || [],
       recurrence: recurrence || null,
       subtasks: subtasks || [],
+      occurrence_subtasks: body.occurrenceSubtasks || {},
       comments: comments || [],
       completed: false,
       location: location || null,
@@ -213,7 +216,9 @@ export async function PATCH(request) {
     if (fields.sectionId !== undefined) updates.section_id = fields.sectionId || null;
     if (fields.labels !== undefined) updates.labels = fields.labels;
     if (fields.recurrence !== undefined) updates.recurrence = fields.recurrence;
+    if (fields.exclusions !== undefined) updates.exclusions = fields.exclusions;
     if (fields.subtasks !== undefined) updates.subtasks = fields.subtasks;
+    if (fields.occurrenceSubtasks !== undefined) updates.occurrence_subtasks = fields.occurrenceSubtasks;
     if (fields.comments !== undefined) updates.comments = fields.comments;
     if (fields.location !== undefined) updates.location = fields.location || null;
     if (fields.url !== undefined) updates.url = fields.url || null;

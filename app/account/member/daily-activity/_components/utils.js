@@ -65,6 +65,27 @@ export function resolveTaskColor(task, layerColors, subColors = {}, projects = [
   return layerColors.todo;
 }
 
+/**
+ * The subtask list for a task on a specific occurrence date.
+ *
+ * Recurring tasks keep an independent list per date in `occurrenceSubtasks`
+ * (keyed `YYYY-MM-DD`); a date not yet edited is seeded from the task's
+ * `subtasks` template with completion reset. Non-recurring tasks have a single
+ * occurrence, so their `subtasks` array is returned unchanged.
+ *
+ * @param {object} task
+ * @param {string} dateStr  Occurrence day as `YYYY-MM-DD`.
+ * @returns {{id:string,title:string,completed:boolean}[]}
+ */
+export function subtasksForDate(task, dateStr) {
+  if (!task) return [];
+  const isRecurring = !!task.recurrence?.freq;
+  if (!isRecurring) return task.subtasks || [];
+  const stored = task.occurrenceSubtasks?.[dateStr];
+  if (Array.isArray(stored)) return stored;
+  return (task.subtasks || []).map((s) => ({ ...s, completed: false }));
+}
+
 /** Convert "HH:MM" (24-hour) → "H:MM AM/PM". Returns empty string for falsy input. */
 export function fmt24(t) {
   if (!t) return '';
@@ -281,6 +302,9 @@ export function getFeedItemUrl(task) {
  * @returns {boolean}
  */
 export function isTaskOnDate(task, dateStr) {
+  // A detached occurrence is excluded from the series so it renders only as its
+  // own standalone task.
+  if (Array.isArray(task.exclusions) && task.exclusions.includes(dateStr)) return false;
   // Personal events store their date in `start` (ISO string), not `dueDate`.
   const effectiveDueDate = task.dueDate || (task.feedCategory === 'personal' && task.start ? task.start.split('T')[0] : null);
   if (!effectiveDueDate) return false;

@@ -21,7 +21,7 @@ import {
   syncChildSubtasks,
   pushFeedItem,
   deleteTodoEvent,
-  readTaskCompletions,
+  readDefaultTaskStatuses,
   listGoogleTasks,
   pushPersonalEvent,
   pullPersonalEventsFromGoogle,
@@ -246,10 +246,10 @@ const LWW_GRACE_MS = 60 * 1000;
 
 /**
  * Two-way completion pull: read the done-state of the member's mirrored Google
- * Tasks and apply any change back to NEUPC. Non-recurring todos only (a single
- * unambiguous done-state). Uses `gcal_synced_at` vs `updated_at` as a
- * last-write-wins guard so a newer local edit isn't clobbered. Best-effort and
- * idempotent — safe to call on page open and after "Sync now".
+ * Tasks — both the parent task AND its child subtasks — and apply any change back
+ * to NEUPC. Non-recurring todos only (a single unambiguous done-state). Uses
+ * `gcal_synced_at` vs `updated_at` as a last-write-wins guard so a newer local
+ * edit isn't clobbered. Best-effort and idempotent — safe on page open / sync.
  *
  * @returns {Promise<{updated:number}|{error:string}>}
  */
@@ -263,7 +263,7 @@ export async function pullGoogleCompletionsAction() {
   // Linked, non-recurring todos are the only ones with a 1:1 Google Task done-state.
   const { data: rows, error } = await supabaseAdmin
     .from('todos')
-    .select('id, completed, recurrence, updated_at, gcal_synced_at, gtask_id')
+    .select('id, completed, recurrence, updated_at, gcal_synced_at, gtask_id, subtasks, gtask_subtask_ids')
     .eq('user_id', a.userId)
     .not('gtask_id', 'is', null)
     .limit(PULL_LIMIT);
@@ -275,31 +275,52 @@ export async function pullGoogleCompletionsAction() {
   const linked = (rows || []).filter((r) => !r.recurrence?.freq && r.gtask_id);
   if (linked.length === 0) return { updated: 0 };
 
-  const states = await readTaskCompletions(
-    a.userId,
-    linked.map((r) => ({ id: r.id, gtaskId: r.gtask_id }))
-  );
-  const byId = new Map(linked.map((r) => [r.id, r]));
+  // One list call → done-state of every @default task (parents + child subtasks).
+  const statusById = await readDefaultTaskStatuses(a.userId);
+  if (!statusById) return { updated: 0 };
 
   let updated = 0;
-  for (const { todoId, completed } of states) {
-    const row = byId.get(todoId);
-    if (!row || !!row.completed === !!completed) continue; // already in sync
-
+  for (const row of linked) {
     // Last-write-wins: if the local row was edited more recently than our last
-    // sync (plus grace), prefer the local state and skip Google's value.
+    // sync (plus grace), prefer the local state and skip Google entirely.
     const localTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
     const syncTime = row.gcal_synced_at ? new Date(row.gcal_synced_at).getTime() : 0;
     if (localTime > syncTime + LWW_GRACE_MS) continue;
 
+    const patch = {};
+
+    // Parent completion.
+    if (statusById.has(row.gtask_id)) {
+      const completed = statusById.get(row.gtask_id);
+      if (!!row.completed !== !!completed) {
+        patch.completed = completed;
+        patch.completed_at = completed ? new Date().toISOString() : null;
+      }
+    }
+
+    // Subtask completion — match each NEUPC subtask to its Google child via the
+    // stored { neupcSubId: googleChildId } map.
+    const subMap = row.gtask_subtask_ids || {};
+    if (Array.isArray(row.subtasks) && row.subtasks.length && Object.keys(subMap).length) {
+      let subsChanged = false;
+      const nextSubs = row.subtasks.map((s) => {
+        const childId = subMap[s.id];
+        if (childId && statusById.has(childId)) {
+          const done = statusById.get(childId);
+          if (!!s.completed !== !!done) { subsChanged = true; return { ...s, completed: done }; }
+        }
+        return s;
+      });
+      if (subsChanged) patch.subtasks = nextSubs;
+    }
+
+    if (Object.keys(patch).length === 0) continue; // already in sync
+
+    patch.gcal_synced_at = new Date().toISOString();
     const { error: updErr } = await supabaseAdmin
       .from('todos')
-      .update({
-        completed,
-        completed_at: completed ? new Date().toISOString() : null,
-        gcal_synced_at: new Date().toISOString(),
-      })
-      .eq('id', todoId)
+      .update(patch)
+      .eq('id', row.id)
       .eq('user_id', a.userId);
     if (updErr) {
       console.error('pullGoogleCompletionsAction (update):', updErr.message);
@@ -364,11 +385,11 @@ export async function pullFromGoogleAction({ timeMin, timeMax }) {
         start_date: dueDate,
         due_time: null,
         labels: ['Google Tasks'],
-        subtasks: [],
+        subtasks: t.subtasks || [],
         comments: [],
         completed: false,
         gtask_id: rawId,
-        gtask_subtask_ids: {},
+        gtask_subtask_ids: t.gtaskSubtaskIds || {},
         gcal_synced_at: new Date().toISOString(),
       });
       imported++;
@@ -395,17 +416,19 @@ export async function pullFromGoogleAction({ timeMin, timeMax }) {
 
     let importedEvents = 0;
     for (const ev of rawGoogleEvents) {
+      // ev is already normalised to Dhaka-local fields (eventDate/endDate/start/end).
       if (existingGcalIds.has(ev.id)) {
-        // Update title/description/location in case it changed in Google.
-        const eventDate = ev.start?.date || (ev.start?.dateTime || '').split('T')[0];
-        if (!eventDate) continue;
+        // Reflect any change made in Google back onto the linked row.
         await supabaseAdmin
           .from('personal_events')
           .update({
-            title: ev.summary || '(no title)',
-            description: ev.description ? ev.description.replace(/<[^>]+>/g, '').trim() : null,
-            location: ev.location || null,
-            event_date: eventDate,
+            title: ev.title,
+            description: ev.description,
+            location: ev.location,
+            event_date: ev.eventDate,
+            end_date: ev.endDate,
+            start_time: ev.startTime,
+            end_time: ev.endTime,
             gcal_synced_at: new Date().toISOString(),
           })
           .eq('gcal_event_id', ev.id)
@@ -413,18 +436,7 @@ export async function pullFromGoogleAction({ timeMin, timeMax }) {
         continue;
       }
 
-      const allDay = !ev.start?.dateTime;
-      const eventDate = allDay ? ev.start.date : (ev.start.dateTime || '').split('T')[0];
-      if (!eventDate) continue;
-
-      let startTime = null, endTime = null;
-      if (!allDay && ev.start?.dateTime) {
-        startTime = ev.start.dateTime.split('T')[1]?.slice(0, 5) || null;
-        endTime = ev.end?.dateTime ? ev.end.dateTime.split('T')[1]?.slice(0, 5) : null;
-      }
-
-      const title = ev.summary || '(no title)';
-      const dateTitleKey = `${eventDate}|${title.toLowerCase()}`;
+      const dateTitleKey = `${ev.eventDate}|${ev.title.toLowerCase()}`;
 
       // If a row exists with no gcal_event_id but same date+title, link it instead of inserting.
       const orphanRowId = existingByDateTitle.get(dateTitleKey);
@@ -441,12 +453,13 @@ export async function pullFromGoogleAction({ timeMin, timeMax }) {
 
       await supabaseAdmin.from('personal_events').insert({
         user_id: a.userId,
-        title,
-        description: ev.description ? ev.description.replace(/<[^>]+>/g, '').trim() : null,
-        location: ev.location || null,
-        event_date: eventDate,
-        start_time: startTime,
-        end_time: endTime,
+        title: ev.title,
+        description: ev.description,
+        location: ev.location,
+        event_date: ev.eventDate,
+        end_date: ev.endDate,
+        start_time: ev.startTime,
+        end_time: ev.endTime,
         gcal_event_id: ev.id,
         gcal_synced_at: new Date().toISOString(),
       });
