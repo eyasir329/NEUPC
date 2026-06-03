@@ -10,7 +10,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
-import { formatDateString, addDays, getTodayDateString, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
+import { formatDateString, addDays, getTodayDateString, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE, resolveTaskColor } from './utils';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -155,28 +155,6 @@ const LAYERS_CFG = [
   { key: 'tasks',    label: 'Tasks',    emoji: '📅' },
   { key: 'sessions', label: 'Sessions', emoji: '🎓' },
 ];
-
-function resolveTaskColor(task, layerColors, subColors, projects) {
-  if (task.colorId && GCAL_COLOR_MAP[task.colorId]) return GCAL_COLOR_MAP[task.colorId];
-  if (task.isContest) {
-    const platform = (task.contestPlatform || 'other').toLowerCase();
-    return subColors[`platform:${platform}`] || layerColors.contests;
-  }
-  if (task.feedCategory === 'task') {
-    const bc = task.bootcampTitle || 'Other';
-    return subColors[`bootcamp:${bc}`] || layerColors.tasks;
-  }
-  if (task.feedCategory === 'session') {
-    const bc = task.bootcampTitle || 'Other';
-    return subColors[`bootcamp:${bc}`] || layerColors.sessions;
-  }
-  if (task.feedCategory === 'personal') return layerColors.personal;
-  if (task.feedCategory === 'event')    return layerColors.events;
-  // todo — per-project color
-  const proj = (projects || []).find((p) => p.id === task.projectId);
-  if (proj) return subColors[`project:${proj.name}`] || proj.color || layerColors.todo;
-  return layerColors.todo;
-}
 
 function layerVisible(task, showLayers, subVis) {
   if (task.isContest) {

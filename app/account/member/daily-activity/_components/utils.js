@@ -31,6 +31,40 @@ export const PALETTE = [
   '#8e24aa', '#616161', '#f09300', '#ad1457', '#0097a7', '#795548',
 ];
 
+/**
+ * Resolve the display colour for a calendar task, matching the expand-mode
+ * calendar exactly: a per-item `colorId` wins, then a sub-item override
+ * (platform / bootcamp / project), then the layer default. Shared by
+ * ExpandedCalendarModal and the Google Calendar push so the pushed colours match
+ * what the week/day view shows.
+ *
+ * @param {object} task
+ * @param {object} layerColors  Layer → hex (merge of LAYER_DEFAULTS + overrides).
+ * @param {object} subColors    'platform:x'|'bootcamp:x'|'project:name' → hex.
+ * @param {object[]} projects   [{ id, name, color }]
+ * @returns {string} hex colour
+ */
+export function resolveTaskColor(task, layerColors, subColors = {}, projects = []) {
+  if (task.colorId && GCAL_COLOR_MAP[task.colorId]) return GCAL_COLOR_MAP[task.colorId];
+  if (task.isContest) {
+    const platform = (task.contestPlatform || 'other').toLowerCase();
+    return subColors[`platform:${platform}`] || layerColors.contests;
+  }
+  if (task.feedCategory === 'task') {
+    const bc = task.bootcampTitle || 'Other';
+    return subColors[`bootcamp:${bc}`] || layerColors.tasks;
+  }
+  if (task.feedCategory === 'session') {
+    const bc = task.bootcampTitle || 'Other';
+    return subColors[`bootcamp:${bc}`] || layerColors.sessions;
+  }
+  if (task.feedCategory === 'personal') return layerColors.personal;
+  if (task.feedCategory === 'event')    return layerColors.events;
+  const proj = (projects || []).find((p) => p.id === task.projectId);
+  if (proj) return subColors[`project:${proj.name}`] || proj.color || layerColors.todo;
+  return layerColors.todo;
+}
+
 /** Convert "HH:MM" (24-hour) → "H:MM AM/PM". Returns empty string for falsy input. */
 export function fmt24(t) {
   if (!t) return '';

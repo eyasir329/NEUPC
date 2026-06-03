@@ -26,10 +26,31 @@ import {
   pullFromGoogleAction,
 } from '@/app/_lib/actions/google-calendar-actions';
 import { isValidUUID } from '@/app/_lib/utils/validation';
+import { resolveTaskColor, LAYER_DEFAULTS } from '@/app/account/member/daily-activity/_components/utils';
 
 const CONNECT_URL = '/api/integrations/google-calendar/connect';
 
-export default function GoogleCalendarPanel({ monthTasks = [], timeMin, timeMax, onToast, onSynced }) {
+/**
+ * Resolve each item's colour from the expand-modal colour settings (ecm_* in
+ * localStorage), read fresh at push time so customised colours are honoured.
+ * Returns a plain { [itemId]: hex } map for the server to map to Google colours.
+ */
+function resolveExpandColors(items, projects) {
+  let layerColors = { ...LAYER_DEFAULTS };
+  let subColors = {};
+  try {
+    layerColors = { ...LAYER_DEFAULTS, ...(JSON.parse(localStorage.getItem('ecm_colors') || 'null') || {}) };
+    subColors = JSON.parse(localStorage.getItem('ecm_sub_colors') || 'null') || {};
+  } catch { /* defaults */ }
+  const map = {};
+  for (const t of items) {
+    const hex = resolveTaskColor(t, layerColors, subColors, projects);
+    if (hex) map[t.id] = hex;
+  }
+  return map;
+}
+
+export default function GoogleCalendarPanel({ monthTasks = [], projects = [], timeMin, timeMax, onToast, onSynced }) {
   const [status, setStatus] = useState({ connected: false, email: null, syncEnabled: false, needsReconnect: false });
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -116,8 +137,9 @@ export default function GoogleCalendarPanel({ monthTasks = [], timeMin, timeMax,
     const feedIds = monthTasks
       .filter((t) => !isValidUUID(t.id) && !t.id.startsWith('gcal-') && !t.id.startsWith('gtask-') && !t.id.startsWith('personal-'))
       .map((t) => t.id);
+    const colors = resolveExpandColors(monthTasks, projects);
     setPushBusy(true);
-    const res = await syncTodosToCalendarAction({ taskIds, feedIds, timeMin, timeMax });
+    const res = await syncTodosToCalendarAction({ taskIds, feedIds, timeMin, timeMax, colors });
     if (res?.error) { setPushBusy(false); toast(res.error, 'error'); return; }
     await pullCompletions();
     setPushBusy(false);

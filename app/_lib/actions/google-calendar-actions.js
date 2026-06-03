@@ -20,7 +20,6 @@ import {
   pushTodoCalendarEvent,
   syncChildSubtasks,
   pushFeedItem,
-  pushTasksStacked,
   deleteTodoEvent,
   readTaskCompletions,
   listGoogleTasks,
@@ -104,7 +103,7 @@ export async function setGoogleCalendarSyncEnabledAction(enabled) {
  * @param {string}   opts.timeMin        - ISO — start of visible month (for personal events).
  * @param {string}   opts.timeMax        - ISO — end of visible month (for personal events).
  */
-export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], timeMin, timeMax } = {}) {
+export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], timeMin, timeMax, colors = {} } = {}) {
   const a = await memberId();
   if (a.error) return { error: a.error };
 
@@ -118,13 +117,26 @@ export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], ti
   if (ids.length > 0) {
     const { data: rows, error } = await supabaseAdmin
       .from('todos')
-      .select('id, title, notes, description, start_date, due_time, priority, labels, recurrence, gcal_event_id, gtask_id, subtasks, gtask_subtask_ids, completed')
+      .select('id, title, notes, description, start_date, due_time, priority, labels, recurrence, gcal_event_id, gtask_id, subtasks, gtask_subtask_ids, completed, list_id, color_id')
       .eq('user_id', a.userId)
       .in('id', ids.slice(0, MAX_BACKFILL))
       .not('start_date', 'is', null);
     if (error) {
       console.error('syncTodosToCalendarAction (load tasks):', error.message);
       return { error: 'Failed to load tasks.' };
+    }
+
+    // Project colours so the calendar event matches the expand-mode todo colour
+    // (per-item color_id wins, else the project's colour, else the todo default).
+    const projectIds = [...new Set((rows || []).map((r) => r.list_id).filter(Boolean))];
+    const projColorById = new Map();
+    if (projectIds.length) {
+      const { data: projs } = await supabaseAdmin
+        .from('todo_lists')
+        .select('id, tone')
+        .eq('user_id', a.userId)
+        .in('id', projectIds);
+      for (const p of projs || []) projColorById.set(p.id, p.tone);
     }
 
     const { data: comps } = await supabaseAdmin
@@ -149,6 +161,10 @@ export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], ti
         gcalEventId: r.gcal_event_id || null,
         gtaskId: r.gtask_id || null,
         completed: isCompleted,
+        colorId: r.color_id || null,
+        projectColor: projColorById.get(r.list_id) || null,
+        // Colour resolved client-side from the expand-modal settings (wins).
+        overrideColor: colors[r.id] || null,
       };
 
       // Push to Google Calendar (all-day event with priority colour) — this makes
@@ -182,17 +198,11 @@ export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], ti
       .filter((it) => wantFeed.has(it.id) && it.category !== 'gcal' && it.category !== 'gtask' && it.category !== 'personal')
       .slice(0, MAX_BACKFILL);
 
-    // Bootcamp tasks are placed together so they stack without overlapping
-    // (smallest span first); other feed items push individually.
-    const taskItems  = toPush.filter((it) => it.category === 'task' && it.start && it.endTime);
-    const otherItems = toPush.filter((it) => !(it.category === 'task' && it.start && it.endTime));
-
-    for (const item of otherItems) {
-      const ok = await pushFeedItem(a.userId, item);
+    // Every feed item — including bootcamp tasks — pushes as a single event that
+    // mirrors how expand mode draws it (timing, colour, title).
+    for (const item of toPush) {
+      const ok = await pushFeedItem(a.userId, { ...item, overrideColor: colors[item.id] || null });
       if (ok) synced++;
-    }
-    if (taskItems.length > 0) {
-      synced += await pushTasksStacked(a.userId, taskItems);
     }
   }
 
@@ -208,7 +218,7 @@ export async function syncTodosToCalendarAction({ taskIds = [], feedIds = [], ti
       .lte('event_date', maxDate);
 
     for (const row of personalRows || []) {
-      const result = await pushPersonalEvent(a.userId, row);
+      const result = await pushPersonalEvent(a.userId, row, { overrideColor: colors[`personal-${row.id}`] || null });
       if (result) {
         const patch = { gcal_synced_at: new Date().toISOString() };
         if (result.eventId && result.eventId !== row.gcal_event_id) patch.gcal_event_id = result.eventId;

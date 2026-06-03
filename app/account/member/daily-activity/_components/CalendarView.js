@@ -687,6 +687,7 @@ export default function CalendarView({ tasks, projects, labels = [], onToggleCom
         <div className="bg-gray-900 rounded-3xl border border-white/[0.08] p-5 space-y-4 shadow-xl" id="compact-controls-panel">
           <GoogleCalendarPanel
             monthTasks={monthTasks}
+            projects={projects}
             timeMin={monthTimeMin}
             timeMax={monthTimeMax}
             onToast={onToast}

@@ -29,6 +29,7 @@
 
 import { google } from 'googleapis';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { GCAL_COLOR_MAP, LAYER_DEFAULTS } from '@/app/account/member/daily-activity/_components/utils';
 
 export const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar',   // read + write all calendars
@@ -45,6 +46,56 @@ const TODO_MARKER = 'neupcTodoId';
 const FEED_MARKER = 'neupcFeedId';
 // Personal calendar events carry their NEUPC personal_event id under this marker.
 const PERSONAL_MARKER = 'neupcPersonalId';
+
+// ── Expand-mode colour parity ──────────────────────────────────────────────────
+// The expand-mode calendar (ExpandedCalendarModal) colours items by their layer
+// default (LAYER_DEFAULTS), per-item colorId, or project colour. Google Calendar
+// supports only its 11 fixed colorIds, so we map a hex colour to the nearest one.
+
+// Expand-mode default colour per feed category, mirroring LAYER_DEFAULTS.
+const CATEGORY_COLOR = {
+  contest:  LAYER_DEFAULTS.contests,
+  event:    LAYER_DEFAULTS.events,
+  session:  LAYER_DEFAULTS.sessions,
+  task:     LAYER_DEFAULTS.tasks,
+  personal: LAYER_DEFAULTS.personal,
+  todo:     LAYER_DEFAULTS.todo,
+};
+
+// Dhaka-local YYYY-MM-DD from an ISO string — matches the date basis the feed
+// route (and therefore expand mode) uses to decide multi-day spanning.
+function dhakaDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return typeof iso === 'string' ? iso.split('T')[0] : null;
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d).map(({ type, value }) => [type, value])
+  );
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Nearest Google Calendar colorId (string) to a hex colour, or undefined. */
+function hexToColorId(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return undefined;
+  let best, bestDist = Infinity;
+  for (const [id, h] of Object.entries(GCAL_COLOR_MAP)) {
+    const c = hexToRgb(h);
+    if (!c) continue;
+    const d = (rgb[0] - c[0]) ** 2 + (rgb[1] - c[1]) ** 2 + (rgb[2] - c[2]) ** 2;
+    if (d < bestDist) { bestDist = d; best = id; }
+  }
+  return best;
+}
 
 // ── OAuth client ──────────────────────────────────────────────────────────────
 
@@ -391,22 +442,6 @@ export async function listGoogleTasks(userId) {
 
 // ── Export: NEUPC feed item → Google Calendar event ────────────────────────────
 
-// Google Calendar colorId per feed category so items are visually distinct.
-const FEED_COLOR_ID = {
-  contest: '5',   // Sage (green)
-  event:   '2',   // Flamingo (pink)
-  task:    '9',   // Lavender (purple)
-  session: '7',   // Peacock (blue)
-  personal: null, // uses colorId stored on the row
-};
-
-const FEED_PREFIX = {
-  contest: '🏆 Contest: ',
-  session: '🎓 Session: ',
-  event:   '📣 Event: ',
-  task:    '📅 Deadline: ',
-};
-
 function fmtDuration(min) {
   if (!min || min <= 0) return null;
   const h = Math.floor(min / 60), m = min % 60;
@@ -425,7 +460,14 @@ function feedItemToEvent(item) {
   const start = new Date(item.start);
   if (Number.isNaN(start.getTime())) return null;
 
-  const colorId = FEED_COLOR_ID[item.category] || undefined;
+  // Colour to match expand mode: a colour resolved client-side from the
+  // expand-modal settings wins, then a per-item colorId, then the category
+  // layer default — all mapped to the nearest Google colorId.
+  const colorId = item.overrideColor
+    ? hexToColorId(item.overrideColor)
+    : item.colorId
+      ? hexToColorId(GCAL_COLOR_MAP[item.colorId]) || item.colorId
+      : hexToColorId(CATEGORY_COLOR[item.category]);
   const marker = { [FEED_MARKER]: String(item.id) };
 
   // Helper: end ISO — use explicit endTime if valid, else start + fallbackMin.
@@ -449,7 +491,7 @@ function feedItemToEvent(item) {
     ].filter(Boolean).join('\n');
 
     return {
-      summary: `🎓 Session: ${item.title}`,
+      summary: item.title,
       description: desc || undefined,
       location: item.url || item.location || undefined,
       start: { dateTime: start.toISOString() },
@@ -471,12 +513,19 @@ function feedItemToEvent(item) {
       item.status && `Status: ${item.status}`,
     ].filter(Boolean).join('\n');
 
+    // Multi-day events render as an all-day spanning chip in expand mode.
+    const startDate = dhakaDate(item.start);
+    const endDate   = dhakaDate(item.endTime || item.start);
+    const spanning  = startDate && endDate && endDate > startDate;
+    const timing = spanning
+      ? { start: { date: startDate }, end: { date: addDayExclusive(endDate) } }
+      : { start: { dateTime: start.toISOString() }, end: { dateTime: endISO(60) } };
+
     return {
-      summary: `📣 Event: ${item.title}`,
+      summary: item.title,
       description: desc || undefined,
       location: item.location || undefined,
-      start: { dateTime: start.toISOString() },
-      end:   { dateTime: endISO(60) },
+      ...timing,
       source: item.url ? { title: 'NEUPC Event', url: item.url } : undefined,
       colorId,
       extendedProperties: { private: marker },
@@ -493,7 +542,7 @@ function feedItemToEvent(item) {
     ].filter(Boolean).join('\n');
 
     return {
-      summary: `🏆 Contest: ${item.title}`,
+      summary: item.title,
       description: desc || undefined,
       location: item.location || undefined,
       start: { dateTime: start.toISOString() },
@@ -504,18 +553,14 @@ function feedItemToEvent(item) {
     };
   }
 
-  // ── Bootcamp task: template body for stacked placement ──
-  // placeTasksInFreeTime builds the body once, then overrides start/end with the
-  // chosen block. _scheduledStart/_scheduledEnd seed the window bounds; the
-  // deadline fallback only applies if a task is pushed outside that path.
+  // ── Bootcamp task: span the available→deadline window, like expand mode ──
+  // Expand mode draws a task whose available date differs from its deadline date
+  // as a multi-day all-day chip; a same-day task as a timed block from its
+  // available time to its deadline time.
   if (item.category === 'task') {
-    const deadlineDate = item.endTime ? new Date(item.endTime) : start;
-    const slotStart = item._scheduledStart
-      ? new Date(item._scheduledStart).toISOString()
-      : deadlineDate.toISOString();
-    const slotEnd = item._scheduledEnd
-      ? new Date(item._scheduledEnd).toISOString()
-      : new Date(deadlineDate.getTime() + 60 * 60000).toISOString();
+    const availableDate = dhakaDate(item.start);
+    const deadlineDate  = dhakaDate(item.endTime || item.start);
+    const spanning = availableDate && deadlineDate && availableDate !== deadlineDate;
 
     const desc = [
       item.description,
@@ -526,11 +571,14 @@ function feedItemToEvent(item) {
       item.submissionStatus && item.submissionStatus !== 'pending' && `Status: ${item.submissionStatus}`,
     ].filter(Boolean).join('\n');
 
+    const timing = spanning
+      ? { start: { date: availableDate }, end: { date: addDayExclusive(deadlineDate) } }
+      : { start: { dateTime: start.toISOString() }, end: { dateTime: endISO(60) } };
+
     return {
-      summary: `📅 Deadline: ${item.title}`,
+      summary: item.title,
       description: desc || undefined,
-      start: { dateTime: slotStart },
-      end:   { dateTime: slotEnd },
+      ...timing,
       colorId,
       transparency: 'transparent',
       extendedProperties: { private: marker },
@@ -539,7 +587,7 @@ function feedItemToEvent(item) {
 
   // ── Fallback ──
   return {
-    summary: `${FEED_PREFIX[item.category] || ''}${item.title}`,
+    summary: item.title,
     description: item.description || undefined,
     location: item.location || undefined,
     start: { dateTime: start.toISOString() },
@@ -548,100 +596,6 @@ function feedItemToEvent(item) {
     colorId,
     extendedProperties: { private: marker },
   };
-}
-
-const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000; // UTC+6, no DST
-const SLEEP_START_H   = 22; // 10 PM Dhaka
-const SLEEP_END_H     = 8;  // 8 AM Dhaka
-const MIN_GAP_MS      = 15 * 60 * 1000; // ignore gaps shorter than 15 min
-
-/**
- * Fetch merged busy intervals from all owned calendars in [windowStart, windowEnd].
- * Our own gap-events are `transparency: 'transparent'`, so Google already omits
- * them from the free/busy response — no manual exclusion needed.
- */
-async function fetchBusy(client, windowStart, windowEnd) {
-  const { data: calList } = await client.calendar.calendarList.list({ minAccessRole: 'owner' });
-  const calIds = [...new Set([
-    client.calendarId,
-    ...(calList?.items || []).map((c) => c.id),
-  ])];
-
-  const { data: fbData } = await client.calendar.freebusy.query({
-    requestBody: {
-      timeMin: windowStart.toISOString(),
-      timeMax: windowEnd.toISOString(),
-      items: calIds.map((id) => ({ id })),
-    },
-  });
-
-  const busyRaw = Object.values(fbData?.calendars || {}).flatMap((c) => c.busy || []);
-  return busyRaw
-    .map((b) => ({ s: new Date(b.start).getTime(), e: new Date(b.end).getTime() }))
-    .sort((a, b) => a.s - b.s);
-}
-
-/**
- * Given a sorted list of busy intervals and a window [startMs, endMs],
- * return all free gaps clipped to waking hours (08:00–22:00 Dhaka).
- * Gaps shorter than MIN_GAP_MS are dropped.
- */
-function computeFreeGaps(busy, startMs, endMs) {
-  const gaps = [];
-  let cursor = startMs;
-
-  // Build boundaries: busy intervals carve the window into free segments.
-  const boundaries = [
-    ...busy.map((b) => [b.s, b.e]),
-    [endMs, endMs], // sentinel
-  ];
-
-  for (const [bs, be] of boundaries) {
-    if (cursor < bs) {
-      // Free segment [cursor, bs] — clip to waking hours.
-      const freeGaps = clipToWakingHours(cursor, bs);
-      for (const g of freeGaps) {
-        if (g.e - g.s >= MIN_GAP_MS) gaps.push(g);
-      }
-    }
-    cursor = Math.max(cursor, be);
-    if (cursor >= endMs) break;
-  }
-
-  return gaps;
-}
-
-/**
- * Split [startMs, endMs] by sleeping hours (22:00–08:00 Dhaka) into
- * sub-intervals that fall entirely within waking hours.
- */
-function clipToWakingHours(startMs, endMs) {
-  const result = [];
-  let cur = startMs;
-
-  while (cur < endMs) {
-    const dhakaHour = new Date(cur + DHAKA_OFFSET_MS).getUTCHours();
-
-    if (dhakaHour >= SLEEP_START_H || dhakaHour < SLEEP_END_H) {
-      // In sleep window — jump to next 08:00 Dhaka.
-      const dhakaDate = new Date(cur + DHAKA_OFFSET_MS);
-      if (dhakaHour >= SLEEP_START_H) dhakaDate.setUTCDate(dhakaDate.getUTCDate() + 1);
-      dhakaDate.setUTCHours(SLEEP_END_H, 0, 0, 0);
-      cur = dhakaDate.getTime() - DHAKA_OFFSET_MS;
-      continue;
-    }
-
-    // Find end of current waking segment (next 22:00 Dhaka).
-    const dhakaToday = new Date(cur + DHAKA_OFFSET_MS);
-    dhakaToday.setUTCHours(SLEEP_START_H, 0, 0, 0);
-    const wakingEnd = dhakaToday.getTime() - DHAKA_OFFSET_MS;
-
-    const segEnd = Math.min(wakingEnd, endMs);
-    if (segEnd > cur) result.push({ s: cur, e: segEnd });
-    cur = segEnd;
-  }
-
-  return result;
 }
 
 /**
@@ -658,19 +612,9 @@ export async function pushFeedItem(userId, item) {
   const client = await getCalendarClient(userId);
   if (!client) return false;
 
-  // Bootcamp tasks get stacked single-block placement.
-  if (item.category === 'task' && item.start && item.endTime) {
-    try {
-      const n = await placeTasksInFreeTime(client, userId, [item]);
-      return n > 0;
-    } catch (err) {
-      if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return false; }
-      console.error('pushFeedItem(task):', err?.message);
-      return false;
-    }
-  }
-
-  // ── Non-task feed items: single event upsert ──
+  // Single event upsert (keyed by FEED_MARKER / feed_gcal_events) for every feed
+  // category, including bootcamp tasks — they now span the available→deadline
+  // window like expand mode rather than being auto-placed into free time.
   const body = feedItemToEvent(item);
   if (!body) return false;
 
@@ -694,6 +638,10 @@ export async function pushFeedItem(userId, item) {
         gcalEventId = data.id;
       }
     } else {
+      // No stored mapping. Legacy pushes (e.g. free-time-stacked bootcamp tasks)
+      // may have left marker events with no DB row — clear them first so we
+      // replace rather than duplicate.
+      await deleteEventsByMarker(client, item.id).catch(() => {});
       const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
       gcalEventId = data.id;
     }
@@ -731,111 +679,6 @@ async function deleteEventsByMarker(client, markerId) {
     }
     pageToken = data.nextPageToken;
   } while (pageToken);
-}
-
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS  = 24 * HOUR_MS;
-
-/** Block length for a task: 1h per remaining day, clamped to 1–8h. */
-function taskBlockMs(windowStartMs, deadlineMs) {
-  const spanDays = Math.max(1, Math.round((deadlineMs - windowStartMs) / DAY_MS));
-  return Math.min(Math.max(spanDays * HOUR_MS, HOUR_MS), 8 * HOUR_MS);
-}
-
-/**
- * Place bootcamp tasks as single, non-overlapping blocks in the member's free
- * time. Tasks are sorted by span (now→deadline) ascending so the tightest task
- * takes the earliest slot ("smaller span at the top"); each placed block then
- * counts as busy for the rest, so tasks stack rather than overlap. Block length
- * scales with span. Dedup is marker-based (FEED_MARKER) — no DB row per task.
- *
- * @returns {Promise<number>} count of tasks successfully placed.
- */
-async function placeTasksInFreeTime(client, userId, items) {
-  const now = Date.now();
-
-  // Clear every task's prior events + any legacy mapping row first.
-  for (const item of items) {
-    await deleteEventsByMarker(client, item.id);
-    await supabaseAdmin.from('feed_gcal_events').delete().eq('user_id', userId).eq('feed_id', item.id);
-  }
-
-  // Build descriptors, dropping anything already past its deadline.
-  const tasks = items
-    .map((item) => {
-      const windowStartMs = Math.max(new Date(item.start).getTime(), now);
-      const deadlineMs = new Date(item.endTime).getTime();
-      return { item, windowStartMs, deadlineMs, spanMs: deadlineMs - windowStartMs };
-    })
-    .filter((t) => t.deadlineMs > now)
-    .sort((a, b) => a.spanMs - b.spanMs); // smallest span first → earliest slot
-
-  if (tasks.length === 0) return 0;
-
-  // Real busy intervals across the union window; placed task blocks are appended
-  // so later tasks stack after earlier ones.
-  const unionStart = new Date(Math.min(...tasks.map((t) => t.windowStartMs)));
-  const unionEnd   = new Date(Math.max(...tasks.map((t) => t.deadlineMs)));
-  let occupied;
-  try {
-    occupied = await fetchBusy(client, unionStart, unionEnd);
-  } catch {
-    occupied = [];
-  }
-
-  let placed = 0;
-  for (const t of tasks) {
-    const baseBody = feedItemToEvent({
-      ...t.item,
-      _scheduledStart: new Date(t.windowStartMs).toISOString(),
-      _scheduledEnd: new Date(t.deadlineMs).toISOString(),
-    });
-    if (!baseBody) continue;
-
-    const gaps = computeFreeGaps(occupied, t.windowStartMs, t.deadlineMs);
-
-    let slot;
-    if (gaps.length > 0) {
-      // Earliest free gap; block sized by span but never larger than the gap.
-      const g = gaps[0];
-      const len = Math.min(taskBlockMs(t.windowStartMs, t.deadlineMs), g.e - g.s);
-      slot = { s: g.s, e: g.s + len };
-    } else {
-      // Fully booked → 1h before the deadline (best-effort; may overlap).
-      const s = Math.max(t.deadlineMs - HOUR_MS, t.windowStartMs);
-      slot = { s, e: s + HOUR_MS };
-    }
-
-    const body = {
-      ...baseBody,
-      start: { dateTime: new Date(slot.s).toISOString() },
-      end:   { dateTime: new Date(slot.e).toISOString() },
-    };
-    try {
-      await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
-      placed++;
-      occupied.push({ s: slot.s, e: slot.e });
-      occupied.sort((a, b) => a.s - b.s);
-    } catch { /* skip individual failure */ }
-  }
-
-  return placed;
-}
-
-/**
- * Push a batch of bootcamp task feed items as stacked single blocks.
- * @returns {Promise<number>} count placed.
- */
-export async function pushTasksStacked(userId, items) {
-  const client = await getCalendarClient(userId);
-  if (!client) return 0;
-  try {
-    return await placeTasksInFreeTime(client, userId, items);
-  } catch (err) {
-    if (isRevoked(err)) { await deleteConnection(userId).catch(() => {}); return 0; }
-    console.error('pushTasksStacked:', err?.message);
-    return 0;
-  }
 }
 
 /** Delete a mirrored event. Best-effort; missing events are ignored. */
@@ -945,7 +788,14 @@ export async function pushTodoCalendarEvent(userId, todo, { force = false } = {}
   if (!force && !client.syncEnabled) return null;
   if (!todo.startKey) return null;
 
-  const { colorId } = normalisePriority(todo.priority);
+  // Colour to match expand mode: a colour resolved client-side from the
+  // expand-modal settings wins, then a per-item colorId, then the project
+  // colour, then the todo layer default — mapped to the nearest Google colorId.
+  const colorId = todo.overrideColor
+    ? hexToColorId(todo.overrideColor)
+    : todo.colorId
+      ? hexToColorId(GCAL_COLOR_MAP[todo.colorId]) || todo.colorId
+      : hexToColorId(todo.projectColor || CATEGORY_COLOR.todo);
 
   const descLines = [];
   const { label: priorityLabel } = normalisePriority(todo.priority);
@@ -999,12 +849,15 @@ export async function pushTodoCalendarEvent(userId, todo, { force = false } = {}
     }
 
     if (startHHMM) {
-      const startISO = `${startDate}T${startHHMM}:00`;
+      // Stored todo times are Dhaka wall-clock; pin the offset so Google accepts
+      // the datetime and places it at the correct local time (a floating, offset-
+      // less datetime is parsed in the server's tz and may be rejected).
+      const startISO = `${startDate}T${startHHMM}:00+06:00`;
       const startMs  = new Date(startISO).getTime();
       if (!Number.isNaN(startMs)) {
         startObj = { dateTime: startISO };
         if (endHHMM) {
-          const endISO = `${startDate}T${endHHMM}:00`;
+          const endISO = `${startDate}T${endHHMM}:00+06:00`;
           const endMs  = new Date(endISO).getTime();
           // End must be after start; if not (e.g. crosses midnight) add 1 day.
           endObj = { dateTime: endMs > startMs ? endISO : new Date(startMs + 60 * 60000).toISOString() };
@@ -1016,9 +869,10 @@ export async function pushTodoCalendarEvent(userId, todo, { force = false } = {}
   }
 
   if (!startObj) {
-    // No valid time — all-day event on startKey date.
-    startObj = { date: startDate };
-    endObj   = { date: addDayExclusive(startDate) };
+    // No valid time — expand mode draws an untimed todo as an 8 AM–10 PM block
+    // in the time grid, so push a matching timed event (not an all-day one).
+    startObj = { dateTime: `${startDate}T08:00:00+06:00` };
+    endObj   = { dateTime: `${startDate}T22:00:00+06:00` };
   }
 
   const body = {
@@ -1352,7 +1206,7 @@ export async function deleteTodoTask(userId, gtaskId) {
  * @param {object} row  - personal_events row.
  * @returns {Promise<string|null>}
  */
-export async function pushPersonalEvent(userId, row) {
+export async function pushPersonalEvent(userId, row, { overrideColor = null } = {}) {
   const client = await getCalendarClient(userId);
   if (!client) return null;
 
@@ -1372,10 +1226,12 @@ export async function pushPersonalEvent(userId, row) {
     endObj = { date: endStr };
   } else {
     const endDate = row.end_date || row.event_date;
-    const startISO = `${row.event_date}T${row.start_time}:00`;
+    // start_time/end_time are Dhaka wall-clock — pin the offset so Google accepts
+    // and places the event correctly (a floating datetime can be rejected).
+    const startISO = `${row.event_date}T${row.start_time}:00+06:00`;
     let endISO;
     if (row.end_time) {
-      endISO = `${endDate}T${row.end_time}:00`;
+      endISO = `${endDate}T${row.end_time}:00+06:00`;
     } else {
       // No end time set — default to start + 1 hour so it occupies the timetable.
       endISO = new Date(new Date(startISO).getTime() + 60 * 60000).toISOString();
@@ -1401,7 +1257,7 @@ export async function pushPersonalEvent(userId, row) {
     source: row.url ? { title: row.title, url: row.url } : undefined,
     start: startObj,
     end: endObj,
-    colorId: row.color_id || undefined,
+    colorId: overrideColor ? hexToColorId(overrideColor) : (row.color_id || hexToColorId(CATEGORY_COLOR.personal)),
     status: row.status || 'confirmed',
     visibility: row.visibility !== 'default' ? row.visibility : undefined,
     guestsCanSeeOtherGuests: row.guests_can_see_other_guests ?? true,
