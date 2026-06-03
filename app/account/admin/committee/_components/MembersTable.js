@@ -84,7 +84,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                       <Avatar
                         name={fullName}
                         size="sm"
-                        src={member.users?.avatar_url}
+                        src={member.custom_avatar_url || member.users?.avatar_url}
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-white transition-colors group-hover:text-indigo-400">
@@ -186,7 +186,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                   <Avatar
                     name={fullName}
                     size="sm"
-                    src={member.users?.avatar_url}
+                    src={member.custom_avatar_url || member.users?.avatar_url}
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">
