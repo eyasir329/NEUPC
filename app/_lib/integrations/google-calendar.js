@@ -62,18 +62,78 @@ const CATEGORY_COLOR = {
   todo:     LAYER_DEFAULTS.todo,
 };
 
-// Dhaka-local YYYY-MM-DD from an ISO string — matches the date basis the feed
-// route (and therefore expand mode) uses to decide multi-day spanning.
+// ── Dhaka-local date/time helpers (UTC+6, no DST) ──────────────────────────────
+const DHAKA_PARTS = (iso) =>
+  Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Dhaka',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(new Date(iso)).map(({ type, value }) => [type, value])
+  );
+
+/** Dhaka-local YYYY-MM-DD from an ISO string. */
 function dhakaDate(iso) {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return typeof iso === 'string' ? iso.split('T')[0] : null;
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).formatToParts(d).map(({ type, value }) => [type, value])
-  );
+  if (Number.isNaN(new Date(iso).getTime())) return typeof iso === 'string' ? iso.split('T')[0] : null;
+  const p = DHAKA_PARTS(iso);
   return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** Dhaka-local HH:MM:SS from an ISO string. */
+function dhakaTime(iso) {
+  const p = DHAKA_PARTS(iso);
+  const hh = p.hour === '24' ? '00' : p.hour;
+  return `${hh}:${p.minute}:${p.second}`;
+}
+
+/** Next calendar day (YYYY-MM-DD) in Dhaka. */
+function nextDhakaDate(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00+06:00`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return dhakaDate(d.toISOString());
+}
+
+/**
+ * Split a timed range [startISO, endISO] into one sub-event per Dhaka calendar
+ * day, each strictly within a single day (start time → 23:59:59, full middle
+ * days, 00:00:00 → end time). Google only draws events shorter than a day in the
+ * time grid; multi-day events get parked in the all-day strip — so slicing makes
+ * a multi-day task/event appear *in the timeline* exactly like the expand day
+ * view. Same-day ranges return a single slice (unchanged).
+ */
+function sliceTimedRange(startISO, endISO) {
+  const startDate = dhakaDate(startISO);
+  const endDate   = dhakaDate(endISO);
+  if (!startDate || !endDate || startDate === endDate) {
+    return [{ start: { dateTime: startISO }, end: { dateTime: endISO } }];
+  }
+  const slices = [];
+  let cur = startDate;
+  let guard = 0;
+  while (cur <= endDate && guard < 120) {
+    const s = cur === startDate ? dhakaTime(startISO) : '00:00:00';
+    const e = cur === endDate   ? dhakaTime(endISO)   : '23:59:59';
+    if (`${cur}T${s}` < `${cur}T${e}`) {
+      slices.push({ start: { dateTime: `${cur}T${s}+06:00` }, end: { dateTime: `${cur}T${e}+06:00` } });
+    }
+    cur = nextDhakaDate(cur);
+    guard++;
+  }
+  return slices.length ? slices : [{ start: { dateTime: startISO }, end: { dateTime: endISO } }];
+}
+
+/**
+ * Expand a single timed event body into per-day slices (see sliceTimedRange).
+ * All-day or single-day bodies pass through unchanged.
+ */
+function explodeToSlices(body) {
+  if (!body) return [];
+  const startISO = body.start?.dateTime;
+  const endISO   = body.end?.dateTime;
+  if (!startISO || !endISO) return [body];
+  const slices = sliceTimedRange(startISO, endISO);
+  return slices.length <= 1 ? [body] : slices.map((s) => ({ ...body, ...s }));
 }
 
 function hexToRgb(hex) {
@@ -448,13 +508,6 @@ function fmtDuration(min) {
   return `${h > 0 ? `${h}h` : ''}${h > 0 && m > 0 ? ' ' : ''}${m > 0 ? `${m}m` : ''}`;
 }
 
-function addDayExclusive(dateStr) {
-  const pad = (n) => String(n).padStart(2, '0');
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 /** Build a Google Calendar event body from a raw Daily Activity feed item. */
 function feedItemToEvent(item) {
   const start = new Date(item.start);
@@ -513,19 +566,16 @@ function feedItemToEvent(item) {
       item.status && `Status: ${item.status}`,
     ].filter(Boolean).join('\n');
 
-    // Multi-day events render as an all-day spanning chip in expand mode.
-    const startDate = dhakaDate(item.start);
-    const endDate   = dhakaDate(item.endTime || item.start);
-    const spanning  = startDate && endDate && endDate > startDate;
-    const timing = spanning
-      ? { start: { date: startDate }, end: { date: addDayExclusive(endDate) } }
-      : { start: { dateTime: start.toISOString() }, end: { dateTime: endISO(60) } };
-
+    // Always a timed event. A multi-day event is pushed as a multi-day *timed*
+    // event so Google slices it per day in day/week view exactly like the expand
+    // calendar (available time → midnight, full middle days, midnight → end time)
+    // instead of showing a flat all-day banner.
     return {
       summary: item.title,
       description: desc || undefined,
       location: item.location || undefined,
-      ...timing,
+      start: { dateTime: start.toISOString() },
+      end:   { dateTime: endISO(60) },
       source: item.url ? { title: 'NEUPC Event', url: item.url } : undefined,
       colorId,
       extendedProperties: { private: marker },
@@ -553,15 +603,13 @@ function feedItemToEvent(item) {
     };
   }
 
-  // ── Bootcamp task: span the available→deadline window, like expand mode ──
-  // Expand mode draws a task whose available date differs from its deadline date
-  // as a multi-day all-day chip; a same-day task as a timed block from its
-  // available time to its deadline time.
+  // ── Bootcamp task: timed event spanning available → deadline, like expand ──
+  // The expand calendar draws a task as a timed block from its available time to
+  // its deadline time; in day view a multi-day task is sliced per day (available
+  // time → midnight, full middle days, midnight → deadline time). Pushing a
+  // multi-day *timed* event makes Google slice it the same way — so we never use
+  // an all-day banner here.
   if (item.category === 'task') {
-    const availableDate = dhakaDate(item.start);
-    const deadlineDate  = dhakaDate(item.endTime || item.start);
-    const spanning = availableDate && deadlineDate && availableDate !== deadlineDate;
-
     const desc = [
       item.description,
       item.bootcampTitle && `Bootcamp: ${item.bootcampTitle}`,
@@ -571,14 +619,11 @@ function feedItemToEvent(item) {
       item.submissionStatus && item.submissionStatus !== 'pending' && `Status: ${item.submissionStatus}`,
     ].filter(Boolean).join('\n');
 
-    const timing = spanning
-      ? { start: { date: availableDate }, end: { date: addDayExclusive(deadlineDate) } }
-      : { start: { dateTime: start.toISOString() }, end: { dateTime: endISO(60) } };
-
     return {
       summary: item.title,
       description: desc || undefined,
-      ...timing,
+      start: { dateTime: start.toISOString() },
+      end:   { dateTime: endISO(60) },
       colorId,
       transparency: 'transparent',
       extendedProperties: { private: marker },
@@ -612,45 +657,19 @@ export async function pushFeedItem(userId, item) {
   const client = await getCalendarClient(userId);
   if (!client) return false;
 
-  // Single event upsert (keyed by FEED_MARKER / feed_gcal_events) for every feed
-  // category, including bootcamp tasks — they now span the available→deadline
-  // window like expand mode rather than being auto-placed into free time.
+  // A multi-day task/event is split into one timed sub-event per day so Google
+  // draws each in the time grid (it parks multi-day events in the all-day strip).
+  // Dedup is marker-based: clear this feed item's prior events, then insert the
+  // fresh slice set — idempotent, never duplicates.
   const body = feedItemToEvent(item);
   if (!body) return false;
+  const bodies = explodeToSlices(body);
 
   try {
-    const { data: stored } = await supabaseAdmin
-      .from('feed_gcal_events')
-      .select('gcal_event_id, calendar_id')
-      .eq('user_id', userId)
-      .eq('feed_id', item.id)
-      .maybeSingle();
-
-    let gcalEventId = stored?.gcal_event_id || null;
-    const calId = stored?.calendar_id || client.calendarId;
-
-    if (gcalEventId) {
-      try {
-        await client.calendar.events.update({ calendarId: calId, eventId: gcalEventId, requestBody: body });
-      } catch (err) {
-        if (err?.code !== 404 && err?.code !== 410) throw err;
-        const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
-        gcalEventId = data.id;
-      }
-    } else {
-      // No stored mapping. Legacy pushes (e.g. free-time-stacked bootcamp tasks)
-      // may have left marker events with no DB row — clear them first so we
-      // replace rather than duplicate.
-      await deleteEventsByMarker(client, item.id).catch(() => {});
-      const { data } = await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: body });
-      gcalEventId = data.id;
-    }
-
-    if (gcalEventId) {
-      await supabaseAdmin.from('feed_gcal_events').upsert(
-        { user_id: userId, feed_id: item.id, gcal_event_id: gcalEventId, calendar_id: client.calendarId, synced_at: new Date().toISOString() },
-        { onConflict: 'user_id,feed_id' }
-      );
+    await deleteEventsByMarker(client, item.id).catch(() => {});
+    await supabaseAdmin.from('feed_gcal_events').delete().eq('user_id', userId).eq('feed_id', item.id);
+    for (const slice of bodies) {
+      await client.calendar.events.insert({ calendarId: client.calendarId, requestBody: slice });
     }
     return true;
   } catch (err) {
