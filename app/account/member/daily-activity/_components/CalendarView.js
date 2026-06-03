@@ -17,10 +17,10 @@ import { useState, useEffect, useCallback } from 'react';
 
 import {
   ChevronLeft, ChevronRight, Calendar, Check, Plus, CalendarDays, CheckCircle2, RefreshCw, Info, Layers, LayoutGrid, ListTodo, Tag,
-  X, Flag, Expand,
+  X, Flag, Expand, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
+import { Priority, getTodayDateString, formatDateString, addDays, getFeedMeta, isTaskOnDate, fmt24, GCAL_COLOR_MAP, LAYER_DEFAULTS, PALETTE } from './utils';
 import FeedItemCard from './FeedItemCard';
 import GoogleCalendarPanel from './GoogleCalendarPanel';
 import ExpandedCalendarModal from './ExpandedCalendarModal';
@@ -123,7 +123,7 @@ function SubItemList({ items, emptyLabel, getChecked, onToggle, getColor, onSetC
   );
 }
 
-export default function CalendarView({ tasks, projects, sections = [], labels = [], onAddTask, onUpdateTask, onDeleteTask, onToggleComplete, onSelectTask, onToast, onSynced, onCreatePersonal, onOpenCreatePane }) {
+export default function CalendarView({ tasks, projects, labels = [], onToggleComplete, onSelectTask, onToast, onSynced, onCreatePersonal, onOpenCreatePane }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayDateString());
   const [viewMode, setViewMode] = useState('grid');
@@ -377,10 +377,27 @@ export default function CalendarView({ tasks, projects, sections = [], labels = 
     }
   };
 
-  const selectedDayTasks = getFilteredTasksForDate(selectedDateStr);
-  const completedCount = selectedDayTasks.filter((t) => t.completed).length;
-  const totalCount = selectedDayTasks.length;
+  // Start-of-day minute for ordering the schedule. Bootcamp deadlines keep their
+  // clock in startTime; every other type uses time. Untimed items sort to the end.
+  const scheduleStartMin = (t) => {
+    const clock = t.time || t.startTime;
+    if (!clock) return Infinity;
+    const [h, m] = clock.split(':').map(Number);
+    return (isNaN(h) || isNaN(m)) ? Infinity : h * 60 + m;
+  };
+  const selectedDayTasks = getFilteredTasksForDate(selectedDateStr)
+    .sort((a, b) => scheduleStartMin(a) - scheduleStartMin(b));
+  // Completion reflects only completable goals — read-only feed items (contests,
+  // events, sessions, deadlines, personal events) carry completed=false forever
+  // and would otherwise drag the percentage down.
+  const completableTasks = selectedDayTasks.filter((t) => !getFeedMeta(t));
+  const completedCount = completableTasks.filter((t) => t.completed).length;
+  const totalCount = completableTasks.length;
   const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  // Day-detail panel summary state.
+  const feedCount = selectedDayTasks.length - totalCount;
+  const isSelectedToday = selectedDateStr === getTodayDateString();
+  const allGoalsDone = totalCount > 0 && completedCount === totalCount;
 
   // Distinct items visible across the days currently shown in the grid — the
   // set "Sync now" pushes to Google. De-duped because recurring items appear
@@ -906,51 +923,81 @@ export default function CalendarView({ tasks, projects, sections = [], labels = 
           </div>
         </div>
 
-        <div className="bg-gray-900 rounded-3xl border border-white/[0.08] p-5 flex flex-col flex-1 shadow-2xl" id="calendar-day-details" style={{ minHeight: '340px' }}>
-          <div className="flex justify-between items-center pb-3 border-b border-white/[0.05] shrink-0">
-            <div>
-              <span className="text-[8px] text-violet-400 font-mono tracking-widest uppercase block font-black">ACTIVE TODAY SCHEDULE</span>
-              <h4 className="text-[13px] font-extrabold text-white mt-1 truncate max-w-[170px]">
+        <div className="bg-gray-900 rounded-3xl border border-white/[0.08] p-5 flex flex-col flex-1 shadow-2xl" id="calendar-day-details" style={{ minHeight: '340px', maxHeight: '640px' }}>
+          {/* Header */}
+          <div className="flex justify-between items-start gap-3 pb-3.5 border-b border-white/[0.05] shrink-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] text-violet-400 font-mono tracking-widest uppercase font-black">Schedule</span>
+                {isSelectedToday && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 text-[7.5px] font-black font-mono tracking-widest uppercase leading-none">Today</span>
+                )}
+              </div>
+              <h4 className="text-[14px] font-extrabold text-white mt-1.5 truncate">
                 {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </h4>
+              <p className="text-[9px] font-mono text-slate-500 mt-1">
+                {totalCount + feedCount === 0
+                  ? 'Nothing scheduled'
+                  : [
+                      totalCount > 0 ? `${totalCount} goal${totalCount > 1 ? 's' : ''}` : null,
+                      feedCount > 0 ? `${feedCount} event${feedCount > 1 ? 's' : ''}` : null,
+                    ].filter(Boolean).join(' · ')}
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               {onCreatePersonal && (
-                <button type="button" onClick={onCreatePersonal} className="px-3 py-2 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl text-[10px] font-bold font-mono tracking-wider transition flex items-center gap-1 cursor-pointer">
+                <button type="button" onClick={onCreatePersonal} title="New event" className="p-2 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl transition flex items-center justify-center cursor-pointer">
                   <CalendarDays className="w-3.5 h-3.5 stroke-2" />
-                  <span>NEW EVENT</span>
                 </button>
               )}
               <button type="button" onClick={() => onOpenCreatePane?.()} className="px-3 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-bold font-mono tracking-wider transition flex items-center gap-1 cursor-pointer shadow-lg shadow-violet-600/10 hover:scale-[1.01]">
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>NEW GOAL</span>
+                <span>GOAL</span>
               </button>
             </div>
           </div>
 
+          {/* Completion progress */}
           {totalCount > 0 && (
-            <div className="mt-3.5 p-3.5 bg-slate-900/50 border border-white/5 rounded-2xl shrink-0">
-              <div className="flex justify-between items-center text-[9px] font-mono text-slate-400 mb-1.5">
-                <span className="font-bold">COMPLETION INDICATOR</span>
-                <span className="text-white font-black">{completedCount}/{totalCount} FINISHED ({completionPercentage}%)</span>
+            <div className={`mt-3.5 p-3.5 rounded-2xl shrink-0 border transition-colors ${allGoalsDone ? 'bg-emerald-500/[0.07] border-emerald-500/25' : 'bg-slate-900/50 border-white/5'}`}>
+              <div className="flex justify-between items-center text-[9px] font-mono mb-2">
+                <span className={`font-black tracking-wider ${allGoalsDone ? 'text-emerald-300' : 'text-slate-400'}`}>
+                  {allGoalsDone ? '✓ ALL GOALS DONE' : 'GOAL PROGRESS'}
+                </span>
+                <span className="text-white font-black">{completedCount}/{totalCount} · {completionPercentage}%</span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${completionPercentage}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} className="bg-gradient-to-r from-violet-500 to-emerald-400 h-full rounded-full" />
+              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${completionPercentage}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className={`h-full rounded-full ${allGoalsDone ? 'bg-emerald-400' : 'bg-gradient-to-r from-violet-500 to-emerald-400'}`}
+                />
               </div>
             </div>
           )}
 
-          <div className="mt-4 space-y-3">
+          {/* Schedule list */}
+          <div className="mt-4 flex-1 min-h-0 overflow-y-auto no-scrollbar -mx-1 px-1 space-y-2.5">
             {selectedDayTasks.length === 0 ? (
-              <div className="h-full min-h-[170px] flex flex-col items-center justify-center text-center p-6 text-slate-500 font-mono text-[10px]">
-                <div className="p-3 bg-slate-900 border border-white/5 rounded-2xl text-slate-400 mb-3 opacity-60">
-                  <CheckCircle2 className="w-5 h-5 stroke-[1.5]" />
+              <div className="h-full min-h-[170px] flex flex-col items-center justify-center text-center p-6">
+                <div className="p-3.5 bg-slate-900 border border-white/5 rounded-2xl text-slate-500 mb-3.5">
+                  <CalendarDays className="w-5 h-5 stroke-[1.5]" />
                 </div>
-                <span>No goals blocked out on this day.</span>
-                <button type="button" onClick={() => onOpenCreatePane?.()} className="mt-2 text-[10px] text-violet-400 hover:text-violet-300 font-bold transition font-sans underline underline-offset-4 cursor-pointer">
-                  Add a new goal
-                </button>
+                <p className="text-[11px] font-bold text-slate-300">{isSelectedToday ? 'Your day is clear' : 'Nothing scheduled'}</p>
+                <p className="text-[9px] font-mono text-slate-500 mt-1 mb-3.5">Plan a goal or block out an event.</p>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => onOpenCreatePane?.()} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1 cursor-pointer">
+                    <Plus className="w-3 h-3 stroke-[2.5]" /> ADD GOAL
+                  </button>
+                  {onCreatePersonal && (
+                    <button type="button" onClick={onCreatePersonal} className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/20 rounded-xl text-[9.5px] font-black font-mono tracking-wider transition flex items-center gap-1 cursor-pointer">
+                      <CalendarDays className="w-3 h-3" /> ADD EVENT
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               selectedDayTasks.map((t) => {
@@ -966,39 +1013,41 @@ export default function CalendarView({ tasks, projects, sections = [], labels = 
                   );
                 }
 
+                const tc = getTaskColor(t);
                 return (
-                  (() => {
-                    const tc = getTaskColor(t);
-                    return (
                   <div
                     key={`agenda-task-line-${t.id}`}
-                    style={{ borderColor: tc + '30', backgroundColor: tc + '0d' }}
-                    className="flex justify-between items-center gap-3 p-3.5 border rounded-2xl group select-none cursor-pointer duration-150 transition shadow-md hover:brightness-110"
+                    style={{ borderColor: tc + '2e', backgroundColor: tc + '0d' }}
+                    className={`relative flex items-center gap-3 pl-4 pr-3 py-3 border rounded-2xl group select-none cursor-pointer transition-all duration-150 hover:translate-x-0.5 hover:brightness-110 ${t.completed ? 'opacity-60' : ''}`}
                     onClick={() => onSelectTask(t.id)}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onToggleComplete(t.id); }}
-                        style={t.completed ? { backgroundColor: tc, borderColor: tc } : { borderColor: tc + '90' }}
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition ${t.completed ? 'text-white' : 'text-transparent'}`}
-                      >
-                        {t.completed && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
-                      </button>
-                      <span className={`text-[11.5px] font-black break-words tracking-tight leading-snug min-w-0 flex-1 ${t.completed ? 'line-through text-slate-500' : 'text-slate-100 font-semibold'}`}>{t.title}</span>
-                    </div>
+                    {/* Left accent bar */}
+                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full" style={{ backgroundColor: tc }} />
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onToggleComplete(t.id); }}
+                      title={t.completed ? 'Mark incomplete' : 'Mark complete'}
+                      style={t.completed ? { backgroundColor: tc, borderColor: tc } : { borderColor: tc + '90' }}
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition hover:scale-110 ${t.completed ? 'text-white' : 'text-transparent'}`}
+                    >
+                      {t.completed && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
+                    </button>
+
+                    <div className="min-w-0 flex-1">
+                      <span className={`block text-[11.5px] font-bold break-words tracking-tight leading-snug ${t.completed ? 'line-through text-slate-500' : 'text-slate-100'}`} title={t.title}>
+                        {t.title}
+                      </span>
                       {t.time && (
-                        <span className="text-[9px] font-mono font-black text-slate-400">
-                          🕒 {t.time}{t.endTime ? ` – ${t.endTime}` : ''}
+                        <span className="inline-flex items-center gap-1 mt-1 text-[8.5px] font-mono font-black" style={{ color: tc }}>
+                          <Clock className="w-2.5 h-2.5" />
+                          {fmt24(t.time)}{t.endTime ? ` – ${fmt24(t.endTime)}` : ''}
                         </span>
                       )}
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0" />
                     </div>
+
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0" />
                   </div>
-                    );
-                  })()
                 );
               })
             )}
