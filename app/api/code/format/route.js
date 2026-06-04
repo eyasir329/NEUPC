@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { requireApiSession, isAuthError } from '@/app/_lib/auth/api-guard';
 import { spawn } from 'child_process';
 import * as prettier from 'prettier';
 import { format as sqlFormat } from 'sql-formatter';
@@ -686,6 +687,11 @@ function normalizePython(code) {
 // ── Route handler ────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
+    const authResult = await requireApiSession();
+    if (isAuthError(authResult)) {
+      return authResult;
+    }
+
     const body = await request.json();
     const { code, language } = body ?? {};
 

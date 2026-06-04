@@ -15,7 +15,6 @@ import {
 } from 'react';
 import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
-import CodePlayground from '@/app/_components/ui/CodePlayground';
 import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   getCategoryConfig,
@@ -86,44 +85,6 @@ const LANGUAGE_LABELS = {
   typescript: 'TypeScript',
 };
 
-function normalizeCodeLanguage(language) {
-  const normalized = String(language || '')
-    .trim()
-    .toLowerCase();
-  const aliases = {
-    c: 'c',
-    cpp: 'cpp',
-    'c++': 'cpp',
-    cplusplus: 'cpp',
-    csharp: 'csharp',
-    cs: 'csharp',
-    go: 'go',
-    golang: 'go',
-    java: 'java',
-    javascript: 'javascript',
-    js: 'javascript',
-    php: 'php',
-    py: 'python',
-    python: 'python',
-    rb: 'ruby',
-    ruby: 'ruby',
-    rs: 'rust',
-    rust: 'rust',
-    ts: 'typescript',
-    typescript: 'typescript',
-  };
-  return aliases[normalized] || normalized;
-}
-
-function canExecuteLanguage(language) {
-  return EXECUTABLE_LANGUAGES.has(normalizeCodeLanguage(language));
-}
-
-function getCodeLanguageLabel(language) {
-  const normalized = normalizeCodeLanguage(language);
-  return LANGUAGE_LABELS[normalized] || normalized || 'Code';
-}
-
 // Inject slug IDs into h2/h3 that lack them so the TOC can find them.
 function injectHeadingIds(htmlString) {
   if (!htmlString) return htmlString;
@@ -184,13 +145,9 @@ function highlightCodeBlocks(htmlString) {
         highlighted = codeContent;
       }
       const wrapped = wrapCodeLines(highlighted);
-      const normalized = normalizeCodeLanguage(lang || '');
       let toolbarHtml = `<div class="code-block-toolbar" data-block-index="${blockIndex}">`;
       toolbarHtml += '<span class="code-toolbar-actions">';
       toolbarHtml += `<button type="button" class="code-toolbar-btn code-copy-btn" aria-label="Copy code">${COPY_SVG}<span>Copy</span></button>`;
-      if (canExecuteLanguage(normalized)) {
-        toolbarHtml += `<button type="button" class="code-toolbar-btn code-run-btn" data-lang="${normalized}" aria-label="Run ${getCodeLanguageLabel(normalized)} code">${PLAY_SVG}<span>Run</span></button>`;
-      }
       toolbarHtml += '</span></div>';
       return `${openTag}${attrs}${gt}${wrapped}</code>${toolbarHtml}</pre>`;
     }
@@ -445,19 +402,6 @@ export default function BlogDetailClient({
   useScrollLock(showMobileTOC);
   const [copied, setCopied] = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
-  const [runnerState, setRunnerState] = useState({
-    isOpen: false,
-    blockIndex: null,
-    language: '',
-    originalCode: '',
-    draftCode: '',
-    stdin: '',
-  });
-  const [runnerResult, setRunnerResult] = useState(null);
-  const [runnerError, setRunnerError] = useState('');
-  const [isRunningCode, setIsRunningCode] = useState(false);
-  const [isFormatting, setIsFormatting] = useState(false);
-  const [formatError, setFormatError] = useState('');
   const contentRef = useRef(null);
   const tocNavRef = useRef(null);
   const tocInitRef = useRef(false);
@@ -538,86 +482,6 @@ export default function BlogDetailClient({
     [meta.content, isJsonContent]
   );
 
-  const openCodeRunner = useCallback((payload) => {
-    setRunnerResult(null);
-    setRunnerError('');
-    setRunnerState({
-      isOpen: true,
-      blockIndex: payload.blockIndex,
-      language: normalizeCodeLanguage(payload.language),
-      originalCode: payload.code,
-      draftCode: payload.code,
-      stdin: '',
-    });
-  }, []);
-
-  const closeCodeRunner = useCallback(() => {
-    setRunnerState((prev) => ({ ...prev, isOpen: false }));
-    setRunnerResult(null);
-    setRunnerError('');
-    setFormatError('');
-    setIsRunningCode(false);
-  }, []);
-
-  const handleRunnerExecute = useCallback(async () => {
-    const language = normalizeCodeLanguage(runnerState.language);
-    if (!canExecuteLanguage(language)) {
-      setRunnerError(
-        'This code block language is not supported by the online runner.'
-      );
-      return;
-    }
-    if (!runnerState.draftCode.trim()) {
-      setRunnerError('Add some code before running this block.');
-      return;
-    }
-    setIsRunningCode(true);
-    setRunnerError('');
-    setRunnerResult(null);
-    try {
-      const response = await fetch('/api/code/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language,
-          code: runnerState.draftCode,
-          stdin: runnerState.stdin,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data?.error || 'Failed to execute code.');
-      setRunnerResult(data?.result || null);
-    } catch (error) {
-      setRunnerError(error?.message || 'Failed to execute code.');
-    } finally {
-      setIsRunningCode(false);
-    }
-  }, [runnerState.draftCode, runnerState.language, runnerState.stdin]);
-
-  const handleFormat = useCallback(async () => {
-    if (!runnerState.draftCode.trim()) return;
-    setIsFormatting(true);
-    setFormatError('');
-    try {
-      const res = await fetch('/api/code/format', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: runnerState.draftCode,
-          language: runnerState.language,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Format failed.');
-      setRunnerState((prev) => ({ ...prev, draftCode: data.formatted }));
-    } catch (err) {
-      setFormatError(err?.message || 'Could not format code.');
-    } finally {
-      setIsFormatting(false);
-    }
-  }, [runnerState.draftCode, runnerState.language]);
-
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -636,28 +500,11 @@ export default function BlogDetailClient({
             copyBtn.innerHTML = `${COPY_SVG}<span>Copy</span>`;
           }, 2000);
         });
-        return;
-      }
-      const runBtn = e.target.closest('.code-run-btn');
-      if (runBtn) {
-        const pre = runBtn.closest('pre');
-        if (!pre) return;
-        const code = pre.querySelector('code');
-        if (!code) return;
-        const toolbar = runBtn.closest('.code-block-toolbar');
-        const blockIndex = toolbar
-          ? Number(toolbar.dataset.blockIndex) || 1
-          : 1;
-        openCodeRunner({
-          blockIndex,
-          language: runBtn.dataset.lang || '',
-          code: code.textContent || '',
-        });
       }
     };
     container.addEventListener('click', handleClick);
     return () => container.removeEventListener('click', handleClick);
-  }, [openCodeRunner]);
+  }, []);
 
   useEffect(() => {
     const container = contentRef.current;
@@ -2023,35 +1870,6 @@ export default function BlogDetailClient({
 
         <ScrollToTop />
       </main>
-
-      <CodePlayground
-        state={runnerState}
-        result={runnerResult}
-        error={runnerError}
-        formatError={formatError}
-        isRunning={isRunningCode}
-        isFormatting={isFormatting}
-        onClose={closeCodeRunner}
-        onRun={handleRunnerExecute}
-        onFormat={handleFormat}
-        onDraftChange={(value) =>
-          setRunnerState((prev) => ({ ...prev, draftCode: value }))
-        }
-        onStdinChange={(value) =>
-          setRunnerState((prev) => ({ ...prev, stdin: value }))
-        }
-        onReset={() =>
-          setRunnerState((prev) => ({
-            ...prev,
-            draftCode: prev.originalCode,
-            stdin: '',
-          }))
-        }
-        onLanguageChange={(lang) =>
-          setRunnerState((prev) => ({ ...prev, language: lang }))
-        }
-        getLanguageLabel={getCodeLanguageLabel}
-      />
     </>
   );
 }

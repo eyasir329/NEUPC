@@ -37,6 +37,7 @@ import {
   GraduationCap,
   Video,
   Map,
+  Terminal,
 } from 'lucide-react';
 
 export function getSidebarNavigation(activeRole, stats, session) {
@@ -162,6 +163,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Problem Solving',
             icon: Code,
             href: '/account/member/problem-solving',
+          },
+          {
+            id: 'code-runner',
+            label: 'Code Runner',
+            icon: Terminal,
+            href: '/account/member/code-runner',
           },
         ],
       },
