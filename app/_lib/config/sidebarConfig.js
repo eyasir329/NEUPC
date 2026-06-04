@@ -233,6 +233,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: MessageSquare,
             href: '/account/executive/discussions',
           },
+          {
+            id: 'todo-list',
+            label: 'Todo List',
+            icon: CheckSquare,
+            href: '/account/executive/daily-activity',
+          },
         ],
       },
       {
@@ -528,6 +534,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Calendar,
             href: '/account/mentor/events',
           },
+          {
+            id: 'todo-list',
+            label: 'Todo List',
+            icon: CheckSquare,
+            href: '/account/mentor/daily-activity',
+          },
         ],
       },
       {
@@ -623,6 +635,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Help Desk',
             icon: MessageSquare,
             href: '/account/advisor/discussions',
+          },
+          {
+            id: 'todo-list',
+            label: 'Todo List',
+            icon: CheckSquare,
+            href: '/account/advisor/daily-activity',
           },
         ],
       },

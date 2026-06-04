@@ -26,7 +26,7 @@ import {
   pullFromGoogleAction,
 } from '@/app/_lib/actions/google-calendar-actions';
 import { isValidUUID } from '@/app/_lib/utils/validation';
-import { resolveTaskColor, LAYER_DEFAULTS } from '@/app/account/member/daily-activity/_components/utils';
+import { resolveTaskColor, LAYER_DEFAULTS } from './utils';
 
 const CONNECT_URL = '/api/integrations/google-calendar/connect';
 
