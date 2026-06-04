@@ -22,6 +22,7 @@ import { uploadToDrive, deleteFromDrive } from '@/app/_lib/integrations/gdrive';
 import { generateImage } from '@/app/_lib/integrations/image-gen';
 import { generateText } from '@/app/_lib/integrations/text-gen';
 import sanitizeHtml from 'sanitize-html';
+import { sanitizeText } from '@/app/_lib/utils/validation';
 
 const logActivity = createLogger('blog');
 
@@ -59,7 +60,7 @@ function extractImageUrls(html) {
     .filter(Boolean);
 }
 
-function sanitizeBlogHtml(html) {
+function sanitizeBlogHtmlContent(html) {
   return sanitizeHtml(html || '', {
     allowedTags: [
       'p',
@@ -122,6 +123,74 @@ function sanitizeBlogHtml(html) {
       },
     },
   });
+}
+
+function sanitizeBlogHtml(content) {
+  if (content == null) return content;
+
+  let parsedContent = content;
+  let isJson = false;
+
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) || (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks))) {
+          parsedContent = parsed;
+          isJson = true;
+        }
+      } catch (e) {
+        // Not a JSON block content string, treat as legacy rich-text string
+      }
+    }
+  }
+
+  const sanitizeBlock = (block) => {
+    if (!block || typeof block !== 'object') return block;
+    const next = { ...block };
+    if (next.type === 'html') {
+      // Bypass rich-text sanitization for HTML block types to preserve custom admin-authored styling
+    } else if (next.type === 'lessonPlan' && typeof next.content === 'string') {
+      try {
+        const parsed = JSON.parse(next.content);
+        const cleaned = sanitizeBlogHtml(parsed);
+        next.content = typeof cleaned === 'string' ? cleaned : JSON.stringify(cleaned);
+      } catch (e) {
+        // Keep as-is if parsing fails
+      }
+    } else if (typeof next.content === 'string') {
+      next.content = sanitizeBlogHtmlContent(next.content);
+    }
+    // Block `data` may carry nested text. Sanitize known fields conservatively.
+    if (next.data && typeof next.data === 'object') {
+      const data = { ...next.data };
+      if (typeof data.caption === 'string')
+        data.caption = sanitizeBlogHtmlContent(data.caption);
+      if (typeof data.alt === 'string')
+        data.alt = sanitizeText(data.alt, 500);
+      if (typeof data.title === 'string')
+        data.title = sanitizeText(data.title, 500);
+      next.data = data;
+    }
+    return next;
+  };
+
+  let cleaned;
+  if (Array.isArray(parsedContent)) {
+    cleaned = parsedContent.map(sanitizeBlock);
+  } else if (typeof parsedContent === 'object' && Array.isArray(parsedContent.blocks)) {
+    cleaned = { ...parsedContent, blocks: parsedContent.blocks.map(sanitizeBlock) };
+  } else if (typeof parsedContent === 'string') {
+    cleaned = sanitizeBlogHtmlContent(parsedContent);
+  } else {
+    cleaned = parsedContent;
+  }
+
+  if (isJson) {
+    return JSON.stringify(cleaned);
+  }
+  return cleaned;
 }
 
 // =============================================================================
