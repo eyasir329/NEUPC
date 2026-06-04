@@ -863,26 +863,17 @@ export async function getParticipationRecordsAdmin() {
  * Get user's bootcamp enrollments for LMS context dropdown.
  */
 export async function getUserBootcampEnrollments(userId) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('enrollments')
-    .select(
-      `
-      bootcamp_id,
-      bootcamp:bootcamps(
-        id, title, slug,
-        courses(id, title,
-          modules(id, title,
-            lessons(id, title)
-          )
-        )
-      )
-    `
-    )
+    .select('bootcamp:bootcamps(id, title, slug, status)')
     .eq('user_id', userId)
     .eq('status', 'active');
 
   if (error) throw new Error(error.message);
-  return data?.map((e) => e.bootcamp).filter(Boolean) || [];
+  return (
+    data?.map((e) => e.bootcamp)
+      .filter((b) => b && b.status === 'published') || []
+  );
 }
 
 export async function searchUsers(query) {

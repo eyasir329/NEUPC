@@ -11,15 +11,15 @@ import { requireRole } from '@/app/_lib/auth/auth-guard';
 import {
   getDiscussions,
   getUserDiscussionStats,
-  getUserBootcampEnrollments,
 } from '@/app/_lib/services/data-service';
+import { getMyEnrollments } from '@/app/_lib/actions/bootcamp-actions';
 import { DiscussionErrorBoundary } from '@/app/_components/discussions';
 import MemberHelpDeskClient from './_components/MemberHelpDeskClient';
 
 export const metadata = { title: 'Help Desk | Member | NEUPC' };
 
 export default async function MemberDiscussionsPage() {
-  const { session, user } = await requireRole('member');
+  const { session, user, userRoles } = await requireRole('member');
 
   // Fetch initial data in parallel with detailed error logging
   const [discussionsResult, stats, bootcamps] = await Promise.all([
@@ -31,11 +31,19 @@ export default async function MemberDiscussionsPage() {
       console.error('Error fetching user stats:', err.message);
       return {};
     }),
-    getUserBootcampEnrollments(user.id).catch((err) => {
+    getMyEnrollments().catch((err) => {
       console.error('Error fetching bootcamp enrollments:', err.message);
       return [];
     }),
   ]);
+
+  // Filter: only show bootcamps where member is currently enrolled (status = active) and bootcamp itself is active (status = published)
+  const enrolledActiveBootcamps = (bootcamps || []).filter(
+    (e) =>
+      e.status === 'active' &&
+      e.bootcamps &&
+      e.bootcamps.status === 'published'
+  );
 
   return (
     <DiscussionErrorBoundary
@@ -45,9 +53,11 @@ export default async function MemberDiscussionsPage() {
       <MemberHelpDeskClient
         initialDiscussions={discussionsResult.data || []}
         initialStats={stats}
-        bootcamps={bootcamps}
+        bootcamps={enrolledActiveBootcamps}
         userId={user.id}
         userEmail={session.user.email}
+        userRoles={userRoles}
+        isMemberPanel={true}
       />
     </DiscussionErrorBoundary>
   );

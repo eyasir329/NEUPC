@@ -16,7 +16,7 @@ import MemberHelpDeskClient from '@/app/account/member/discussions/_components/M
 export const metadata = { title: 'Help Desk | Executive | NEUPC' };
 
 export default async function ExecutiveDiscussionsPage() {
-  const { session, user } = await requireRole('executive');
+  const { session, user, userRoles } = await requireRole('executive');
 
   const [discussionsResult, stats, bootcamps] = await Promise.all([
     getDiscussions({ userId: user.id, limit: 50 }).catch(() => ({
@@ -38,6 +38,8 @@ export default async function ExecutiveDiscussionsPage() {
         bootcamps={bootcamps}
         userId={user.id}
         userEmail={session.user.email}
+        userRoles={userRoles}
+        isExecutivePanel={true}
       />
     </DiscussionErrorBoundary>
   );

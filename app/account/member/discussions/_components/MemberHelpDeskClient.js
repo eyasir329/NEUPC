@@ -5,13 +5,24 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   PageShell,
   TabBar as UiTabBar,
   PageHeader,
 } from '@/app/account/_components/ui';
 import { AnimatePresence, motion } from 'framer-motion';
+import { formatRelativeTime } from '@/app/_lib/utils/utils';
+import {
+  createDiscussionAction,
+  createReplyAction,
+  fetchDiscussionDetailAction,
+  voteThreadAction,
+  togglePinAction,
+  fetchTopContributorsAction,
+  updateStatusAction,
+} from '@/app/_lib/actions/discussion-actions';
 import {
   MessageSquare,
   Search,
@@ -39,12 +50,6 @@ function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-const CURRENT_USER_STATS = {
-  threads: 14,
-  replies: 86,
-  solved: 12,
-};
-
 const TABS = [
   { id: 'All', label: 'All Posts', icon: MessageSquare },
   { id: 'Help', label: 'Help & Support', icon: Heart },
@@ -54,181 +59,102 @@ const TABS = [
   { id: 'Feature Requests', label: 'Feature Requests', icon: Star },
 ];
 
-const OVERVIEW_STATS = {
-  total: 128,
-  open: 24,
-  resolved: 92,
-  pinned: 4,
+// ─── Real-data mapping helpers ───────────────────────────────────────────────
+// The Help Desk UI is tag-driven; map DB discussion rows onto the same shape
+// the view already expects so the layout/styling stays identical.
+
+const TYPE_TO_TAG = {
+  general_question: { text: 'Help', color: 'blue' },
+  course_problem: { text: 'Discussion', color: 'purple' },
+  assignment_issue: { text: 'Discussion', color: 'purple' },
+  bug_report: { text: 'Help', color: 'blue' },
+  ui_issue: { text: 'Help', color: 'blue' },
+  feature_request: { text: 'Feature Request', color: 'teal' },
+  announcement: { text: 'Announce', color: 'rose' },
 };
 
-const TOP_CONTRIBUTORS = [
-  {
-    id: 1,
-    name: 'Marcus Chen',
-    score: 1420,
-    avatar: 'MC',
-    color: 'bg-amber-500',
-  },
-  {
-    id: 2,
-    name: 'Sarah Jenkins',
-    score: 1285,
-    avatar: 'SJ',
-    color: 'bg-violet-500',
-  },
-  {
-    id: 3,
-    name: 'Alex Rivera',
-    score: 945,
-    avatar: 'AR',
-    color: 'bg-emerald-500',
-  },
-  {
-    id: 4,
-    name: 'Jordan Smith',
-    score: 820,
-    avatar: 'JS',
-    color: 'bg-purple-500',
-  },
-  {
-    id: 5,
-    name: 'Priya Patel',
-    score: 754,
-    avatar: 'PP',
-    color: 'bg-rose-500',
-  },
+// Category options in the New Thread form → DB discussion types.
+const CATEGORY_TO_TYPE = {
+  Help: 'general_question',
+  Discussion: 'course_problem',
+  'Feature Request': 'feature_request',
+  Announce: 'announcement',
+  'Release Log': 'announcement',
+};
+
+const AVATAR_COLORS = [
+  'bg-blue-600',
+  'bg-violet-500',
+  'bg-amber-500',
+  'bg-emerald-500',
+  'bg-rose-600',
+  'bg-teal-600',
+  'bg-cyan-600',
+  'bg-fuchsia-600',
+  'bg-sky-600',
+  'bg-purple-600',
 ];
 
-const THREADS = [
-  {
-    id: 1,
-    avatarText: 'AZ',
-    avatarColor: 'bg-blue-600',
-    tags: [
-      { text: 'Help', color: 'blue' },
-      { text: 'Hot', icon: Flame, color: 'orange' },
-    ],
-    title: 'Best practices for React Context API performance in 2024?',
-    author: 'Ali Zafar',
-    time: '5 minutes ago',
-    replies: 24,
-    views: 312,
-  },
-  {
-    id: 2,
-    avatarText: 'SJ',
-    avatarColor: 'bg-violet-500',
-    tags: [
-      { text: 'Discussion', color: 'purple' },
-      { text: 'Pinned', icon: Pin, color: 'slate' },
-    ],
-    title: 'RFC: Migrating our monorepo from Yarn to pnpm',
-    author: 'Sarah Jenkins',
-    time: '2 hours ago',
-    replies: 56,
-    views: 1205,
-  },
-  {
-    id: 3,
-    avatarText: 'MC',
-    avatarColor: 'bg-amber-500',
-    tags: [
-      { text: 'Show & Tell', color: 'amber' },
-      { text: 'Featured', icon: Star, color: 'amber' },
-    ],
-    title: 'Just open-sourced my new WebGL physics engine! 🚀',
-    author: 'Marcus Chen',
-    time: '4 hours ago',
-    replies: 89,
-    views: 2400,
-  },
-  {
-    id: 4,
-    avatarText: 'PP',
-    avatarColor: 'bg-emerald-500',
-    tags: [
-      { text: 'Help', color: 'blue' },
-      { text: 'Solved', icon: CheckCircle2, color: 'emerald' },
-    ],
-    title: 'How to properly type a generic forwardRef component?',
-    author: 'Priya Patel',
-    time: '5 hours ago',
-    replies: 12,
-    views: 280,
-  },
-  {
-    id: 5,
-    avatarText: 'Team',
-    avatarColor: 'bg-rose-600',
-    tags: [
-      { text: 'Announce', color: 'rose' },
-      { text: 'Pinned', icon: Pin, color: 'slate' },
-    ],
-    title: 'Q3 Hackathon Winners Announced! 🏆',
-    author: 'Developer Relations',
-    time: '1 day ago',
-    replies: 124,
-    views: 3500,
-  },
-  {
-    id: 6,
-    avatarText: 'AR',
-    avatarColor: 'bg-teal-600',
-    tags: [{ text: 'Help', color: 'blue' }],
-    title: 'PostgreSQL index not being hit for JSONB text search',
-    author: 'Alex Rivera',
-    time: '1 day ago',
-    replies: 8,
-    views: 195,
-  },
-  {
-    id: 7,
-    avatarText: 'TK',
-    avatarColor: 'bg-cyan-600',
-    tags: [{ text: 'Show & Tell', color: 'amber' }],
-    title: 'Built a CLI that converts Figma designs to Tailwind components',
-    author: 'Tariq Khan',
-    time: '2 days ago',
-    replies: 42,
-    views: 856,
-  },
-  {
-    id: 8,
-    avatarText: 'DK',
-    avatarColor: 'bg-violet-600',
-    tags: [{ text: 'Discussion', color: 'purple' }],
-    title: "Is anyone else feeling the 'JS Framework Fatigue' again?",
-    author: 'David Kim',
-    time: '2 days ago',
-    replies: 215,
-    views: 4200,
-  },
-  {
-    id: 9,
-    avatarText: 'EW',
-    avatarColor: 'bg-fuchsia-600',
-    tags: [
-      { text: 'Help', color: 'blue' },
-      { text: 'Solved', icon: CheckCircle2, color: 'emerald' },
-    ],
-    title: "Docker build failing with 'out of memory' on latest Apple Silicon",
-    author: 'Elena Weaver',
-    time: '3 days ago',
-    replies: 14,
-    views: 450,
-  },
-  {
-    id: 10,
-    avatarText: 'JS',
-    avatarColor: 'bg-sky-600',
-    tags: [{ text: 'Feature Request', color: 'teal' }],
-    title: 'Add dark mode support to the internal email templates',
-    author: 'Jordan Smith',
-    time: '3 days ago',
-    replies: 31,
-    views: 620,
-  },
-];
+function avatarColorFor(key) {
+  const s = String(key ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+function initials(name) {
+  if (!name) return 'U';
+  const parts = name.trim().split(/\s+/);
+  return (
+    ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'U'
+  );
+}
+
+function mapThreadToUi(d) {
+  const author = d.author || d.user || {};
+  const name = author.full_name || author.name || 'Unknown User';
+  let typeTag = TYPE_TO_TAG[d.type] || { text: 'Discussion', color: 'purple' };
+  
+  if (d.type === 'announcement' && d.tags && d.tags.includes('Release Log')) {
+    typeTag = { text: 'Release Log', color: 'indigo' };
+  }
+  
+  const tags = [{ ...typeTag }];
+  const solved =
+    d.is_solved || d.status === 'resolved' || d.status === 'closed';
+  if (solved) tags.push({ text: 'Solved', icon: CheckCircle2, color: 'emerald' });
+  if (d.is_pinned) tags.push({ text: 'Pinned', icon: Pin, color: 'slate' });
+
+  return {
+    id: d.id,
+    avatarText: initials(name),
+    avatarColor: avatarColorFor(author.id || d.author_id || d.id),
+    tags,
+    title: d.title,
+    author: name,
+    time: d.created_at ? formatRelativeTime(d.created_at) : '',
+    replies: d.reply_count || 0,
+    views: d.views || 0,
+    content: d.content || '',
+    comments: null,
+    type: d.type,
+    bootcamp_id: d.bootcamp_id,
+    status: d.status,
+  };
+}
+
+function mapReplyToComment(r) {
+  const name = r.author?.full_name || 'Unknown User';
+  return {
+    id: r.id,
+    author: name,
+    avatarText: initials(name),
+    avatarColor: avatarColorFor(r.author?.id || r.author_id || r.id),
+    time: r.created_at ? formatRelativeTime(r.created_at) : '',
+    content: r.content,
+    likes: r.upvotes || 0,
+  };
+}
 
 export default function MemberHelpDeskClient({
   initialDiscussions = [],
@@ -236,31 +162,59 @@ export default function MemberHelpDeskClient({
   bootcamps = [],
   userId,
   userEmail,
+  userRoles = [],
+  isMemberPanel = false,
+  isMentorPanel = false,
+  isExecutivePanel = false,
+  isAdvisorPanel = false,
+  isAdminPanel = false,
 }) {
-  const [threads, setThreads] = useState(() => {
-    // Merge real data if available with mock data for demonstration
-    if (initialDiscussions && initialDiscussions.length > 0) {
-      // Map real data to match the mock data structure
-      const mapped = initialDiscussions.map((d) => ({
-        id: d.id,
-        avatarText: d.user?.name?.substring(0, 2).toUpperCase() || 'U',
-        avatarColor: 'bg-violet-600',
-        tags: d.tags
-          ? d.tags.map((t) => ({ text: t, color: 'blue' }))
-          : [{ text: 'Discussion', color: 'purple' }],
-        title: d.title,
-        author: d.user?.name || 'Unknown User',
-        time: new Date(d.createdAt).toLocaleDateString(),
-        replies: d.repliesCount || 0,
-        views: d.viewsCount || 0,
-        content: d.content,
-        comments: d.replies || [],
-      }));
-      // Just for a rich demo, combine them
-      return [...mapped, ...THREADS];
+  const router = useRouter();
+  const getHighestRole = (roles = []) => {
+    const priority = ['admin', 'mentor', 'advisor', 'executive', 'member'];
+    for (const r of priority) {
+      if (roles.includes(r)) return r;
     }
-    return THREADS;
-  });
+    return 'member';
+  };
+  const highestRole = getHighestRole(userRoles);
+
+  const allowedCategories = useMemo(() => {
+    if (isMemberPanel) {
+      return ['Help', 'Discussion', 'Feature Request'];
+    }
+    if (isMentorPanel) {
+      return ['Feature Request', 'Announce'];
+    }
+    if (isExecutivePanel) {
+      return ['Feature Request', 'Announce'];
+    }
+    if (isAdvisorPanel) {
+      return ['Feature Request', 'Announce'];
+    }
+    if (isAdminPanel) {
+      return ['Announce', 'Release Log'];
+    }
+    if (highestRole === 'admin') {
+      return ['Help', 'Discussion', 'Feature Request', 'Announce', 'Release Log'];
+    }
+    if (highestRole === 'executive') {
+      return ['Help', 'Discussion', 'Feature Request', 'Announce'];
+    }
+    if (highestRole === 'mentor') {
+      return ['Feature Request', 'Announce'];
+    }
+    return ['Help', 'Discussion', 'Feature Request'];
+  }, [highestRole, isMemberPanel, isMentorPanel, isExecutivePanel, isAdvisorPanel, isAdminPanel]);
+  const [threads, setThreads] = useState(() =>
+    initialDiscussions.map(mapThreadToUi)
+  );
+
+  // Keep the list in sync with fresh server data after revalidation.
+  useEffect(() => {
+    setThreads(initialDiscussions.map(mapThreadToUi));
+  }, [initialDiscussions]);
+
   const [activeTab, setActiveTab] = useState('All');
   const [selectedThreadId, setSelectedThreadId] = useState(null);
   const [isCreatingThread, setIsCreatingThread] = useState(false);
@@ -270,38 +224,72 @@ export default function MemberHelpDeskClient({
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 7;
   const [likedThreads, setLikedThreads] = useState(new Set());
-  const toggleLike = (id) =>
+  const [topContributors, setTopContributors] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchTopContributorsAction({ limit: 5 }).then((res) => {
+      if (active && res?.success) setTopContributors(res.contributors || []);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleLike = useCallback((id) => {
+    let willLike = false;
     setLikedThreads((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        willLike = false;
+      } else {
+        next.add(id);
+        willLike = true;
+      }
       return next;
     });
-
-  const togglePin = useCallback((id) => {
-    setThreads((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const hasPin = t.tags?.some((tag) => tag.text === 'Pinned');
-          let newTags = [...(t.tags || [])];
-          if (hasPin) {
-            newTags = newTags.filter((tag) => tag.text !== 'Pinned');
-          } else {
-            newTags.push({ text: 'Pinned', icon: Pin, color: 'slate' });
-          }
-          return { ...t, tags: newTags };
-        }
-        return t;
-      })
-    );
+    voteThreadAction({
+      threadId: id,
+      voteType: 'up',
+      currentVote: willLike ? null : 'up',
+    }).catch(() => {});
   }, []);
+
+  const togglePin = useCallback(
+    (id) => {
+      let nowPinned = false;
+      setThreads((prev) =>
+        prev.map((t) => {
+          if (t.id === id) {
+            const hasPin = t.tags?.some((tag) => tag.text === 'Pinned');
+            nowPinned = !hasPin;
+            let newTags = [...(t.tags || [])];
+            if (hasPin) {
+              newTags = newTags.filter((tag) => tag.text !== 'Pinned');
+            } else {
+              newTags.push({ text: 'Pinned', icon: Pin, color: 'slate' });
+            }
+            return { ...t, tags: newTags };
+          }
+          return t;
+        })
+      );
+      togglePinAction({ threadId: id, isPinned: nowPinned }).then((res) => {
+        // Pinning is staff-only; revert to server truth on failure.
+        if (res?.error) router.refresh();
+      });
+    },
+    [router]
+  );
 
   // Reset page whenever any filter changes
   const resetPage = useCallback(() => setCurrentPage(1), []);
 
   const currentUserStats = {
-    threads: initialStats?.threadsCount || 0,
+    threads: initialStats?.total || 0,
     replies: initialStats?.repliesCount || 0,
-    solved: initialStats?.solvedCount || 0,
+    solved: initialStats?.resolved || 0,
   };
 
   const overviewStats = {
@@ -390,6 +378,9 @@ export default function MemberHelpDeskClient({
     Announcements: threads.filter((t) =>
       t.tags.some((tag) => tag.text === 'Announce')
     ).length,
+    'Release Log': threads.filter((t) =>
+      t.tags.some((tag) => tag.text === 'Release Log')
+    ).length,
     'Feature Requests': threads.filter((t) =>
       t.tags.some((tag) => tag.text === 'Feature Request')
     ).length,
@@ -400,6 +391,30 @@ export default function MemberHelpDeskClient({
     icon: t.icon,
     count: tabCounts[t.id],
   }));
+
+  const handleCreateThread = useCallback(
+    async ({ title, content, tag, bootcampId }) => {
+      const result = await createDiscussionAction({
+        title,
+        content,
+        type: CATEGORY_TO_TYPE[tag] || 'general_question',
+        bootcampId: bootcampId || null,
+        tags: tag === 'Release Log' ? ['Release Log'] : [],
+      });
+      if (result?.error) {
+        alert(result.error);
+        return;
+      }
+      if (result?.thread) {
+        const mapped = mapThreadToUi(result.thread);
+        setThreads((prev) => [mapped, ...prev]);
+        setIsCreatingThread(false);
+        setSelectedThreadId(mapped.id);
+        router.refresh();
+      }
+    },
+    [router]
+  );
 
   return (
     <PageShell className="text-gray-300 selection:bg-violet-500/30">
@@ -471,12 +486,10 @@ export default function MemberHelpDeskClient({
             >
               {isCreatingThread ? (
                 <NewThread
+                  bootcamps={bootcamps}
                   onBack={() => setIsCreatingThread(false)}
-                  onSubmit={(newThread) => {
-                    setThreads([newThread, ...threads]);
-                    setIsCreatingThread(false);
-                    setSelectedThreadId(newThread.id);
-                  }}
+                  onSubmit={handleCreateThread}
+                  allowedCategories={allowedCategories}
                 />
               ) : selectedThreadId ? (
                 <ThreadDetail
@@ -486,63 +499,9 @@ export default function MemberHelpDeskClient({
                   likedThreads={likedThreads}
                   onToggleLike={toggleLike}
                   onTogglePin={togglePin}
-                  onAddComment={(tId, content) => {
-                    setThreads((prev) =>
-                      prev.map((t) => {
-                        if (t.id === tId) {
-                          const newComment = {
-                            id: Math.floor(Math.random() * 10000) + 10000,
-                            author: 'New Participant',
-                            avatarText: 'NP',
-                            avatarColor: 'bg-violet-600',
-                            time: 'Just now',
-                            content,
-                            likes: 0,
-                          };
-                          const defaultComments = [
-                            {
-                              id: 101,
-                              author: 'Jordan Smith',
-                              avatarText: 'JS',
-                              avatarColor: 'bg-purple-500',
-                              time: '3 hours ago',
-                              content:
-                                "I usually stick to Context API until I hit a performance wall or the state logic becomes too complex to manage in a few files. Zustand has been my go-to lately because it's so lightweight and easy to set up compared to Redux.",
-                              likes: 15,
-                            },
-                            {
-                              id: 102,
-                              author: 'Elena Weaver',
-                              avatarText: 'EW',
-                              avatarColor: 'bg-fuchsia-600',
-                              time: '1 hour ago',
-                              content:
-                                "Great write-up! I definitely agree about the over-rendering issue with Context. Splitting your contexts (one for state, one for dispatch) can help mitigate it, but it's still a pain point once the app grows.",
-                              likes: 7,
-                            },
-                            {
-                              id: 103,
-                              author: 'Alex Rivera',
-                              avatarText: 'AR',
-                              avatarColor: 'bg-teal-600',
-                              time: '45 mins ago',
-                              content:
-                                "Signals look really promising. I've used them in SolidJS and bringing that mental model to React with things like Preact Signals or Jotai is a game changer for performance.",
-                              likes: 24,
-                            },
-                          ];
-                          const currentComments =
-                            t.comments || (t.id <= 10 ? defaultComments : []);
-                          return {
-                            ...t,
-                            comments: [...currentComments, newComment],
-                            replies: (t.replies || 0) + 1,
-                          };
-                        }
-                        return t;
-                      })
-                    );
-                  }}
+                  onReplyPosted={() => router.refresh()}
+                  userRoles={userRoles}
+                  userId={userId}
                 />
               ) : (
                 <div className="flex flex-col gap-3">
@@ -843,16 +802,20 @@ export default function MemberHelpDeskClient({
               Top contributors
             </h3>
             <div className="flex flex-col gap-4 text-sm">
-              {TOP_CONTRIBUTORS.map((contributor, index) => (
-                <ContributorRow
-                  key={contributor.id}
-                  rank={index + 1}
-                  name={contributor.name}
-                  score={contributor.score}
-                  avatar={contributor.avatar}
-                  color={contributor.color}
-                />
-              ))}
+              {topContributors.length > 0 ? (
+                topContributors.map((contributor, index) => (
+                  <ContributorRow
+                    key={contributor.id}
+                    rank={index + 1}
+                    name={contributor.name}
+                    score={contributor.score}
+                    avatar={initials(contributor.name)}
+                    color={avatarColorFor(contributor.id)}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-gray-500">No contributors yet.</p>
+              )}
             </div>
           </div>
 
@@ -1051,66 +1014,125 @@ function ThreadDetail({
   threadId,
   threads,
   onBack,
-  onAddComment,
   likedThreads = new Set(),
   onToggleLike,
   onTogglePin,
+  onReplyPosted,
+  userRoles = [],
+  userId,
 }) {
   const [replyText, setReplyText] = useState('');
+  const [comments, setComments] = useState([]);
+  const [loadedContent, setLoadedContent] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
 
-  const threadDetail = useMemo(() => {
-    const base = threads.find((t) => t.id === threadId);
-    if (!base) return null;
-    return {
-      ...base,
-      content:
-        base.content ||
-        `I've been exploring this topic recently and wanted to share some thoughts and get feedback from the community.\n\nWhen we build large scale applications, managing state and ensuring performant rendering becomes quite challenging. I've been experimenting with several approaches:\n\n1. **Context API** - Great for simple global state, but can lead to over-rendering if not careful.\n2. **Zustand / Redux** - Fantastic for structured, predictable changes.\n3. **Signals** - A relatively new pattern in the React ecosystem that offers fine-grained reactivity.\n\nHere is a small example of what I'm looking at:\n\n\`\`\`typescript\ninterface AppState {\n  user: User | null;\n  theme: 'light' | 'dark';\n  setTheme: (theme: 'light' | 'dark') => void;\n}\n\`\`\`\n\nWhat are your thoughts on balancing simplicity with scalability? Have you found any specific threshold where you always switch from Context to a dedicated state manager?`,
-      comments:
-        base.comments ||
-        (base.id <= 10
-          ? [
-              {
-                id: 101,
-                author: 'Jordan Smith',
-                avatarText: 'JS',
-                avatarColor: 'bg-purple-500',
-                time: '3 hours ago',
-                content:
-                  "I usually stick to Context API until I hit a performance wall or the state logic becomes too complex to manage in a few files. Zustand has been my go-to lately because it's so lightweight and easy to set up compared to Redux.",
-                likes: 15,
-              },
-              {
-                id: 102,
-                author: 'Elena Weaver',
-                avatarText: 'EW',
-                avatarColor: 'bg-fuchsia-600',
-                time: '1 hour ago',
-                content:
-                  "Great write-up! I definitely agree about the over-rendering issue with Context. Splitting your contexts (one for state, one for dispatch) can help mitigate it, but it's still a pain point once the app grows.",
-                likes: 7,
-              },
-              {
-                id: 103,
-                author: 'Alex Rivera',
-                avatarText: 'AR',
-                avatarColor: 'bg-teal-600',
-                time: '45 mins ago',
-                content:
-                  "Signals look really promising. I've used them in SolidJS and bringing that mental model to React with things like Preact Signals or Jotai is a game changer for performance.",
-                likes: 24,
-              },
-            ]
-          : []),
-    };
-  }, [threadId, threads]);
+  const base = useMemo(
+    () => threads.find((t) => t.id === threadId) || null,
+    [threadId, threads]
+  );
 
-  const handlePostReply = () => {
-    if (!replyText.trim()) return;
-    if (onAddComment) {
-      onAddComment(threadId, replyText);
+  const [threadStatus, setThreadStatus] = useState(base?.status || 'open');
+  const [threadTags, setThreadTags] = useState(base?.tags || []);
+
+  const loadDetail = useCallback(async () => {
+    const result = await fetchDiscussionDetailAction({ threadId });
+    if (result?.thread) {
+      setLoadedContent(result.thread.content || '');
+      setComments((result.thread.replies || []).map(mapReplyToComment));
+      setThreadStatus(result.thread.status || 'open');
+
+      const name = result.thread.author?.full_name || result.thread.author?.name || 'Unknown User';
+      let typeTag = TYPE_TO_TAG[result.thread.type] || { text: 'Discussion', color: 'purple' };
+      if (result.thread.type === 'announcement' && result.thread.tags && result.thread.tags.includes('Release Log')) {
+        typeTag = { text: 'Release Log', color: 'indigo' };
+      }
+      const tags = [{ ...typeTag }];
+      const solved = result.thread.is_solved || result.thread.status === 'resolved' || result.thread.status === 'closed';
+      if (solved) tags.push({ text: 'Solved', icon: CheckCircle2, color: 'emerald' });
+      if (result.thread.is_pinned) tags.push({ text: 'Pinned', icon: Pin, color: 'slate' });
+      setThreadTags(tags);
+    }
+  }, [threadId]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
+
+  const threadDetail = base
+    ? { ...base, content: loadedContent || base.content, comments, tags: threadTags.length ? threadTags : base.tags }
+    : null;
+
+  const getHighestRole = (roles = []) => {
+    const priority = ['admin', 'mentor', 'advisor', 'executive', 'member'];
+    for (const r of priority) {
+      if (roles.includes(r)) return r;
+    }
+    return 'member';
+  };
+  const highestRole = getHighestRole(userRoles);
+
+  const canSolve = useMemo(() => {
+    if (threadStatus === 'resolved' || threadStatus === 'closed') return false;
+
+    // Get thread type
+    const type = base?.type || '';
+
+    // If no type, check first tag text
+    let derivedType = type;
+    if (!derivedType && base?.tags?.length) {
+      const firstTag = base.tags[0].text;
+      if (firstTag === 'Help') derivedType = 'general_question';
+      else if (firstTag === 'Discussion') derivedType = 'course_problem';
+      else if (firstTag === 'Feature Request') derivedType = 'feature_request';
+      else if (firstTag === 'Announce') derivedType = 'announcement';
+      else if (firstTag === 'Release Log') derivedType = 'announcement';
+    }
+
+    // 1. Feature Request: only be solve by admin
+    if (derivedType === 'feature_request') {
+      return highestRole === 'admin';
+    }
+    // 2. Discussion (course_problem or assignment_issue): only solved by mentor
+    if (derivedType === 'course_problem' || derivedType === 'assignment_issue') {
+      return highestRole === 'mentor';
+    }
+    // 3. Help & Support (general_question, bug_report, ui_issue): can be solve by mentor, executive, advisor, admin
+    if (
+      derivedType === 'general_question' ||
+      derivedType === 'bug_report' ||
+      derivedType === 'ui_issue'
+    ) {
+      return ['mentor', 'executive', 'advisor', 'admin'].includes(highestRole);
+    }
+
+    return false;
+  }, [threadStatus, base, highestRole]);
+
+  const handleSolve = async () => {
+    const result = await updateStatusAction({ threadId, status: 'resolved' });
+    if (result?.error) {
+      alert(result.error);
+      return;
+    }
+    await loadDetail();
+    if (onReplyPosted) onReplyPosted();
+  };
+
+  const handlePostReply = async () => {
+    if (!replyText.trim() || isPosting) return;
+    setIsPosting(true);
+    const result = await createReplyAction({
+      threadId,
+      content: replyText.trim(),
+    });
+    setIsPosting(false);
+    if (result?.error) {
+      alert(result.error);
+      return;
     }
     setReplyText('');
+    await loadDetail();
+    if (onReplyPosted) onReplyPosted();
   };
 
   if (!threadDetail)
@@ -1176,6 +1198,15 @@ function ThreadDetail({
             </div>
 
             <div className="flex items-center gap-2">
+              {canSolve && threadStatus !== 'resolved' && (
+                <button
+                  onClick={handleSolve}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold text-emerald-400 shadow-sm transition-all hover:bg-emerald-600/35 hover:text-emerald-300"
+                >
+                  <CheckCircle2 size={14} />
+                  Solve
+                </button>
+              )}
               <button
                 onClick={() => onTogglePin && onTogglePin(threadId)}
                 className={`flex items-center gap-1.5 rounded-lg p-2 text-sm font-medium transition-colors ${isPinned ? 'bg-violet-500/10 text-violet-400' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
@@ -1323,11 +1354,11 @@ function ThreadDetail({
                 </button>
               </div>
               <button
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || isPosting}
                 onClick={handlePostReply}
                 className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-[#0d1117] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Post Reply
+                {isPosting ? 'Posting…' : 'Post Reply'}
               </button>
             </div>
           </div>
@@ -1337,51 +1368,30 @@ function ThreadDetail({
   );
 }
 
-function NewThread({ onBack, onSubmit }) {
+function NewThread({
+  onBack,
+  onSubmit,
+  bootcamps = [],
+  allowedCategories = ['Help', 'Discussion', 'Feature Request'],
+}) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [tag, setTag] = useState('Help');
-  const [bootcampName, setBootcampName] = useState('');
+  const [tag, setTag] = useState(allowedCategories[0] || 'Help');
+  const [bootcampId, setBootcampId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
-
-    const tags = [
-      {
-        text: tag,
-        color:
-          tag === 'Help'
-            ? 'blue'
-            : tag === 'Show & Tell'
-              ? 'amber'
-              : tag === 'Announce'
-                ? 'rose'
-                : tag === 'Feature Request'
-                  ? 'teal'
-                  : 'purple',
-      },
-    ];
-
-    if (tag === 'Discussion' && bootcampName) {
-      tags.push({ text: `Bootcamp: ${bootcampName}`, color: 'orange' });
-    }
-
-    const newThread = {
-      id: Math.floor(Math.random() * 10000) + 100, // random id
-      avatarText: 'NP',
-      avatarColor: 'bg-violet-600',
-      tags,
+    if (!title.trim() || !content.trim() || isSubmitting) return;
+    if (tag === 'Discussion' && !bootcampId) return;
+    setIsSubmitting(true);
+    await onSubmit({
       title: title.trim(),
-      author: 'New Participant', // we could use real user's name if we had auth
-      time: 'Just now',
-      replies: 0,
-      views: 0,
       content: content.trim(),
-      comments: [],
-    };
-
-    onSubmit(newThread);
+      tag,
+      bootcampId: tag === 'Discussion' ? bootcampId : null,
+    });
+    setIsSubmitting(false);
   };
 
   return (
@@ -1431,7 +1441,7 @@ function NewThread({ onBack, onSubmit }) {
               Category
             </label>
             <div className="mb-4 flex flex-wrap gap-3">
-              {['Help', 'Discussion', 'Feature Request'].map((cat) => (
+              {allowedCategories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
@@ -1453,27 +1463,25 @@ function NewThread({ onBack, onSubmit }) {
                   htmlFor="bootcamp"
                   className="mb-2 block text-sm font-medium text-gray-300"
                 >
-                  Related Bootcamp (Optional)
+                  Related Bootcamp
                 </label>
                 <select
                   id="bootcamp"
-                  value={bootcampName}
-                  onChange={(e) => setBootcampName(e.target.value)}
+                  value={bootcampId}
+                  onChange={(e) => setBootcampId(e.target.value)}
+                  required
                   className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-gray-200 shadow-sm transition-all focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none"
                 >
-                  <option value="">None</option>
-                  <option value="Spring '26 Bootcamp">
-                    Spring '26 Bootcamp
-                  </option>
-                  <option value="Summer '26 Bootcamp">
-                    Summer '26 Bootcamp
-                  </option>
-                  <option value="Advanced React Bootcamp">
-                    Advanced React Bootcamp
-                  </option>
-                  <option value="Frontend Zero-to-Hero">
-                    Frontend Zero-to-Hero
-                  </option>
+                  <option value="">Select a bootcamp…</option>
+                  {bootcamps.map((e) => {
+                    const b = e.bootcamps || e;
+                    if (!b || !b.id) return null;
+                    return (
+                      <option key={b.id} value={b.id}>
+                        {b.title}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
@@ -1507,10 +1515,10 @@ function NewThread({ onBack, onSubmit }) {
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || !content.trim()}
+              disabled={!title.trim() || !content.trim() || isSubmitting || (tag === 'Discussion' && !bootcampId)}
               className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/20 transition-all hover:bg-violet-500 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-[#0d1117] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Post Thread
+              {isSubmitting ? 'Posting…' : 'Post Thread'}
             </button>
           </div>
         </form>
