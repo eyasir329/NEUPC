@@ -538,6 +538,7 @@ export default function CodePlayground({
   formatError,
   isRunning,
   isFormatting,
+  execTime,
   onClose,
   onRun,
   onFormat,
@@ -554,6 +555,7 @@ export default function CodePlayground({
   const [ioWidth, setIoWidth] = useState(null); // null = CSS default
   const [isDesktop, setIsDesktop] = useState(false);
   const [fontSize, setFontSize] = useState(13);
+  const [tabSize, setTabSize] = useState(4);
   const [wordWrap, setWordWrap] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   // AI Tutor state
@@ -888,8 +890,15 @@ export default function CodePlayground({
       ]),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state?.language, wordWrap, fontSize]
+    [state?.language, wordWrap, fontSize, tabSize]
   );
+
+  // Helper to format execution time nicely
+  const fmtTime = (ms) => {
+    if (ms == null) return null;
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
 
   if (!state?.isOpen) return null;
 
@@ -1041,6 +1050,15 @@ export default function CodePlayground({
             <WrapText className="h-3.5 w-3.5" />
           </button>
 
+          {/* Tab size toggle */}
+          <button
+            onClick={() => setTabSize((s) => (s === 2 ? 4 : 2))}
+            className="playground-btn hidden sm:inline-flex"
+            title={`Tab size: ${tabSize} spaces (click to toggle)`}
+          >
+            <span className="font-mono text-[10px]">Tab:{tabSize}</span>
+          </button>
+
           <div className="hidden h-4 w-px bg-white/6 sm:block" />
           <button
             onClick={handleOpenAi}
@@ -1133,7 +1151,7 @@ export default function CodePlayground({
                 highlightActiveLineGutter: true,
                 highlightSelectionMatches: true,
                 indentOnInput: true,
-                tabSize: 2,
+                tabSize,
                 bracketMatching: true,
                 crosshairCursor: false,
                 rectangularSelection: true,
@@ -1559,25 +1577,32 @@ export default function CodePlayground({
       </div>
 
       {/* ── Status bar ───────────────────────────────────────────────────── */}
-      <div className="flex h-6 shrink-0 items-center justify-between border-t border-white/6 bg-[#0d1117] px-3 text-[10px] text-gray-600">
-        <div className="flex items-center gap-3">
+      <div className="flex h-7 shrink-0 items-center justify-between border-t border-white/6 bg-[#0d1117] px-3 text-[10px] text-gray-600">
+        <div className="flex items-center gap-2.5">
           <span className="font-medium text-gray-500">{langLabel}</span>
           <span className="h-2.5 w-px bg-white/8" />
           <span>
             {lineCount} {lineCount === 1 ? 'line' : 'lines'}
           </span>
-          <span className="h-2.5 w-px bg-white/8" />
-          <span>Font {fontSize}px</span>
-          <span className="h-2.5 w-px bg-white/8" />
-          <span>UTF-8</span>
+          <span className="hidden h-2.5 w-px bg-white/8 sm:block" />
+          <span className="hidden sm:inline">Tab: {tabSize}</span>
+          <span className="hidden h-2.5 w-px bg-white/8 sm:block" />
+          <span className="hidden sm:inline">Font {fontSize}px</span>
+          <span className="hidden h-2.5 w-px bg-white/8 sm:block" />
+          <span className="hidden sm:inline">UTF-8</span>
           {wordWrap && (
             <>
-              <span className="h-2.5 w-px bg-white/8" />
-              <span>Wrap</span>
+              <span className="hidden h-2.5 w-px bg-white/8 sm:block" />
+              <span className="hidden sm:inline">Wrap</span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {fmtTime(execTime) && !isRunning && (
+            <span className="flex items-center gap-1 font-medium text-gray-500">
+              ⏱ {fmtTime(execTime)}
+            </span>
+          )}
           <span className="hidden sm:inline">
             <kbd className="font-mono">⌘⏎</kbd> Run
           </span>

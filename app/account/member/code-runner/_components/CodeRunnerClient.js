@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import CodePlayground from '@/app/_components/ui/CodePlayground';
 
+// ── Starter templates per language ───────────────────────────────────────────
 const STARTER_TEMPLATES = {
-  c: `#include <stdio.h>\n\nint main() {\n    // Your first C program — try changing the message!\n    printf("Hello, World!\\n");\n    return 0;\n}\n`,
-  cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your first C++ program — try changing the message!\n    cout << "Hello, World!" << endl;\n    return 0;\n}\n`,
-  python: `# Your first Python program — try changing the message!\nprint("Hello, World!")\n`,
-  javascript: `// Your first JavaScript program — try changing the message!\nconsole.log("Hello, World!");\n`,
-  typescript: `// Your first TypeScript program — try changing the message!\nconst greeting: string = "Hello, World!";\nconsole.log(greeting);\n`,
-  java: `public class Main {\n    public static void main(String[] args) {\n        // Your first Java program — try changing the message!\n        System.out.println("Hello, World!");\n    }\n}\n`,
-  go: `package main\n\nimport "fmt"\n\nfunc main() {\n    // Your first Go program — try changing the message!\n    fmt.Println("Hello, World!")\n}\n`,
-  rust: `fn main() {\n    // Your first Rust program — try changing the message!\n    println!("Hello, World!");\n}\n`,
-  php: `<?php\n// Your first PHP program — try changing the message!\necho "Hello, World!\\n";\n?>\n`,
-  csharp: `using System;\n\nclass Program {\n    static void Main() {\n        // Your first C# program — try changing the message!\n        Console.WriteLine("Hello, World!");\n    }\n}\n`,
-  ruby: `# Your first Ruby program — try changing the message!\nputs "Hello, World!"\n`,
+  c: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}\n',
+  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}\n',
+  python: '# Write your Python code here\nprint("Hello, World!")\n',
+  javascript:
+    '// Write your JavaScript code here\nconsole.log("Hello, World!");\n',
+  typescript:
+    '// Write your TypeScript code here\nconst greeting: string = "Hello, World!";\nconsole.log(greeting);\n',
+  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}\n',
+  go: 'package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, World!")\n}\n',
+  rust: 'fn main() {\n    println!("Hello, World!");\n}\n',
+  php: '<?php\necho "Hello, World!\\n";\n?>\n',
+  csharp:
+    'using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, World!");\n    }\n}\n',
+  ruby: '# Write your Ruby code here\nputs "Hello, World!"\n',
 };
 
 const EXECUTABLE_LANGUAGES = new Set([
@@ -84,16 +88,49 @@ function getCodeLanguageLabel(language) {
   return LANGUAGE_LABELS[normalized] || normalized || 'Code';
 }
 
-export default function CodeRunnerClient() {
-  const router = useRouter();
+// ── localStorage helpers ─────────────────────────────────────────────────────
+const STORAGE_KEY = 'neupc-code-runner';
 
-  const [runnerState, setRunnerState] = useState({
-    isOpen: true,
-    blockIndex: null,
-    language: 'javascript',
-    originalCode: STARTER_TEMPLATES.javascript,
-    draftCode: STARTER_TEMPLATES.javascript,
-    stdin: '',
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveState(language, code, stdin) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ language, code, stdin, ts: Date.now() })
+    );
+  } catch {
+    /* quota exceeded — ignore */
+  }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function CodeRunnerClient({ isOpen = true, onClose }) {
+  const router = useRouter();
+  const saveTimer = useRef(null);
+
+  // Initialise from localStorage or defaults
+  const [runnerState, setRunnerState] = useState(() => {
+    const saved = loadSaved();
+    const lang = saved?.language || 'cpp';
+    const code = saved?.code || STARTER_TEMPLATES[lang] || '';
+    return {
+      isOpen: false, // overridden dynamically by prop
+      blockIndex: null,
+      language: lang,
+      originalCode: STARTER_TEMPLATES[lang] || '',
+      draftCode: code,
+      stdin: saved?.stdin || '',
+    };
   });
 
   const [runnerResult, setRunnerResult] = useState(null);
@@ -101,11 +138,27 @@ export default function CodeRunnerClient() {
   const [isRunningCode, setIsRunningCode] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
   const [formatError, setFormatError] = useState('');
+  const [execTime, setExecTime] = useState(null); // ms
 
+  // ── Auto-save to localStorage (debounced) ──────────────────────────────────
+  useEffect(() => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveState(runnerState.language, runnerState.draftCode, runnerState.stdin);
+    }, 600);
+    return () => clearTimeout(saveTimer.current);
+  }, [runnerState.language, runnerState.draftCode, runnerState.stdin]);
+
+  // ── Close → navigate back ──────────────────────────────────────────────────
   const handleClose = useCallback(() => {
-    router.push('/account/member');
-  }, [router]);
+    if (onClose) {
+      onClose();
+    } else {
+      router.push('/account/member');
+    }
+  }, [router, onClose]);
 
+  // ── Execute code ───────────────────────────────────────────────────────────
   const handleRunnerExecute = useCallback(async () => {
     const language = normalizeCodeLanguage(runnerState.language);
     if (!canExecuteLanguage(language)) {
@@ -119,6 +172,8 @@ export default function CodeRunnerClient() {
     setIsRunningCode(true);
     setRunnerError('');
     setRunnerResult(null);
+    setExecTime(null);
+    const t0 = performance.now();
     try {
       const response = await fetch('/api/code/execute', {
         method: 'POST',
@@ -130,17 +185,20 @@ export default function CodeRunnerClient() {
         }),
       });
       const data = await response.json();
+      setExecTime(Math.round(performance.now() - t0));
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to execute code.');
       }
       setRunnerResult(data?.result || null);
     } catch (error) {
+      setExecTime(Math.round(performance.now() - t0));
       setRunnerError(error?.message || 'Failed to execute code.');
     } finally {
       setIsRunningCode(false);
     }
   }, [runnerState.draftCode, runnerState.language, runnerState.stdin]);
 
+  // ── Format code ────────────────────────────────────────────────────────────
   const handleFormat = useCallback(async () => {
     if (!runnerState.draftCode.trim()) return;
     setIsFormatting(true);
@@ -168,12 +226,13 @@ export default function CodeRunnerClient() {
 
   return (
     <CodePlayground
-      state={runnerState}
+      state={{ ...runnerState, isOpen }}
       result={runnerResult}
       error={runnerError}
       formatError={formatError}
       isRunning={isRunningCode}
       isFormatting={isFormatting}
+      execTime={execTime}
       onClose={handleClose}
       onRun={handleRunnerExecute}
       onFormat={handleFormat}
@@ -183,19 +242,23 @@ export default function CodeRunnerClient() {
       onStdinChange={(value) =>
         setRunnerState((prev) => ({ ...prev, stdin: value }))
       }
-      onReset={() =>
+      onReset={() => {
         setRunnerState((prev) => ({
           ...prev,
           draftCode: prev.originalCode,
           stdin: '',
-        }))
-      }
+        }));
+        setRunnerResult(null);
+        setRunnerError('');
+        setExecTime(null);
+      }}
       onLanguageChange={(lang) =>
         setRunnerState((prev) => {
           const template = STARTER_TEMPLATES[lang] || '';
           const currentTrimmed = prev.draftCode.trim();
           const originalTrimmed = prev.originalCode.trim();
-          const shouldLoadTemplate = !currentTrimmed || currentTrimmed === originalTrimmed;
+          const shouldLoadTemplate =
+            !currentTrimmed || currentTrimmed === originalTrimmed;
           return {
             ...prev,
             language: lang,

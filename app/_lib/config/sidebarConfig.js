@@ -164,12 +164,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Code,
             href: '/account/member/problem-solving',
           },
-          {
-            id: 'code-runner',
-            label: 'Code Runner',
-            icon: Terminal,
-            href: '/account/member/code-runner',
-          },
         ],
       },
       {
