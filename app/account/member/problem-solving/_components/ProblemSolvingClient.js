@@ -490,9 +490,14 @@ function ActivityHeatmap({ data }) {
           365 Days
         </span>
       </div>
-      <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 relative z-10 w-full overflow-x-auto pb-2">
-        <div className="flex min-w-[720px] flex-col gap-2.5">
-          <div className="flex pt-1 pl-8 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+      <div className="relative z-10 w-full">
+        {/* Fading gradient overlays to indicate horizontal scrollable overflow */}
+        <div className="pointer-events-none absolute bottom-2 left-0 top-0 z-20 w-8 bg-gradient-to-r from-zinc-950/80 to-transparent sm:hidden" />
+        <div className="pointer-events-none absolute bottom-2 right-0 top-0 z-20 w-8 bg-gradient-to-l from-zinc-950/80 to-transparent sm:hidden" />
+
+        <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 overflow-x-auto pb-2">
+          <div className="flex min-w-[720px] md:min-w-0 md:w-full flex-col gap-2.5">
+            <div className="flex pt-1 pl-8 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
             {[
               'Jan',
               'Feb',
@@ -533,6 +538,7 @@ function ActivityHeatmap({ data }) {
             </div>
           </div>
         </div>
+      </div>
       </div>
       <div className="relative z-10 mt-auto flex items-center justify-between border-t border-white/5 pt-2 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
         <span className="text-zinc-400">
@@ -629,7 +635,7 @@ function DifficultyDonut({ statistics }) {
       </div>
 
       {/* Donut + rows side by side */}
-      <div className="relative z-10 flex items-center gap-6">
+      <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
         {/* SVG donut */}
         <div className="relative shrink-0">
           <svg width="140" height="140" viewBox="0 0 140 140">
@@ -674,7 +680,7 @@ function DifficultyDonut({ statistics }) {
         </div>
 
         {/* Tier rows */}
-        <div className="flex flex-1 flex-col gap-3.5">
+        <div className="flex w-full sm:flex-1 flex-col gap-3.5">
           {tiers.map((t) => {
             const pct = Math.round((t.count / total) * 100);
             return (
@@ -910,13 +916,13 @@ function OverviewTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,1fr)_200px]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s, i) => (
           <motion.div
             key={i}
             whileHover={{ y: -4, scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 sm:p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
           >
             <div
               className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-linear-to-br opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -924,7 +930,7 @@ function OverviewTab({
             />
 
             <div className="relative z-10 mb-4 flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+              <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-zinc-400 uppercase">
                 {s.l}
               </span>
               <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -942,7 +948,7 @@ function OverviewTab({
                 {s.v}
               </span>
               {s.sub && (
-                <span className="text-sm font-medium text-zinc-500">
+                <span className="text-[11px] sm:text-xs font-medium text-zinc-500 whitespace-nowrap">
                   {s.sub}
                 </span>
               )}
@@ -954,7 +960,7 @@ function OverviewTab({
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1 xl:col-span-1"
+          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 sm:p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1"
         >
           <div
             className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -962,7 +968,7 @@ function OverviewTab({
           />
 
           <div className="relative z-10 mb-1 flex items-center justify-between">
-            <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+            <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-zinc-400 uppercase">
               Avg Accuracy
             </span>
             <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -1345,7 +1351,7 @@ function ProblemsTab({ submissions }) {
               <th className="w-12 px-5 py-4 text-center font-semibold">
                 Status
               </th>
-              <th className="px-5 py-4 font-semibold">Problem</th>
+              <th className="px-5 py-4 font-semibold min-w-[220px]">Problem</th>
               <th className="w-[140px] px-5 py-4 font-semibold">Tags</th>
               <th className="w-36 px-5 py-4 font-semibold">Platform</th>
               <th className="w-28 px-5 py-4 text-right font-semibold">
@@ -1396,7 +1402,9 @@ function ProblemsTab({ submissions }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-zinc-200 transition-colors group-hover:text-indigo-300">
-                      {title}
+                      <span className="truncate max-w-[180px] sm:max-w-[320px]" title={title}>
+                        {title}
+                      </span>
                       {(s.problem_url ||
                         buildProblemUrl(s.platform, s.problem_id)) && (
                         <ExternalLink
@@ -1518,6 +1526,14 @@ function ProblemsTab({ submissions }) {
 
 // Simple SVG line chart for ratings
 function RatingLineChart({ ratingHistory }) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Group by platform code
   const grouped = useMemo(() => {
     const map = new Map();
@@ -1575,9 +1591,9 @@ function RatingLineChart({ ratingHistory }) {
     maxR = maxR + 100;
   }
 
-  const W = 800;
-  const H = 280;
-  const PAD = { l: 50, r: 20, t: 20, b: 30 };
+  const W = isMobile ? 380 : 800;
+  const H = isMobile ? 220 : 280;
+  const PAD = isMobile ? { l: 35, r: 15, t: 15, b: 25 } : { l: 50, r: 20, t: 20, b: 30 };
   const innerW = W - PAD.l - PAD.r;
   const innerH = H - PAD.t - PAD.b;
 
@@ -1624,7 +1640,7 @@ function RatingLineChart({ ratingHistory }) {
       </div>
       <div
         className="relative z-10 w-full"
-        style={{ aspectRatio: '16/5', minHeight: 200 }}
+        style={{ aspectRatio: isMobile ? '16/8' : '16/5', minHeight: 200 }}
       >
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -1662,7 +1678,7 @@ function RatingLineChart({ ratingHistory }) {
           })}
           {/* x-axis date labels */}
           {(() => {
-            const tickCount = 5;
+            const tickCount = isMobile ? 3 : 5;
             return Array.from({ length: tickCount }, (_, i) => {
               const t = minTime + (i / (tickCount - 1)) * (maxTime - minTime);
               const x = xOf(t);
@@ -2179,6 +2195,14 @@ function TopicsTab({ submissions }) {
 }
 
 function LeaderboardTab({ leaderboard, currentUserId }) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // leaderboard might be just user rank object, not full list. Use defensive.
   const list = useMemo(() => {
     if (Array.isArray(leaderboard)) return leaderboard;
@@ -2228,8 +2252,10 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
     },
   ];
 
-  // Order: 2nd, 1st, 3rd visually
-  const podiumOrder = top3.length >= 3 ? [2, 0, 1] : top3.map((_, i) => i);
+  // Order: 2nd, 1st, 3rd visually on desktop; 1st, 2nd, 3rd on mobile
+  const podiumOrder = isMobile
+    ? top3.map((_, i) => i)
+    : (top3.length >= 3 ? [1, 0, 2] : top3.map((_, i) => i));
 
   if (list.length === 0) {
     return (
@@ -2243,7 +2269,7 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
   return (
     <div className="space-y-10">
       {top3.length > 0 && (
-        <div className="mx-auto mt-8 flex h-72 w-full max-w-3xl items-end justify-center gap-1 px-4 md:gap-4">
+        <div className="mx-auto mt-8 flex flex-col md:flex-row md:h-72 w-full max-w-3xl items-center md:items-end justify-center gap-6 md:gap-4 px-4">
           {podiumOrder.map((idx) => {
             const user = top3[idx];
             if (!user) return null;
@@ -2252,12 +2278,12 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
               <div
                 key={idx}
                 className={cn(
-                  'relative flex flex-col items-center rounded-t-3xl border bg-black/40 bg-linear-to-t from-black/80',
+                  'relative flex flex-col items-center border bg-black/40 bg-linear-to-t from-black/80',
                   style.ring,
                   style.gradient,
-                  style.width,
-                  style.pad,
-                  style.transform
+                  isMobile
+                    ? 'w-full max-w-[280px] pt-6 pb-6 mt-12 rounded-3xl'
+                    : cn('rounded-t-3xl', style.width, style.pad, style.transform)
                 )}
               >
                 <div
@@ -2354,10 +2380,10 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-zinc-400">
+                    <td className="px-5 py-4 text-right font-mono text-zinc-400 whitespace-nowrap">
                       {formatNumber(u.total_solved)}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono font-bold text-zinc-200">
+                    <td className="px-5 py-4 text-right font-mono font-bold text-zinc-200 whitespace-nowrap">
                       {formatNumber(u.total_score || u.score)}
                     </td>
                   </tr>

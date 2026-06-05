@@ -3352,7 +3352,7 @@ const UPCOMING_CONTEST_PLATFORMS = [
   'leetcode',
   'codechef',
 ];
-const UPCOMING_CONTESTS_STALE_MS = 30 * 60 * 1000;
+const UPCOMING_CONTESTS_STALE_MS = 6 * 60 * 60 * 1000;
 
 /**
  * Get upcoming CP contests (Codeforces, AtCoder, LeetCode, CodeChef) for the
