@@ -36,6 +36,7 @@ import {
   Radar,
   LineChart,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import {
   useProblemSolving,
@@ -43,6 +44,8 @@ import {
 } from '@/app/_hooks/useProblemSolving';
 import { getUpcomingContestsAction } from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
+import AddPlatformSection from './AddPlatformSection';
+import { PROBLEM_SOLVING_PLATFORMS, getAllPlatformConfigs } from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 // =====================================================================
@@ -345,47 +348,7 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-function ConnectModal({ platform, onClose, onConnect }) {
-  const [handle, setHandle] = useState('');
-  if (!platform) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0b]/80 p-4 backdrop-blur-sm">
-      <div className="flex w-full max-w-[400px] flex-col gap-2 rounded-xl border border-[#222228] bg-[#111114] p-6 shadow-xl">
-        <h3 className="text-[16px] font-semibold text-white">
-          Connect {platform.name || 'Platform'}
-        </h3>
-        <p className="mb-2 text-[13px] text-[#94a3b8]">
-          Enter your handle to link your account and start syncing submissions.
-        </p>
-        <input
-          type="text"
-          autoFocus
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder="Your handle..."
-          className="h-9 w-full rounded-md border border-[#334155] bg-[#1e1e24] px-3 font-mono text-[13px] text-white transition-colors outline-none focus:border-[#60a5fa]"
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-1.5 text-sm font-medium text-[#e2e8f0] transition-colors hover:bg-[#1e1e24]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              if (handle.trim()) onConnect(platform.code, handle.trim());
-            }}
-            disabled={!handle.trim()}
-            className="flex items-center gap-2 rounded-md bg-[#60a5fa] px-4 py-1.5 text-sm font-medium text-[#0a0a0b] transition-colors hover:bg-[#3b82f6] disabled:opacity-50"
-          >
-            <ExternalLink className="h-4 w-4" /> Connect
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 function SettingsModal({ open, onClose }) {
   if (!open) return null;
@@ -1091,8 +1054,8 @@ function OverviewTab({
         <DifficultyDonut statistics={statistics} />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-[1fr_340px]">
-        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl lg:col-span-2 xl:col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
               <Sparkles className="h-5 w-5 text-indigo-400" />
@@ -1175,7 +1138,7 @@ function OverviewTab({
           </div>
         </div>
 
-        <div className="flex h-fit flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl lg:col-span-1">
+        <div className="flex h-fit flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
               <House className="h-5 w-5 text-indigo-400" />
@@ -2689,7 +2652,15 @@ function RecommendationsTab({ submissions }) {
   );
 }
 
-function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
+function ProfileTab({
+  statistics,
+  handles,
+  badges,
+  contestHistory,
+  userId,
+  onConnectClick,
+  onDisconnectClick,
+}) {
   // Derive a display name from the first connected handle, fallback to 'Member'
   const displayName =
     (handles || [])[0]?.handle ||
@@ -2802,16 +2773,43 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
       </div>
 
       {/* ── Platform accounts ────────────────────────────────────────── */}
-      {hasHandles && (
-        <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-            <h3 className="text-sm font-semibold text-gray-300">
-              Connected Platforms
-            </h3>
+      <div className="rounded-2xl border border-white/[0.08] bg-gray-900 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+          <h3 className="text-sm font-semibold text-gray-300">
+            Connected Platforms
+          </h3>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onConnectClick}
+              className="flex items-center gap-1 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
+            >
+              Connect New
+            </button>
             <span className="text-[11px] font-medium text-gray-500">
-              {handles.length} account{handles.length !== 1 ? 's' : ''}
+              {handles?.length || 0} account{(handles?.length || 0) !== 1 ? 's' : ''}
             </span>
           </div>
+        </div>
+
+        {!handles || handles.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12 text-center bg-gray-900 rounded-b-2xl">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-3xl">
+              🔗
+            </div>
+            <p className="text-sm font-medium text-gray-400">
+              No connected platforms yet
+            </p>
+            <p className="max-w-xs text-[12px] text-gray-600">
+              Connect your competitive programming accounts to track your statistics, solves, and progress.
+            </p>
+            <button
+              onClick={onConnectClick}
+              className="mt-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-violet-500 transition-all"
+            >
+              Connect a Platform
+            </button>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 gap-px bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
             {(handles || []).map((h, idx) => {
               const meta = getPlatformMeta(h.platform);
@@ -2847,13 +2845,22 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
                         </p>
                       </div>
                     </div>
-                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        </span>
+                        Live
                       </span>
-                      Live
-                    </span>
+                      <button
+                        onClick={() => onDisconnectClick(h.platform)}
+                        className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/5 hover:text-rose-400"
+                        title="Disconnect platform"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Stats */}
@@ -2880,8 +2887,8 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Achievements ─────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
@@ -2949,7 +2956,7 @@ export default function ProblemSolvingClient({ userId }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [connectTarget, setConnectTarget] = useState(null);
+  const [addPlatformOpen, setAddPlatformOpen] = useState(false);
   const [upcomingContests, setUpcomingContests] = useState([]);
   const [upcomingSyncing, setUpcomingSyncing] = useState(false);
   const upcomingLoadedRef = useRef(false);
@@ -2965,7 +2972,7 @@ export default function ProblemSolvingClient({ userId }) {
     syncPlatform,
     refetch,
   } = useProblemSolving();
-  const { connect } = useConnectHandle();
+  const { connect, disconnect, loading: isConnecting, error: connectError } = useConnectHandle();
 
   const loadUpcomingContests = useCallback(async ({ refresh = false } = {}) => {
     setUpcomingSyncing(true);
@@ -3047,13 +3054,35 @@ export default function ProblemSolvingClient({ userId }) {
       try {
         await connect(platform, handle);
         showToast(`Connected ${handle} on ${platform}`, 'success');
-        setConnectTarget(null);
+        setAddPlatformOpen(false);
         refetch();
       } catch (err) {
         showToast(getErrorMessage(err, 'Failed to connect'), 'error');
       }
     },
     [connect, refetch, showToast]
+  );
+
+  const handleDisconnect = useCallback(
+    async (platform) => {
+      if (!platform) return;
+      if (!confirm(`Are you sure you want to disconnect your ${platform} account?`)) {
+        return;
+      }
+      showToast(`Disconnecting ${platform}...`, 'info');
+      try {
+        const result = await disconnect(platform);
+        if (result?.success) {
+          showToast(`Disconnected ${platform} successfully!`, 'success');
+          refetch();
+        } else {
+          showToast(result?.error || `Failed to disconnect ${platform}`, 'error');
+        }
+      } catch (err) {
+        showToast(getErrorMessage(err, `Failed to disconnect ${platform}`), 'error');
+      }
+    },
+    [disconnect, refetch, showToast]
   );
 
   const handleTabChange = useCallback((tabId) => {
@@ -3076,6 +3105,11 @@ export default function ProblemSolvingClient({ userId }) {
     contestHistory,
   } = problemSolvingData;
 
+  const unconnectedPlatforms = useMemo(() => {
+    const connectedIds = (handles || []).map((h) => h.platform);
+    return PROBLEM_SOLVING_PLATFORMS.filter((p) => !connectedIds.includes(p.id));
+  }, [handles]);
+
   const renderTab = () => {
     if (loading) return <LoadingState />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
@@ -3088,7 +3122,7 @@ export default function ProblemSolvingClient({ userId }) {
             dailyActivity={dailyActivity}
             recentSubmissions={recentSubmissions}
             handles={handles}
-            onConnectClick={(p) => setConnectTarget(p)}
+            onConnectClick={() => setAddPlatformOpen(true)}
             onSyncPlatform={handleSyncPlatform}
             syncingPlatform={syncingPlatform}
             onTabChange={handleTabChange}
@@ -3122,6 +3156,8 @@ export default function ProblemSolvingClient({ userId }) {
             badges={badges}
             contestHistory={contestHistory}
             userId={userId}
+            onConnectClick={() => setAddPlatformOpen(true)}
+            onDisconnectClick={handleDisconnect}
           />
         );
       default:
@@ -3189,11 +3225,16 @@ export default function ProblemSolvingClient({ userId }) {
 
       {/* Connect modal */}
       <AnimatePresence>
-        {connectTarget && (
-          <ConnectModal
-            platform={connectTarget}
-            onClose={() => setConnectTarget(null)}
+        {addPlatformOpen && (
+          <AddPlatformSection
+            availablePlatforms={unconnectedPlatforms}
+            platformConfig={getAllPlatformConfigs()}
             onConnect={handleConnect}
+            isConnecting={isConnecting}
+            error={connectError}
+            isExpanded={addPlatformOpen}
+            onToggleExpanded={() => setAddPlatformOpen(!addPlatformOpen)}
+            hasConnected={(handles || []).length > 0}
           />
         )}
       </AnimatePresence>
