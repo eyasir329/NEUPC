@@ -26,7 +26,7 @@ import { dummyData } from './useProblemSolving.mock';
  * Hook for fetching current user's problem solving data
  */
 export function useProblemSolving() {
-  const [data, setData] = useState(dummyData);
+  const [data, setData] = useState({ ...dummyData, handles: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -46,10 +46,6 @@ export function useProblemSolving() {
         setLoading(true);
       }
 
-      // Temporary mock data mapping
-      setData(dummyData);
-      setError(null);
-      /*
       const result = await getProblemSolvingData();
 
       if (!result.success) {
@@ -58,8 +54,11 @@ export function useProblemSolving() {
         );
       }
 
-      setData(result.data);
-      */
+      setData({
+        ...dummyData,
+        handles: result.data?.handles || [],
+      });
+      setError(null);
     } catch (err) {
       if (!background) {
         setError(err.message);

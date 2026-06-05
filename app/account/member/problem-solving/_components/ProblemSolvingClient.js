@@ -53,6 +53,34 @@ function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+function getPaginationRange(currentPageIndex, totalPages) {
+  const currentPage = currentPageIndex + 1;
+  const delta = 1;
+  const range = [];
+  const rangeWithDots = [];
+  let l;
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+      range.push(i);
+    }
+  }
+
+  for (let i of range) {
+    if (l) {
+      if (i - l === 2) {
+        rangeWithDots.push(l + 1);
+      } else if (i - l > 2) {
+        rangeWithDots.push('...');
+      }
+    }
+    rangeWithDots.push(i);
+    l = i;
+  }
+
+  return rangeWithDots.map(item => item === '...' ? '...' : item - 1);
+}
+
 const TABS = [
   { id: 'overview', label: 'Overview', icon: House },
   { id: 'problems', label: 'Problems', icon: List },
@@ -837,6 +865,22 @@ function OverviewTab({
   syncingPlatform,
   onTabChange,
 }) {
+  const [platformPage, setPlatformPage] = useState(0);
+  const PLATFORM_PAGE_SIZE = 5;
+
+  const totalPlatformPages = Math.ceil((handles?.length || 0) / PLATFORM_PAGE_SIZE);
+  const visiblePlatforms = (handles || []).slice(
+    platformPage * PLATFORM_PAGE_SIZE,
+    (platformPage + 1) * PLATFORM_PAGE_SIZE
+  );
+  const platformPaginationRange = getPaginationRange(platformPage, totalPlatformPages);
+
+  useEffect(() => {
+    if (platformPage >= totalPlatformPages && totalPlatformPages > 0) {
+      setPlatformPage(totalPlatformPages - 1);
+    }
+  }, [handles, totalPlatformPages, platformPage]);
+
   const stats = [
     {
       l: 'Total Solved',
@@ -1145,65 +1189,121 @@ function OverviewTab({
             </button>
           </div>
           <div className="flex flex-col gap-1.5 pt-2">
-            {Object.keys(PLATFORM_META).map((code) => {
-              const meta = getPlatformMeta(code);
-              const handle = (handles || []).find((h) => h.platform === code);
-              const connected = !!handle;
-              const handleName = handle?.handle;
-              return (
-                <div
-                  key={code}
-                  className="flex items-center gap-3 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
-                >
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
-                      meta.color
-                    )}
-                  >
-                    {meta.short}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-zinc-200">
-                      {meta.name}
-                    </div>
-                    <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-                      {connected ? `@${handleName}` : 'Not connected'}
-                    </div>
-                  </div>
-                  {connected ? (
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                        Active
-                      </span>
-                      <button
-                        onClick={() => onSyncPlatform(code)}
-                        className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                        title="Sync now"
-                        disabled={syncingPlatform === code}
+            {!handles || handles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-xs text-zinc-500">No platforms connected yet.</p>
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  Connect your first platform to start tracking solves!
+                </p>
+              </div>
+            ) : (
+              <>
+                {visiblePlatforms.map((h) => {
+                  const code = h.platform;
+                  const meta = getPlatformMeta(code);
+                  const handleName = h.handle;
+                  return (
+                    <div
+                      key={code}
+                      className="flex items-center gap-3 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
+                    >
+                      <div
+                        className={cn(
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
+                          meta.color
+                        )}
                       >
-                        <RefreshCw
-                          className={cn(
-                            'h-3.5 w-3.5',
-                            syncingPlatform === code
-                              ? 'animate-spin text-indigo-400'
-                              : ''
-                          )}
-                        />
+                        {meta.short}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-zinc-200">
+                          {meta.name}
+                        </div>
+                        <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
+                          @{handleName}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                          Active
+                        </span>
+                        <button
+                          onClick={() => onSyncPlatform(code)}
+                          className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                          title="Sync now"
+                          disabled={syncingPlatform === code}
+                        >
+                          <RefreshCw
+                            className={cn(
+                              'h-3.5 w-3.5',
+                              syncingPlatform === code
+                                ? 'animate-spin text-indigo-400'
+                                : ''
+                            )}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {totalPlatformPages > 1 && (
+                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
+                    <p className="text-[10px] font-medium text-zinc-500">
+                      {platformPage * PLATFORM_PAGE_SIZE + 1}–
+                      {Math.min(
+                        (platformPage + 1) * PLATFORM_PAGE_SIZE,
+                        (handles || []).length
+                      )}{' '}
+                      of {(handles || []).length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setPlatformPage((p) => Math.max(0, p - 1))}
+                        disabled={platformPage === 0}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      {platformPaginationRange.map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span
+                              key={`dots-${idx}`}
+                              className="flex h-7 w-7 items-center justify-center text-[10px] font-semibold text-zinc-600"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => setPlatformPage(p)}
+                            className={cn(
+                              'flex h-7 w-7 items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors',
+                              p === platformPage
+                                ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                                : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                            )}
+                          >
+                            {p + 1}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => setPlatformPage((p) => Math.min(totalPlatformPages - 1, p + 1))}
+                        disabled={platformPage === totalPlatformPages - 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => onConnectClick({ code, name: meta.name })}
-                      className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300 transition-all hover:bg-white/10 hover:text-white"
-                    >
-                      Connect
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1259,6 +1359,8 @@ function ProblemsTab({ submissions }) {
 
   const start = page * PAGE_SIZE;
   const visible = list.slice(start, start + PAGE_SIZE);
+  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  const paginationRange = getPaginationRange(page, totalPages);
 
   return (
     <div className="animate-in fade-in mt-2 space-y-6 rounded-2xl border border-white/5 bg-zinc-900/50 p-6 pb-12 shadow-lg backdrop-blur-xl duration-500 md:p-8">
@@ -1490,28 +1592,56 @@ function ProblemsTab({ submissions }) {
 
       <div className="flex items-center justify-between border-t border-white/5 pt-4">
         <div className="text-sm font-medium text-zinc-500">
-          Showing <span className="text-white">{start + 1}</span> to{' '}
+          Showing <span className="text-white">{list.length === 0 ? 0 : start + 1}</span> to{' '}
           <span className="text-white">
             {Math.min(start + PAGE_SIZE, list.length)}
           </span>{' '}
           of <span className="text-white">{list.length}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <button
-            disabled={start + PAGE_SIZE >= list.length}
-            onClick={() => setPage((p) => p + 1)}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {paginationRange.map((p, idx) => {
+              if (p === '...') {
+                return (
+                  <span
+                    key={`dots-${idx}`}
+                    className="flex h-8 w-8 items-center justify-center text-xs font-semibold text-zinc-600"
+                  >
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors',
+                    p === page
+                      ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                      : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {p + 1}
+                </button>
+              );
+            })}
+            <button
+              disabled={page === totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedProblem && (
@@ -1766,6 +1896,8 @@ function ContestsTab({
 }) {
   const [expanded, setExpanded] = useState(null);
   const [upcomingPage, setUpcomingPage] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const HISTORY_PAGE_SIZE = 10;
 
   const totalPages = Math.ceil(
     (upcomingContests?.length || 0) / UPCOMING_PAGE_SIZE
@@ -1774,6 +1906,21 @@ function ContestsTab({
     upcomingPage * UPCOMING_PAGE_SIZE,
     (upcomingPage + 1) * UPCOMING_PAGE_SIZE
   );
+
+  const totalHistoryPages = Math.ceil(
+    (contestHistory?.length || 0) / HISTORY_PAGE_SIZE
+  );
+  const startHistory = historyPage * HISTORY_PAGE_SIZE;
+  const pageHistory = (contestHistory || []).slice(
+    startHistory,
+    startHistory + HISTORY_PAGE_SIZE
+  );
+  const historyPaginationRange = getPaginationRange(historyPage, totalHistoryPages);
+
+  const handlePageChange = (p) => {
+    setHistoryPage(p);
+    setExpanded(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -1954,7 +2101,7 @@ function ContestsTab({
                     </td>
                   </tr>
                 )}
-                {(contestHistory || []).slice(0, 20).map((c, i) => {
+                {pageHistory.map((c, i) => {
                   const meta = getPlatformMeta(c.platform);
                   const delta = Number(c.ratingChange || 0);
                   const isOpen = expanded === i;
@@ -2084,6 +2231,60 @@ function ContestsTab({
               </tbody>
             </table>
           </div>
+          {totalHistoryPages > 1 && (
+            <div className="flex items-center justify-between border-t border-white/5 p-5 bg-white/[0.01]">
+              <p className="text-xs font-medium text-zinc-500">
+                Showing {startHistory + 1}–
+                {Math.min(
+                  startHistory + HISTORY_PAGE_SIZE,
+                  (contestHistory || []).length
+                )}{' '}
+                of {(contestHistory || []).length}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePageChange(Math.max(0, historyPage - 1))}
+                  disabled={historyPage === 0}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {historyPaginationRange.map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span
+                        key={`dots-${idx}`}
+                        className="flex h-8 w-8 items-center justify-center text-xs font-semibold text-zinc-600"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors',
+                        p === historyPage
+                          ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                          : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                      )}
+                    >
+                      {p + 1}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => handlePageChange(Math.min(totalHistoryPages - 1, historyPage + 1))}
+                  disabled={historyPage === totalHistoryPages - 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
