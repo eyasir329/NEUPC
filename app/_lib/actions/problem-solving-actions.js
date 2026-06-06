@@ -747,63 +747,93 @@ async function getUserSyncStatusByPlatform(userId) {
  * Transform contest history to the format expected by components
  * Maps contest_history table columns to component-expected field names
  */
-function transformContestHistory(contestHistoryData) {
-  return (contestHistoryData || []).map((ch) => {
-    // Parse problems_data - handle both direct objects and double-stringified data
-    let problems = null;
-    if (ch.problems_data) {
-      try {
-        let data = ch.problems_data;
-        // If it's a string, parse it
-        if (typeof data === 'string') {
-          data = JSON.parse(data);
-        }
-        // Handle double-stringified case (jsonb stored as JSON string)
-        // This happens when the data looks like: "[{\"label\":\"A\"...}]" (starts with quote)
-        if (typeof data === 'string') {
-          data = JSON.parse(data);
-        }
-        problems = Array.isArray(data) ? data : null;
-      } catch (e) {
-        console.warn('Failed to parse problems_data:', e);
-      }
-    }
+// Score a transformed contest by data completeness, for picking the best
+// row among duplicates (same contest stored under different external IDs).
+function contestCompletenessScore(c) {
+  let score = 0;
+  if (c.totalParticipants != null) score += 8;
+  if (Array.isArray(c.problems) && c.problems.length > 0) score += 4;
+  if (c.rank != null) score += 2;
+  if (c.newRating != null) score += 1;
+  return score;
+}
 
-    return {
-      ...ch,
-      // Map database fields to component-expected fields
-      // contest_history uses platform code from join, not platform_id directly
-      platform: ch.platform || ch.platforms?.code,
-      date: ch.contest_date,
-      endDate: ch.contest_end_date,
-      name: ch.contest_name,
-      contestId: ch.external_contest_id,
-      platformContestId: ch.platform_contest_id,
-      ratingChange: ch.rating_change,
-      newRating: ch.new_rating,
-      oldRating: ch.old_rating,
-      solved: ch.problems_solved,
-      problemsAttempted: ch.problems_attempted,
-      totalProblems: ch.total_problems || ch.problems_attempted,
-      problems: problems,
-      rank: ch.rank,
-      totalParticipants: ch.total_participants,
-      score: ch.score,
-      maxScore: ch.max_score,
-      penalty: ch.penalty,
-      isRated: ch.is_rated,
-      isVirtual: ch.is_virtual,
-      division: ch.division,
-      duration: ch.duration_minutes,
-      // Construct contest URL based on platform
-      url:
-        ch.contest_url ||
-        getContestUrl(
-          ch.platform || ch.platforms?.code,
-          ch.platform_contest_id || ch.external_contest_id
-        ),
-    };
-  });
+function transformContestHistory(contestHistoryData) {
+  const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+  const transformed = (contestHistoryData || [])
+    .map((ch) => {
+      // Parse problems_data - handle both direct objects and double-stringified data
+      let problems = null;
+      if (ch.problems_data) {
+        try {
+          let data = ch.problems_data;
+          // If it's a string, parse it
+          if (typeof data === 'string') {
+            data = JSON.parse(data);
+          }
+          // Handle double-stringified case (jsonb stored as JSON string)
+          // This happens when the data looks like: "[{\"label\":\"A\"...}]" (starts with quote)
+          if (typeof data === 'string') {
+            data = JSON.parse(data);
+          }
+          problems = Array.isArray(data) ? data : null;
+        } catch (e) {
+          console.warn('Failed to parse problems_data:', e);
+        }
+      }
+
+      return {
+        ...ch,
+        // Map database fields to component-expected fields
+        // contest_history uses platform code from join, not platform_id directly
+        platform: ch.platform || ch.platforms?.code,
+        date: ch.contest_date,
+        endDate: ch.contest_end_date,
+        name: ch.contest_name,
+        contestId: ch.external_contest_id,
+        platformContestId: ch.platform_contest_id,
+        ratingChange: ch.rating_change,
+        newRating: ch.new_rating,
+        oldRating: ch.old_rating,
+        solved: ch.problems_solved,
+        problemsAttempted: ch.problems_attempted,
+        totalProblems: ch.total_problems || ch.problems_attempted,
+        problems: problems,
+        rank: ch.rank,
+        totalParticipants: ch.total_participants,
+        score: ch.score,
+        maxScore: ch.max_score,
+        penalty: ch.penalty,
+        isRated: ch.is_rated,
+        isVirtual: ch.is_virtual,
+        division: ch.division,
+        duration: ch.duration_minutes,
+        // Construct contest URL based on platform
+        url:
+          ch.contest_url ||
+          getContestUrl(
+            ch.platform || ch.platforms?.code,
+            ch.platform_contest_id || ch.external_contest_id
+          ),
+      };
+    })
+    .filter((ch) => allowedPlatforms.includes(ch.platform));
+
+  // Dedupe rows that represent the same contest stored under different
+  // external IDs (legacy native-API rows vs CLIST rows). Group by
+  // platform + native contest id, keep the most complete row.
+  const bestByContest = new Map();
+  for (const c of transformed) {
+    const key = `${c.platform}:${c.platformContestId || c.contestId}`;
+    const existing = bestByContest.get(key);
+    if (
+      !existing ||
+      contestCompletenessScore(c) > contestCompletenessScore(existing)
+    ) {
+      bestByContest.set(key, c);
+    }
+  }
+  return Array.from(bestByContest.values());
 }
 
 /**
@@ -811,17 +841,20 @@ function transformContestHistory(contestHistoryData) {
  * Maps rating_history table columns to component-expected field names
  */
 function transformRatingHistory(ratingHistoryData) {
-  return (ratingHistoryData || []).map((rh) => ({
-    ...rh,
-    // Map database fields to component-expected fields
-    platform: rh.platform || rh.platforms?.code,
-    date: rh.recorded_at,
-    rating: rh.rating,
-    change: rh.rating_change,
-    // Contest info from joined contest_history if available
-    contestName: rh.contest_history?.contest_name,
-    contestId: rh.contest_history?.external_contest_id,
-  }));
+  const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+  return (ratingHistoryData || [])
+    .map((rh) => ({
+      ...rh,
+      // Map database fields to component-expected fields
+      platform: rh.platform || rh.platforms?.code,
+      date: rh.recorded_at,
+      rating: rh.rating,
+      change: rh.rating_change,
+      // Contest info from joined contest_history if available
+      contestName: rh.contest_history?.contest_name,
+      contestId: rh.contest_history?.external_contest_id,
+    }))
+    .filter((rh) => allowedPlatforms.includes(rh.platform));
 }
 
 /**
@@ -890,14 +923,13 @@ function isValueBetter(existingVal, newVal, fieldName) {
     if (existingVal === 0 && newVal !== 0) {
       return true;
     }
-    // For participant counts, ranks - keep existing non-zero values
-    if (
-      fieldName === 'total_participants' ||
-      fieldName === 'rank' ||
-      fieldName === 'problems_solved'
-    ) {
-      // Only update if existing is 0 or null-ish
+    // For ranks and solved counts - keep existing non-zero values
+    if (fieldName === 'rank' || fieldName === 'problems_solved') {
       return existingVal === 0 || !existingVal;
+    }
+    // For participant counts - prefer the larger (more complete) value from CLIST
+    if (fieldName === 'total_participants') {
+      return newVal > existingVal;
     }
     // For scores, prefer higher
     if (fieldName === 'score' || fieldName === 'max_score') {
@@ -960,52 +992,47 @@ function mergeProblemsData(existingProblems, newProblems) {
       // Problem exists - merge intelligently
       const merged = { ...existing };
 
-      // If existing shows upsolve, preserve it
-      if (existing.upsolve || existing.isUpsolve) {
-        merged.upsolve = true;
-        merged.isUpsolve = true;
-      }
+      // Determine solve, upsolve, and attempted status by combining existing and new
+      const isSolvedNew = newP.solved === true || newP.solvedDuringContest === true || newP.upsolve === true || newP.isUpsolve === true;
+      const isSolvedExisting = existing.solved === true || existing.solvedDuringContest === true || existing.upsolve === true || existing.isUpsolve === true;
+      
+      const isUpsolveNew = newP.upsolve === true || newP.isUpsolve === true;
+      const isUpsolveExisting = existing.upsolve === true || existing.isUpsolve === true;
 
-      // If new shows solved during contest, update
-      if (newP.solved && !newP.upsolve && !newP.isUpsolve) {
-        merged.solved = true;
-        // If it was marked as upsolve but now shows contest solve, keep as contest solve
-        if (merged.upsolve || merged.isUpsolve) {
-          // This is rare - keep as solved during contest if API says so
-          merged.upsolve = false;
-          merged.isUpsolve = false;
-        }
-      }
-
-      // If new shows upsolve and existing doesn't have solve status
-      if (
-        (newP.upsolve || newP.isUpsolve) &&
-        !existing.solved &&
-        !existing.upsolve
-      ) {
-        merged.upsolve = true;
-        merged.isUpsolve = true;
+      if (isSolvedNew || isSolvedExisting) {
         merged.solved = true;
       }
+      
+      if (isUpsolveNew || isUpsolveExisting) {
+        merged.upsolve = true;
+        merged.isUpsolve = true;
+        merged.solvedDuringContest = false;
+      } else if (newP.solvedDuringContest === true || existing.solvedDuringContest === true) {
+        merged.solvedDuringContest = true;
+        merged.upsolve = false;
+        merged.isUpsolve = false;
+      } else if (isSolvedNew && !isUpsolveNew) {
+        merged.solvedDuringContest = true;
+        merged.upsolve = false;
+        merged.isUpsolve = false;
+      }
 
-      // Preserve attempted status
-      if (newP.attempted || existing.attempted) {
+      if (newP.attempted || existing.attempted || isSolvedNew || isSolvedExisting) {
         merged.attempted = true;
       }
 
-      // Copy over any other useful fields from new data
-      if (newP.problemId && !merged.problemId) {
-        merged.problemId = newP.problemId;
-      }
-      if (newP.url && !merged.url) {
-        merged.url = newP.url;
-      }
-      if (newP.name && !merged.name) {
-        merged.name = newP.name;
-      }
-      if (newP.rating && !merged.rating) {
-        merged.rating = newP.rating;
-      }
+      // Copy over or update specific values
+      if (newP.problemId) merged.problemId = newP.problemId;
+      if (newP.url) merged.url = newP.url;
+      if (newP.name) merged.name = newP.name;
+      if (newP.rating) merged.rating = newP.rating;
+      if (newP.time || newP.solveTime) merged.time = newP.time || newP.solveTime;
+      if (newP.result) merged.result = newP.result;
+      
+      // Update wrong attempts (prefer the higher count or newer count)
+      const wrongNew = newP.wrongAttempts || 0;
+      const wrongExist = existing.wrongAttempts || 0;
+      merged.wrongAttempts = Math.max(wrongNew, wrongExist);
 
       existingMap.set(key, merged);
     }
@@ -2633,11 +2660,19 @@ export async function syncContestHistoryAction(forceUpdate = true) {
   try {
     const { user } = await requireRole('member');
 
-    // Get user's connected handles
-    const { data: handles } = await supabaseAdmin
-      .from('user_handles')
-      .select('platform, handle')
-      .eq('user_id', user.id);
+    // Get user's connected handles (V2-aware)
+    const useV2 = await isV2SchemaAvailable();
+    let handles = [];
+
+    if (useV2) {
+      handles = await getUserHandlesV2(user.id);
+    } else {
+      const { data } = await supabaseAdmin
+        .from('user_handles')
+        .select('platform, handle')
+        .eq('user_id', user.id);
+      handles = data || [];
+    }
 
     if (!handles || handles.length === 0) {
       return {
@@ -2657,15 +2692,29 @@ export async function syncContestHistoryAction(forceUpdate = true) {
 
     // Starting contest history sync
 
-    const handlesList = handles.map((h) => ({
-      platform: h.platform,
-      handle: h.handle,
-    }));
+    const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+    const handlesList = handles
+      .filter((h) => allowedPlatforms.includes(h.platform))
+      .map((h) => ({
+        platform: h.platform,
+        handle: h.handle,
+      }));
+
+    if (handlesList.length === 0) {
+      return {
+        success: true,
+        data: {
+          synced: 0,
+          message: 'No contest history sync needed: none of the supported platforms (Codeforces, CodeChef, AtCoder, LeetCode) are connected.',
+        },
+      };
+    }
 
     // Fetch contest history from CLIST
     const contestHistory = await clistService.getAggregatedContestHistory(
       handlesList,
-      10000 // Fetch ALL contests
+      10000, // Fetch ALL contests
+      false  // Skip native platform API enrichment - CLIST data is sufficient
     );
 
     if (!contestHistory || contestHistory.length === 0) {
@@ -2854,6 +2903,106 @@ export async function syncContestHistoryAction(forceUpdate = true) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Sync rating history specifically
+ * Fetches rating history from CLIST for all connected handles of the allowed 4 platforms
+ */
+export async function syncRatingHistoryAction() {
+  try {
+    const { user } = await requireRole('member');
+
+    // Get user's connected handles (V2-aware)
+    const useV2 = await isV2SchemaAvailable();
+    let handles = [];
+
+    if (useV2) {
+      handles = await getUserHandlesV2(user.id);
+    } else {
+      const { data } = await supabaseAdmin
+        .from('user_handles')
+        .select('platform, handle')
+        .eq('user_id', user.id);
+      handles = data || [];
+    }
+
+    if (handles.length === 0) {
+      return {
+        success: false,
+        error: 'No handles connected. Connect a platform first.',
+      };
+    }
+
+    const clistService = new ClistService();
+    const clistConfigured = clistService.isConfigured();
+
+    if (!clistConfigured) {
+      return {
+        success: false,
+        error: 'CLIST service is not configured on the server.',
+      };
+    }
+
+    const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+    const handlesList = handles
+      .filter((h) => allowedPlatforms.includes(h.platform))
+      .map((h) => ({
+        platform: h.platform,
+        handle: h.handle,
+      }));
+
+    if (handlesList.length === 0) {
+      return {
+        success: true,
+        data: {
+          synced: 0,
+          message: 'No supported handles connected.',
+        },
+      };
+    }
+
+    let totalSaved = 0;
+    for (const { platform, handle } of handlesList) {
+      try {
+        const ratingHistory = await clistService.getRatingHistory(
+          platform,
+          handle,
+          user.id // Pass userId for caching
+        );
+
+        if (ratingHistory && ratingHistory.length > 0) {
+          const ratingResult = await clistService.saveRatingHistory(
+            user.id,
+            ratingHistory,
+            'clist'
+          );
+          totalSaved += ratingResult.saved || 0;
+        }
+      } catch (err) {
+        console.error(
+          `[syncRatingHistoryAction] Error syncing rating history for ${platform}/${handle}:`,
+          err.message
+        );
+      }
+    }
+
+    // Revalidate problem-solving pages to show updated rating data
+    revalidatePath('/account/member/problem-solving', 'page');
+    revalidatePath('/api/problem-solving/stats', 'page');
+
+    return {
+      success: true,
+      data: {
+        synced: totalSaved,
+        message: `Synced ${totalSaved} rating entries across platforms.`,
+      },
+    };
+  } catch (error) {
+    console.error('[syncRatingHistoryAction] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 
 /**
  * Update contest names in database with real names from CLIST API
@@ -3128,12 +3277,11 @@ export async function fullSyncAction(forceFullSync = false) {
           handle: h.handle,
         }));
 
-        // Fetch aggregated contest history with problem data enrichment
         const aggregatedContests =
           await clistService.getAggregatedContestHistory(
             handlesList,
             10000, // Fetch ALL contests
-            true // Enable problem enrichment
+            false  // Skip native platform API enrichment
           );
 
         if (aggregatedContests && aggregatedContests.length > 0) {

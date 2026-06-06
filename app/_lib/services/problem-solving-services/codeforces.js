@@ -445,14 +445,47 @@ export class CodeforcesService {
       // Fetch ALL problems for this contest from Codeforces API
       const contestProblems = await this.getContestProblems(matchId);
 
-      // Build problem map from user's submissions
+      // Initialize problem map from existing CLIST problems
       const problemMap = {};
+      if (contest.problems && Array.isArray(contest.problems)) {
+        contest.problems.forEach((p) => {
+          const key = p.label || p.id || p.name;
+          problemMap[key] = {
+            label: p.label,
+            name: p.name,
+            url: p.url || contest.url,
+            solved: p.solved === true || p.solvedDuringContest === true || p.upsolve === true,
+            solvedDuringContest: p.solvedDuringContest === true,
+            upsolve: p.upsolve === true,
+            attempted: p.attempted === true,
+            wrongAttempts: p.wrongAttempts || 0,
+            submissions: [],
+          };
+        });
+      }
+
+      // Build problem map from user's submissions
       contestSubs.forEach((sub) => {
         const problemIndex = sub.problem_id.replace(matchId, '');
         const subTime = new Date(sub.submitted_at);
 
-        if (!problemMap[problemIndex]) {
-          problemMap[problemIndex] = {
+        // Find matching key in map
+        let matchedKey = null;
+        for (const [key, value] of Object.entries(problemMap)) {
+          if (
+            key.toLowerCase() === problemIndex.toLowerCase() ||
+            key.toLowerCase() === sub.problem_id.toLowerCase() ||
+            (value.url && value.url.toLowerCase().includes(sub.problem_id.toLowerCase()))
+          ) {
+            matchedKey = key;
+            break;
+          }
+        }
+        
+        const targetKey = matchedKey || problemIndex;
+
+        if (!problemMap[targetKey]) {
+          problemMap[targetKey] = {
             label: problemIndex,
             name: sub.problem_name,
             url: sub.problem_url,
@@ -460,38 +493,44 @@ export class CodeforcesService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
-            attemptedDuringContest: false,
+            wrongAttempts: 0,
             submissions: [],
           };
         }
 
-        problemMap[problemIndex].submissions.push(sub);
-        problemMap[problemIndex].attempted = true;
-
-        // Check if this attempt was during the contest
-        if (subTime <= contestEnd) {
-          problemMap[problemIndex].attemptedDuringContest = true;
-        }
+        const prob = problemMap[targetKey];
+        prob.submissions.push(sub);
+        prob.attempted = true;
 
         if (sub.verdict === 'AC') {
-          problemMap[problemIndex].solved = true;
-          // Check if solved during contest or after (upsolve)
-          // Priority: solvedDuringContest > upsolve (if solved during contest, don't mark as upsolve)
+          prob.solved = true;
           if (subTime <= contestEnd) {
-            problemMap[problemIndex].solvedDuringContest = true;
-            // If we already marked it as upsolve but now found an earlier AC during contest, remove upsolve flag
-            problemMap[problemIndex].upsolve = false;
-          } else if (!problemMap[problemIndex].solvedDuringContest) {
-            // Only mark as upsolve if not already solved during contest
-            problemMap[problemIndex].upsolve = true;
+            prob.solvedDuringContest = true;
+            prob.upsolve = false;
+          } else if (!prob.solvedDuringContest) {
+            prob.upsolve = true;
           }
+        } else {
+          prob.wrongAttempts = (prob.wrongAttempts || 0) + 1;
         }
       });
 
       // Add unattempted problems from the contest problem list
       contestProblems.forEach((cp) => {
-        if (!problemMap[cp.index]) {
-          problemMap[cp.index] = {
+        let matchedKey = null;
+        for (const [key, value] of Object.entries(problemMap)) {
+          if (
+            key.toLowerCase() === cp.index.toLowerCase() ||
+            (value.url && value.url.toLowerCase().includes(cp.index.toLowerCase()))
+          ) {
+            matchedKey = key;
+            break;
+          }
+        }
+
+        const targetKey = matchedKey || cp.index;
+        if (!problemMap[targetKey]) {
+          problemMap[targetKey] = {
             label: cp.index,
             name: cp.name,
             url: cp.url,
@@ -499,21 +538,22 @@ export class CodeforcesService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
-            attemptedDuringContest: false,
+            wrongAttempts: 0,
             submissions: [],
             rating: cp.rating,
             tags: cp.tags,
           };
         } else {
           // Update existing problem with additional data
-          problemMap[cp.index].rating = cp.rating;
-          problemMap[cp.index].tags = cp.tags;
+          problemMap[targetKey].rating = cp.rating;
+          problemMap[targetKey].tags = cp.tags;
+          if (cp.url) problemMap[targetKey].url = cp.url;
         }
       });
 
       // Convert to array and sort by label (A, B, C, ...)
       const problems = Object.values(problemMap).sort((a, b) =>
-        a.label.localeCompare(b.label)
+        a.label.localeCompare(b.label, undefined, { numeric: true })
       );
 
       const solvedCount = problems.filter((p) => p.solvedDuringContest).length;

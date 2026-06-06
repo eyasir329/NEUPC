@@ -14,6 +14,7 @@ import {
   fullSyncAction,
   syncPlatformAction,
   syncContestHistoryAction,
+  syncRatingHistoryAction,
   getLeaderboardAction,
   connectHandleAction,
   disconnectHandleAction,
@@ -26,10 +27,16 @@ import { dummyData } from './useProblemSolving.mock';
  * Hook for fetching current user's problem solving data
  */
 export function useProblemSolving() {
-  const [data, setData] = useState({ ...dummyData, handles: [] });
+  const [data, setData] = useState({
+    ...dummyData,
+    handles: [],
+    ratingHistory: [],
+    contestHistory: [],
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncingRating, setSyncingRating] = useState(false);
   const [syncingPlatform, setSyncingPlatform] = useState(null);
   const isFetchingRef = useRef(false);
 
@@ -56,7 +63,9 @@ export function useProblemSolving() {
 
       setData({
         ...dummyData,
-        handles: result.data?.handles || [],
+        ...result.data,
+        ratingHistory: result.data?.ratingHistory || [],
+        contestHistory: result.data?.contestHistory || [],
       });
       setError(null);
     } catch (err) {
@@ -143,6 +152,25 @@ export function useProblemSolving() {
     [fetchData]
   );
 
+  const syncRatingHistory = useCallback(async () => {
+    try {
+      setSyncingRating(true);
+      const result = await syncRatingHistoryAction();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to sync rating history');
+      }
+
+      await fetchData();
+      return result.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setSyncingRating(false);
+    }
+  }, [fetchData]);
+
   const cleanupLeetCodeData = useCallback(async () => {
     try {
       setSyncing(true);
@@ -200,11 +228,13 @@ export function useProblemSolving() {
     loading,
     error,
     syncing,
+    syncingRating,
     syncingPlatform,
     refetch: fetchData,
     sync: syncData,
     syncPlatform,
     syncContestHistory,
+    syncRatingHistory,
     cleanupLeetCodeData,
   };
 }

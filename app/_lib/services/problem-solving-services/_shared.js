@@ -354,20 +354,24 @@ export class TimeoutError extends Error {
 export function categorizeError(error, response = null) {
   // Timeout errors
   if (
-    error.name === 'AbortError' ||
-    error.code === 'ETIMEDOUT' ||
-    error.cause?.code === 'ETIMEDOUT'
+    error && (
+      error.name === 'AbortError' ||
+      error.code === 'ETIMEDOUT' ||
+      error.cause?.code === 'ETIMEDOUT'
+    )
   ) {
     return new TimeoutError('Request timeout');
   }
 
   // Network errors
   if (
-    error.code === 'ECONNRESET' ||
-    error.code === 'ENOTFOUND' ||
-    error.code === 'ECONNREFUSED' ||
-    error.cause?.code === 'ECONNRESET' ||
-    error.name === 'TypeError'
+    error && (
+      error.code === 'ECONNRESET' ||
+      error.code === 'ENOTFOUND' ||
+      error.code === 'ECONNREFUSED' ||
+      error.cause?.code === 'ECONNRESET' ||
+      error.name === 'TypeError'
+    )
   ) {
     return new NetworkError('Network connection failed', error);
   }
@@ -422,6 +426,7 @@ export async function fetchWithTimeout(
 
     try {
       const response = await fetch(url, {
+        cache: 'no-store',
         ...options,
         signal: controller.signal,
       });
@@ -485,7 +490,7 @@ export async function fetchWithTimeout(
       // Log retry attempt
       const waitTime = retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
       console.warn(
-        `[${categorizedError.name}] Attempt ${attempt}/${retries} - ${url.substring(0, 100)}... ${categorizedError.message}`
+        `[${categorizedError.name}] Attempt ${attempt}/${retries} - ${url.substring(0, 100)}... ${categorizedError.message} (Original error: ${error.message || error})`
       );
 
       // Wait before retry with exponential backoff

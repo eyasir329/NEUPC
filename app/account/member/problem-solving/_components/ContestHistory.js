@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
@@ -26,6 +26,11 @@ import {
   ChevronRight,
   ChevronUp,
   Search,
+  Activity,
+  Crown,
+  Award,
+  Hash,
+  Percent,
 } from 'lucide-react';
 import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
 
@@ -40,6 +45,21 @@ const PLATFORM_CONFIG = PROBLEM_SOLVING_PLATFORMS.reduce((acc, platform) => {
   };
   return acc;
 }, {});
+
+const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+const getPlatformMeta = (platformId) => {
+  const p = PROBLEM_SOLVING_PLATFORMS.find((x) => x.id === platformId);
+  return {
+    short: p?.ui?.short || platformId.slice(0, 2).toUpperCase(),
+    name: p?.name || platformId,
+    tagBg: p?.ui?.bg || 'bg-white/5',
+    tagText: p?.ui?.color || 'text-white',
+    tagBorder: p?.ui?.border || 'border-white/10',
+    color: p?.ui?.color || 'text-white',
+  };
+};
+
 
 // Get rank percentile color based on performance
 function getRankPercentileColor(percentile) {
@@ -216,6 +236,63 @@ function isRatedContest(contest) {
   return contest.isRated !== false && (ratingChange !== 0 || contest.newRating);
 }
 
+// Circular percentile badge shown before rank in each row
+function PercentileBadge({ rank, total }) {
+  const safeRank = toNumber(rank);
+  const safeTotal = toNumber(total);
+
+  if (!safeRank || !safeTotal || safeTotal <= 0) {
+    return (
+      <div className="relative h-9 w-9" title="Percentile unavailable">
+        <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
+          <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-white/8" />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-semibold text-gray-600">—</span>
+      </div>
+    );
+  }
+
+  const percentile = Math.max(0.01, Math.min((safeRank / safeTotal) * 100, 100));
+  const colors = getRankPercentileColor(percentile);
+  // Arc fill: top percentile = more fill. circumference of r=15 circle ≈ 94.25
+  const circumference = 2 * Math.PI * 15;
+  const fillFraction = (100 - percentile) / 100;
+  const strokeDasharray = `${fillFraction * circumference} ${circumference}`;
+
+  const colorMap = {
+    'bg-red-500': '#ef4444',
+    'bg-orange-500': '#f97316',
+    'bg-amber-500': '#f59e0b',
+    'bg-yellow-500': '#eab308',
+    'bg-emerald-500': '#10b981',
+    'bg-cyan-500': '#06b6d4',
+    'bg-blue-500': '#3b82f6',
+  };
+  const strokeColor = colorMap[colors.bar] || '#6b7280';
+
+  return (
+    <div
+      className="relative h-9 w-9"
+      title={`Top ${percentile.toFixed(1)}% | Rank ${safeRank.toLocaleString()} / ${safeTotal.toLocaleString()}`}
+    >
+      <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
+        <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-white/8" />
+        <circle
+          cx="18" cy="18" r="15"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={strokeDasharray}
+        />
+      </svg>
+      <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-bold tabular-nums ${colors.text}`}>
+        {percentile < 10 ? percentile.toFixed(1) : Math.round(percentile)}%
+      </span>
+    </div>
+  );
+}
+
 // Vertical Rank Progress Bar Component (like clist.by)
 function RankProgressBar({ rank, total, className = '' }) {
   const safeRank = toNumber(rank);
@@ -306,19 +383,28 @@ function RatingCircle({ rating, size = 18 }) {
 
 // Problem Badge Component (clist.by style - solid colored badges)
 function ProblemBadge({ problem, index, onProblemClick }) {
+  const resultStr = typeof problem.result === 'string' ? problem.result : (problem.result != null ? String(problem.result) : '');
+  const numResult = parseFloat(resultStr);
+  
   // Check for different solve states
   // Note: solvedDuringContest and upsolve are explicitly set by the enrichment functions
   // If neither is set, we fall back to the generic "solved" state (green)
   const isSolvedDuringContest = problem.solvedDuringContest === true;
   const isUpsolve = problem.upsolve === true;
-  const isSolved = problem.solved === true || problem.result?.includes('+');
+  const isSolved =
+    problem.solved === true ||
+    isSolvedDuringContest ||
+    isUpsolve ||
+    resultStr.includes('+') ||
+    resultStr === 'AC' ||
+    (!isNaN(numResult) && numResult > 0);
 
   // Extract wrong attempts - prioritize wrongAttempts field, fallback to parsing result
   const wrongCount =
     problem.wrongAttempts ||
     (isSolved
-      ? Number(problem.result?.match(/\+(\d+)/)?.[1] || 0)
-      : Number(problem.result?.match(/-(\d+)/)?.[1] || 0));
+      ? Number(resultStr.match(/\+(\d+)/)?.[1] || 0)
+      : Number(resultStr.match(/-(\d+)/)?.[1] || (!isNaN(numResult) && numResult < 0 ? Math.abs(numResult) : 0)));
 
   const time = problem.time || problem.solveTime;
 
@@ -326,7 +412,8 @@ function ProblemBadge({ problem, index, onProblemClick }) {
   const isAttempted =
     problem.attempted === true ||
     wrongCount > 0 ||
-    (problem.result && problem.result.trim() !== '');
+    resultStr.trim() !== '' ||
+    (!isNaN(numResult) && (numResult > 0 || numResult < 0));
 
   const label = problem.label || problem.index || `Q${index + 1}`;
 
@@ -540,7 +627,7 @@ function ContestRow({ contest, index, onProblemClick, isHighlighted }) {
       const problemsData = contest.addition.problems;
       if (typeof problemsData === 'object') {
         const extracted = Object.entries(problemsData).map(([key, value]) => {
-          const result = value?.result || '';
+          const result = typeof value?.result === 'string' ? value.result : (value?.result != null ? String(value.result) : '');
           const isSolved = result.includes('+') || value?.solved === true;
 
           // Extract wrong attempts from result string
@@ -704,10 +791,6 @@ function ContestRow({ contest, index, onProblemClick, isHighlighted }) {
       >
         {/* Main Row */}
         <div className="flex items-stretch gap-0">
-          {/* Rank Progress Bar (Desktop) */}
-          <div className="flex items-center justify-center border-r border-white/4 px-1.5 sm:px-2.5">
-            <RankProgressBar rank={rank} total={totalParticipants} />
-          </div>
 
           {/* Rank Column */}
           <div className="flex w-14 shrink-0 flex-col items-center justify-center border-r border-white/4 py-3 sm:w-16">
@@ -724,15 +807,6 @@ function ContestRow({ contest, index, onProblemClick, isHighlighted }) {
             >
               {rank || '—'}
             </a>
-            {/* Top percentage - show below rank */}
-            {hasPercentile && (
-              <span
-                className={`mt-0.5 text-[9px] font-semibold tabular-nums ${percentileColors?.text || 'text-gray-500'}`}
-                title={`Top ${percentile.toFixed(1)}%`}
-              >
-                {percentile.toFixed(1)}%
-              </span>
-            )}
           </div>
 
           {/* Score Column */}
@@ -797,7 +871,8 @@ function ContestRow({ contest, index, onProblemClick, isHighlighted }) {
                 {config.short}
               </span>
 
-              {/* Contest Name */}
+              {/* Percentile Badge + Contest Name */}
+              <PercentileBadge rank={rank} total={totalParticipants} />
               <a
                 href={contest.url}
                 target="_blank"
@@ -999,15 +1074,16 @@ function ContestRow({ contest, index, onProblemClick, isHighlighted }) {
                     </div>
                     <div className="space-y-1.5">
                       {problems.map((problem, i) => {
+                        const resultStr = typeof problem.result === 'string' ? problem.result : (problem.result != null ? String(problem.result) : '');
                         const isSolved =
-                          problem.solved || problem.result?.includes('+');
+                          problem.solved || resultStr.includes('+');
                         const isAttempted =
                           problem.attempted ||
                           problem.wrongAttempts > 0 ||
-                          problem.result?.includes('-');
+                          resultStr.includes('-');
                         const wrongCount =
                           problem.wrongAttempts ||
-                          problem.result?.match(/\+(\d+)/)?.[1] ||
+                          resultStr.match(/\+(\d+)/)?.[1] ||
                           0;
                         const time = problem.time || problem.solveTime;
                         const label =
@@ -1150,76 +1226,81 @@ function ContestSummary({ contests }) {
   }, [contests]);
 
   const avgPercentileColors = getRankPercentileColor(stats.avgPercentile);
+  const gainPositive = stats.totalGain >= 0;
+
+  const cards = [
+    {
+      icon: Activity,
+      label: 'Contests',
+      value: stats.total,
+      accent: 'text-sky-400',
+      glow: 'bg-sky-500/15',
+      ring: 'ring-sky-400/20',
+    },
+    {
+      icon: Crown,
+      label: 'Wins',
+      value: stats.wins,
+      accent: 'text-amber-400',
+      glow: 'bg-amber-500/15',
+      ring: 'ring-amber-400/20',
+    },
+    {
+      icon: Award,
+      label: 'Best Rank',
+      value: stats.bestRank ? `#${stats.bestRank}` : '—',
+      accent: 'text-blue-400',
+      glow: 'bg-blue-500/15',
+      ring: 'ring-blue-400/20',
+    },
+    {
+      icon: Hash,
+      label: 'Avg Rank',
+      value: stats.avgRank ? `#${stats.avgRank}` : '—',
+      accent: 'text-violet-400',
+      glow: 'bg-violet-500/15',
+      ring: 'ring-violet-400/20',
+    },
+    {
+      icon: Percent,
+      label: 'Avg Top %',
+      value: stats.avgPercentile ? `${stats.avgPercentile.toFixed(0)}%` : '—',
+      accent: avgPercentileColors.text,
+      glow: `${avgPercentileColors.bar}/15`,
+      ring: 'ring-white/10',
+    },
+    {
+      icon: gainPositive ? TrendingUp : TrendingDown,
+      label: 'Rating Δ',
+      value: `${gainPositive ? '+' : ''}${stats.totalGain}`,
+      accent: gainPositive ? 'text-emerald-400' : 'text-red-400',
+      glow: gainPositive ? 'bg-emerald-500/15' : 'bg-red-500/15',
+      ring: gainPositive ? 'ring-emerald-400/20' : 'ring-red-400/20',
+    },
+  ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8">
-      <div className="rounded-xl bg-white/3 p-3 text-center ring-1 ring-white/4 transition-all duration-200 hover:bg-white/5">
-        <div className="text-xl font-bold text-white tabular-nums">
-          {stats.total}
-        </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Contests
-        </div>
-      </div>
-      <div className="rounded-xl bg-amber-500/8 p-3 text-center ring-1 ring-amber-400/15 transition-all duration-200 hover:bg-amber-500/12">
-        <div className="text-xl font-bold text-amber-400 tabular-nums">
-          {stats.wins}
-        </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Wins
-        </div>
-      </div>
-      <div className="rounded-xl bg-blue-500/8 p-3 text-center ring-1 ring-blue-400/15 transition-all duration-200 hover:bg-blue-500/12">
-        <div className="text-xl font-bold text-blue-400 tabular-nums">
-          {stats.bestRank ? `#${stats.bestRank}` : '—'}
-        </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Best Rank
-        </div>
-      </div>
-      <div className="rounded-xl bg-violet-500/8 p-3 text-center ring-1 ring-violet-400/15 transition-all duration-200 hover:bg-violet-500/12">
-        <div className="text-xl font-bold text-violet-400 tabular-nums">
-          {stats.avgRank ? `#${stats.avgRank}` : '—'}
-        </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Avg Rank
-        </div>
-      </div>
-      <div
-        className={`rounded-xl p-3 text-center ring-1 transition-all duration-200 ${
-          stats.avgPercentile
-            ? `${avgPercentileColors.text.replace('text-', 'bg-')}/8 ring-${avgPercentileColors.text.replace('text-', '')}/15`
-            : 'bg-gray-500/8 ring-gray-400/15'
-        }`}
-      >
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+      {cards.map(({ icon: Icon, label, value, accent, glow, ring }) => (
         <div
-          className={`text-xl font-bold tabular-nums ${avgPercentileColors.text}`}
+          key={label}
+          className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/6 bg-white/2 p-3.5 transition-all duration-200 hover:border-white/12 hover:bg-white/4"
         >
-          {stats.avgPercentile ? `${stats.avgPercentile.toFixed(0)}%` : '—'}
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${glow} ring-1 ${ring}`}
+          >
+            <Icon className={`h-4 w-4 ${accent}`} />
+          </div>
+          <div className="min-w-0">
+            <div className={`text-xl font-bold leading-tight tabular-nums ${accent}`}>
+              {value}
+            </div>
+            <div className="truncate text-[10px] font-medium tracking-wider text-gray-500 uppercase">
+              {label}
+            </div>
+          </div>
         </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Avg Top %
-        </div>
-      </div>
-      <div
-        className={`rounded-xl p-3 text-center ring-1 transition-all duration-200 ${
-          stats.totalGain >= 0
-            ? 'bg-emerald-500/8 ring-emerald-400/15 hover:bg-emerald-500/12'
-            : 'bg-red-500/8 ring-red-400/15 hover:bg-red-500/12'
-        }`}
-      >
-        <div
-          className={`text-xl font-bold tabular-nums ${
-            stats.totalGain >= 0 ? 'text-emerald-400' : 'text-red-400'
-          }`}
-        >
-          {stats.totalGain >= 0 ? '+' : ''}
-          {stats.totalGain}
-        </div>
-        <div className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
-          Rating Δ
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -1236,24 +1317,26 @@ export default function ContestHistory({
   highlightContestId = null,
 }) {
   const [selectedPlatform, setSelectedPlatform] = useState('all');
-  const [showRatedOnly, setShowRatedOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(15);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedRow, setExpandedRow] = useState(null);
+
+  // Reset expanded row on pagination or filter changes
+  useEffect(() => {
+    setExpandedRow(null);
+  }, [currentPage, pageSize, selectedPlatform, searchQuery]);
+
 
   // Page size options
-  const pageSizeOptions = [5, 10, 20, 50, 100];
+  const pageSizeOptions = [15, 20, 50, 100];
 
-  // Get base filtered contests (live participation + rated filter applied)
+  // Get base filtered contests (live participation + rated filter always applied)
   const baseFilteredContests = useMemo(() => {
-    let filtered = contestHistory.filter(isLiveParticipationContest);
-
-    if (showRatedOnly) {
-      filtered = filtered.filter(isRatedContest);
-    }
-
-    return filtered;
-  }, [contestHistory, showRatedOnly]);
+    return contestHistory
+      .filter(isLiveParticipationContest)
+      .filter(isRatedContest);
+  }, [contestHistory]);
 
   // Get available platforms from filtered contests (respects rated filter)
   const availablePlatforms = useMemo(() => {
@@ -1417,12 +1500,12 @@ export default function ContestHistory({
               <button
                 onClick={onSync}
                 disabled={syncing}
-                className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400 transition-all hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+                title={syncing ? 'Syncing…' : 'Sync Contests'}
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`}
+                  className={`h-4 w-4 ${syncing ? 'animate-spin text-amber-400' : ''}`}
                 />
-                {syncing ? 'Syncing...' : 'Sync Contests'}
               </button>
             )}
           </div>
@@ -1448,13 +1531,10 @@ export default function ContestHistory({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-2xl border border-white/6 bg-white/2 shadow-lg shadow-black/5"
+      className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl"
     >
-      <div className="h-0.5 bg-linear-to-r from-amber-500/60 via-orange-500/40 to-transparent" />
-
-      <div className="p-4 sm:p-5">
-        {/* Header */}
-        <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-white/5 bg-white/[0.02] p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-amber-500/20 to-orange-500/10 shadow-lg ring-2 shadow-amber-500/10 ring-amber-400/20">
               <Trophy className="h-5 w-5 text-amber-400" />
@@ -1503,35 +1583,15 @@ export default function ContestHistory({
               <button
                 onClick={onSync}
                 disabled={syncing}
-                className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-400 transition-all hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+                title={syncing ? 'Syncing…' : 'Sync'}
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`}
+                  className={`h-4 w-4 ${syncing ? 'animate-spin text-amber-400' : ''}`}
                 />
-                {syncing ? 'Syncing...' : 'Sync'}
               </button>
             )}
 
-            {/* Rated Only Toggle */}
-            <button
-              onClick={() => {
-                setShowRatedOnly(!showRatedOnly);
-                setSelectedPlatform('all'); // Reset platform filter when toggling rated
-                setCurrentPage(1);
-              }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
-                showRatedOnly
-                  ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-400/30'
-                  : 'bg-white/3 text-gray-400 hover:bg-white/5 hover:text-gray-300'
-              }`}
-              title={
-                showRatedOnly
-                  ? 'Showing rated contests only'
-                  : 'Show all contests'
-              }
-            >
-              {showRatedOnly ? '★ Rated Only' : 'All Types'}
-            </button>
 
             {/* Platform Filter */}
             {availablePlatforms.length > 1 && (
@@ -1573,45 +1633,164 @@ export default function ContestHistory({
               </div>
             )}
           </div>
-        </div>
+      </div>
 
+      <div className="p-5">
         {/* Summary Stats */}
         {!compact && (
-          <div className="mb-4 sm:mb-5">
+          <div className="mb-5">
             <ContestSummary contests={filteredContests} />
           </div>
         )}
 
-        {/* Column Headers (Desktop) */}
-        <div className="mb-2 hidden items-center gap-0 text-[10px] font-medium tracking-wider text-gray-500 uppercase md:flex">
-          <div className="w-8 text-center">%</div>
-          <div className="w-16 text-center">Rank</div>
-          <div className="w-14 text-center">Score</div>
-          <div className="w-24 text-center">Rating</div>
-          <div className="hidden w-24 text-center lg:block">Date</div>
-          <div className="flex-1 pl-4">Contest</div>
-        </div>
+        {/* Contest Table */}
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+            <thead className="border-b border-white/10 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+              <tr>
+                <th className="px-5 py-4">Contest Name</th>
+                <th className="w-28 px-5 py-4">Platform</th>
+                <th className="w-24 px-5 py-4">Rank</th>
+                <th className="w-28 px-5 py-4">Δ Rating</th>
+                <th className="w-24 px-5 py-4">Solved</th>
+                <th className="w-28 px-5 py-4">Date</th>
+                <th className="w-12 px-5 py-4 text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 font-medium text-zinc-300">
+              {displayedContests.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center text-zinc-500">
+                    <Trophy className="mx-auto mb-3 h-10 w-10 text-zinc-700" />
+                    No contests found matching filters
+                  </td>
+                </tr>
+              )}
+              {displayedContests.map((c, i) => {
+                const meta = getPlatformMeta(c.platform);
+                const delta = Number(c.ratingChange || 0);
+                const isOpen = expandedRow === i;
+                
+                // Parse problems count
+                const problems = c.problems || [];
+                const solvedProblemsCount = problems.filter(p => p.solved === true || p.solvedDuringContest === true || p.upsolve === true).length;
+                const solvedCount = solvedProblemsCount > 0 ? solvedProblemsCount : (c.solved || 0);
+                const totalProblems = Math.max(c.totalProblems || 0, problems.length);
+                
+                // Formatted Date
+                const contestDate = new Date(c.date);
+                const shortDateStr = contestDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
 
-        {/* Contest List */}
-        <div className="space-y-1.5">
-          {displayedContests.map((contest, index) => {
-            const contestId = contest.contestId || contest.external_contest_id;
-            const isHighlighted =
-              highlightContestId && contestId === highlightContestId;
-            return (
-              <div
-                key={`${contest.platform}-${contestId}-${index}`}
-                ref={isHighlighted ? highlightedContestRef : null}
-              >
-                <ContestRow
-                  contest={contest}
-                  index={index}
-                  onProblemClick={onProblemClick}
-                  isHighlighted={isHighlighted}
-                />
-              </div>
-            );
-          })}
+                return (
+                  <Fragment key={`${c.platform}-${c.contestId || c.external_contest_id || i}`}>
+                    <tr
+                      onClick={() => setExpandedRow(isOpen ? null : i)}
+                      className={cn(
+                        'group cursor-pointer transition-colors hover:bg-white/[0.04]',
+                        isOpen && 'bg-white/[0.02]'
+                      )}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <PercentileBadge
+                            rank={c.rank}
+                            total={c.totalParticipants ?? c.participants}
+                          />
+                          <span className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">
+                            {c.name || c.contestName || 'Unknown Contest'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={cn(
+                            'rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase',
+                            meta.tagBg,
+                            meta.tagBorder,
+                            meta.tagText
+                          )}
+                        >
+                          {meta.short}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-mono font-semibold text-zinc-400">
+                        {c.rank ? `#${c.rank}` : '—'}
+                      </td>
+                      <td className="px-5 py-4">
+                        {delta !== 0 ? (
+                          <span
+                            className={cn(
+                              'inline-flex min-w-[3rem] items-center justify-center rounded px-2 py-1 font-mono font-bold',
+                              delta > 0
+                                ? 'bg-emerald-400/10 text-emerald-400'
+                                : 'bg-rose-400/10 text-rose-400'
+                            )}
+                          >
+                            {delta > 0 ? `+${delta}` : delta}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-zinc-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 font-mono text-zinc-400">
+                        <span className="font-semibold text-zinc-300">
+                          {solvedCount}
+                        </span>
+                        {totalProblems ? (
+                          <span className="text-zinc-600">
+                            /{totalProblems}
+                          </span>
+                        ) : (
+                          ''
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-xs text-zinc-500">
+                        {shortDateStr}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex justify-end">
+                          <ChevronRight
+                            className={cn(
+                              'h-5 w-5 text-zinc-600 transition-transform group-hover:text-zinc-300',
+                              isOpen && 'rotate-90 text-indigo-400'
+                            )}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-black/20">
+                        <td colSpan={7} className="border-t-0 px-6 py-5 shadow-inner">
+                          <div className="flex flex-col gap-4 text-xs sm:flex-row sm:items-center">
+                            <span className="font-bold tracking-widest text-zinc-600 uppercase">
+                              Problems
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {problems.map((p, j) => (
+                                <ProblemBadge
+                                  key={j}
+                                  problem={p}
+                                  index={j}
+                                  onProblemClick={onProblemClick}
+                                />
+                              ))}
+                              {problems.length === 0 && (
+                                <span className="text-zinc-500">No problem data available</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination Controls */}

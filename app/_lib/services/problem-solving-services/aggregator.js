@@ -454,7 +454,14 @@ export class ProblemSolvingAggregator {
       }
 
       for (const prob of contest.problems) {
-        if (prob.solved || prob.result?.includes('+') || prob.result === 'AC') {
+        const resultStr = prob.result != null ? String(prob.result) : '';
+        const numResult = parseFloat(resultStr);
+        const isSolved =
+          prob.solved ||
+          resultStr.includes('+') ||
+          resultStr === 'AC' ||
+          (!isNaN(numResult) && numResult > 0);
+        if (isSolved) {
           submissions.push({
             submission_id: `clist_${contest.contestId}_${prob.label}`,
             problem_id:
@@ -992,12 +999,17 @@ export class ProblemSolvingAggregator {
                           stat.problems
                         )) {
                           const solveContext = probData.upsolving || probData;
-                          if (
-                            solveContext &&
-                            (solveContext.result === 100 ||
+                          const isSolved =
+                            solveContext && (
+                              solveContext.result === 100 ||
                               solveContext.verdict === 'AC' ||
-                              solveContext.verdict === 'OK')
-                          ) {
+                              solveContext.verdict === 'OK' ||
+                              (solveContext.result != null && (
+                                String(solveContext.result).includes('+') ||
+                                (!isNaN(parseFloat(solveContext.result)) && parseFloat(solveContext.result) > 0)
+                              ))
+                            );
+                          if (solveContext && isSolved) {
                             const subTime = solveContext.submission_time
                               ? new Date(
                                   solveContext.submission_time * 1000

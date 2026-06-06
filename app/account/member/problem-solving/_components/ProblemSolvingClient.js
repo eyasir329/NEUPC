@@ -45,6 +45,7 @@ import {
 import { getUpcomingContestsAction } from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
 import AddPlatformSection from './AddPlatformSection';
+import ContestHistory from './ContestHistory';
 import { PROBLEM_SOLVING_PLATFORMS, getAllPlatformConfigs } from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
@@ -1618,7 +1619,7 @@ function ProblemsTab({ submissions }) {
 }
 
 // Simple SVG line chart for ratings
-function RatingLineChart({ ratingHistory }) {
+function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
@@ -1658,6 +1659,21 @@ function RatingLineChart({ ratingHistory }) {
               Platform ratings over time
             </p>
           </div>
+          {onSyncRating && (
+            <button
+              onClick={onSyncRating}
+              disabled={syncingRating}
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+              title="Refresh Rating History"
+            >
+              <RefreshCw
+                className={cn(
+                  'h-4 w-4',
+                  syncingRating && 'animate-spin text-indigo-400'
+                )}
+              />
+            </button>
+          )}
         </div>
         <div className="relative z-10 flex h-72 w-full items-center justify-center text-sm font-medium text-zinc-500">
           No rating data yet
@@ -1716,19 +1732,36 @@ function RatingLineChart({ ratingHistory }) {
             Platform ratings over time
           </p>
         </div>
-        <div className="flex gap-4">
-          {platforms.map((p) => (
-            <div
-              key={p}
-              className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase"
+        <div className="flex items-center gap-4">
+          <div className="flex gap-4">
+            {platforms.map((p) => (
+              <div
+                key={p}
+                className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase"
+              >
+                <span
+                  className="h-2 w-2 rounded-[2px] shadow-sm"
+                  style={{ backgroundColor: colors[p] || '#94a3b8' }}
+                />
+                {getPlatformMeta(p).name}
+              </div>
+            ))}
+          </div>
+          {onSyncRating && (
+            <button
+              onClick={onSyncRating}
+              disabled={syncingRating}
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+              title="Refresh Rating History"
             >
-              <span
-                className="h-2 w-2 rounded-[2px] shadow-sm"
-                style={{ backgroundColor: colors[p] || '#94a3b8' }}
+              <RefreshCw
+                className={cn(
+                  'h-4 w-4',
+                  syncingRating && 'animate-spin text-indigo-400'
+                )}
               />
-              {getPlatformMeta(p).name}
-            </div>
-          ))}
+            </button>
+          )}
         </div>
       </div>
       <div
@@ -1856,11 +1889,13 @@ function ContestsTab({
   upcomingContests,
   onSync,
   syncing,
+  onSyncHistory,
+  syncingHistory,
+  onSyncRating,
+  syncingRating,
+  handles,
 }) {
-  const [expanded, setExpanded] = useState(null);
   const [upcomingPage, setUpcomingPage] = useState(0);
-  const [historyPage, setHistoryPage] = useState(0);
-  const HISTORY_PAGE_SIZE = 10;
 
   const totalPages = Math.ceil(
     (upcomingContests?.length || 0) / UPCOMING_PAGE_SIZE
@@ -1870,24 +1905,13 @@ function ContestsTab({
     (upcomingPage + 1) * UPCOMING_PAGE_SIZE
   );
 
-  const totalHistoryPages = Math.ceil(
-    (contestHistory?.length || 0) / HISTORY_PAGE_SIZE
-  );
-  const startHistory = historyPage * HISTORY_PAGE_SIZE;
-  const pageHistory = (contestHistory || []).slice(
-    startHistory,
-    startHistory + HISTORY_PAGE_SIZE
-  );
-  const historyPaginationRange = getPaginationRange(historyPage, totalHistoryPages);
-
-  const handlePageChange = (p) => {
-    setHistoryPage(p);
-    setExpanded(null);
-  };
-
   return (
     <div className="space-y-6">
-      <RatingLineChart ratingHistory={ratingHistory} />
+      <RatingLineChart
+        ratingHistory={ratingHistory}
+        onSyncRating={onSyncRating}
+        syncingRating={syncingRating}
+      />
 
       <div className="flex flex-col gap-6">
         <div className="flex h-max flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl">
@@ -2032,223 +2056,12 @@ function ContestsTab({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] p-5">
-            <h3 className="flex items-center gap-2 font-semibold text-white">
-              <Trophy className="h-4 w-4 text-amber-400" />
-              Contest History
-            </h3>
-          </div>
-          <div className="w-full overflow-x-auto p-1">
-            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-              <thead className="border-b border-white/10 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-                <tr>
-                  <th className="px-5 py-4">Contest Name</th>
-                  <th className="w-28 px-5 py-4">Platform</th>
-                  <th className="w-24 px-5 py-4">Rank</th>
-                  <th className="w-28 px-5 py-4">Δ Rating</th>
-                  <th className="w-24 px-5 py-4">Solved</th>
-                  <th className="w-28 px-5 py-4">Date</th>
-                  <th className="w-12 px-5 py-4 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 font-medium text-zinc-300">
-                {(contestHistory || []).length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="py-16 text-center text-sm text-zinc-500"
-                    >
-                      <Trophy className="mx-auto mb-3 h-10 w-10 text-zinc-700" />
-                      No contest history yet
-                    </td>
-                  </tr>
-                )}
-                {pageHistory.map((c, i) => {
-                  const meta = getPlatformMeta(c.platform);
-                  const delta = Number(c.ratingChange || 0);
-                  const isOpen = expanded === i;
-                  return (
-                    <Fragment key={c.id || i}>
-                      <tr
-                        onClick={() => setExpanded(isOpen ? null : i)}
-                        className={cn(
-                          'group cursor-pointer transition-colors hover:bg-white/[0.04]',
-                          isOpen && 'bg-white/[0.02]'
-                        )}
-                      >
-                        <td className="px-5 py-4">
-                          <span className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">
-                            {c.name}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={cn(
-                              'rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase',
-                              meta.tagBg,
-                              meta.tagBorder,
-                              meta.tagText
-                            )}
-                          >
-                            {meta.short}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 font-mono font-semibold text-zinc-400">
-                          {c.rank ? `#${c.rank}` : '—'}
-                        </td>
-                        <td className="px-5 py-4">
-                          {delta !== 0 ? (
-                            <span
-                              className={cn(
-                                'inline-flex min-w-[3rem] items-center justify-center rounded px-2 py-1 font-mono font-bold',
-                                delta > 0
-                                  ? 'bg-emerald-400/10 text-emerald-400'
-                                  : 'bg-rose-400/10 text-rose-400'
-                              )}
-                            >
-                              {delta > 0 ? `+${delta}` : delta}
-                            </span>
-                          ) : (
-                            <span className="font-mono text-zinc-600">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 font-mono text-zinc-400">
-                          <span className="font-semibold text-zinc-300">
-                            {c.solved ?? '—'}
-                          </span>
-                          {c.totalProblems ? (
-                            <span className="text-zinc-600">
-                              /{c.totalProblems}
-                            </span>
-                          ) : (
-                            ''
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-xs text-zinc-500">
-                          {shortDate(c.date)}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex justify-end">
-                            <ChevronRight
-                              className={cn(
-                                'h-5 w-5 text-zinc-600 transition-transform group-hover:text-zinc-300',
-                                isOpen && 'rotate-90 text-indigo-400'
-                              )}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                      {isOpen && (
-                        <tr className="bg-black/20">
-                          <td
-                            colSpan={7}
-                            className="border-t-0 px-6 py-5 shadow-inner"
-                          >
-                            <div className="flex flex-col gap-4 text-xs sm:flex-row sm:items-center">
-                              <span className="font-bold tracking-widest text-zinc-600 uppercase">
-                                Problems
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                {(c.problems || []).map((p, j) => {
-                                  const verdict = String(
-                                    p.result || p.verdict || ''
-                                  ).toUpperCase();
-                                  const ac =
-                                    p.solved === true ||
-                                    verdict === 'AC' ||
-                                    verdict === 'OK';
-                                  const wa =
-                                    !ac &&
-                                    (verdict.includes('WRONG') ||
-                                      verdict === 'WA');
-                                  return (
-                                    <div
-                                      key={j}
-                                      className={cn(
-                                        'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 font-mono text-[11px] font-bold shadow-sm',
-                                        ac
-                                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                          : wa
-                                            ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-                                            : 'border-white/5 bg-white/5 text-zinc-400'
-                                      )}
-                                    >
-                                      <span>{p.label || p.id || j + 1}</span>
-                                    </div>
-                                  );
-                                })}
-                                {(!c.problems || c.problems.length === 0) && (
-                                  <span className="text-[#64748b]">
-                                    No problem data
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {totalHistoryPages > 1 && (
-            <div className="flex items-center justify-between border-t border-white/5 p-5 bg-white/[0.01]">
-              <p className="text-xs font-medium text-zinc-500">
-                Showing {startHistory + 1}–
-                {Math.min(
-                  startHistory + HISTORY_PAGE_SIZE,
-                  (contestHistory || []).length
-                )}{' '}
-                of {(contestHistory || []).length}
-              </p>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => handlePageChange(Math.max(0, historyPage - 1))}
-                  disabled={historyPage === 0}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                {historyPaginationRange.map((p, idx) => {
-                  if (p === '...') {
-                    return (
-                      <span
-                        key={`dots-${idx}`}
-                        className="flex h-8 w-8 items-center justify-center text-xs font-semibold text-zinc-600"
-                      >
-                        ...
-                      </span>
-                    );
-                  }
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => handlePageChange(p)}
-                      className={cn(
-                        'flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors',
-                        p === historyPage
-                          ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
-                          : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-                      )}
-                    >
-                      {p + 1}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => handlePageChange(Math.min(totalHistoryPages - 1, historyPage + 1))}
-                  disabled={historyPage === totalHistoryPages - 1}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <ContestHistory
+          contestHistory={contestHistory}
+          handles={handles}
+          onSync={onSyncHistory}
+          syncing={syncingHistory}
+        />
       </div>
     </div>
   );
@@ -2967,9 +2780,12 @@ export default function ProblemSolvingClient({ userId }) {
     loading,
     error,
     syncing,
+    syncingRating,
     syncingPlatform,
     sync,
     syncPlatform,
+    syncContestHistory,
+    syncRatingHistory,
     refetch,
   } = useProblemSolving();
   const { connect, disconnect, loading: isConnecting, error: connectError } = useConnectHandle();
@@ -3033,6 +2849,26 @@ export default function ProblemSolvingClient({ userId }) {
       showToast(getErrorMessage(err, 'Failed to refresh contests'), 'error');
     }
   }, [loadUpcomingContests, showToast]);
+
+  const handleSyncContestHistory = useCallback(async () => {
+    showToast('Refreshing contest history...', 'info');
+    try {
+      const result = await syncContestHistory(true);
+      showToast(result?.message || 'Contest history updated!', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to refresh contest history'), 'error');
+    }
+  }, [syncContestHistory, showToast]);
+
+  const handleSyncRatingHistory = useCallback(async () => {
+    showToast('Refreshing rating history...', 'info');
+    try {
+      const result = await syncRatingHistory();
+      showToast(result?.message || 'Rating history updated!', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to refresh rating history'), 'error');
+    }
+  }, [syncRatingHistory, showToast]);
 
   const handleSyncPlatform = useCallback(
     async (platform) => {
@@ -3138,6 +2974,11 @@ export default function ProblemSolvingClient({ userId }) {
             upcomingContests={upcomingContests}
             onSync={handleRefreshUpcoming}
             syncing={upcomingSyncing}
+            onSyncHistory={handleSyncContestHistory}
+            syncingHistory={syncing}
+            onSyncRating={handleSyncRatingHistory}
+            syncingRating={syncingRating}
+            handles={handles}
           />
         );
       case 'topics':
