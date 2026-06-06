@@ -853,6 +853,12 @@ function transformRatingHistory(ratingHistoryData) {
       // Contest info from joined contest_history if available
       contestName: rh.contest_history?.contest_name,
       contestId: rh.contest_history?.external_contest_id,
+      contestUrl: rh.contest_history?.contest_url,
+      rank: rh.contest_history?.rank,
+      totalParticipants: rh.contest_history?.total_participants,
+      problemsSolved: rh.contest_history?.problems_solved,
+      problemsAttempted: rh.contest_history?.problems_attempted,
+      totalProblems: rh.contest_history?.total_problems,
     }))
     .filter((rh) => allowedPlatforms.includes(rh.platform));
 }
@@ -1333,7 +1339,7 @@ export async function getProblemSolvingData() {
           `
           *,
           platforms!inner(code, name),
-          contest_history(contest_name, external_contest_id, contest_url)
+          contest_history(contest_name, external_contest_id, contest_url, rank, total_participants, problems_solved, problems_attempted, total_problems)
         `
         )
         .eq('user_id', user.id)
@@ -1906,7 +1912,7 @@ export async function getMemberProblemSolvingData(targetUserId) {
           `
           *,
           platforms!inner(code, name),
-          contest_history(contest_name, external_contest_id, contest_url)
+          contest_history(contest_name, external_contest_id, contest_url, rank, total_participants, problems_solved, problems_attempted, total_problems)
         `
         )
         .eq('user_id', targetUserId)

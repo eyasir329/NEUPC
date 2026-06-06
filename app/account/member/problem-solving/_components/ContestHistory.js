@@ -1675,7 +1675,17 @@ export default function ContestHistory({
                 const problems = c.problems || [];
                 const solvedProblemsCount = problems.filter(p => p.solved === true || p.solvedDuringContest === true || p.upsolve === true).length;
                 const solvedCount = solvedProblemsCount > 0 ? solvedProblemsCount : (c.solved || 0);
-                const totalProblems = Math.max(c.totalProblems || 0, problems.length);
+                // Only trust problems.length as the total when the array contains
+                // unattempted entries — that proves the full contest problem set was
+                // fetched (not just the user's submissions). Otherwise, only show a
+                // denominator when c.totalProblems is strictly larger than solved
+                // so we never display a misleading "X of X".
+                const hasFullProblemList = problems.some(
+                  p => !p.solved && !p.solvedDuringContest && !p.upsolve && !p.attempted
+                );
+                const totalProblems = hasFullProblemList
+                  ? problems.length
+                  : (c.totalProblems && c.totalProblems > solvedCount ? c.totalProblems : null);
                 
                 // Formatted Date
                 const contestDate = new Date(c.date);

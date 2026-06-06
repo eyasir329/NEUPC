@@ -1619,8 +1619,38 @@ function ProblemsTab({ submissions }) {
 }
 
 // Simple SVG line chart for ratings
-function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
+// Position the hover tooltip relative to the Rating History box so it always
+// stays inside it: coordinates are converted from viewport space to box space,
+// the tooltip is centered over the point and placed above it by default
+// (flipped below near the top), then clamped to the box's bounds.
+function getTooltipStyle(pos, box) {
+  const WIDTH = 260;
+  const EST_HEIGHT = 200;
+  const MARGIN = 8;
+  const GAP = 14;
+  if (!box) return { left: 0, top: 0 };
+
+  const rect = box.getBoundingClientRect();
+  const px = pos.x - rect.left;
+  const py = pos.y - rect.top;
+
+  const maxLeft = rect.width - WIDTH - MARGIN;
+  const left = Math.max(MARGIN, Math.min(px - WIDTH / 2, maxLeft));
+
+  const above = py - GAP - EST_HEIGHT;
+  const maxTop = rect.height - EST_HEIGHT - MARGIN;
+  let top = above >= MARGIN ? above : py + GAP + 12;
+  top = Math.max(MARGIN, Math.min(top, maxTop));
+
+  return { left, top };
+}
+
+function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingRating }) {
   const [isMobile, setIsMobile] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const boxRef = useRef(null);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
     checkMobile();
@@ -1628,20 +1658,146 @@ function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Create a map of contests by date+platform for quick lookup
+  const contestMap = useMemo(() => {
+    const map = new Map();
+    (contestHistory || []).forEach((contest) => {
+      const contestPlatform = contest.platform || contest.platforms?.code;
+      const contestDateStr = contest.date || contest.contest_date;
+      if (!contestDateStr || !contestPlatform) return;
+      const contestDate = new Date(contestDateStr);
+      const dateKey = contestDate.toISOString().split('T')[0];
+      const key = `${contestPlatform.toLowerCase()}-${dateKey}`;
+      map.set(key, contest);
+
+      const newRating = contest.newRating || contest.new_rating;
+      if (newRating) {
+        const ratingKey = `${contestPlatform.toLowerCase()}-${newRating}`;
+        if (!map.has(ratingKey)) {
+          map.set(ratingKey, contest);
+        }
+      }
+    });
+    return map;
+  }, [contestHistory]);
+
+  // Enrich rating data with contest names and other metadata
+  const enrichedRatingHistory = useMemo(() => {
+    return (ratingHistory || []).map((rating) => {
+      const ratingPlatform = (rating.platform || rating.platforms?.code || '').toLowerCase();
+      const ratingDateStr = rating.date || rating.recorded_at;
+      if (!ratingDateStr || !ratingPlatform) return rating;
+
+      const ratingDate = new Date(ratingDateStr);
+      const dateKey = ratingDate.toISOString().split('T')[0];
+      const key = `${ratingPlatform}-${dateKey}`;
+
+      let matchedContest = contestMap.get(key);
+
+      // Fallback 1: match by rating value
+      const ratingValue = rating.rating;
+      if (!matchedContest && ratingValue) {
+        const ratingKey = `${ratingPlatform}-${ratingValue}`;
+        matchedContest = contestMap.get(ratingKey);
+      }
+
+      // Fallback 2: search through contest history for close date match
+      if (!matchedContest) {
+        matchedContest = (contestHistory || []).find((contest) => {
+          const contestPlatform = (contest.platform || contest.platforms?.code || '').toLowerCase();
+          if (contestPlatform !== ratingPlatform) return false;
+          const contestDateStr = contest.date || contest.contest_date;
+          if (!contestDateStr) return false;
+          const contestDate = new Date(contestDateStr);
+          const timeDiff = Math.abs(ratingDate - contestDate);
+
+          const contestNewRating = contest.newRating || contest.new_rating;
+          // Match if within 1.5 days and rating matches
+          return (
+            timeDiff < 129600000 &&
+            contestNewRating === ratingValue
+          );
+        });
+      }
+
+      // Fallback 3: match by platform + rating change
+      const ratingChange = rating.change || rating.rating_change;
+      if (!matchedContest && ratingChange) {
+        matchedContest = (contestHistory || []).find((contest) => {
+          const contestPlatform = (contest.platform || contest.platforms?.code || '').toLowerCase();
+          if (contestPlatform !== ratingPlatform) return false;
+
+          const contestRatingChange = contest.ratingChange || contest.rating_change;
+          const contestDateStr = contest.date || contest.contest_date;
+          if (!contestDateStr) return false;
+          const contestDate = new Date(contestDateStr);
+          const timeDiff = Math.abs(ratingDate - contestDate);
+
+          return (
+            timeDiff < 129600000 &&
+            contestRatingChange === ratingChange
+          );
+        });
+      }
+
+      // Prefer the row's own contest data (joined authoritatively via the
+      // contest_id FK in transformRatingHistory); fall back to the heuristic
+      // match only when the FK join was empty.
+      const contestName = rating.contestName || rating.contest_history?.contest_name || matchedContest?.name || matchedContest?.contest_name;
+      const contestId = rating.contestId || rating.contest_history?.external_contest_id || matchedContest?.contestId || matchedContest?.external_contest_id;
+      const contestUrl = rating.contestUrl || rating.contest_history?.contest_url || matchedContest?.url || matchedContest?.contest_url;
+      const rank = rating.rank ?? matchedContest?.rank;
+      const totalParticipants = rating.totalParticipants ?? matchedContest?.totalParticipants ?? matchedContest?.total_participants;
+      const problemsSolved = rating.problemsSolved ?? matchedContest?.solved ?? matchedContest?.problems_solved;
+      const problemsAttempted = rating.problemsAttempted ?? matchedContest?.problemsAttempted ?? matchedContest?.problems_attempted;
+
+      // Derive the real contest size from the problems array (already fetched
+      // by the sync and stored in problems_data → transformContestHistory sets
+      // matchedContest.problems). The DB total_problems column often equals
+      // problems_solved (a sync bug) so we can't trust it directly.
+      const totalProblems = (() => {
+        if (rating.totalProblems != null) return rating.totalProblems;
+        const probs = matchedContest?.problems;
+        if (Array.isArray(probs) && probs.length > 0) {
+          const hasUnattempted = probs.some(
+            p => !p.solved && !p.solvedDuringContest && !p.upsolve && !p.attempted
+          );
+          if (hasUnattempted) return probs.length;
+        }
+        const dbTotal = matchedContest?.totalProblems ?? matchedContest?.total_problems;
+        const solved = problemsSolved;
+        return dbTotal && dbTotal > solved ? dbTotal : null;
+      })();
+
+      return {
+        ...rating,
+        platform: ratingPlatform,
+        date: ratingDate.getTime(),
+        rating: ratingValue,
+        change: ratingChange,
+        contestName,
+        contestId,
+        contestUrl,
+        rank,
+        totalParticipants,
+        problemsSolved,
+        problemsAttempted,
+        totalProblems,
+      };
+    });
+  }, [ratingHistory, contestHistory, contestMap]);
+
   // Group by platform code
   const grouped = useMemo(() => {
     const map = new Map();
-    (ratingHistory || []).forEach((r) => {
+    enrichedRatingHistory.forEach((r) => {
       if (!r.platform || r.rating == null) return;
       if (!map.has(r.platform)) map.set(r.platform, []);
-      map.get(r.platform).push({
-        date: new Date(r.date).getTime(),
-        rating: r.rating,
-      });
+      map.get(r.platform).push(r);
     });
     map.forEach((arr) => arr.sort((a, b) => a.date - b.date));
     return map;
-  }, [ratingHistory]);
+  }, [enrichedRatingHistory]);
 
   const platforms = Array.from(grouped.keys());
 
@@ -1720,7 +1876,10 @@ function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
   };
 
   return (
-    <div className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+    <div
+      ref={boxRef}
+      className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl"
+    >
       <div className="pointer-events-none absolute -right-32 -bottom-32 h-64 w-64 rounded-full bg-indigo-500/5 blur-[100px]" />
       <div className="relative z-10 flex items-center justify-between border-b border-white/5 pb-4">
         <div>
@@ -1835,6 +1994,9 @@ function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
             y2={PAD.t + innerH}
             stroke="rgba(255,255,255,0.06)"
           />
+          {/* Areas + lines: non-interactive layer drawn first so a later
+              platform's area fill never covers or steals hover from another
+              platform's points. */}
           {platforms.map((p) => {
             const arr = grouped.get(p);
             if (!arr || arr.length < 1) return null;
@@ -1849,7 +2011,7 @@ function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
             // area fill path
             const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD.t + innerH} L ${pts[0].x} ${PAD.t + innerH} Z`;
             return (
-              <g key={p}>
+              <g key={p} className="pointer-events-none">
                 {/* subtle area fill */}
                 <path d={areaPath} fill={color} opacity={0.06} />
                 <path
@@ -1860,23 +2022,193 @@ function RatingLineChart({ ratingHistory, onSyncRating, syncingRating }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {arr.map((pt, i) => (
-                  <circle
-                    key={i}
-                    cx={xOf(pt.date)}
-                    cy={yOf(pt.rating)}
-                    r="3.5"
-                    fill="#18181b"
-                    stroke={color}
-                    strokeWidth="2"
-                    className="cursor-pointer"
-                  />
-                ))}
+              </g>
+            );
+          })}
+
+          {/* Points: drawn on top of every area/line so each platform's data
+              points stay visible and hoverable. */}
+          {platforms.map((p) => {
+            const arr = grouped.get(p);
+            if (!arr || arr.length < 1) return null;
+            const color = colors[p] || '#94a3b8';
+            return (
+              <g key={p}>
+                {arr.map((pt, i) => {
+                  const cx = xOf(pt.date);
+                  const cy = yOf(pt.rating);
+                  const isActive =
+                    hoveredPoint?.date === pt.date &&
+                    hoveredPoint?.platform === pt.platform;
+                  return (
+                    <g key={i}>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={isActive ? '5.5' : '3.5'}
+                        fill={isActive ? color : '#18181b'}
+                        stroke={color}
+                        strokeWidth="2"
+                        className="pointer-events-none transition-all duration-150"
+                      />
+                      {/* Invisible larger hit target so dense/middle points
+                          are easy to hover. */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="11"
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setTooltipPos({
+                            x: rect.left + rect.width / 2,
+                            y: rect.top,
+                          });
+                          setHoveredPoint(pt);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredPoint(null);
+                        }}
+                        onClick={() => {
+                          if (pt.contestUrl) {
+                            window.open(
+                              pt.contestUrl,
+                              '_blank',
+                              'noopener,noreferrer'
+                            );
+                          }
+                        }}
+                      />
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
         </svg>
       </div>
+
+      <AnimatePresence>
+        {hoveredPoint && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 5 }}
+            transition={{ duration: 0.15 }}
+            className="pointer-events-none absolute z-50 w-[260px] rounded-xl border border-white/10 bg-zinc-950/95 p-4 shadow-2xl backdrop-blur-md"
+            style={getTooltipStyle(tooltipPos, boxRef.current)}
+          >
+            {(() => {
+              const meta = getPlatformMeta(hoveredPoint.platform);
+              const date = new Date(hoveredPoint.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              });
+              const changeFormatted = hoveredPoint.change > 0 ? `+${hoveredPoint.change}` : hoveredPoint.change;
+              const changeColor = hoveredPoint.change > 0 ? 'text-emerald-400' : hoveredPoint.change < 0 ? 'text-rose-400' : 'text-zinc-500';
+
+              const getPercentile = (rank, total) => {
+                if (!rank || !total || total <= 0) return null;
+                const pct = (rank / total) * 100;
+                return Math.max(0.01, Math.min(pct, 100));
+              };
+
+              const getRankPercentileColor = (percentile) => {
+                if (percentile <= 1) return 'text-rose-400';
+                if (percentile <= 5) return 'text-orange-400';
+                if (percentile <= 10) return 'text-amber-400';
+                if (percentile <= 25) return 'text-yellow-400';
+                if (percentile <= 50) return 'text-emerald-400';
+                if (percentile <= 75) return 'text-cyan-400';
+                return 'text-blue-400';
+              };
+
+              const pct = getPercentile(hoveredPoint.rank, hoveredPoint.totalParticipants);
+
+              return (
+                <div className="flex flex-col gap-1.5 text-left">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn('h-2 w-2 rounded-full', meta.dot)} />
+                      <span className={cn('text-[10px] font-bold uppercase tracking-wider', meta.tagText)}>
+                        {meta.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">{date}</span>
+                  </div>
+                  
+                  {hoveredPoint.contestName ? (
+                    <h4 className="max-w-[230px] text-xs font-bold text-zinc-100 leading-tight">
+                      {hoveredPoint.contestName}
+                    </h4>
+                  ) : (
+                    <h4 className="text-xs font-semibold text-zinc-400 italic">
+                      Platform Rating Update
+                    </h4>
+                  )}
+
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-white/5 pt-2 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">New Rating</span>
+                      <span className="font-mono font-bold text-zinc-200">{hoveredPoint.rating}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Change</span>
+                      <span className={cn('font-mono font-bold', changeColor)}>
+                        {hoveredPoint.change !== null && hoveredPoint.change !== undefined ? changeFormatted : '—'}
+                      </span>
+                    </div>
+
+                    {hoveredPoint.rank !== null && hoveredPoint.rank !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Rank</span>
+                        <span className="font-mono font-bold text-zinc-200">
+                          {hoveredPoint.rank}
+                          {hoveredPoint.totalParticipants ? (
+                            <span className="text-[10px] text-zinc-500 font-normal">
+                              {' '}/ {hoveredPoint.totalParticipants}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    )}
+
+                    {pct !== null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Percentile</span>
+                        <span className={cn('font-mono font-bold', getRankPercentileColor(pct))}>
+                          Top {pct.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {hoveredPoint.problemsSolved !== null && hoveredPoint.problemsSolved !== undefined && (
+                      <div className="col-span-2 flex items-center justify-between border-t border-white/[0.03] pt-1.5">
+                        <span className="text-zinc-500">Solved</span>
+                        <span className="font-mono font-semibold text-emerald-400">
+                          {hoveredPoint.problemsSolved}
+                          {hoveredPoint.totalProblems ? (
+                            <span className="text-zinc-500">
+                              {' '}of {hoveredPoint.totalProblems} Problems
+                            </span>
+                          ) : ' Problems'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {hoveredPoint.contestUrl && (
+                    <div className="mt-1.5 border-t border-white/5 pt-1.5 text-center text-[9px] text-zinc-500">
+                      Click to view contest page
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1909,6 +2241,7 @@ function ContestsTab({
     <div className="space-y-6">
       <RatingLineChart
         ratingHistory={ratingHistory}
+        contestHistory={contestHistory}
         onSyncRating={onSyncRating}
         syncingRating={syncingRating}
       />
