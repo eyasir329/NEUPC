@@ -1036,9 +1036,12 @@ export async function updateUserDailyActivity(
   date = null
 ) {
   try {
-    const activityDate = date
-      ? new Date(date).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
+    const MIN_VALID_ACTIVITY_MS = Date.parse('2005-01-01T00:00:00.000Z');
+    const dateMs = date ? new Date(date).getTime() : NaN;
+    const activityDate =
+      date && Number.isFinite(dateMs) && dateMs >= MIN_VALID_ACTIVITY_MS
+        ? new Date(dateMs).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
 
     const { data: existing } = await supabaseAdmin
       .from(V2_TABLES.USER_DAILY_ACTIVITY)

@@ -1627,7 +1627,7 @@ export async function getProblemSolvingData() {
     // Transform statistics to expected format
     const transformedStatistics = statistics
       ? {
-          total_solved: dashboardMetrics.total_solved,
+          total_solved: statistics.total_solved || dashboardMetrics.total_solved,
           total_solutions: statistics.total_solutions || 0,
           total_submissions: effectiveTotalSubmissions,
           acceptance_rate: dashboardMetrics.acceptance_rate,
@@ -1710,8 +1710,23 @@ export async function getProblemSolvingData() {
           platform_stats: {},
         };
 
-    // Generate daily activity from recent solves
-    const dailyActivity = generateDailyActivity(problemSolves || []);
+    // Load daily activity from user_daily_activity table (full history)
+    let dailyActivity = [];
+    try {
+      if (useV2) {
+        const { data: activityRows } = await supabaseAdmin
+          .from(V2_TABLES.USER_DAILY_ACTIVITY)
+          .select('activity_date, problems_solved')
+          .eq('user_id', user.id)
+          .order('activity_date', { ascending: true });
+        dailyActivity = activityRows || [];
+      } else {
+        dailyActivity = generateDailyActivity(problemSolves || []);
+      }
+    } catch (e) {
+      console.error('Error fetching daily activity:', e.message);
+      dailyActivity = generateDailyActivity(problemSolves || []);
+    }
 
     // Transform submissions: resolve platform code + problem name via JOIN
     const transformedSubmissions = (recentSubmissions || []).map((sub) => ({
@@ -2163,8 +2178,23 @@ export async function getMemberProblemSolvingData(targetUserId) {
           platform_stats: {},
         };
 
-    // Generate daily activity from recent solves
-    const dailyActivity = generateDailyActivity(recentSolves || []);
+    // Load daily activity from user_daily_activity table (full history)
+    let dailyActivity = [];
+    try {
+      if (useV2) {
+        const { data: activityRows } = await supabaseAdmin
+          .from(V2_TABLES.USER_DAILY_ACTIVITY)
+          .select('activity_date, problems_solved')
+          .eq('user_id', targetUserId)
+          .order('activity_date', { ascending: true });
+        dailyActivity = activityRows || [];
+      } else {
+        dailyActivity = generateDailyActivity(recentSolves || []);
+      }
+    } catch (e) {
+      console.error('Error fetching daily activity:', e.message);
+      dailyActivity = generateDailyActivity(recentSolves || []);
+    }
 
     // Transform recentSubmissions from problem_submissions table (ALL verdicts)
     // V2 uses problem_external_id, legacy uses problem_id - support both
@@ -3913,16 +3943,21 @@ export async function getUserAllProblems() {
 
   if (useV2) {
     // 1. Solved problems from user_solves (one row per unique problem solved)
-    const { data: solves } = await supabaseAdmin
+    const { data: solves, error: solvesError } = await supabaseAdmin
       .from(V2_TABLES.USER_SOLVES)
       .select(
         `first_solved_at,
-         problems!inner(
+         problems!user_solves_problem_id_fkey(
            id, external_id, name, url, difficulty_rating,
-           platforms!inner(code, name)
+           platforms!problems_platform_id_fkey(code, name)
          )`
       )
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .limit(10000);
+
+    if (solvesError) {
+      console.error('[getUserAllProblems] solves query error:', solvesError.message);
+    }
 
     const solvedByProblemId = new Map();
     for (const row of solves || []) {
@@ -3943,14 +3978,19 @@ export async function getUserAllProblems() {
     }
 
     // 2. All submissions to catch unsolved attempts not in user_solves
-    const { data: subs } = await supabaseAdmin
+    const { data: subs, error: subsError } = await supabaseAdmin
       .from(V2_TABLES.SUBMISSIONS)
       .select(
         `external_problem_id, problem_name, verdict, submitted_at,
-         platforms!inner(code)`
+         platforms!submissions_platform_id_fkey(code)`
       )
       .eq('user_id', user.id)
-      .order('submitted_at', { ascending: false });
+      .order('submitted_at', { ascending: false })
+      .limit(10000);
+
+    if (subsError) {
+      console.error('[getUserAllProblems] subs query error:', subsError.message);
+    }
 
     const attemptMap = new Map();
     for (const sub of subs || []) {

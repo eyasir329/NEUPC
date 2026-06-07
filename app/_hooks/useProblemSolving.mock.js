@@ -293,7 +293,7 @@ export const dummyData = {
 
   recentSubmissions: Array.from({ length: 120 }, (_, i) => makeSub(i)),
 
-  dailyActivity: Array.from({ length: 365 }, (_, i) => {
+  dailyActivity: Array.from({ length: 730 }, (_, i) => {
     const base =
       i < 42
         ? Math.floor(Math.random() * 6) + 1

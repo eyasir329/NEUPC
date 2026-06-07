@@ -47,6 +47,7 @@ import ProblemDetailModal from './ProblemDetailModal';
 import AddPlatformSection from './AddPlatformSection';
 import ContestHistory from './ContestHistory';
 import ExtensionGuide from './ExtensionGuide';
+import ActivityHeatmap from './ActivityHeatmap';
 import { PROBLEM_SOLVING_PLATFORMS, getAllPlatformConfigs } from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
@@ -411,150 +412,7 @@ function SettingsModal({ open, onClose }) {
   );
 }
 
-// =====================================================================
-// Activity heatmap (52 cols x 7 rows)
-// =====================================================================
-function HeatmapCell({ level, count }) {
-  const colors = [
-    'bg-[#222228]',
-    'bg-[#4ade80]/20',
-    'bg-[#4ade80]/40',
-    'bg-[#4ade80]/60',
-    'bg-[#4ade80]',
-  ];
-  return (
-    <div
-      className={cn(
-        'h-3 w-3 cursor-pointer rounded-[2.5px] ring-[#334155] ring-offset-1 ring-offset-[#111114] transition-all hover:ring-1',
-        colors[level]
-      )}
-      title={`${count} solve${count === 1 ? '' : 's'}`}
-    />
-  );
-}
 
-function ActivityHeatmap({ data }) {
-  // data: array of { activity_date, problems_solved }
-  // Build 52 columns x 7 rows matrix (last 364 days, ending today)
-  const grid = useMemo(() => {
-    const map = new Map();
-    (data || []).forEach((d) => {
-      if (d.activity_date) map.set(d.activity_date, d.problems_solved || 0);
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cols = [];
-    let total = 0;
-    for (let week = 51; week >= 0; week--) {
-      const col = [];
-      for (let day = 0; day < 7; day++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - (week * 7 + (6 - day)));
-        const key = date.toISOString().split('T')[0];
-        const count = map.get(key) || 0;
-        total += count;
-        const level =
-          count === 0
-            ? 0
-            : count <= 1
-              ? 1
-              : count <= 3
-                ? 2
-                : count <= 6
-                  ? 3
-                  : 4;
-        col.push({ date, count, level });
-      }
-      cols.push(col);
-    }
-    return { cols, total };
-  }, [data]);
-
-  return (
-    <div className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
-      <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-emerald-500/5 blur-[100px]" />
-      <div className="relative z-10 flex items-center justify-between border-b border-white/5 pb-4">
-        <h3 className="flex items-center gap-2 font-semibold text-white">
-          <Calendar className="h-4 w-4 text-emerald-400" />
-          Activity Heatmap
-        </h3>
-        <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-          365 Days
-        </span>
-      </div>
-      <div className="relative z-10 w-full">
-        {/* Fading gradient overlays to indicate horizontal scrollable overflow */}
-        <div className="pointer-events-none absolute bottom-2 left-0 top-0 z-20 w-8 bg-gradient-to-r from-zinc-950/80 to-transparent sm:hidden" />
-        <div className="pointer-events-none absolute bottom-2 right-0 top-0 z-20 w-8 bg-gradient-to-l from-zinc-950/80 to-transparent sm:hidden" />
-
-        <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 overflow-x-auto pb-2">
-          <div className="flex min-w-[720px] md:min-w-0 md:w-full flex-col gap-2.5">
-            <div className="flex pt-1 pl-8 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-            {[
-              'Jan',
-              'Feb',
-              'Mar',
-              'Apr',
-              'May',
-              'Jun',
-              'Jul',
-              'Aug',
-              'Sep',
-              'Oct',
-              'Nov',
-              'Dec',
-            ].map((m) => (
-              <div key={m} style={{ flex: 1 }}>
-                {m}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <div className="flex flex-col justify-between py-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-              <span>Mon</span>
-              <span>Wed</span>
-              <span>Fri</span>
-            </div>
-            <div className="flex flex-1 gap-1">
-              {grid.cols.map((col, i) => (
-                <div key={i} className="flex flex-col gap-1">
-                  {col.map((cell, j) => (
-                    <HeatmapCell
-                      key={j}
-                      level={cell.level}
-                      count={cell.count}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div className="relative z-10 mt-auto flex items-center justify-between border-t border-white/5 pt-2 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-        <span className="text-zinc-400">
-          Total: {formatNumber(grid.total)} solves
-        </span>
-        <div className="flex items-center gap-2">
-          <span>Less</span>
-          <div
-            className="mx-2 flex cursor-help gap-1.5 opacity-90 transition-opacity hover:opacity-100"
-            title="0, 1, 2-3, 4-6, 7+ solves"
-          >
-            <div className="h-3 w-3 rounded-[3px] bg-zinc-800 ring-1 ring-white/5" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/20 ring-1 ring-emerald-500/20" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/40 ring-1 ring-emerald-500/40" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/70 ring-1 ring-emerald-500/50" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-400" />
-          </div>
-          <span>More</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // =====================================================================
 // Difficulty donut
@@ -1334,12 +1192,22 @@ function OverviewTab({
   );
 }
 
-function ProblemsTab({ problems, loading }) {
+function ProblemsTab({ problems, loading, handles }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'solved' | 'unsolved'
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | '7d' | '30d' | '90d' | '1y'
   const [page, setPage] = useState(0);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const PAGE_SIZE = 15;
+
+  // All connected platforms from handles; fall back to platforms seen in problems
+  const availablePlatforms = useMemo(() => {
+    if (handles && handles.length > 0) {
+      return [...new Set(handles.map((h) => (h.platform || '').toLowerCase()).filter(Boolean))].sort();
+    }
+    return [...new Set((problems || []).map((s) => s.platform).filter(Boolean))].sort();
+  }, [handles, problems]);
 
   const list = useMemo(() => {
     let arr = problems || [];
@@ -1353,8 +1221,19 @@ function ProblemsTab({ problems, loading }) {
     }
     if (statusFilter === 'solved') arr = arr.filter((s) => s.solved);
     if (statusFilter === 'unsolved') arr = arr.filter((s) => !s.solved);
+    if (platformFilter !== 'all') arr = arr.filter((s) => s.platform === platformFilter);
+    if (dateFilter !== 'all') {
+      const cutoffMs = {
+        '7d': 7, '30d': 30, '90d': 90, '1y': 365,
+      }[dateFilter] * 86400000;
+      const cutoff = Date.now() - cutoffMs;
+      arr = arr.filter((s) => {
+        if (!s.submitted_at) return false;
+        return new Date(s.submitted_at).getTime() >= cutoff;
+      });
+    }
     return arr;
-  }, [problems, search, statusFilter]);
+  }, [problems, search, statusFilter, platformFilter, dateFilter]);
 
   const totalSolved = (problems || []).filter((s) => s.solved).length;
 
@@ -1436,35 +1315,80 @@ function ProblemsTab({ problems, loading }) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">
-        <div className="group relative w-full sm:w-[360px]">
-          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-indigo-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search problems by name or ID..."
-            className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20"
-          />
+      <div className="flex flex-col gap-3 pt-2">
+        {/* Row 1: search + status */}
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="group relative w-full sm:w-[360px]">
+            <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-indigo-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              placeholder="Search problems by name or ID..."
+              className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
+            {['all', 'solved', 'unsolved'].map((f) => (
+              <button
+                key={f}
+                onClick={() => { setStatusFilter(f); setPage(0); }}
+                className={cn(
+                  'rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap capitalize transition-colors',
+                  statusFilter === f
+                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                    : 'border-white/5 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
-          {['all', 'solved', 'unsolved'].map((f) => (
-            <button
-              key={f}
-              onClick={() => { setStatusFilter(f); setPage(0); }}
-              className={cn(
-                'rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap capitalize transition-colors',
-                statusFilter === f
-                  ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
-                  : 'border-white/5 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
-              )}
+
+        {/* Row 2: platform + date filters */}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          {/* Platform filter */}
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">Platform</span>
+            <select
+              value={platformFilter}
+              onChange={(e) => { setPlatformFilter(e.target.value); setPage(0); }}
+              className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 outline-none transition-colors focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
             >
-              {f}
-            </button>
-          ))}
+              <option value="all">All platforms</option>
+              {availablePlatforms.map((p) => (
+                <option key={p} value={p}>{getPlatformMeta(p).name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden h-4 w-px bg-white/10 sm:block" />
+
+          {/* Date filter */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">Date</span>
+            {[
+              { value: 'all', label: 'All time' },
+              { value: '7d', label: '7 days' },
+              { value: '30d', label: '30 days' },
+              { value: '90d', label: '3 months' },
+              { value: '1y', label: '1 year' },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setDateFilter(value); setPage(0); }}
+                className={cn(
+                  'rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
+                  dateFilter === value
+                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                    : 'border-white/5 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -3381,7 +3305,7 @@ export default function ProblemSolvingClient({ userId }) {
           />
         );
       case 'problems':
-        return <ProblemsTab problems={allProblems} loading={allProblemsLoading} />;
+        return <ProblemsTab problems={allProblems} loading={allProblemsLoading} handles={handles} />;
       case 'contests':
         return (
           <ContestsTab

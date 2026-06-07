@@ -33,7 +33,7 @@ export function useProblemSolving() {
     ratingHistory: [],
     contestHistory: [],
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingRating, setSyncingRating] = useState(false);
