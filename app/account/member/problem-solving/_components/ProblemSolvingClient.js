@@ -42,10 +42,11 @@ import {
   useProblemSolving,
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
-import { getUpcomingContestsAction } from '@/app/_lib/actions/problem-solving-actions';
+import { getUpcomingContestsAction, getUserAllProblems } from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
 import AddPlatformSection from './AddPlatformSection';
 import ContestHistory from './ContestHistory';
+import ExtensionGuide from './ExtensionGuide';
 import { PROBLEM_SOLVING_PLATFORMS, getAllPlatformConfigs } from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
@@ -1166,48 +1167,106 @@ function OverviewTab({
                   const code = h.platform;
                   const meta = getPlatformMeta(code);
                   const handleName = h.handle;
+                  const ps = statistics?.platform_stats?.[code];
+                  const isSyncing = syncingPlatform === code;
+                  const syncStatus = ps?.sync_status || 'pending';
+                  const hasError = !!ps?.error_message;
+                  const rating = ps?.rating || 0;
+                  const solvedCount = ps?.solved_count || 0;
+                  const lastSynced = ps?.last_synced_at;
+
+                  const statusBadge = isSyncing ? (
+                    <span className="flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-indigo-400 uppercase">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
+                      Syncing
+                    </span>
+                  ) : hasError ? (
+                    <span className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-rose-400 uppercase" title={ps.error_message}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      Error
+                    </span>
+                  ) : syncStatus === 'completed' || lastSynced ? (
+                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      Synced
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-800/50 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-zinc-500 uppercase">
+                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                      Pending
+                    </span>
+                  );
+
                   return (
                     <div
                       key={code}
-                      className="flex items-center gap-3 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
+                      className="flex flex-col gap-2 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
                     >
-                      <div
-                        className={cn(
-                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
-                          meta.color
-                        )}
-                      >
-                        {meta.short}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-200">
-                          {meta.name}
-                        </div>
-                        <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-                          @{handleName}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
-                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                          Active
-                        </span>
-                        <button
-                          onClick={() => onSyncPlatform(code)}
-                          className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                          title="Sync now"
-                          disabled={syncingPlatform === code}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
+                            meta.color
+                          )}
                         >
-                          <RefreshCw
-                            className={cn(
-                              'h-3.5 w-3.5',
-                              syncingPlatform === code
-                                ? 'animate-spin text-indigo-400'
-                                : ''
-                            )}
-                          />
-                        </button>
+                          {meta.short}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-200">
+                            {meta.name}
+                          </div>
+                          <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
+                            @{handleName}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {statusBadge}
+                          <button
+                            onClick={() => onSyncPlatform(code)}
+                            className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                            title={lastSynced ? `Last synced ${relativeTime(lastSynced)}` : 'Sync now'}
+                            disabled={isSyncing}
+                          >
+                            <RefreshCw
+                              className={cn(
+                                'h-3.5 w-3.5',
+                                isSyncing ? 'animate-spin text-indigo-400' : ''
+                              )}
+                            />
+                          </button>
+                        </div>
                       </div>
+
+                      {(rating > 0 || solvedCount > 0) && (
+                        <div className="flex items-center gap-3 border-t border-white/5 pt-2">
+                          {rating > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">Rating</span>
+                              <span className={cn('font-mono text-xs font-bold', meta.tagText)}>{formatNumber(rating)}</span>
+                            </div>
+                          )}
+                          {rating > 0 && solvedCount > 0 && (
+                            <span className="h-3 w-px bg-white/10" />
+                          )}
+                          {solvedCount > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">Solved</span>
+                              <span className="font-mono text-xs font-bold text-emerald-400">{formatNumber(solvedCount)}</span>
+                            </div>
+                          )}
+                          {lastSynced && (
+                            <>
+                              <span className="ml-auto text-[10px] text-zinc-600">{relativeTime(lastSynced)}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {hasError && (
+                        <p className="truncate rounded-lg bg-rose-500/5 px-2 py-1 text-[10px] text-rose-400" title={ps.error_message}>
+                          {ps.error_message}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -1275,25 +1334,15 @@ function OverviewTab({
   );
 }
 
-function ProblemsTab({ submissions }) {
+function ProblemsTab({ problems, loading }) {
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'solved' | 'unsolved'
   const [page, setPage] = useState(0);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const PAGE_SIZE = 15;
 
   const list = useMemo(() => {
-    const seen = new Map();
-    (submissions || []).forEach((s) => {
-      const key = `${s.platform}:${s.problem_id}`;
-      // Sort properly rather than just relying on whatever appeared first
-      if (
-        !seen.has(key) ||
-        new Date(s.submitted_at) > new Date(seen.get(key).submitted_at)
-      ) {
-        seen.set(key, s);
-      }
-    });
-    let arr = Array.from(seen.values());
+    let arr = problems || [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       arr = arr.filter(
@@ -1302,15 +1351,12 @@ function ProblemsTab({ submissions }) {
           (s.problem_id || '').toLowerCase().includes(q)
       );
     }
-    // Default sort by submitted_at desc
-    arr.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    if (statusFilter === 'solved') arr = arr.filter((s) => s.solved);
+    if (statusFilter === 'unsolved') arr = arr.filter((s) => !s.solved);
     return arr;
-  }, [submissions, search]);
+  }, [problems, search, statusFilter]);
 
-  const totalSolved = list.filter((s) => {
-    const v = String(s.verdict || '').toUpperCase();
-    return v === 'OK' || v === 'AC' || v === 'ACCEPTED';
-  }).length;
+  const totalSolved = (problems || []).filter((s) => s.solved).length;
 
   const easy = list.filter(
     (s) => (s.difficulty_rating || 0) > 0 && (s.difficulty_rating || 0) < 1400
@@ -1326,6 +1372,15 @@ function ProblemsTab({ submissions }) {
   const totalPages = Math.ceil(list.length / PAGE_SIZE);
   const paginationRange = getPaginationRange(page, totalPages);
 
+  if (loading) {
+    return (
+      <div className="animate-in fade-in mt-2 flex items-center justify-center rounded-2xl border border-white/5 bg-zinc-900/50 p-24 shadow-lg backdrop-blur-xl duration-500">
+        <RefreshCw className="h-6 w-6 animate-spin text-zinc-500" />
+        <span className="ml-3 text-sm text-zinc-500">Loading problems…</span>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-in fade-in mt-2 space-y-6 rounded-2xl border border-white/5 bg-zinc-900/50 p-6 pb-12 shadow-lg backdrop-blur-xl duration-500 md:p-8">
       {/* Stat Bar top */}
@@ -1338,7 +1393,7 @@ function ProblemsTab({ submissions }) {
             <div className="flex items-baseline gap-2 text-4xl font-black tracking-tight text-white">
               {formatNumber(totalSolved)}{' '}
               <span className="text-sm font-medium text-zinc-600">
-                / {formatNumber(list.length)}
+                / {formatNumber((problems || []).length)}
               </span>
             </div>
           </div>
@@ -1396,16 +1451,20 @@ function ProblemsTab({ submissions }) {
           />
         </div>
         <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
-          <button className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
-            <Funnel className="h-4 w-4 text-zinc-400" /> Topic Tags
-          </button>
-          <button className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
-            <Crown className="h-4 w-4 text-amber-400" /> Difficulty
-          </button>
-          <div className="mx-1 hidden h-6 w-px bg-white/10 sm:block" />
-          <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-zinc-400 transition-colors hover:text-white">
-            <SlidersHorizontal className="h-4 w-4" /> Sort
-          </button>
+          {['all', 'solved', 'unsolved'].map((f) => (
+            <button
+              key={f}
+              onClick={() => { setStatusFilter(f); setPage(0); }}
+              className={cn(
+                'rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap capitalize transition-colors',
+                statusFilter === f
+                  ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                  : 'border-white/5 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
+              )}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -1438,15 +1497,16 @@ function ProblemsTab({ submissions }) {
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
                     <Search className="h-8 w-8 text-zinc-600" />
                   </div>
-                  No problems match your filters.
+                  {(problems || []).length === 0
+                    ? 'No problems synced yet. Sync your platforms to see all your problems here.'
+                    : 'No problems match your filters.'}
                 </td>
               </tr>
             )}
             {visible.map((s, i) => {
+              const isAc = s.solved === true;
               const verdict = String(s.verdict || '').toUpperCase();
-              const isAc =
-                verdict === 'OK' || verdict === 'AC' || verdict === 'ACCEPTED';
-              const isWa = verdict.includes('WRONG') || verdict === 'WA';
+              const isWa = !isAc && (verdict.includes('WRONG') || verdict === 'WA');
               const meta = getPlatformMeta(s.platform);
               const diff = s.difficulty_rating;
               const title = s.problem_name || s.problem_id;
@@ -3095,6 +3155,9 @@ function ProfileTab({
 // React Fragment shim (avoid import bloat)
 const Fragment = ({ children }) => children;
 
+// Platforms that require the browser extension for submission sync
+const EXTENSION_ONLY_PLATFORMS = new Set(['leetcode', 'spoj', 'toph', 'cses', 'hackerrank', 'kattis', 'uva', 'lightoj', 'vjudge', 'cfgym', 'beecrowd', 'dmoj']);
+
 // =====================================================================
 // Main Component
 // =====================================================================
@@ -3103,9 +3166,13 @@ export default function ProblemSolvingClient({ userId }) {
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addPlatformOpen, setAddPlatformOpen] = useState(false);
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
   const [upcomingContests, setUpcomingContests] = useState([]);
   const [upcomingSyncing, setUpcomingSyncing] = useState(false);
   const upcomingLoadedRef = useRef(false);
+  const [allProblems, setAllProblems] = useState(null);
+  const [allProblemsLoading, setAllProblemsLoading] = useState(false);
+  const allProblemsLoadedRef = useRef(false);
   const toastTimeoutRef = useRef(null);
 
   const {
@@ -3143,6 +3210,18 @@ export default function ProblemSolvingClient({ userId }) {
       loadUpcomingContests();
     }
   }, [activeTab, loadUpcomingContests]);
+
+  // Lazy-load all problems the first time the Problems tab opens.
+  useEffect(() => {
+    if (activeTab === 'problems' && !allProblemsLoadedRef.current) {
+      allProblemsLoadedRef.current = true;
+      setAllProblemsLoading(true);
+      getUserAllProblems()
+        .then((result) => setAllProblems(result?.problems || []))
+        .catch(() => setAllProblems([]))
+        .finally(() => setAllProblemsLoading(false));
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     return () => {
@@ -3206,6 +3285,10 @@ export default function ProblemSolvingClient({ userId }) {
   const handleSyncPlatform = useCallback(
     async (platform) => {
       if (!platform) return;
+      if (EXTENSION_ONLY_PLATFORMS.has(platform.toLowerCase())) {
+        setExtensionModalOpen(true);
+        return;
+      }
       showToast(`Syncing ${platform}...`, 'info');
       try {
         const result = await syncPlatform(platform, true);
@@ -3298,7 +3381,7 @@ export default function ProblemSolvingClient({ userId }) {
           />
         );
       case 'problems':
-        return <ProblemsTab submissions={recentSubmissions} />;
+        return <ProblemsTab problems={allProblems} loading={allProblemsLoading} />;
       case 'contests':
         return (
           <ContestsTab
@@ -3419,6 +3502,44 @@ export default function ProblemSolvingClient({ userId }) {
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
         />
+      </AnimatePresence>
+
+      {/* Browser Extension modal for extension-only platforms */}
+      <AnimatePresence>
+        {extensionModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={() => setExtensionModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+                <h2 className="text-sm font-semibold text-white">Browser Extension Required</h2>
+                <button
+                  onClick={() => setExtensionModalOpen(false)}
+                  className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                <p className="mb-5 text-xs text-gray-500">
+                  This platform doesn&apos;t support direct API sync. Use the browser extension to automatically capture your solutions as you submit.
+                </p>
+                <ExtensionGuide />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </PageShell>
   );

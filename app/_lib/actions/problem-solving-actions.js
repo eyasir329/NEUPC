@@ -284,47 +284,82 @@ async function purgePlatformDataForUser({ userId, platformId }) {
     throw new Error('userId and platformId are required for platform cleanup');
   }
 
-  const { data: existingSubmissions, error: existingSubmissionsError } =
-    await supabaseAdmin
-      .from(V2_TABLES.SUBMISSIONS)
-      .select('id')
-      .eq('user_id', userId)
-      .eq('platform_id', platformId);
+  const fetchAllIds = async (table, filters) => {
+    const ids = [];
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      let q = supabaseAdmin.from(table).select('id').range(from, from + PAGE - 1);
+      for (const [col, val] of Object.entries(filters)) q = q.eq(col, val);
+      const { data: page, error } = await q;
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      ids.push(...page.map((r) => r.id));
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+    return ids;
+  };
 
-  if (existingSubmissionsError) throw existingSubmissionsError;
-  const submissionIds = (existingSubmissions || []).map((row) => row.id);
+  const submissionIds = await fetchAllIds(V2_TABLES.SUBMISSIONS, {
+    user_id: userId,
+    platform_id: platformId,
+  });
 
-  const { data: existingSolves, error: existingSolvesError } =
-    await supabaseAdmin
-      .from(V2_TABLES.USER_SOLVES)
-      .select('id, problems!inner(platform_id)')
-      .eq('user_id', userId)
-      .eq('problems.platform_id', platformId);
-
-  if (existingSolvesError) throw existingSolvesError;
-  const solveIds = (existingSolves || []).map((row) => row.id);
+  let solveIds = [];
+  {
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error } = await supabaseAdmin
+        .from(V2_TABLES.USER_SOLVES)
+        .select('id, problems!inner(platform_id)')
+        .eq('user_id', userId)
+        .eq('problems.platform_id', platformId)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      solveIds.push(...page.map((r) => r.id));
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+  }
 
   let existingAttempts = [];
   let unsolvedAttemptStorageAvailable = true;
 
-  const { data: existingAttemptsData, error: existingAttemptsError } =
-    await supabaseAdmin
-      .from(V2_TABLES.UNSOLVED_ATTEMPTS)
-      .select('id, external_problem_id')
-      .eq('user_id', userId)
-      .eq('platform_id', platformId);
-
-  if (existingAttemptsError) {
+  try {
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error } = await supabaseAdmin
+        .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+        .select('id, external_problem_id')
+        .eq('user_id', userId)
+        .eq('platform_id', platformId)
+        .range(from, from + PAGE - 1);
+      if (error) {
+        if (isMissingUnsolvedAttemptsTableError(error)) {
+          unsolvedAttemptStorageAvailable = false;
+          console.warn(
+            '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
+          );
+        } else {
+          throw error;
+        }
+        break;
+      }
+      if (!page || page.length === 0) break;
+      existingAttempts = existingAttempts.concat(page);
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+  } catch (existingAttemptsError) {
     if (isMissingUnsolvedAttemptsTableError(existingAttemptsError)) {
       unsolvedAttemptStorageAvailable = false;
-      console.warn(
-        '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
-      );
     } else {
       throw existingAttemptsError;
     }
-  } else {
-    existingAttempts = existingAttemptsData || [];
   }
 
   const attemptIds = (existingAttempts || []).map((row) => row.id);
@@ -1363,15 +1398,25 @@ export async function getProblemSolvingData() {
     let solvedRowsForDashboard = [];
     try {
       if (useV2) {
-        // V2 schema: user_solves -> problems -> platforms
-        const { data } = await supabaseAdmin
-          .from(V2_TABLES.USER_SOLVES)
-          .select(
-            'first_solved_at, problem_id, problems!inner(external_id, name, url, difficulty_rating, platform_id, platforms!inner(code))'
-          )
-          .eq('user_id', user.id);
-
-        solvedRowsForDashboard = data || [];
+        // V2 schema: user_solves -> problems -> platforms (paginated — no row cap)
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from(V2_TABLES.USER_SOLVES)
+              .select(
+                'first_solved_at, problem_id, problems!inner(external_id, name, url, difficulty_rating, platform_id, platforms!inner(code))'
+              )
+              .eq('user_id', user.id)
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            if (!page || page.length === 0) break;
+            solvedRowsForDashboard = solvedRowsForDashboard.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         // Count unique solved problems per platform code
         const solvedByPlatform = {};
@@ -1385,15 +1430,25 @@ export async function getProblemSolvingData() {
         platformSolvedCounts = solvedByPlatform;
         platformSolvedCountsLoaded = true;
       } else {
-        // V1 schema: user_solves -> problems -> platforms
-        const { data } = await supabaseAdmin
-          .from('user_solves')
-          .select(
-            'first_solved_at, problem_id, problems!inner(problem_id, problem_name, problem_url, difficulty_rating, platform_id, platforms!inner(code))'
-          )
-          .eq('user_id', user.id);
-
-        solvedRowsForDashboard = data || [];
+        // V1 schema: user_solves -> problems -> platforms (paginated — no row cap)
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from('user_solves')
+              .select(
+                'first_solved_at, problem_id, problems!inner(problem_id, problem_name, problem_url, difficulty_rating, platform_id, platforms!inner(code))'
+              )
+              .eq('user_id', user.id)
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            if (!page || page.length === 0) break;
+            solvedRowsForDashboard = solvedRowsForDashboard.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         // Count unique solved problems per platform code
         const solvedByPlatform = {};
@@ -1411,22 +1466,30 @@ export async function getProblemSolvingData() {
       console.error('Error fetching platform solved counts:', e.message);
     }
 
-    // Get total submissions per platform
+    // Get total submissions per platform (paginated)
     let platformSubmissionCounts = {};
     let platformSubmissionCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('platform_id, platforms!inner(code)')
-        .eq('user_id', user.id);
-
-      (data || []).forEach((sub) => {
-        const platformCode = sub.platforms?.code;
-        if (platformCode) {
-          platformSubmissionCounts[platformCode] =
-            (platformSubmissionCounts[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from(V2_TABLES.SUBMISSIONS)
+          .select('platform_id, platforms!inner(code)')
+          .eq('user_id', user.id)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((sub) => {
+          const platformCode = sub.platforms?.code;
+          if (platformCode) {
+            platformSubmissionCounts[platformCode] =
+              (platformSubmissionCounts[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSubmissionCountsLoaded = true;
     } catch (e) {
       console.error('Error fetching platform submission counts:', e.message);
@@ -1929,50 +1992,62 @@ export async function getMemberProblemSolvingData(targetUserId) {
     // Get latest sync status per platform from merged sync_jobs table.
     const syncCheckpoints = await getUserSyncStatusByPlatform(targetUserId);
 
-    // Get solved counts per platform from user_solves table (unique problems solved)
-    // This joins user_solves -> problems -> platforms to get accurate counts
+    // Get solved counts per platform from user_solves table (paginated)
     let platformSolvedCounts = {};
     let platformSolvedCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from('user_solves')
-        .select(
-          'problem_id, problems!inner(platform_id, platforms!inner(code))'
-        )
-        .eq('user_id', targetUserId);
-
-      // Count unique solved problems per platform code
       const solvedByPlatform = {};
-      (data || []).forEach((solve) => {
-        const platformCode = solve.problems?.platforms?.code;
-        if (platformCode) {
-          solvedByPlatform[platformCode] =
-            (solvedByPlatform[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('user_solves')
+          .select('problem_id, problems!inner(platform_id, platforms!inner(code))')
+          .eq('user_id', targetUserId)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((solve) => {
+          const platformCode = solve.problems?.platforms?.code;
+          if (platformCode) {
+            solvedByPlatform[platformCode] =
+              (solvedByPlatform[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSolvedCounts = solvedByPlatform;
       platformSolvedCountsLoaded = true;
     } catch (e) {
       console.error('Error fetching platform solved counts:', e.message);
     }
 
-    // Get total submissions per platform (joined with platforms)
+    // Get total submissions per platform (paginated)
     let platformSubmissionCounts = {};
     let platformSubmissionCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from('submissions')
-        .select('platform_id, platforms!inner(code)')
-        .eq('user_id', targetUserId);
-
       const countsByPlatform = {};
-      (data || []).forEach((sub) => {
-        const platformCode = sub.platforms?.code;
-        if (platformCode) {
-          countsByPlatform[platformCode] =
-            (countsByPlatform[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('submissions')
+          .select('platform_id, platforms!inner(code)')
+          .eq('user_id', targetUserId)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((sub) => {
+          const platformCode = sub.platforms?.code;
+          if (platformCode) {
+            countsByPlatform[platformCode] =
+              (countsByPlatform[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSubmissionCounts = countsByPlatform;
       platformSubmissionCountsLoaded = true;
     } catch (e) {
@@ -3820,4 +3895,123 @@ function _getDefaultStatistics() {
       usaco: { solved: 0, division: null },
     },
   };
+}
+
+/**
+ * Fetch every problem a user has touched (solved or attempted).
+ * Returns a flat list deduplicated by platform+problem_id, each with a
+ * `solved` boolean derived from whether any AC submission exists.
+ */
+export async function getUserAllProblems() {
+  const { user } = await requireRole('member');
+  const useV2 = await isV2SchemaAvailable();
+
+  const isAC = (v) => {
+    const u = String(v || '').toUpperCase().trim();
+    return u === 'AC' || u === 'OK' || u === 'ACCEPTED';
+  };
+
+  if (useV2) {
+    // 1. Solved problems from user_solves (one row per unique problem solved)
+    const { data: solves } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select(
+        `first_solved_at,
+         problems!inner(
+           id, external_id, name, url, difficulty_rating,
+           platforms!inner(code, name)
+         )`
+      )
+      .eq('user_id', user.id);
+
+    const solvedByProblemId = new Map();
+    for (const row of solves || []) {
+      const p = row.problems;
+      if (!p) continue;
+      const platform = p.platforms?.code || '';
+      const key = `${platform}:${p.external_id}`;
+      solvedByProblemId.set(key, {
+        problem_id: p.external_id,
+        problem_name: p.name,
+        problem_url: p.url,
+        platform,
+        difficulty_rating: p.difficulty_rating ?? null,
+        submitted_at: row.first_solved_at,
+        verdict: 'AC',
+        solved: true,
+      });
+    }
+
+    // 2. All submissions to catch unsolved attempts not in user_solves
+    const { data: subs } = await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select(
+        `external_problem_id, problem_name, verdict, submitted_at,
+         platforms!inner(code)`
+      )
+      .eq('user_id', user.id)
+      .order('submitted_at', { ascending: false });
+
+    const attemptMap = new Map();
+    for (const sub of subs || []) {
+      if (!sub.external_problem_id) continue;
+      const platform = sub.platforms?.code || '';
+      const key = `${platform}:${sub.external_problem_id}`;
+      // Already have it as solved — skip
+      if (solvedByProblemId.has(key)) continue;
+      // Keep the best (AC) or most recent entry
+      const existing = attemptMap.get(key);
+      if (!existing || (!isAC(existing.verdict) && isAC(sub.verdict))) {
+        attemptMap.set(key, {
+          problem_id: sub.external_problem_id,
+          problem_name: sub.problem_name || sub.external_problem_id,
+          problem_url: null,
+          platform,
+          difficulty_rating: null,
+          submitted_at: sub.submitted_at,
+          verdict: sub.verdict,
+          solved: isAC(sub.verdict),
+        });
+      }
+    }
+
+    const all = [
+      ...Array.from(solvedByProblemId.values()),
+      ...Array.from(attemptMap.values()),
+    ];
+    all.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    return { problems: all };
+  }
+
+  // Legacy schema
+  const { data: subs } = await supabaseAdmin
+    .from('problem_submissions')
+    .select(
+      'problem_id, platform, problem_name, problem_url, verdict, submitted_at, difficulty_rating'
+    )
+    .eq('user_id', user.id)
+    .order('submitted_at', { ascending: false });
+
+  const seen = new Map();
+  for (const sub of subs || []) {
+    if (!sub.problem_id) continue;
+    const key = `${sub.platform}:${sub.problem_id}`;
+    const existing = seen.get(key);
+    if (!existing || (!isAC(existing.verdict) && isAC(sub.verdict))) {
+      seen.set(key, {
+        problem_id: sub.problem_id,
+        problem_name: sub.problem_name || sub.problem_id,
+        problem_url: sub.problem_url,
+        platform: sub.platform,
+        difficulty_rating: sub.difficulty_rating ?? null,
+        submitted_at: sub.submitted_at,
+        verdict: sub.verdict,
+        solved: isAC(sub.verdict),
+      });
+    }
+  }
+
+  const all = Array.from(seen.values());
+  all.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+  return { problems: all };
 }

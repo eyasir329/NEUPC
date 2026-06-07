@@ -3741,6 +3741,143 @@ async function fetchHackerrankLatestSubmissionMeta(
   return null;
 }
 
+function parseHackerrankRelativeTime(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (!t) return null;
+
+  const now = Date.now();
+
+  const patterns = [
+    [/(\d+)\s*second/, 1000],
+    [/(\d+)\s*minute/, 60 * 1000],
+    [/(\d+)\s*hour/, 3600 * 1000],
+    [/(\d+)\s*day/, 86400 * 1000],
+    [/(\d+)\s*week/, 7 * 86400 * 1000],
+    [/(\d+)\s*month/, 30 * 86400 * 1000],
+    [/(\d+)\s*year/, 365 * 86400 * 1000],
+  ];
+
+  for (const [pattern, unitMs] of patterns) {
+    const match = t.match(pattern);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      return new Date(now - n * unitMs).toISOString();
+    }
+  }
+
+  // "almost X years", "about X years", "over X years" without explicit number
+  const approxMatch = t.match(
+    /(?:almost|about|over|nearly)\s+(\d+)\s*(year|month|week|day|hour)/
+  );
+  if (approxMatch) {
+    const n = parseInt(approxMatch[1], 10);
+    const unit = approxMatch[2];
+    const unitMap = {
+      year: 365 * 86400 * 1000,
+      month: 30 * 86400 * 1000,
+      week: 7 * 86400 * 1000,
+      day: 86400 * 1000,
+      hour: 3600 * 1000,
+    };
+    return new Date(now - n * (unitMap[unit] || 86400 * 1000)).toISOString();
+  }
+
+  return null;
+}
+
+async function fetchHackerrankSubmissionsViaTab(normalizedHandle) {
+  const BASE_URL = 'https://www.hackerrank.com/submissions/all';
+  const MAX_PAGES = 50;
+  const PAGE_LOAD_TIMEOUT = 30000;
+  const submissions = [];
+  const seenIds = new Set();
+  let tabId = null;
+
+  async function waitForPageLoad(expectedUrlPattern) {
+    const deadline = Date.now() + PAGE_LOAD_TIMEOUT;
+    // Give the navigation a moment to start
+    await sleep(800);
+    while (Date.now() < deadline) {
+      const info = await getTabInfo(tabId);
+      if (!info) throw new Error('HackerRank tab closed during scrape');
+      const urlMatch =
+        !expectedUrlPattern ||
+        String(info.url || '').includes(expectedUrlPattern);
+      if (info.status === 'complete' && urlMatch) return true;
+      await sleep(1000);
+    }
+    return false;
+  }
+
+  try {
+    const tab = await createTab(BASE_URL);
+    tabId = tab.id;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const pageUrl = page === 1 ? BASE_URL : `${BASE_URL}/${page}`;
+      const expectedFragment = page === 1 ? '/submissions/all' : `/submissions/all/${page}`;
+
+      await new Promise((resolve) => {
+        browserAPI.tabs.update(tabId, { url: pageUrl }, () => resolve());
+      });
+
+      const loaded = await waitForPageLoad(expectedFragment);
+      if (!loaded) {
+        console.warn(`[HackerRank] Tab load timeout on page ${page}`);
+        break;
+      }
+
+      // Inject content script (content script itself waits for React table via waitForElement)
+      await injectContentScript(tabId, 'hackerrank');
+      await sleep(500);
+
+      const response = await sendMessageToTab(tabId, { action: 'scrapeSubmissionsAll' });
+      if (!response?.success || !response?.data?.submissions) break;
+
+      const { submissions: pageRows, totalPages } = response.data;
+      if (!pageRows || pageRows.length === 0) break;
+
+      for (const row of pageRows) {
+        if (!row.id || !row.challengeSlug) continue;
+        if (seenIds.has(row.id)) continue;
+        seenIds.add(row.id);
+
+        const challengeSlug = String(row.challengeSlug).trim();
+        const submissionId = String(row.id).trim();
+        const verdict = normalizeHackerrankVerdict(row.verdictText || '');
+        const submittedAt = parseHackerrankRelativeTime(row.timeText);
+
+        submissions.push({
+          submission_id: submissionId,
+          problem_id: challengeSlug,
+          problem_name: String(row.problemName || challengeSlug).trim(),
+          problem_url: `https://www.hackerrank.com/challenges/${encodeURIComponent(challengeSlug)}/problem`,
+          contest_id: null,
+          verdict,
+          language: String(row.language || 'Unknown').trim(),
+          execution_time_ms: null,
+          memory_kb: null,
+          submitted_at: submittedAt,
+          source_code: null,
+          difficulty_rating: null,
+          tags: [],
+          submission_url: `https://www.hackerrank.com/challenges/${encodeURIComponent(challengeSlug)}/submissions/code/${encodeURIComponent(submissionId)}`,
+          platform: 'hackerrank',
+          handle: normalizedHandle,
+        });
+      }
+
+      if (page >= totalPages) break;
+      // Brief pause between pages to avoid hammering HackerRank
+      await sleep(1000);
+    }
+  } finally {
+    if (tabId) await removeTab(tabId);
+  }
+
+  return submissions;
+}
+
 async function fetchHackerrankSubmissions(handle, options = {}) {
   const { includeSubmissionIds = false } = options;
   const normalizedHandle = normalizeHackerrankHandleInput(handle);
@@ -3785,6 +3922,13 @@ async function fetchHackerrankSubmissions(handle, options = {}) {
           throw new Error(
             `HackerRank handle not found or inaccessible: ${normalizedHandle}`
           );
+        }
+        // 5xx means HackerRank's API is unavailable; fall back to page scraping
+        if (response.status >= 500) {
+          console.warn(
+            `[HackerRank] recent_challenges API returned ${response.status} for ${normalizedHandle} — falling back to /submissions/all scraping`
+          );
+          return await fetchHackerrankSubmissionsViaTab(normalizedHandle);
         }
         throw new Error(`HackerRank recent challenges HTTP ${response.status}`);
       }

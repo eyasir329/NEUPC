@@ -402,6 +402,9 @@
     detectPageType() {
       const path = window.location.pathname;
 
+      if (/\/submissions\/all/i.test(path)) {
+        return 'submissions_list';
+      }
       if (/\/submissions\//i.test(path)) {
         return 'submission';
       }
@@ -1327,6 +1330,53 @@
       return hasDescription || hasInputOutput || hasExamples || hasConstraints;
     }
 
+    scrapeSubmissionsListPage() {
+      const rows = safeQueryAll(
+        'table[aria-label="Submissions Table"] tbody tr[data-key]'
+      );
+
+      const submissions = [];
+      for (const row of rows) {
+        const id = row.getAttribute('data-key');
+        if (!id) continue;
+
+        const cells = safeQueryAll('td', row);
+        if (cells.length < 5) continue;
+
+        const problemLink = safeQuery('a', cells[0]);
+        const problemName = normalizeWhitespace(
+          problemLink?.textContent || ''
+        );
+        const href = problemLink?.getAttribute('href') || '';
+        const challengeSlug =
+          href.match(/\/challenges\/([^/?#]+)/i)?.[1] || '';
+        if (!challengeSlug) continue;
+
+        const language = normalizeWhitespace(cells[1]?.textContent || '');
+        const timeText = normalizeWhitespace(cells[2]?.textContent || '');
+        const verdictText = normalizeWhitespace(cells[3]?.textContent || '');
+        const score =
+          parseFloat(normalizeWhitespace(cells[4]?.textContent || '')) || 0;
+
+        submissions.push({
+          id,
+          challengeSlug,
+          problemName: problemName || challengeSlug,
+          language: language || 'Unknown',
+          timeText,
+          verdictText,
+          score,
+        });
+      }
+
+      const pageNums = safeQueryAll('.pagination-item a')
+        .map((a) => parseInt(normalizeWhitespace(a.textContent), 10))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const totalPages = pageNums.length > 0 ? Math.max(...pageNums) : 1;
+
+      return { submissions, totalPages };
+    }
+
     async handleExtractSubmissionMessage(request, sendResponse) {
       try {
         const pageType = this.detectPageType();
@@ -1414,6 +1464,22 @@
       this.messageListenerAttached = true;
 
       browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request?.action === 'scrapeSubmissionsAll') {
+          waitForElement('table[aria-label="Submissions Table"] tbody tr[data-key]', 15000)
+            .then(() => {
+              try {
+                const data = this.scrapeSubmissionsListPage();
+                sendResponse({ success: true, data });
+              } catch (error) {
+                sendResponse({ success: false, error: error?.message || 'Scrape failed' });
+              }
+            })
+            .catch(() => {
+              sendResponse({ success: true, data: { submissions: [], totalPages: 1 } });
+            });
+          return true;
+        }
+
         if (request?.action === 'extractSubmission') {
           this.handleExtractSubmissionMessage(request, sendResponse);
           return true;

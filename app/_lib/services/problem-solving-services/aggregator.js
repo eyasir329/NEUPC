@@ -1687,24 +1687,48 @@ export class ProblemSolvingAggregator {
         return;
       }
 
-      const { data } = await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('platform_id', platformId)
-        .order('submitted_at', { ascending: true });
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from(V2_TABLES.SUBMISSIONS)
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform_id', platformId)
+            .order('submitted_at', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
-      submissions = (data || []).filter(
+      submissions = submissions.filter(
         (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
       );
     } else {
       // Legacy: Query from problem_submissions
-      const { data } = await supabaseAdmin
-        .from('problem_submissions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('platform', platform)
-        .order('submitted_at', { ascending: true });
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_submissions')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform', platform)
+            .order('submitted_at', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       submissions = (data || []).filter(
         (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
@@ -1787,12 +1811,25 @@ export class ProblemSolvingAggregator {
       const validProblemKeys = new Set(Object.keys(solvesByProblem));
 
       try {
-        const { data: existingSolveRows, error: existingSolveError } =
-          await supabaseAdmin
-            .from(V2_TABLES.USER_SOLVES)
-            .select('id, problems!inner(external_id, platform_id)')
-            .eq('user_id', userId)
-            .eq('problems.platform_id', platformId);
+        let existingSolveRows = [];
+        let existingSolveError = null;
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from(V2_TABLES.USER_SOLVES)
+              .select('id, problems!inner(external_id, platform_id)')
+              .eq('user_id', userId)
+              .eq('problems.platform_id', platformId)
+              .range(from, from + PAGE - 1);
+            if (error) { existingSolveError = error; break; }
+            if (!page || page.length === 0) break;
+            existingSolveRows = existingSolveRows.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         if (existingSolveError) {
           console.warn(
@@ -1988,11 +2025,23 @@ export class ProblemSolvingAggregator {
       // ═══════════════════════════════════════════════════════════════════════
 
       // ── CLEANUP ORPHANED SOLVES ──────────────────────────────────────────────
-      const { data: existingSolves } = await supabaseAdmin
-        .from('problem_solves')
-        .select('problem_id')
-        .eq('user_id', userId)
-        .eq('platform', platform);
+      let existingSolves = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_solves')
+            .select('problem_id')
+            .eq('user_id', userId)
+            .eq('platform', platform)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          existingSolves = existingSolves.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       if (existingSolves) {
         const validProblemIds = new Set(Object.keys(solvesByProblem));
@@ -2169,12 +2218,24 @@ export class ProblemSolvingAggregator {
    */
   async backfillTagsForUser(userId) {
     try {
-      // Get all submissions with tags
-      const { data: submissions } = await supabaseAdmin
-        .from('problem_submissions')
-        .select('platform, problem_id, tags')
-        .eq('user_id', userId)
-        .not('tags', 'is', null);
+      // Get all submissions with tags (paginated)
+      let submissions = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_submissions')
+            .select('platform, problem_id, tags')
+            .eq('user_id', userId)
+            .not('tags', 'is', null)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       if (!submissions || submissions.length === 0) return 0;
 
@@ -2222,12 +2283,24 @@ export class ProblemSolvingAggregator {
   }
 
   async updateDailyActivity(userId) {
-    const { data: solves } = await supabaseAdmin
-      .from('problem_solves')
-      .select('first_solved_at, platform')
-      .eq('user_id', userId);
+    let solves = [];
+    {
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('problem_solves')
+          .select('first_solved_at, platform')
+          .eq('user_id', userId)
+          .range(from, from + PAGE - 1);
+        if (error || !page || page.length === 0) break;
+        solves = solves.concat(page);
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
+    }
 
-    if (!solves) return;
+    if (solves.length === 0) return;
 
     const byDate = {};
     for (const solve of solves) {
@@ -2257,22 +2330,34 @@ export class ProblemSolvingAggregator {
   async updateUserStatistics(userId, fetchPlatformStats = false) {
     const statsTable = V2_TABLES.USER_STATS;
 
-    // V2/V3: join user_solves → problems → difficulty_tiers for proper tier counts
-    const { data: solves } = await supabaseAdmin
-      .from(V2_TABLES.USER_SOLVES)
-      .select(
-        `first_solved_at,
-         problems(
-           difficulty_rating,
-           difficulty_tier_id,
-           platform_id,
-           difficulty_tiers(id, min_rating, max_rating),
-           platforms(code)
-         )`
-      )
-      .eq('user_id', userId);
+    // V2/V3: join user_solves → problems → difficulty_tiers for proper tier counts (paginated)
+    let solves = [];
+    {
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from(V2_TABLES.USER_SOLVES)
+          .select(
+            `first_solved_at,
+             problems(
+               difficulty_rating,
+               difficulty_tier_id,
+               platform_id,
+               difficulty_tiers(id, min_rating, max_rating),
+               platforms(code)
+             )`
+          )
+          .eq('user_id', userId)
+          .range(from, from + PAGE - 1);
+        if (error || !page || page.length === 0) break;
+        solves = solves.concat(page);
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
+    }
 
-    if (!solves) return;
+    if (solves.length === 0) return;
 
     const totalSolved = solves.length;
     const now = new Date();
@@ -2516,13 +2601,25 @@ export class ProblemSolvingAggregator {
         return hasAttemptInProblemsPayload(contest.problems_data);
       };
 
-      // Count active contests per platform (submission attempt during contest time)
-      const { data: contests } = await supabaseAdmin
-        .from(V2_TABLES.CONTEST_HISTORY)
-        .select(
-          'platform_id, is_virtual, problems_attempted, problems_solved, score, problems_data'
-        )
-        .eq('user_id', userId);
+      // Count active contests per platform (paginated)
+      let contests = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from(V2_TABLES.CONTEST_HISTORY)
+            .select(
+              'platform_id, is_virtual, problems_attempted, problems_solved, score, problems_data'
+            )
+            .eq('user_id', userId)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          contests = contests.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       const contestsByPlatform = {};
       (contests || []).forEach((contest) => {
