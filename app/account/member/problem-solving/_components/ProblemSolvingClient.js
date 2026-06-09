@@ -26,7 +26,6 @@ import {
   User as UserIcon,
   Settings,
   Search,
-  Funnel,
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -42,13 +41,19 @@ import {
   useProblemSolving,
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
-import { getUpcomingContestsAction, getUserAllProblems } from '@/app/_lib/actions/problem-solving-actions';
+import {
+  getUpcomingContestsAction,
+  getUserAllProblems,
+} from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
 import AddPlatformSection from './AddPlatformSection';
 import ContestHistory from './ContestHistory';
 import ExtensionGuide from './ExtensionGuide';
 import ActivityHeatmap from './ActivityHeatmap';
-import { PROBLEM_SOLVING_PLATFORMS, getAllPlatformConfigs } from '@/app/_lib/services/problem-solving-platforms';
+import {
+  PROBLEM_SOLVING_PLATFORMS,
+  getAllPlatformConfigs,
+} from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 // =====================================================================
@@ -67,7 +72,11 @@ function getPaginationRange(currentPageIndex, totalPages) {
   let l;
 
   for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - delta && i <= currentPage + delta)
+    ) {
       range.push(i);
     }
   }
@@ -84,7 +93,7 @@ function getPaginationRange(currentPageIndex, totalPages) {
     l = i;
   }
 
-  return rangeWithDots.map(item => item === '...' ? '...' : item - 1);
+  return rangeWithDots.map((item) => (item === '...' ? '...' : item - 1));
 }
 
 const TABS = [
@@ -152,6 +161,15 @@ const PLATFORM_META = {
     tagText: 'text-[#94a3b8]',
     tagBorder: 'border-[#94a3b8]/20',
   },
+  cfgym: {
+    short: 'CG',
+    name: 'CF Gym',
+    color: 'bg-[#f472b6]',
+    dot: 'bg-[#f472b6]',
+    tagBg: 'bg-[#f472b6]/10',
+    tagText: 'text-[#f472b6]',
+    tagBorder: 'border-[#f472b6]/20',
+  },
 };
 
 function getPlatformMeta(code) {
@@ -194,6 +212,13 @@ const getErrorMessage = (error, fallbackMessage) => {
 function buildProblemUrl(platform, problemId) {
   if (!problemId) return null;
   const p = (platform || '').toLowerCase();
+  if (p === 'cfgym') {
+    // problemId is like "100001A" (contestId >= 100000)
+    const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
+    if (match)
+      return `https://codeforces.com/gym/${match[1]}/problem/${match[2]}`;
+    return null;
+  }
   if (p === 'codeforces') {
     // problemId is typically "1234A" or "1234/A"
     const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
@@ -351,8 +376,6 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-
-
 function SettingsModal({ open, onClose }) {
   if (!open) return null;
   return (
@@ -411,8 +434,6 @@ function SettingsModal({ open, onClose }) {
     </div>
   );
 }
-
-
 
 // =====================================================================
 // Difficulty donut
@@ -486,7 +507,7 @@ function DifficultyDonut({ statistics }) {
       </div>
 
       {/* Donut + rows side by side */}
-      <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+      <div className="relative z-10 flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
         {/* SVG donut */}
         <div className="relative shrink-0">
           <svg width="140" height="140" viewBox="0 0 140 140">
@@ -531,7 +552,7 @@ function DifficultyDonut({ statistics }) {
         </div>
 
         {/* Tier rows */}
-        <div className="flex w-full sm:flex-1 flex-col gap-3.5">
+        <div className="flex w-full flex-col gap-3.5 sm:flex-1">
           {tiers.map((t) => {
             const pct = Math.round((t.count / total) * 100);
             return (
@@ -691,12 +712,17 @@ function OverviewTab({
   const [platformPage, setPlatformPage] = useState(0);
   const PLATFORM_PAGE_SIZE = 5;
 
-  const totalPlatformPages = Math.ceil((handles?.length || 0) / PLATFORM_PAGE_SIZE);
+  const totalPlatformPages = Math.ceil(
+    (handles?.length || 0) / PLATFORM_PAGE_SIZE
+  );
   const visiblePlatforms = (handles || []).slice(
     platformPage * PLATFORM_PAGE_SIZE,
     (platformPage + 1) * PLATFORM_PAGE_SIZE
   );
-  const platformPaginationRange = getPaginationRange(platformPage, totalPlatformPages);
+  const platformPaginationRange = getPaginationRange(
+    platformPage,
+    totalPlatformPages
+  );
 
   useEffect(() => {
     if (platformPage >= totalPlatformPages && totalPlatformPages > 0) {
@@ -789,7 +815,7 @@ function OverviewTab({
             key={i}
             whileHover={{ y: -4, scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 sm:p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:p-6"
           >
             <div
               className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-linear-to-br opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -797,7 +823,7 @@ function OverviewTab({
             />
 
             <div className="relative z-10 mb-4 flex items-center justify-between">
-              <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+              <span className="text-[10px] font-semibold tracking-wide text-zinc-400 uppercase sm:text-xs">
                 {s.l}
               </span>
               <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -815,7 +841,7 @@ function OverviewTab({
                 {s.v}
               </span>
               {s.sub && (
-                <span className="text-[11px] sm:text-xs font-medium text-zinc-500 whitespace-nowrap">
+                <span className="text-[11px] font-medium whitespace-nowrap text-zinc-500 sm:text-xs">
                   {s.sub}
                 </span>
               )}
@@ -827,7 +853,7 @@ function OverviewTab({
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 sm:p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1"
+          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 sm:p-5 lg:col-span-1"
         >
           <div
             className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -835,7 +861,7 @@ function OverviewTab({
           />
 
           <div className="relative z-10 mb-1 flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            <span className="text-[10px] font-semibold tracking-wide text-zinc-400 uppercase sm:text-xs">
               Avg Accuracy
             </span>
             <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -1014,7 +1040,9 @@ function OverviewTab({
           <div className="flex flex-col gap-1.5 pt-2">
             {!handles || handles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center">
-                <p className="text-xs text-zinc-500">No platforms connected yet.</p>
+                <p className="text-xs text-zinc-500">
+                  No platforms connected yet.
+                </p>
                 <p className="mt-1 text-[11px] text-zinc-600">
                   Connect your first platform to start tracking solves!
                 </p>
@@ -1039,7 +1067,10 @@ function OverviewTab({
                       Syncing
                     </span>
                   ) : hasError ? (
-                    <span className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-rose-400 uppercase" title={ps.error_message}>
+                    <span
+                      className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-rose-400 uppercase"
+                      title={ps.error_message}
+                    >
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
                       Error
                     </span>
@@ -1082,7 +1113,11 @@ function OverviewTab({
                           <button
                             onClick={() => onSyncPlatform(code)}
                             className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                            title={lastSynced ? `Last synced ${relativeTime(lastSynced)}` : 'Sync now'}
+                            title={
+                              lastSynced
+                                ? `Last synced ${relativeTime(lastSynced)}`
+                                : 'Sync now'
+                            }
                             disabled={isSyncing}
                           >
                             <RefreshCw
@@ -1099,8 +1134,17 @@ function OverviewTab({
                         <div className="flex items-center gap-3 border-t border-white/5 pt-2">
                           {rating > 0 && (
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">Rating</span>
-                              <span className={cn('font-mono text-xs font-bold', meta.tagText)}>{formatNumber(rating)}</span>
+                              <span className="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">
+                                Rating
+                              </span>
+                              <span
+                                className={cn(
+                                  'font-mono text-xs font-bold',
+                                  meta.tagText
+                                )}
+                              >
+                                {formatNumber(rating)}
+                              </span>
                             </div>
                           )}
                           {rating > 0 && solvedCount > 0 && (
@@ -1108,20 +1152,29 @@ function OverviewTab({
                           )}
                           {solvedCount > 0 && (
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">Solved</span>
-                              <span className="font-mono text-xs font-bold text-emerald-400">{formatNumber(solvedCount)}</span>
+                              <span className="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">
+                                Solved
+                              </span>
+                              <span className="font-mono text-xs font-bold text-emerald-400">
+                                {formatNumber(solvedCount)}
+                              </span>
                             </div>
                           )}
                           {lastSynced && (
                             <>
-                              <span className="ml-auto text-[10px] text-zinc-600">{relativeTime(lastSynced)}</span>
+                              <span className="ml-auto text-[10px] text-zinc-600">
+                                {relativeTime(lastSynced)}
+                              </span>
                             </>
                           )}
                         </div>
                       )}
 
                       {hasError && (
-                        <p className="truncate rounded-lg bg-rose-500/5 px-2 py-1 text-[10px] text-rose-400" title={ps.error_message}>
+                        <p
+                          className="truncate rounded-lg bg-rose-500/5 px-2 py-1 text-[10px] text-rose-400"
+                          title={ps.error_message}
+                        >
                           {ps.error_message}
                         </p>
                       )}
@@ -1141,7 +1194,9 @@ function OverviewTab({
                     </p>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setPlatformPage((p) => Math.max(0, p - 1))}
+                        onClick={() =>
+                          setPlatformPage((p) => Math.max(0, p - 1))
+                        }
                         disabled={platformPage === 0}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                       >
@@ -1174,7 +1229,11 @@ function OverviewTab({
                         );
                       })}
                       <button
-                        onClick={() => setPlatformPage((p) => Math.min(totalPlatformPages - 1, p + 1))}
+                        onClick={() =>
+                          setPlatformPage((p) =>
+                            Math.min(totalPlatformPages - 1, p + 1)
+                          )
+                        }
                         disabled={platformPage === totalPlatformPages - 1}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                       >
@@ -1196,7 +1255,10 @@ function ProblemsTab({ problems, loading, handles }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'solved' | 'unsolved'
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all'); // 'all' | '7d' | '30d' | '90d' | '1y'
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | '7d' | '30d' | '90d' | '1y' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [now] = useState(() => Date.now());
   const [page, setPage] = useState(0);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const PAGE_SIZE = 15;
@@ -1204,9 +1266,15 @@ function ProblemsTab({ problems, loading, handles }) {
   // All connected platforms from handles; fall back to platforms seen in problems
   const availablePlatforms = useMemo(() => {
     if (handles && handles.length > 0) {
-      return [...new Set(handles.map((h) => (h.platform || '').toLowerCase()).filter(Boolean))].sort();
+      return [
+        ...new Set(
+          handles.map((h) => (h.platform || '').toLowerCase()).filter(Boolean)
+        ),
+      ].sort();
     }
-    return [...new Set((problems || []).map((s) => s.platform).filter(Boolean))].sort();
+    return [
+      ...new Set((problems || []).map((s) => s.platform).filter(Boolean)),
+    ].sort();
   }, [handles, problems]);
 
   const list = useMemo(() => {
@@ -1221,19 +1289,53 @@ function ProblemsTab({ problems, loading, handles }) {
     }
     if (statusFilter === 'solved') arr = arr.filter((s) => s.solved);
     if (statusFilter === 'unsolved') arr = arr.filter((s) => !s.solved);
-    if (platformFilter !== 'all') arr = arr.filter((s) => s.platform === platformFilter);
+    if (platformFilter !== 'all')
+      arr = arr.filter((s) => s.platform === platformFilter);
     if (dateFilter !== 'all') {
-      const cutoffMs = {
-        '7d': 7, '30d': 30, '90d': 90, '1y': 365,
-      }[dateFilter] * 86400000;
-      const cutoff = Date.now() - cutoffMs;
-      arr = arr.filter((s) => {
-        if (!s.submitted_at) return false;
-        return new Date(s.submitted_at).getTime() >= cutoff;
-      });
+      if (dateFilter === 'custom') {
+        const startTime = customStartDate
+          ? new Date(`${customStartDate}T00:00:00`).getTime()
+          : null;
+        const endTime = customEndDate
+          ? new Date(`${customEndDate}T23:59:59.999`).getTime()
+          : null;
+
+        if (startTime !== null || endTime !== null) {
+          arr = arr.filter((s) => {
+            if (!s.submitted_at) return false;
+            const submittedTime = new Date(s.submitted_at).getTime();
+            if (Number.isNaN(submittedTime)) return false;
+            if (startTime !== null && submittedTime < startTime) return false;
+            if (endTime !== null && submittedTime > endTime) return false;
+            return true;
+          });
+        }
+      } else {
+        const cutoffMs =
+          {
+            '7d': 7,
+            '30d': 30,
+            '90d': 90,
+            '1y': 365,
+          }[dateFilter] * 86400000;
+        const cutoff = now - cutoffMs;
+        arr = arr.filter((s) => {
+          if (!s.submitted_at) return false;
+          return new Date(s.submitted_at).getTime() >= cutoff;
+        });
+      }
     }
     return arr;
-  }, [problems, search, statusFilter, platformFilter, dateFilter]);
+  }, [
+    problems,
+    search,
+    statusFilter,
+    platformFilter,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    now,
+  ]);
 
   const totalSolved = (problems || []).filter((s) => s.solved).length;
 
@@ -1323,7 +1425,10 @@ function ProblemsTab({ problems, loading, handles }) {
             <input
               type="text"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search problems by name or ID..."
               className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20"
             />
@@ -1332,7 +1437,10 @@ function ProblemsTab({ problems, loading, handles }) {
             {['all', 'solved', 'unsolved'].map((f) => (
               <button
                 key={f}
-                onClick={() => { setStatusFilter(f); setPage(0); }}
+                onClick={() => {
+                  setStatusFilter(f);
+                  setPage(0);
+                }}
                 className={cn(
                   'rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap capitalize transition-colors',
                   statusFilter === f
@@ -1350,15 +1458,22 @@ function ProblemsTab({ problems, loading, handles }) {
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           {/* Platform filter */}
           <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">Platform</span>
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+              Platform
+            </span>
             <select
               value={platformFilter}
-              onChange={(e) => { setPlatformFilter(e.target.value); setPage(0); }}
-              className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 outline-none transition-colors focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+              onChange={(e) => {
+                setPlatformFilter(e.target.value);
+                setPage(0);
+              }}
+              className="cursor-pointer rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All platforms</option>
               {availablePlatforms.map((p) => (
-                <option key={p} value={p}>{getPlatformMeta(p).name}</option>
+                <option key={p} value={p}>
+                  {getPlatformMeta(p).name}
+                </option>
               ))}
             </select>
           </div>
@@ -1367,17 +1482,23 @@ function ProblemsTab({ problems, loading, handles }) {
 
           {/* Date filter */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">Date</span>
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+              Date
+            </span>
             {[
               { value: 'all', label: 'All time' },
               { value: '7d', label: '7 days' },
               { value: '30d', label: '30 days' },
               { value: '90d', label: '3 months' },
               { value: '1y', label: '1 year' },
+              { value: 'custom', label: 'Custom' },
             ].map(({ value, label }) => (
               <button
                 key={value}
-                onClick={() => { setDateFilter(value); setPage(0); }}
+                onClick={() => {
+                  setDateFilter(value);
+                  setPage(0);
+                }}
                 className={cn(
                   'rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
                   dateFilter === value
@@ -1390,6 +1511,53 @@ function ProblemsTab({ problems, loading, handles }) {
             ))}
           </div>
         </div>
+
+        {dateFilter === 'custom' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:flex-row sm:items-end">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+                Start date
+              </span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setPage(0);
+                }}
+                style={{ colorScheme: 'dark' }}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+                End date
+              </span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setPage(0);
+                }}
+                style={{ colorScheme: 'dark' }}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFilter('all');
+                setCustomStartDate('');
+                setCustomEndDate('');
+                setPage(0);
+              }}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Clear custom range
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -1400,7 +1568,7 @@ function ProblemsTab({ problems, loading, handles }) {
               <th className="w-12 px-5 py-4 text-center font-semibold">
                 Status
               </th>
-              <th className="px-5 py-4 font-semibold min-w-[220px]">Problem</th>
+              <th className="min-w-[220px] px-5 py-4 font-semibold">Problem</th>
               <th className="w-[140px] px-5 py-4 font-semibold">Tags</th>
               <th className="w-36 px-5 py-4 font-semibold">Platform</th>
               <th className="w-28 px-5 py-4 text-right font-semibold">
@@ -1430,7 +1598,8 @@ function ProblemsTab({ problems, loading, handles }) {
             {visible.map((s, i) => {
               const isAc = s.solved === true;
               const verdict = String(s.verdict || '').toUpperCase();
-              const isWa = !isAc && (verdict.includes('WRONG') || verdict === 'WA');
+              const isWa =
+                !isAc && (verdict.includes('WRONG') || verdict === 'WA');
               const meta = getPlatformMeta(s.platform);
               const diff = s.difficulty_rating;
               const title = s.problem_name || s.problem_id;
@@ -1452,7 +1621,10 @@ function ProblemsTab({ problems, loading, handles }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-zinc-200 transition-colors group-hover:text-indigo-300">
-                      <span className="truncate max-w-[180px] sm:max-w-[320px]" title={title}>
+                      <span
+                        className="max-w-[180px] truncate sm:max-w-[320px]"
+                        title={title}
+                      >
                         {title}
                       </span>
                       {(s.problem_url ||
@@ -1540,7 +1712,11 @@ function ProblemsTab({ problems, loading, handles }) {
 
       <div className="flex items-center justify-between border-t border-white/5 pt-4">
         <div className="text-sm font-medium text-zinc-500">
-          Showing <span className="text-white">{list.length === 0 ? 0 : start + 1}</span> to{' '}
+          Showing{' '}
+          <span className="text-white">
+            {list.length === 0 ? 0 : start + 1}
+          </span>{' '}
+          to{' '}
           <span className="text-white">
             {Math.min(start + PAGE_SIZE, list.length)}
           </span>{' '}
@@ -1629,7 +1805,12 @@ function getTooltipStyle(pos, box) {
   return { left, top };
 }
 
-function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingRating }) {
+function RatingLineChart({
+  ratingHistory,
+  contestHistory,
+  onSyncRating,
+  syncingRating,
+}) {
   const [isMobile, setIsMobile] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -1668,7 +1849,11 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
   // Enrich rating data with contest names and other metadata
   const enrichedRatingHistory = useMemo(() => {
     return (ratingHistory || []).map((rating) => {
-      const ratingPlatform = (rating.platform || rating.platforms?.code || '').toLowerCase();
+      const ratingPlatform = (
+        rating.platform ||
+        rating.platforms?.code ||
+        ''
+      ).toLowerCase();
       const ratingDateStr = rating.date || rating.recorded_at;
       if (!ratingDateStr || !ratingPlatform) return rating;
 
@@ -1688,7 +1873,11 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
       // Fallback 2: search through contest history for close date match
       if (!matchedContest) {
         matchedContest = (contestHistory || []).find((contest) => {
-          const contestPlatform = (contest.platform || contest.platforms?.code || '').toLowerCase();
+          const contestPlatform = (
+            contest.platform ||
+            contest.platforms?.code ||
+            ''
+          ).toLowerCase();
           if (contestPlatform !== ratingPlatform) return false;
           const contestDateStr = contest.date || contest.contest_date;
           if (!contestDateStr) return false;
@@ -1697,10 +1886,7 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
 
           const contestNewRating = contest.newRating || contest.new_rating;
           // Match if within 1.5 days and rating matches
-          return (
-            timeDiff < 129600000 &&
-            contestNewRating === ratingValue
-          );
+          return timeDiff < 129600000 && contestNewRating === ratingValue;
         });
       }
 
@@ -1708,32 +1894,55 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
       const ratingChange = rating.change || rating.rating_change;
       if (!matchedContest && ratingChange) {
         matchedContest = (contestHistory || []).find((contest) => {
-          const contestPlatform = (contest.platform || contest.platforms?.code || '').toLowerCase();
+          const contestPlatform = (
+            contest.platform ||
+            contest.platforms?.code ||
+            ''
+          ).toLowerCase();
           if (contestPlatform !== ratingPlatform) return false;
 
-          const contestRatingChange = contest.ratingChange || contest.rating_change;
+          const contestRatingChange =
+            contest.ratingChange || contest.rating_change;
           const contestDateStr = contest.date || contest.contest_date;
           if (!contestDateStr) return false;
           const contestDate = new Date(contestDateStr);
           const timeDiff = Math.abs(ratingDate - contestDate);
 
-          return (
-            timeDiff < 129600000 &&
-            contestRatingChange === ratingChange
-          );
+          return timeDiff < 129600000 && contestRatingChange === ratingChange;
         });
       }
 
       // Prefer the row's own contest data (joined authoritatively via the
       // contest_id FK in transformRatingHistory); fall back to the heuristic
       // match only when the FK join was empty.
-      const contestName = rating.contestName || rating.contest_history?.contest_name || matchedContest?.name || matchedContest?.contest_name;
-      const contestId = rating.contestId || rating.contest_history?.external_contest_id || matchedContest?.contestId || matchedContest?.external_contest_id;
-      const contestUrl = rating.contestUrl || rating.contest_history?.contest_url || matchedContest?.url || matchedContest?.contest_url;
+      const contestName =
+        rating.contestName ||
+        rating.contest_history?.contest_name ||
+        matchedContest?.name ||
+        matchedContest?.contest_name;
+      const contestId =
+        rating.contestId ||
+        rating.contest_history?.external_contest_id ||
+        matchedContest?.contestId ||
+        matchedContest?.external_contest_id;
+      const contestUrl =
+        rating.contestUrl ||
+        rating.contest_history?.contest_url ||
+        matchedContest?.url ||
+        matchedContest?.contest_url;
       const rank = rating.rank ?? matchedContest?.rank;
-      const totalParticipants = rating.totalParticipants ?? matchedContest?.totalParticipants ?? matchedContest?.total_participants;
-      const problemsSolved = rating.problemsSolved ?? matchedContest?.solved ?? matchedContest?.problems_solved;
-      const problemsAttempted = rating.problemsAttempted ?? matchedContest?.problemsAttempted ?? matchedContest?.problems_attempted;
+      const totalParticipants =
+        rating.totalParticipants ??
+        matchedContest?.totalParticipants ??
+        matchedContest?.total_participants;
+      const problemsSolved =
+        rating.problemsSolved ??
+        matchedContest?.solved ??
+        matchedContest?.problems_solved;
+      const problemsAttempted =
+        rating.problemsAttempted ??
+        matchedContest?.problemsAttempted ??
+        matchedContest?.problems_attempted;
 
       // Derive the real contest size from the problems array (already fetched
       // by the sync and stored in problems_data → transformContestHistory sets
@@ -1744,11 +1953,13 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
         const probs = matchedContest?.problems;
         if (Array.isArray(probs) && probs.length > 0) {
           const hasUnattempted = probs.some(
-            p => !p.solved && !p.solvedDuringContest && !p.upsolve && !p.attempted
+            (p) =>
+              !p.solved && !p.solvedDuringContest && !p.upsolve && !p.attempted
           );
           if (hasUnattempted) return probs.length;
         }
-        const dbTotal = matchedContest?.totalProblems ?? matchedContest?.total_problems;
+        const dbTotal =
+          matchedContest?.totalProblems ?? matchedContest?.total_problems;
         const solved = problemsSolved;
         return dbTotal && dbTotal > solved ? dbTotal : null;
       })();
@@ -1842,7 +2053,9 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
 
   const W = isMobile ? 380 : 800;
   const H = isMobile ? 220 : 280;
-  const PAD = isMobile ? { l: 35, r: 15, t: 15, b: 25 } : { l: 50, r: 20, t: 20, b: 30 };
+  const PAD = isMobile
+    ? { l: 35, r: 15, t: 15, b: 25 }
+    : { l: 50, r: 20, t: 20, b: 30 };
   const innerW = W - PAD.l - PAD.r;
   const innerH = H - PAD.t - PAD.b;
 
@@ -2085,13 +2298,24 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
           >
             {(() => {
               const meta = getPlatformMeta(hoveredPoint.platform);
-              const date = new Date(hoveredPoint.date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              });
-              const changeFormatted = hoveredPoint.change > 0 ? `+${hoveredPoint.change}` : hoveredPoint.change;
-              const changeColor = hoveredPoint.change > 0 ? 'text-emerald-400' : hoveredPoint.change < 0 ? 'text-rose-400' : 'text-zinc-500';
+              const date = new Date(hoveredPoint.date).toLocaleDateString(
+                'en-US',
+                {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                }
+              );
+              const changeFormatted =
+                hoveredPoint.change > 0
+                  ? `+${hoveredPoint.change}`
+                  : hoveredPoint.change;
+              const changeColor =
+                hoveredPoint.change > 0
+                  ? 'text-emerald-400'
+                  : hoveredPoint.change < 0
+                    ? 'text-rose-400'
+                    : 'text-zinc-500';
 
               const getPercentile = (rank, total) => {
                 if (!rank || !total || total <= 0) return null;
@@ -2109,22 +2333,30 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
                 return 'text-blue-400';
               };
 
-              const pct = getPercentile(hoveredPoint.rank, hoveredPoint.totalParticipants);
+              const pct = getPercentile(
+                hoveredPoint.rank,
+                hoveredPoint.totalParticipants
+              );
 
               return (
                 <div className="flex flex-col gap-1.5 text-left">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                       <span className={cn('h-2 w-2 rounded-full', meta.dot)} />
-                      <span className={cn('text-[10px] font-bold uppercase tracking-wider', meta.tagText)}>
+                      <span
+                        className={cn(
+                          'text-[10px] font-bold tracking-wider uppercase',
+                          meta.tagText
+                        )}
+                      >
                         {meta.name}
                       </span>
                     </div>
                     <span className="text-[10px] text-zinc-500">{date}</span>
                   </div>
-                  
+
                   {hoveredPoint.contestName ? (
-                    <h4 className="max-w-[230px] text-xs font-bold text-zinc-100 leading-tight">
+                    <h4 className="max-w-[230px] text-xs leading-tight font-bold text-zinc-100">
                       {hoveredPoint.contestName}
                     </h4>
                   ) : (
@@ -2136,51 +2368,67 @@ function RatingLineChart({ ratingHistory, contestHistory, onSyncRating, syncingR
                   <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-white/5 pt-2 text-[11px]">
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-500">New Rating</span>
-                      <span className="font-mono font-bold text-zinc-200">{hoveredPoint.rating}</span>
+                      <span className="font-mono font-bold text-zinc-200">
+                        {hoveredPoint.rating}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-500">Change</span>
                       <span className={cn('font-mono font-bold', changeColor)}>
-                        {hoveredPoint.change !== null && hoveredPoint.change !== undefined ? changeFormatted : '—'}
+                        {hoveredPoint.change !== null &&
+                        hoveredPoint.change !== undefined
+                          ? changeFormatted
+                          : '—'}
                       </span>
                     </div>
 
-                    {hoveredPoint.rank !== null && hoveredPoint.rank !== undefined && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Rank</span>
-                        <span className="font-mono font-bold text-zinc-200">
-                          {hoveredPoint.rank}
-                          {hoveredPoint.totalParticipants ? (
-                            <span className="text-[10px] text-zinc-500 font-normal">
-                              {' '}/ {hoveredPoint.totalParticipants}
-                            </span>
-                          ) : null}
-                        </span>
-                      </div>
-                    )}
+                    {hoveredPoint.rank !== null &&
+                      hoveredPoint.rank !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-500">Rank</span>
+                          <span className="font-mono font-bold text-zinc-200">
+                            {hoveredPoint.rank}
+                            {hoveredPoint.totalParticipants ? (
+                              <span className="text-[10px] font-normal text-zinc-500">
+                                {' '}
+                                / {hoveredPoint.totalParticipants}
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
+                      )}
 
                     {pct !== null && (
                       <div className="flex items-center justify-between">
                         <span className="text-zinc-500">Percentile</span>
-                        <span className={cn('font-mono font-bold', getRankPercentileColor(pct))}>
+                        <span
+                          className={cn(
+                            'font-mono font-bold',
+                            getRankPercentileColor(pct)
+                          )}
+                        >
                           Top {pct.toFixed(1)}%
                         </span>
                       </div>
                     )}
 
-                    {hoveredPoint.problemsSolved !== null && hoveredPoint.problemsSolved !== undefined && (
-                      <div className="col-span-2 flex items-center justify-between border-t border-white/[0.03] pt-1.5">
-                        <span className="text-zinc-500">Solved</span>
-                        <span className="font-mono font-semibold text-emerald-400">
-                          {hoveredPoint.problemsSolved}
-                          {hoveredPoint.totalProblems ? (
-                            <span className="text-zinc-500">
-                              {' '}of {hoveredPoint.totalProblems} Problems
-                            </span>
-                          ) : ' Problems'}
-                        </span>
-                      </div>
-                    )}
+                    {hoveredPoint.problemsSolved !== null &&
+                      hoveredPoint.problemsSolved !== undefined && (
+                        <div className="col-span-2 flex items-center justify-between border-t border-white/[0.03] pt-1.5">
+                          <span className="text-zinc-500">Solved</span>
+                          <span className="font-mono font-semibold text-emerald-400">
+                            {hoveredPoint.problemsSolved}
+                            {hoveredPoint.totalProblems ? (
+                              <span className="text-zinc-500">
+                                {' '}
+                                of {hoveredPoint.totalProblems} Problems
+                              </span>
+                            ) : (
+                              ' Problems'
+                            )}
+                          </span>
+                        </div>
+                      )}
                   </div>
                   {hoveredPoint.contestUrl && (
                     <div className="mt-1.5 border-t border-white/5 pt-1.5 text-center text-[9px] text-zinc-500">
@@ -2549,7 +2797,9 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
   // Order: 2nd, 1st, 3rd visually on desktop; 1st, 2nd, 3rd on mobile
   const podiumOrder = isMobile
     ? top3.map((_, i) => i)
-    : (top3.length >= 3 ? [1, 0, 2] : top3.map((_, i) => i));
+    : top3.length >= 3
+      ? [1, 0, 2]
+      : top3.map((_, i) => i);
 
   if (list.length === 0) {
     return (
@@ -2563,7 +2813,7 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
   return (
     <div className="space-y-10">
       {top3.length > 0 && (
-        <div className="mx-auto mt-8 flex flex-col md:flex-row md:h-72 w-full max-w-3xl items-center md:items-end justify-center gap-6 md:gap-4 px-4">
+        <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-4 md:h-72 md:flex-row md:items-end md:gap-4">
           {podiumOrder.map((idx) => {
             const user = top3[idx];
             if (!user) return null;
@@ -2576,8 +2826,13 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
                   style.ring,
                   style.gradient,
                   isMobile
-                    ? 'w-full max-w-[280px] pt-6 pb-6 mt-12 rounded-3xl'
-                    : cn('rounded-t-3xl', style.width, style.pad, style.transform)
+                    ? 'mt-12 w-full max-w-[280px] rounded-3xl pt-6 pb-6'
+                    : cn(
+                        'rounded-t-3xl',
+                        style.width,
+                        style.pad,
+                        style.transform
+                      )
                 )}
               >
                 <div
@@ -2674,10 +2929,10 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-zinc-400 whitespace-nowrap">
+                    <td className="px-5 py-4 text-right font-mono whitespace-nowrap text-zinc-400">
                       {formatNumber(u.total_solved)}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono font-bold text-zinc-200 whitespace-nowrap">
+                    <td className="px-5 py-4 text-right font-mono font-bold whitespace-nowrap text-zinc-200">
                       {formatNumber(u.total_score || u.score)}
                     </td>
                   </tr>
@@ -2903,7 +3158,7 @@ function ProfileTab({
       </div>
 
       {/* ── Platform accounts ────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-white/[0.08] bg-gray-900 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900">
         <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
           <h3 className="text-sm font-semibold text-gray-300">
             Connected Platforms
@@ -2916,13 +3171,14 @@ function ProfileTab({
               Connect New
             </button>
             <span className="text-[11px] font-medium text-gray-500">
-              {handles?.length || 0} account{(handles?.length || 0) !== 1 ? 's' : ''}
+              {handles?.length || 0} account
+              {(handles?.length || 0) !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
 
         {!handles || handles.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-12 text-center bg-gray-900 rounded-b-2xl">
+          <div className="flex flex-col items-center gap-3 rounded-b-2xl bg-gray-900 py-12 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-3xl">
               🔗
             </div>
@@ -2930,11 +3186,12 @@ function ProfileTab({
               No connected platforms yet
             </p>
             <p className="max-w-xs text-[12px] text-gray-600">
-              Connect your competitive programming accounts to track your statistics, solves, and progress.
+              Connect your competitive programming accounts to track your
+              statistics, solves, and progress.
             </p>
             <button
               onClick={onConnectClick}
-              className="mt-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-violet-500 transition-all"
+              className="mt-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500"
             >
               Connect a Platform
             </button>
@@ -3080,7 +3337,19 @@ function ProfileTab({
 const Fragment = ({ children }) => children;
 
 // Platforms that require the browser extension for submission sync
-const EXTENSION_ONLY_PLATFORMS = new Set(['leetcode', 'spoj', 'toph', 'cses', 'hackerrank', 'kattis', 'uva', 'lightoj', 'vjudge', 'cfgym', 'beecrowd', 'dmoj']);
+const EXTENSION_ONLY_PLATFORMS = new Set([
+  'leetcode',
+  'spoj',
+  'toph',
+  'cses',
+  'hackerrank',
+  'kattis',
+  'uva',
+  'lightoj',
+  'vjudge',
+  'beecrowd',
+  'dmoj',
+]);
 
 // =====================================================================
 // Main Component
@@ -3112,7 +3381,12 @@ export default function ProblemSolvingClient({ userId }) {
     syncRatingHistory,
     refetch,
   } = useProblemSolving();
-  const { connect, disconnect, loading: isConnecting, error: connectError } = useConnectHandle();
+  const {
+    connect,
+    disconnect,
+    loading: isConnecting,
+    error: connectError,
+  } = useConnectHandle();
 
   const loadUpcomingContests = useCallback(async ({ refresh = false } = {}) => {
     setUpcomingSyncing(true);
@@ -3192,7 +3466,10 @@ export default function ProblemSolvingClient({ userId }) {
       const result = await syncContestHistory(true);
       showToast(result?.message || 'Contest history updated!', 'success');
     } catch (err) {
-      showToast(getErrorMessage(err, 'Failed to refresh contest history'), 'error');
+      showToast(
+        getErrorMessage(err, 'Failed to refresh contest history'),
+        'error'
+      );
     }
   }, [syncContestHistory, showToast]);
 
@@ -3202,7 +3479,10 @@ export default function ProblemSolvingClient({ userId }) {
       const result = await syncRatingHistory();
       showToast(result?.message || 'Rating history updated!', 'success');
     } catch (err) {
-      showToast(getErrorMessage(err, 'Failed to refresh rating history'), 'error');
+      showToast(
+        getErrorMessage(err, 'Failed to refresh rating history'),
+        'error'
+      );
     }
   }, [syncRatingHistory, showToast]);
 
@@ -3242,7 +3522,11 @@ export default function ProblemSolvingClient({ userId }) {
   const handleDisconnect = useCallback(
     async (platform) => {
       if (!platform) return;
-      if (!confirm(`Are you sure you want to disconnect your ${platform} account?`)) {
+      if (
+        !confirm(
+          `Are you sure you want to disconnect your ${platform} account?`
+        )
+      ) {
         return;
       }
       showToast(`Disconnecting ${platform}...`, 'info');
@@ -3252,10 +3536,16 @@ export default function ProblemSolvingClient({ userId }) {
           showToast(`Disconnected ${platform} successfully!`, 'success');
           refetch();
         } else {
-          showToast(result?.error || `Failed to disconnect ${platform}`, 'error');
+          showToast(
+            result?.error || `Failed to disconnect ${platform}`,
+            'error'
+          );
         }
       } catch (err) {
-        showToast(getErrorMessage(err, `Failed to disconnect ${platform}`), 'error');
+        showToast(
+          getErrorMessage(err, `Failed to disconnect ${platform}`),
+          'error'
+        );
       }
     },
     [disconnect, refetch, showToast]
@@ -3283,7 +3573,9 @@ export default function ProblemSolvingClient({ userId }) {
 
   const unconnectedPlatforms = useMemo(() => {
     const connectedIds = (handles || []).map((h) => h.platform);
-    return PROBLEM_SOLVING_PLATFORMS.filter((p) => !connectedIds.includes(p.id));
+    return PROBLEM_SOLVING_PLATFORMS.filter(
+      (p) => !connectedIds.includes(p.id)
+    );
   }, [handles]);
 
   const renderTab = () => {
@@ -3305,7 +3597,13 @@ export default function ProblemSolvingClient({ userId }) {
           />
         );
       case 'problems':
-        return <ProblemsTab problems={allProblems} loading={allProblemsLoading} handles={handles} />;
+        return (
+          <ProblemsTab
+            problems={allProblems}
+            loading={allProblemsLoading}
+            handles={handles}
+          />
+        );
       case 'contests':
         return (
           <ContestsTab
@@ -3447,7 +3745,9 @@ export default function ProblemSolvingClient({ userId }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
-                <h2 className="text-sm font-semibold text-white">Browser Extension Required</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  Browser Extension Required
+                </h2>
                 <button
                   onClick={() => setExtensionModalOpen(false)}
                   className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
@@ -3457,7 +3757,9 @@ export default function ProblemSolvingClient({ userId }) {
               </div>
               <div className="overflow-y-auto p-5">
                 <p className="mb-5 text-xs text-gray-500">
-                  This platform doesn&apos;t support direct API sync. Use the browser extension to automatically capture your solutions as you submit.
+                  This platform doesn&apos;t support direct API sync. Use the
+                  browser extension to automatically capture your solutions as
+                  you submit.
                 </p>
                 <ExtensionGuide />
               </div>

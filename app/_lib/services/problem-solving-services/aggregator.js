@@ -19,7 +19,7 @@ import {
 } from './_shared';
 import { AtCoderService } from './atcoder';
 import { CFGymService } from './cfgym';
-import { ClistService } from './clist';
+import { ClistService, isSolvedClist } from './clist';
 import { CodeChefService } from './codechef';
 import { CodeforcesService } from './codeforces';
 import { CSAcademyService } from './csacademy';
@@ -424,17 +424,17 @@ export class ProblemSolvingAggregator {
    * Universal fallback to fetch submissions/solved problems using Clist API's contest statistics.
    * This handles platforms that don't have a dedicated scraper/API client.
    */
-  async getSubmissionsFromClist(platform, handle, fromTimestamp = null) {
+  async getSubmissionsFromClist(platform, handle, fromTimestamp = null, userId = null) {
     const clistService = new ClistService();
     if (!clistService.isConfigured()) {
       console.warn(`[Clist Fallback] Clist API not configured.`);
       return [];
     }
-    // Fetch all contests for this user on this platform
     const contests = await clistService.getContestStatistics(
       platform,
       handle,
-      10000
+      10000,
+      userId
     );
     if (!contests || contests.length === 0) return [];
 
@@ -448,35 +448,43 @@ export class ProblemSolvingAggregator {
         : new Date().getTime();
       const fromTime = fromTimestamp ? new Date(fromTimestamp).getTime() : 0;
 
-      // If the contest happened before our fromTimestamp, we can skip it
-      if (fromTimestamp && contestTime <= fromTime) {
-        continue;
-      }
+      if (fromTimestamp && contestTime <= fromTime) continue;
 
       for (const prob of contest.problems) {
-        const resultStr = prob.result != null ? String(prob.result) : '';
-        const numResult = parseFloat(resultStr);
-        const isSolved =
-          prob.solved ||
-          resultStr.includes('+') ||
-          resultStr === 'AC' ||
-          (!isNaN(numResult) && numResult > 0);
-        if (isSolved) {
-          submissions.push({
-            submission_id: `clist_${contest.contestId}_${prob.label}`,
-            problem_id:
-              prob.name || prob.label || `${contest.contestId}_${prob.label}`,
-            problem_name:
-              prob.name ||
-              `${contest.contestName || 'Contest'} - ${prob.label}`,
-            problem_url: prob.url || null,
-            contest_id: contest.contestId?.toString(),
-            verdict: 'AC',
-            language: 'Unknown',
-            // Use contest date as an approximation of submission date
-            submitted_at: contest.date || new Date().toISOString(),
-          });
+        // isSolvedClist covers all clist result formats (binary, verdict, result, +N)
+        const solved = prob.solved || isSolvedClist({ result: prob.result, solved: prob.solved, verdict: prob.result });
+        if (!solved) continue;
+
+        // Use per-problem time offset if available (e.g. FBHC provides seconds since contest start)
+        let submittedAt = contest.date || new Date().toISOString();
+        if (prob.time != null && contest.date) {
+          const contestStartMs = new Date(contest.date).getTime();
+          const offsetMs =
+            typeof prob.time === 'number'
+              ? prob.time * 1000
+              : parseFloat(prob.time) * 1000;
+          if (Number.isFinite(offsetMs) && offsetMs >= 0) {
+            submittedAt = new Date(contestStartMs + offsetMs).toISOString();
+          }
         }
+
+        // Build a stable problem_id: prefer problem name slug, fall back to contest+label
+        const problemId = prob.name
+          ? `${contest.contestId}_${prob.label}_${prob.name.replace(/\s+/g, '_').slice(0, 40)}`
+          : `${contest.contestId}_${prob.label}`;
+
+        submissions.push({
+          submission_id: `clist_${contest.contestId}_${prob.label}`,
+          problem_id: problemId,
+          problem_name:
+            prob.name ||
+            `${contest.contestName || 'Contest'} - ${prob.label}`,
+          problem_url: prob.url || contest.contestUrl || null,
+          contest_id: contest.contestId?.toString(),
+          verdict: 'AC',
+          language: 'Unknown',
+          submitted_at: submittedAt,
+        });
       }
     }
 
@@ -711,12 +719,12 @@ export class ProblemSolvingAggregator {
               }
               break;
             case 'facebookhackercup':
-              // Try CLIST contest statistics first; fall back to extension guidance if empty.
               try {
                 submissions = await this.getSubmissionsFromClist(
                   handle.platform,
                   handle.handle,
-                  fromTimestamp
+                  fromTimestamp,
+                  userId
                 );
               } catch (fbhcError) {
                 console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);
@@ -1114,12 +1122,12 @@ export class ProblemSolvingAggregator {
           }
           break;
         case 'facebookhackercup':
-          // Try CLIST contest statistics first; fall back to extension guidance if empty.
           try {
             submissions = await this.getSubmissionsFromClist(
               platform,
               handle.handle,
-              fromTimestamp
+              fromTimestamp,
+              userId
             );
           } catch (fbhcError) {
             console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);

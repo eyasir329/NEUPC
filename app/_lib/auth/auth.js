@@ -290,7 +290,7 @@ export const auth = async (...args) => {
   ) {
     return {
       user: {
-        id: '4d4f226e-3324-4680-936e-25c8e4aa41df',
+        id: '8de9b724-3787-42a8-abf7-4d5ff3725425',
         name: 'Eyasir Ahamed',
         email: 'eyasir329@gmail.com',
         image: '/api/image/1-gBTtrlFeMI6J__GZg6_VFqQbqe5X-x3',

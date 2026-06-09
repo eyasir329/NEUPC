@@ -11,10 +11,7 @@ import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
-import StatTile from '@/app/_components/ui/StatTile';
-import HeroAmbient from '@/app/_components/ui/HeroAmbient';
-import ScrollCue from '@/app/_components/ui/ScrollCue';
-import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
+import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
@@ -134,6 +131,174 @@ function DifficultyBadge({ difficulty }) {
       <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} />
       {c.label}
     </span>
+  );
+}
+
+// ─── Stat tile (exact pattern from events + achievements) ─────────────────────
+
+function StatTile({ value, label, mobileLabel, accent = false }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
+      <span
+        className={cn(
+          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
+          accent ? 'text-neon-lime' : 'text-white'
+        )}
+      >
+        {value}
+      </span>
+      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
+        <span className="sm:hidden">{mobileLabel || label}</span>
+        <span className="hidden sm:inline">{label}</span>
+      </span>
+    </div>
+  );
+}
+
+// ─── Section eyebrow (exact pattern from events page) ────────────────────────
+
+function SectionEyebrow({ tag, title, accent, right }) {
+  return (
+    <motion.div
+      variants={stagger}
+      initial="hidden"
+      whileInView="visible"
+      viewport={viewport}
+      className={cn(
+        'mb-8 flex flex-col gap-1 sm:mb-10',
+        right && 'sm:flex-row sm:items-end sm:justify-between'
+      )}
+    >
+      <div>
+        <motion.div variants={fadeUp} className="flex items-center gap-3">
+          <span className="bg-neon-lime h-px w-7" />
+          <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
+            {tag}
+          </span>
+        </motion.div>
+        <motion.h2
+          variants={fadeUp}
+          className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
+        >
+          {title}
+          {accent && (
+            <>
+              {' '}
+              <span className="neon-text">{accent}</span>
+            </>
+          )}
+        </motion.h2>
+      </div>
+      {right && (
+        <motion.p
+          variants={fadeUp}
+          className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
+        >
+          {right}
+        </motion.p>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Featured banner — compact horizontal split ───────────────────────────────
+
+function FeaturedBanner({ roadmap }) {
+  const image = roadmap.thumbnail ? driveImageUrl(roadmap.thumbnail) : null;
+  const icon = getCategoryIcon(roadmap.category);
+
+  return (
+    <Link
+      href={`/roadmaps/${roadmap.slug}`}
+      className="group focus-visible:ring-neon-lime block focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none"
+    >
+      <article className="group-hover:border-neon-lime/20 relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-300 group-hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.25)]">
+        {/* Top accent line */}
+        <div className="via-neon-lime/50 absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent to-transparent" />
+
+        <div className="flex flex-col sm:flex-row">
+          {/* ── Image panel ── */}
+          <div className="relative w-full shrink-0 overflow-hidden sm:w-[42%]">
+            <div className="relative aspect-[4/3] w-full sm:aspect-auto sm:h-full sm:min-h-[220px]">
+              {image ? (
+                <>
+                  <SafeImg
+                    src={image}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-2xl"
+                  />
+                  <SafeImg
+                    src={image}
+                    alt={roadmap.title}
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/3 text-6xl text-zinc-700">
+                  {icon}
+                </div>
+              )}
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-16 bg-linear-to-r from-transparent to-[#08090f] sm:block" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-[#08090f] to-transparent sm:hidden" />
+            </div>
+          </div>
+
+          {/* ── Content panel ── */}
+          <div className="flex flex-1 flex-col justify-center gap-4 px-5 py-5 sm:px-7 sm:py-6 lg:px-8 lg:py-7">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="border-neon-lime/30 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.2em] uppercase">
+                <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_5px_1px_rgba(182,243,107,0.7)]" />
+                Featured
+              </span>
+              {roadmap.category && (
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
+                  {roadmap.category}
+                </span>
+              )}
+              {roadmap.difficulty && (
+                <DifficultyBadge difficulty={roadmap.difficulty} />
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className="font-heading group-hover:text-neon-lime text-xl leading-tight font-black text-white transition-colors duration-200 sm:text-2xl lg:text-3xl">
+              {roadmap.title}
+            </h3>
+
+            {/* Description */}
+            {roadmap.description && (
+              <p className="line-clamp-2 text-sm leading-relaxed text-zinc-500">
+                {roadmap.description}
+              </p>
+            )}
+
+            {/* Meta row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/5 pt-3">
+              {roadmap.duration && (
+                <span className="font-mono text-[10px] tracking-wider text-zinc-600">
+                  ⏱ {roadmap.duration}
+                </span>
+              )}
+              {roadmap.views > 0 && (
+                <>
+                  {roadmap.duration && (
+                    <span className="h-3 w-px bg-white/10" />
+                  )}
+                  <span className="font-mono text-[10px] tracking-wider text-zinc-600">
+                    {roadmap.views} views
+                  </span>
+                </>
+              )}
+              <span className="text-neon-lime ml-auto font-mono text-[10px] font-bold tracking-widest uppercase transition-transform duration-200 group-hover:translate-x-0.5">
+                Explore →
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }
 
@@ -337,7 +502,13 @@ export default function RoadmapsClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        <HeroAmbient />
+        {/* Ambient background */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="grid-overlay absolute inset-0 opacity-25" />
+          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
+          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
+        </div>
 
         <motion.div
           variants={stagger}
@@ -426,8 +597,44 @@ export default function RoadmapsClient({
           </div>
         </motion.div>
 
-        <ScrollCue />
+        {/* Scroll cue – desktop only */}
+        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
+          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
+            Scroll
+          </span>
+          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
+        </div>
       </section>
+
+      {/* ── Featured roadmap ──────────────────────────────────────────────── */}
+      {featuredRoadmaps.length > 0 && (
+        <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+          <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
+            <motion.div variants={stagger} initial="hidden" animate="visible">
+              <motion.div variants={fadeUp} className="flex items-center gap-3">
+                <span className="bg-neon-lime h-px w-7" />
+                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
+                  {featuredRoadmaps.length > 1
+                    ? 'Featured Roadmaps'
+                    : 'Featured Roadmap'}
+                </span>
+              </motion.div>
+              <motion.h2
+                variants={fadeUp}
+                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
+              >
+                Don&apos;t Miss This
+              </motion.h2>
+            </motion.div>
+            <FeaturedCarousel
+              items={featuredRoadmaps}
+              ariaLabel="Featured roadmaps"
+              getKey={(r) => r.id ?? r.slug ?? r.title}
+              renderItem={(roadmap) => <FeaturedBanner roadmap={roadmap} />}
+            />
+          </div>
+        </section>
+      )}
 
       {/* ── All roadmaps grid ─────────────────────────────────────────────── */}
       <section
@@ -537,7 +744,7 @@ export default function RoadmapsClient({
             </div>
 
             {/* Category tabs + clear */}
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <div className="scrollbar-none -mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5">
                 <button
                   onClick={() => {
@@ -607,7 +814,7 @@ export default function RoadmapsClient({
                   {activeFilterCount}
                 </button>
               )}
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Cards grid */}
@@ -618,9 +825,9 @@ export default function RoadmapsClient({
                   hidden: {},
                   visible: { transition: { staggerChildren: 0.08 } },
                 }}
-                key={`${difficulty}-${category}-${sortBy}-${currentPage}-${search}`}
                 initial="hidden"
-                animate="visible"
+                whileInView="visible"
+                viewport={viewport}
                 className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
               >
                 {pageItems.map((roadmap) => (

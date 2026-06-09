@@ -574,9 +574,32 @@ export class ClistService {
 
     // First, get the account to obtain account_id (required by statistics endpoint)
     const account = await this.findAccount(platform, handle, userId);
-    if (!account?.id) {
-      // LeetCode isn't indexed as a CLIST account; the caller falls back to the
-      // native LeetCode API, so this is expected — don't warn.
+    let data = null;
+
+    if (account?.id) {
+      data = await this.fetchApi('statistics', {
+        account_id: account.id,
+        ...baseStatsParams,
+      });
+    } else if (platform === 'facebookhackercup') {
+      // FBHC accounts are often not indexed by handle; try direct handle lookup
+      // against each known resource slug
+      for (const host of hosts) {
+        const result = await this.fetchApi('statistics', {
+          account__handle: handle,
+          account__resource__host: host,
+          ...baseStatsParams,
+        });
+        if (result?.objects?.length) {
+          data = result;
+          break;
+        }
+      }
+      if (!data?.objects?.length) {
+        console.warn(`CLIST: No statistics found for FBHC handle ${handle}`);
+        return [];
+      }
+    } else {
       if (platform !== 'leetcode') {
         console.warn(
           `CLIST: Could not find account for ${handle} on ${platform}`
@@ -584,11 +607,6 @@ export class ClistService {
       }
       return [];
     }
-
-    const data = await this.fetchApi('statistics', {
-      account_id: account.id,
-      ...baseStatsParams,
-    });
 
     if (!data?.objects) {
       console.warn(
