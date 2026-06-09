@@ -4,7 +4,7 @@
  */
 
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Sparkles,
@@ -24,6 +24,13 @@ import NotesTab from './NotesTab';
 import AIAnalysisTab from './AIAnalysisTab';
 import SubmissionsTab from './SubmissionsTab';
 import SimilarTab from './SimilarTab';
+import {
+  getProblemDetailsAction,
+  getProblemSubmissionsAction,
+  getProblemNoteAction,
+  saveProblemNoteAction,
+  chatAboutProblemAction,
+} from '@/app/_lib/actions/problem-solving-actions';
 
 const TABS = [
   {
@@ -155,48 +162,81 @@ function normalizeProblem(problem) {
   };
 }
 
-export default function ProblemDetailModal({ problem, onClose }) {
+export default function ProblemDetailModal({ problem, recentSubmissions, onClose }) {
   const [activeTab, setActiveTab] = useState('Problem');
   const [starred, setStarred] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Per-problem DB data
+  const [problemDetails, setProblemDetails] = useState(null);
+  const [problemSubmissions, setProblemSubmissions] = useState(null);
+  const [personalNote, setPersonalNote] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [, startTransition] = useTransition();
+
   const real = useMemo(() => normalizeProblem(problem), [problem]);
 
-  // Compose the data shape ProblemTab expects, falling back to demo content.
+  // Fetch problem details (description, examples, analysis) on open
+  useEffect(() => {
+    if (!real?.platform || !real?.problemId) return;
+    setProblemDetails(null);
+    getProblemDetailsAction(real.platform, real.problemId).then((res) => {
+      if (res.success) setProblemDetails(res.data);
+    });
+    // Fetch all submissions for this specific problem
+    getProblemSubmissionsAction(real.platform, real.problemId).then((res) => {
+      if (res.success) setProblemSubmissions(res.submissions);
+      else {
+        // Fall back to filtering from recentSubmissions
+        const fallback = (recentSubmissions || []).filter(
+          (s) => s.problem_id === real.problemId && s.platform === real.platform
+        );
+        setProblemSubmissions(fallback);
+      }
+    });
+    // Fetch personal note
+    getProblemNoteAction(real.platform, real.problemId).then((res) => {
+      if (res.success) setPersonalNote(res.note || '');
+    });
+  }, [real?.platform, real?.problemId]);
+
+  const handleSaveNote = useCallback(
+    async (note) => {
+      if (!real?.platform || !real?.problemId) return;
+      setNoteSaving(true);
+      await saveProblemNoteAction(real.platform, real.problemId, note);
+      setNoteSaving(false);
+    },
+    [real?.platform, real?.problemId]
+  );
+
+  const handleAIChat = useCallback(
+    async (messages) => {
+      if (!real?.platform || !real?.problemId) return null;
+      return chatAboutProblemAction(real.platform, real.problemId, real.problemName, messages);
+    },
+    [real?.platform, real?.problemId, real?.problemName]
+  );
+
   const tabData = useMemo(
     () => ({
       difficulty: real?.difficulty ?? 'Easy',
       difficultyRating: real?.difficultyRating ?? 800,
-      id: 'sub-0',
-      platform: real?.platform ?? 'leetcode',
-      problemId: real?.problemId ?? 'sample',
-      problemName: real?.problemName ?? 'Two Sum',
+      platform: real?.platform ?? '',
+      problemId: real?.problemId ?? '',
+      problemName: real?.problemName ?? '',
       submittedAt: real?.submittedAt ?? new Date().toISOString(),
-      tags: real?.tags?.length ? real.tags : ['hash-map', 'array'],
+      tags: real?.tags || [],
       verdict: real?.verdict ?? 'AC',
-      description:
-        'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have **exactly one solution**, and you may not use the same element twice.\n\nYou can return the answer in any order.',
-      inputFormat:
-        'The first line contains an array of integers `nums`.\nThe second line contains an integer `target`.',
-      outputFormat:
-        'Return an array containing two integers: the indices of the two numbers that add up to `target`.',
-      examples: [
-        {
-          input: 'nums = [2,7,11,15], target = 9',
-          output: '[0,1]',
-          explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].',
-        },
-      ],
-      constraints: [
-        '2 <= nums.length <= 10^4',
-        '-10^9 <= nums[i] <= 10^9',
-        '-10^9 <= target <= 10^9',
-        'Only one valid answer exists.',
-      ],
-      hints: [],
+      description: problemDetails?.description ?? null,
+      inputFormat: problemDetails?.input_format ?? null,
+      outputFormat: problemDetails?.output_format ?? null,
+      examples: problemDetails?.examples ?? [],
+      constraints: problemDetails?.constraints ?? [],
+      hints: problemDetails?.analysis?.hints ?? [],
     }),
-    [real]
+    [real, problemDetails]
   );
 
   const externalUrl = useMemo(
@@ -458,11 +498,11 @@ export default function ProblemDetailModal({ problem, onClose }) {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-              {activeTab === 'Problem' && <ProblemTab data={tabData} />}
-              {activeTab === 'Submissions' && <SubmissionsTab />}
-              {activeTab === 'AI Analysis' && <AIAnalysisTab />}
+              {activeTab === 'Problem' && <ProblemTab data={tabData} externalUrl={externalUrl} />}
+              {activeTab === 'Submissions' && <SubmissionsTab submissions={problemSubmissions ?? []} loading={problemSubmissions === null} />}
+              {activeTab === 'AI Analysis' && <AIAnalysisTab analysis={problemDetails?.analysis} problem={real} onChat={handleAIChat} />}
               {activeTab === 'Similar' && <SimilarTab />}
-              {activeTab === 'Notes' && <NotesTab />}
+              {activeTab === 'Notes' && <NotesTab note={personalNote} onSaveNote={handleSaveNote} saving={noteSaving} />}
             </motion.div>
           </AnimatePresence>
         </div>

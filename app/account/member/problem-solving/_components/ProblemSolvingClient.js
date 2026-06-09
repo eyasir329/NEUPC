@@ -1251,7 +1251,7 @@ function OverviewTab({
   );
 }
 
-function ProblemsTab({ problems, loading, handles }) {
+function ProblemsTab({ problems, loading, handles, recentSubmissions }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'solved' | 'unsolved'
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -1771,6 +1771,7 @@ function ProblemsTab({ problems, loading, handles }) {
       {selectedProblem && (
         <ProblemDetailModal
           problem={selectedProblem}
+          recentSubmissions={recentSubmissions}
           onClose={() => setSelectedProblem(null)}
         />
       )}
@@ -3602,6 +3603,7 @@ export default function ProblemSolvingClient({ userId }) {
             problems={allProblems}
             loading={allProblemsLoading}
             handles={handles}
+            recentSubmissions={recentSubmissions}
           />
         );
       case 'contests':

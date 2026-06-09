@@ -79,7 +79,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
-export default function ProblemTab({ data }) {
+export default function ProblemTab({ data, externalUrl }) {
   const verdictInfo = getVerdictDetails(data.verdict);
   const VerdictIcon = verdictInfo.icon;
 
@@ -96,7 +96,6 @@ export default function ProblemTab({ data }) {
         className="flex flex-col gap-5 border-b border-white/[0.07] pb-8 md:flex-row md:items-end md:justify-between"
       >
         <div className="space-y-3">
-          {/* Platform breadcrumb */}
           <div className="flex items-center gap-2">
             <Cpu className="h-3.5 w-3.5 text-zinc-600" />
             <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
@@ -108,7 +107,6 @@ export default function ProblemTab({ data }) {
             {data.problemName}
           </h1>
 
-          {/* Tags row */}
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`rounded-md border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${getDifficultyStyle(data.difficulty)}`}
@@ -126,7 +124,6 @@ export default function ProblemTab({ data }) {
           </div>
         </div>
 
-        {/* Rating + link */}
         <div className="flex items-center gap-3">
           <div className="flex min-w-22.5 flex-col items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-3">
             <div className="mb-0.5 flex items-center gap-1 font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
@@ -136,9 +133,9 @@ export default function ProblemTab({ data }) {
               {data.difficultyRating}
             </div>
           </div>
-          {data.problemId && (
+          {externalUrl && (
             <a
-              href={`#`}
+              href={externalUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-900/60 text-zinc-500 transition-colors hover:border-white/20 hover:text-white"
@@ -170,15 +167,45 @@ export default function ProblemTab({ data }) {
             </div>
           </motion.div>
 
-          {/* Description */}
-          <motion.section variants={item} className="space-y-3">
-            <h2 className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-              Problem Statement
-            </h2>
-            <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300">
-              <Markdown>{data.description}</Markdown>
-            </div>
-          </motion.section>
+          {/* Description or CTA */}
+          {data.description ? (
+            <motion.section variants={item} className="space-y-3">
+              <h2 className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Problem Statement
+              </h2>
+              <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300">
+                <Markdown>{data.description}</Markdown>
+              </div>
+            </motion.section>
+          ) : (
+            <motion.div
+              variants={item}
+              className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.07] bg-zinc-900/40 py-14 text-center"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-800/60">
+                <ExternalLink className="h-5 w-5 text-zinc-500" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-zinc-300">
+                  Problem statement not stored locally
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Read the full statement directly on the platform.
+                </p>
+              </div>
+              {externalUrl && (
+                <a
+                  href={externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-zinc-300 transition-all hover:border-white/20 hover:text-white"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open on {data.platform}
+                </a>
+              )}
+            </motion.div>
+          )}
 
           {/* Input / Output format */}
           {(data.inputFormat || data.outputFormat) && (
@@ -304,9 +331,9 @@ export default function ProblemTab({ data }) {
           {/* Metadata */}
           <motion.section variants={item} className="space-y-2">
             {[
-              { label: 'System ID', value: data.id },
               { label: 'Platform ID', value: data.problemId },
-            ].map(({ label, value }) => (
+              { label: 'Platform', value: data.platform },
+            ].filter(({ value }) => value).map(({ label, value }) => (
               <div
                 key={label}
                 className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-zinc-900/50 px-4 py-3"

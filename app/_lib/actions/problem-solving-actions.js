@@ -2196,12 +2196,11 @@ export async function getMemberProblemSolvingData(targetUserId) {
       dailyActivity = generateDailyActivity(recentSolves || []);
     }
 
-    // Transform recentSubmissions from problem_submissions table (ALL verdicts)
-    // V2 uses problem_external_id, legacy uses problem_id - support both
+    // Transform recentSubmissions — V2 column is external_problem_id
     const transformedSubmissions = (recentSubmissions || []).map((sub) => ({
       id: sub.id,
       platform: sub.platform || 'unknown',
-      problem_id: sub.problem_external_id || sub.problem_id || '',
+      problem_id: sub.external_problem_id || sub.problem_id || '',
       problem_name: sub.problem_name || '',
       problem_url: sub.problem_url || '',
       submission_id: sub.submission_id || '',
@@ -4054,4 +4053,242 @@ export async function getUserAllProblems() {
   const all = Array.from(seen.values());
   all.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
   return { problems: all };
+}
+
+// ============================================
+// PROBLEM DETAIL ACTIONS
+// ============================================
+
+/**
+ * Fetch full problem details from DB (description, examples, analysis, editorial)
+ */
+export async function getProblemDetailsAction(platform, externalId) {
+  try {
+    await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, data: null };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, data: null };
+
+    const { data: problem, error } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select(
+        `
+        id, name, description, input_format, output_format, constraints, examples, notes, url,
+        problem_analysis(summary, key_concepts, hints, common_mistakes, time_complexity, space_complexity),
+        problem_editorials(tutorial_url, tutorial_content, tutorial_solutions)
+      `
+      )
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[getProblemDetailsAction] Error:', error.message);
+      return { success: false, data: null };
+    }
+
+    if (!problem) return { success: true, data: null };
+
+    const analysis = Array.isArray(problem.problem_analysis)
+      ? problem.problem_analysis[0]
+      : problem.problem_analysis;
+    const editorial = Array.isArray(problem.problem_editorials)
+      ? problem.problem_editorials[0]
+      : problem.problem_editorials;
+
+    return {
+      success: true,
+      data: {
+        description: problem.description || null,
+        input_format: problem.input_format || null,
+        output_format: problem.output_format || null,
+        constraints: problem.constraints || [],
+        examples: problem.examples || [],
+        notes: problem.notes || null,
+        url: problem.url || null,
+        analysis: analysis
+          ? {
+              summary: analysis.summary || null,
+              key_concepts: analysis.key_concepts || [],
+              hints: analysis.hints || [],
+              common_mistakes: analysis.common_mistakes || [],
+              time_complexity: analysis.time_complexity || null,
+              space_complexity: analysis.space_complexity || null,
+            }
+          : null,
+        editorial: editorial
+          ? {
+              tutorial_url: editorial.tutorial_url || null,
+              tutorial_content: editorial.tutorial_content || null,
+              tutorial_solutions: editorial.tutorial_solutions || [],
+            }
+          : null,
+      },
+    };
+  } catch (err) {
+    console.error('[getProblemDetailsAction] Exception:', err.message);
+    return { success: false, data: null };
+  }
+}
+
+/**
+ * Fetch ALL user submissions for a specific problem
+ */
+export async function getProblemSubmissionsAction(platform, externalId) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, submissions: [] };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, submissions: [] };
+
+    const { data: subs, error } = await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select(
+        `
+        id, verdict, execution_time_ms, memory_kb, submitted_at, language_id, external_problem_id,
+        solutions(id, source_code, is_primary, languages(name))
+      `
+      )
+      .eq('user_id', user.id)
+      .eq('platform_id', platformId)
+      .eq('external_problem_id', externalId)
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('[getProblemSubmissionsAction] Error:', error.message);
+      return { success: false, submissions: [] };
+    }
+
+    const submissions = (subs || []).map((sub) => {
+      const primarySol = (sub.solutions || []).find((s) => s.is_primary) || sub.solutions?.[0];
+      return {
+        id: sub.id,
+        verdict: sub.verdict,
+        execution_time_ms: sub.execution_time_ms,
+        memory_kb: sub.memory_kb,
+        submitted_at: sub.submitted_at,
+        language: primarySol?.languages?.name || null,
+        source_code: primarySol?.source_code || null,
+        problem_id: sub.external_problem_id,
+        platform,
+      };
+    });
+
+    return { success: true, submissions };
+  } catch (err) {
+    console.error('[getProblemSubmissionsAction] Exception:', err.message);
+    return { success: false, submissions: [] };
+  }
+}
+
+/**
+ * Fetch user's personal note for a problem
+ */
+export async function getProblemNoteAction(platform, externalId) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, note: '' };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, note: '' };
+
+    const { data: problem } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select('id')
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (!problem) return { success: true, note: '' };
+
+    const { data: solve } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select('notes')
+      .eq('user_id', user.id)
+      .eq('problem_id', problem.id)
+      .maybeSingle();
+
+    return { success: true, note: solve?.notes || '' };
+  } catch (err) {
+    console.error('[getProblemNoteAction] Exception:', err.message);
+    return { success: false, note: '' };
+  }
+}
+
+/**
+ * Save user's personal note for a problem
+ */
+export async function saveProblemNoteAction(platform, externalId, note) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false };
+
+    const { data: problem } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select('id')
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (!problem) return { success: false, error: 'Problem not found in DB' };
+
+    const { error } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .update({ notes: note, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('problem_id', problem.id);
+
+    if (error) {
+      console.error('[saveProblemNoteAction] Error:', error.message);
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[saveProblemNoteAction] Exception:', err.message);
+    return { success: false };
+  }
+}
+
+/**
+ * Chat about a problem using available LLM providers
+ */
+export async function chatAboutProblemAction(platform, externalId, problemName, userMessages) {
+  try {
+    await requireRole('member');
+
+    const { generateCompletion } = await import('@/app/_lib/integrations/llm');
+
+    const systemPrompt = `You are an expert competitive programmer helping a user understand a problem.
+Problem: ${problemName || externalId} (${platform})
+Be concise and focused. Answer only what is asked. Do not spoil the full solution unless asked.`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...userMessages.map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    const { content, provider } = await generateCompletion(messages, {
+      temperature: 0.4,
+      maxTokens: 800,
+    });
+
+    return { success: true, content, provider };
+  } catch (err) {
+    console.error('[chatAboutProblemAction] Exception:', err.message);
+    return { success: false, error: err.message };
+  }
 }

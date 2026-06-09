@@ -21,18 +21,25 @@ import {
   cleanupLeetCodeDataAction,
 } from '@/app/_lib/actions/problem-solving-actions';
 
-import { dummyData } from './useProblemSolving.mock';
+const EMPTY_DATA = {
+  profile: null,
+  handles: [],
+  statistics: null,
+  recentSolves: [],
+  recentSolutions: [],
+  recentSubmissions: [],
+  dailyActivity: [],
+  badges: [],
+  leaderboard: null,
+  ratingHistory: [],
+  contestHistory: [],
+};
 
 /**
  * Hook for fetching current user's problem solving data
  */
 export function useProblemSolving() {
-  const [data, setData] = useState({
-    ...dummyData,
-    handles: [],
-    ratingHistory: [],
-    contestHistory: [],
-  });
+  const [data, setData] = useState(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -62,10 +69,8 @@ export function useProblemSolving() {
       }
 
       setData({
-        ...dummyData,
+        ...EMPTY_DATA,
         ...result.data,
-        ratingHistory: result.data?.ratingHistory || [],
-        contestHistory: result.data?.contestHistory || [],
       });
       setError(null);
     } catch (err) {
