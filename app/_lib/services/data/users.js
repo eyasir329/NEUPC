@@ -898,6 +898,59 @@ export async function getUserActivityLogs(userId, limit = 50) {
 }
 
 // =============================================================================
+// PUBLIC PROFILE LOOKUP
+// =============================================================================
+
+/**
+ * Fetch an approved member profile by username for the public `/user/[username]` route.
+ * Joins member_profiles → users, then fetches handles and platform stats.
+ */
+export async function getMemberByUsername(username) {
+  if (!username) return null;
+
+  const { data: profile, error } = await supabaseAdmin
+    .from('member_profiles')
+    .select(
+      `*, user:users!member_profiles_user_id_fkey(id, full_name, avatar_url, created_at)`
+    )
+    .eq('username', username)
+    .eq('approved', true)
+    .maybeSingle();
+
+  if (error || !profile || !profile.user) return null;
+
+  // Fetch competitive handles
+  const { data: handles } = await supabaseAdmin
+    .from('user_handles')
+    .select(
+      'handle, platform_id, current_rating, max_rating, rank_title, platform:platform_id(code, name)'
+    )
+    .eq('user_id', profile.user.id);
+
+  // Fetch platform stats (solved counts, etc.)
+  const { data: platformStats } = await supabaseAdmin
+    .from('user_platform_stats')
+    .select(
+      'platform_id, problems_solved, current_rating, max_rating, rank_title, total_submissions, contest_count, platform:platform_id(code, name)'
+    )
+    .eq('user_id', profile.user.id);
+
+  // Fetch user stats (total solved, streaks, etc.)
+  const { data: userStats } = await supabaseAdmin
+    .from('user_stats')
+    .select('total_solved, current_streak, longest_streak, last_solve_date')
+    .eq('user_id', profile.user.id)
+    .maybeSingle();
+
+  return {
+    ...profile,
+    handles: handles ?? [],
+    platformStats: platformStats ?? [],
+    userStats: userStats ?? null,
+  };
+}
+
+// =============================================================================
 // JOURNEY ITEMS
 // =============================================================================
 export async function getJourneyItemsAdmin() {
