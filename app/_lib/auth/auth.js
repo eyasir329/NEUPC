@@ -201,23 +201,6 @@ const {
       }
     },
 
-    async signOut({ token }) {
-      try {
-        if (token?.email) {
-          const dbUser = await getUserByEmail(token.email);
-          if (dbUser) {
-            await updateUser(dbUser.id, {
-              is_online: false,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error during sign out:', error);
-      }
-      return true;
-    },
-
     async session({ session, token }) {
       if (token?.sub) {
         session.user = session.user || {};
@@ -272,6 +255,24 @@ const {
         }
       }
       return session;
+    },
+  },
+  events: {
+    async signOut(message) {
+      const { token } = message;
+      try {
+        if (token?.email) {
+          const dbUser = await getUserByEmail(token.email);
+          if (dbUser) {
+            await updateUser(dbUser.id, {
+              is_online: false,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error during sign out:', error);
+      }
     },
   },
 });

@@ -16,8 +16,8 @@ import {
   driveImageUrl,
 } from '@/app/_lib/utils/utils';
 
-/** @param {{ session: Object, userId: string }} props */
-export default function UserAvatar({ session, userId }) {
+/** @param {{ session: Object, userId: string, size?: 'sm' | 'md' | 'lg' }} props */
+export default function UserAvatar({ session, userId, size = 'lg' }) {
   const [imgError, setImgError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -41,56 +41,74 @@ export default function UserAvatar({ session, userId }) {
     }
   };
 
+  const sizeClasses = {
+    sm: 'h-10 w-10',
+    md: 'h-16 w-16 sm:h-20 sm:w-20',
+    lg: 'h-20 w-20 sm:h-24 sm:w-24',
+  };
+
+  const ringSize = {
+    sm: '-inset-1',
+    md: '-inset-1',
+    lg: '-inset-1.5',
+  };
+
+  const initialsSize = {
+    sm: 'text-sm',
+    md: 'text-xl sm:text-2xl',
+    lg: 'text-2xl sm:text-3xl',
+  };
+
   return (
-    <div className="mb-6 flex flex-col items-center justify-center">
-      <div className="relative">
-        {/* Outer glowing pulsing border ring (Premium Aesthetic) */}
-        <div className="absolute -inset-1.5 animate-pulse rounded-full bg-gradient-to-r from-indigo-500/40 via-purple-500/30 to-pink-500/40 opacity-75 blur-[4px] will-change-transform" />
-        
-        <div
-          className={cn(
-            "relative z-10 overflow-hidden rounded-full border-[3px] border-[#060810] bg-[#0d1226] shadow-2xl transition-all duration-300",
-            "h-28 w-28 sm:h-32 sm:w-32"
-          )}
-        >
-          {isValidImage && !useFallback ? (
-            avatarSrc.startsWith('/api/image/') ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarSrc}
-                alt={name}
-                className="h-full w-full object-cover"
-                onError={handleImageError}
-              />
-            ) : (
-              <Image
-                src={avatarSrc}
-                alt={name}
-                fill
-                sizes="(max-width: 640px) 112px, 128px"
-                className="object-cover"
-                onError={handleImageError}
-                priority
-              />
-            )
-          ) : !imgError && useFallback ? (
+    <div className="relative inline-block">
+      {/* Outer glowing border ring */}
+      <div className={cn(
+        "absolute rounded-full bg-gradient-to-r from-indigo-500/30 via-purple-500/25 to-pink-500/30 opacity-70 blur-[3px]",
+        ringSize[size]
+      )} />
+      
+      <div
+        className={cn(
+          "relative z-10 overflow-hidden rounded-full border-2 border-[#0d1226]/80 bg-[#0d1226] shadow-xl ring-1 ring-white/10 transition-all duration-300",
+          sizeClasses[size]
+        )}
+      >
+        {isValidImage && !useFallback ? (
+          avatarSrc.startsWith('/api/image/') ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={fallbackSrc}
+              src={avatarSrc}
               alt={name}
               className="h-full w-full object-cover"
               onError={handleImageError}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600/30 to-purple-600/30">
-              <span className="text-3xl font-extrabold tracking-wider text-white sm:text-4xl">
-                {initials}
-              </span>
-            </div>
-          )}
-        </div>
+            <Image
+              src={avatarSrc}
+              alt={name}
+              fill
+              sizes="(max-width: 640px) 80px, 96px"
+              className="object-cover"
+              onError={handleImageError}
+              priority
+            />
+          )
+        ) : !imgError && useFallback ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={fallbackSrc}
+            alt={name}
+            className="h-full w-full object-cover"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600/30 to-purple-600/30">
+            <span className={cn("font-extrabold tracking-wider text-white", initialsSize[size])}>
+              {initials}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

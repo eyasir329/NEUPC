@@ -1,18 +1,70 @@
 /**
- * @file Account welcome header with user greeting.
+ * @file Account welcome header — unified profile card with embedded avatar.
+ * Shows avatar, name, email, status pill, and metadata chips as a single
+ * cohesive glassmorphic panel.
+ *
  * @module AccountHeader
  */
 
 'use client';
 
+import Image from 'next/image';
+import { useState } from 'react';
 import {
   Calendar,
-  Shield,
   ShieldCheck,
   LayoutDashboard,
   Mail,
-  Award
+  Award,
 } from 'lucide-react';
+import { cn } from '@/app/_lib/utils/utils';
+import {
+  getInitials,
+  getFallbackAvatarUrl,
+  driveImageUrl,
+} from '@/app/_lib/utils/utils';
+
+// ── Inline Avatar (embedded inside card, no separate component needed) ──────
+function InlineAvatar({ session }) {
+  const [imgError, setImgError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  const name = session?.name || session?.email || '?';
+  const initials = getInitials(name);
+  const rawAvatarSrc = session?.avatar_url || session?.image;
+  const avatarSrc = rawAvatarSrc ? driveImageUrl(rawAvatarSrc) : '';
+  const fallbackSrc = getFallbackAvatarUrl(session?.email || name);
+  const isValidImage = avatarSrc && !avatarSrc.match(/^[A-Z?]{1,3}$/) && !imgError;
+
+  const handleImageError = () => {
+    if (!useFallback) setUseFallback(true);
+    else setImgError(true);
+  };
+
+  return (
+    <div className="relative shrink-0">
+      {/* Glow ring */}
+      <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-indigo-500/25 via-purple-500/20 to-pink-500/25 opacity-60 blur-[3px]" />
+      <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-white/10 bg-[#0d1226] shadow-lg ring-1 ring-white/[0.06] sm:h-16 sm:w-16">
+        {isValidImage && !useFallback ? (
+          avatarSrc.startsWith('/api/image/') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarSrc} alt={name} className="h-full w-full object-cover" onError={handleImageError} />
+          ) : (
+            <Image src={avatarSrc} alt={name} fill sizes="64px" className="object-cover" onError={handleImageError} priority />
+          )
+        ) : !imgError && useFallback ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fallbackSrc} alt={name} className="h-full w-full object-cover" onError={handleImageError} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600/30 to-purple-600/30">
+            <span className="text-lg font-extrabold tracking-wider text-white sm:text-xl">{initials}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** @param {{ session: Object, accountStatus: string, user: Object, userRoles: string[] }} props */
 export default function AccountHeader({ session, accountStatus, user, userRoles = [] }) {
@@ -23,9 +75,9 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
 
   const statusLabel =
     {
-      active: 'Account Active',
-      pending: 'Awaiting Approval',
-      rejected: 'Access Denied',
+      active: 'Active',
+      pending: 'Pending',
+      rejected: 'Rejected',
       suspended: 'Suspended',
       banned: 'Restricted',
       locked: 'Locked',
@@ -33,12 +85,11 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
     }[accountStatus] ?? 'Unknown';
 
   const statusColor = isActive
-    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-    : 'border-amber-500/25 bg-amber-500/10 text-amber-300';
+    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
+    : 'border-amber-500/20 bg-amber-500/8 text-amber-400';
 
   const dotColor = isActive ? 'bg-emerald-400' : 'bg-amber-400';
 
-  // Format joined date
   const joinedDate = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', {
         month: 'short',
@@ -46,118 +97,81 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
       })
     : 'Recent';
 
-  // Capitalize primary role nicely
   const highestRole = userRoles?.[0]
     ? userRoles[0].charAt(0).toUpperCase() + userRoles[0].slice(1)
     : 'Guest';
 
-  const dashboardsCount = `${userRoles?.length || 0} ${userRoles?.length === 1 ? 'Portal' : 'Portals'}`;
-
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* Outer Card Wrapper (Premium Glassmorphic Panel) */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0c1020]/50 p-6 shadow-2xl backdrop-blur-2xl sm:p-8 md:p-10">
-        {/* Subtle Ambient Glowing Background inside card */}
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-[100px] select-none" />
-        <div className="pointer-events-none absolute -bottom-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-purple-500/5 blur-[100px] select-none" />
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c1020]/60 shadow-2xl backdrop-blur-2xl">
+      {/* Top accent line */}
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
 
-        <div className="relative z-10 text-center">
-          {/* Eyebrow badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-1.5 text-xs font-semibold backdrop-blur-sm">
-            <span className="text-lg">{isNew ? '🎉' : '👋'}</span>
-            <span className="text-indigo-300 tracking-wide">
-              {isNew ? 'Welcome to NEUPC' : 'Welcome Back'}
-            </span>
+      <div className="relative z-10 p-4 sm:p-5 md:p-6">
+        {/* Avatar + identity row */}
+        <div className="mb-3 flex items-center gap-4 sm:mb-4">
+          <InlineAvatar session={session} />
+
+          <div className="min-w-0 flex-1">
+            {/* Eyebrow */}
+            <p className="mb-0.5 text-[11px] font-semibold tracking-[0.15em] text-indigo-400/80 uppercase">
+              {isNew ? '🎉 Welcome to NEUPC' : '👋 Welcome Back'}
+            </p>
+
+            {/* Name */}
+            <h1 className="mb-0.5 truncate bg-gradient-to-r from-white via-indigo-100 to-purple-200 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:text-xl md:text-2xl">
+              {name}
+            </h1>
+
+            {/* Email + status inline */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs text-gray-400 sm:text-sm">
+                <Mail className="h-3 w-3 text-indigo-400/70 sm:h-3.5 sm:w-3.5" />
+                {email}
+              </span>
+              <div
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${statusColor}`}
+              >
+                <span className="relative flex h-1.5 w-1.5">
+                  <span
+                    className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${dotColor}`}
+                  />
+                  <span
+                    className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColor}`}
+                  />
+                </span>
+                <span className="text-[10px] font-bold tracking-[0.12em] uppercase">
+                  {statusLabel}
+                </span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Gradient title */}
-          <h1 className="mb-3 bg-gradient-to-r from-white via-indigo-100 to-purple-200 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl md:text-5xl">
-            {name}
-          </h1>
+        {/* Thin separator */}
+        <div className="mb-3 h-px w-full bg-gradient-to-r from-white/[0.04] via-white/[0.08] to-white/[0.04]" />
 
-          {/* Email with Icon */}
-          <div className="mb-6 flex items-center justify-center gap-2 text-gray-400">
-            <Mail className="h-4 w-4 text-indigo-400/85" />
-            <span className="text-sm font-medium tracking-wide sm:text-base">{email}</span>
+        {/* Quick-stat chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+            <Calendar className="h-3.5 w-3.5 text-indigo-400/60" />
+            <span className="text-[11px] font-medium text-gray-400">{joinedDate}</span>
           </div>
-
-          {/* Status pill */}
-          <div
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 ${statusColor}`}
-          >
-            <span className="relative flex h-1.5 w-1.5">
-              <span
-                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${dotColor}`}
-              />
-              <span
-                className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColor}`}
-              />
-            </span>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
-              {statusLabel}
-            </span>
+          <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+            <Award className="h-3.5 w-3.5 text-purple-400/60" />
+            <span className="text-[11px] font-medium text-gray-400">{highestRole}</span>
           </div>
-
-          {/* Premium Thin Divider Line */}
-          <div className="my-8 h-[1px] w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-          {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {/* Card 1: Member Since */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/15">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Member Since
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {joinedDate}
-              </p>
-            </div>
-
-            {/* Card 2: Account Level */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/15">
-                <Award className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Account Level
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {highestRole}
-              </p>
-            </div>
-
-            {/* Card 3: Security */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/15">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Security
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                Verified
-              </p>
-            </div>
-
-            {/* Card 4: Access Portals */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/15">
-                <LayoutDashboard className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Access Portals
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {dashboardsCount}
-              </p>
-            </div>
+          <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400/60" />
+            <span className="text-[11px] font-medium text-gray-400">Verified</span>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-2.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+            <LayoutDashboard className="h-3.5 w-3.5 text-cyan-400/60" />
+            <span className="text-[11px] font-medium text-gray-400">
+              {userRoles?.length || 0} {userRoles?.length === 1 ? 'Portal' : 'Portals'}
+            </span>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
