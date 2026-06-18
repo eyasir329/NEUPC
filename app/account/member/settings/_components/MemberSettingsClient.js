@@ -8,7 +8,6 @@
 import { useState, useTransition, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User,
   Bell,
   Lock,
   Mail,
@@ -29,31 +28,15 @@ import {
   Moon,
   Sun,
   Monitor,
-  Camera,
-  Upload,
-  Trash2,
-  Move,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Activity,
-  Code2,
-  Pencil,
 } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
-import { updateMemberInfoAction } from '@/app/_lib/actions/member-profile-actions';
-import {
-  uploadAvatarAction,
-  removeAvatarAction,
-} from '@/app/_lib/actions/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions/actions';
 import {
   ActionButton,
   GlassCard,
   SectionHeader,
   Pill,
-  Avatar,
   StaggerList,
   GradientBar,
   EmptyState,
@@ -69,7 +52,6 @@ function cn(...classes) {
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'account', label: 'Account', icon: User },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'security', label: 'Security', icon: Lock },
@@ -84,48 +66,6 @@ const STATUS_META = {
   suspended: { label: 'Account Restricted', tone: 'rose' },
   rejected: { label: 'Application Rejected', tone: 'rose' },
 };
-
-// ─── Field block ───────────────────────────────────────────────────────────────
-function Field({ label, children }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-semibold tracking-widest text-white/30 uppercase">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-// ─── Simple Input ──────────────────────────────────────────────────────────────
-function Input({ className = '', ...props }) {
-  return (
-    <input
-      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] text-white placeholder-white/20 transition outline-none focus:border-white/20 focus:bg-white/[0.06] ${className}`}
-      {...props}
-    />
-  );
-}
-
-// ─── Info row ──────────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, label, value, badge }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/[0.04] py-3.5 last:border-0">
-      <div className="flex items-center gap-3">
-        <div className="flex size-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03]">
-          <Icon className="size-3.5 text-white/35" />
-        </div>
-        <p className="text-[12.5px] text-white/60">{label}</p>
-      </div>
-      <div className="flex items-center gap-3">
-        {badge}
-        <p className="text-[13px] font-medium text-white/80">
-          {value || <span className="text-white/20 italic">Not set</span>}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ─── Toggle row ────────────────────────────────────────────────────────────────
 function ToggleRow({ label, description, checked, onChange }) {
@@ -513,199 +453,7 @@ function AvatarUploader({ user }) {
   );
 }
 
-// ─── Section: Account ─────────────────────────────────────────────────────────
-function AccountSection({ user }) {
-  const [editing, setEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const meta = STATUS_META[user.account_status] ?? STATUS_META.pending;
 
-  async function handleSubmit(formData) {
-    setError(null);
-    setSuccess(false);
-    startTransition(async () => {
-      const result = await updateMemberInfoAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        setSuccess(true);
-        setTimeout(() => {
-          setSuccess(false);
-          setEditing(false);
-        }, 1200);
-      }
-    });
-  }
-
-  return (
-    <div className="space-y-6">
-      <GlassCard padding="p-0">
-        <div className="border-b border-white/[0.06] px-5 py-4">
-          <SectionHeader
-            icon={User}
-            title="Account Status"
-            subtitle="Your current membership standing and history"
-            accent="violet"
-          />
-        </div>
-        <div className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Pill tone={meta.tone} icon={Shield}>
-                {meta.label}
-              </Pill>
-              {user.email_verified && (
-                <Pill tone="emerald" icon={BadgeCheck}>
-                  Verified Email
-                </Pill>
-              )}
-              {user.phone_verified && (
-                <Pill tone="sky" icon={Phone}>
-                  Verified Phone
-                </Pill>
-              )}
-            </div>
-            <div className="text-right text-[11px] font-medium text-gray-500">
-              {user.created_at && (
-                <p>
-                  Joined{' '}
-                  {new Date(user.created_at).toLocaleDateString(undefined, {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </p>
-              )}
-              {user.last_login && (
-                <p>
-                  Last active {new Date(user.last_login).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-          </div>
-          {user.status_reason && (
-            <div className="mt-4 flex items-start gap-2 rounded-lg border border-white/[0.04] bg-white/[0.02] p-3">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-gray-400" />
-              <p className="text-[12px] text-gray-400">{user.status_reason}</p>
-            </div>
-          )}
-        </div>
-      </GlassCard>
-
-      <GlassCard padding="p-0">
-        <div className="border-b border-white/[0.06] px-5 py-4">
-          <SectionHeader
-            icon={Camera}
-            title="Profile Picture"
-            subtitle="Update your photo shown across the community"
-            accent="blue"
-          />
-        </div>
-        <div className="p-5">
-          <AvatarUploader user={user} />
-        </div>
-      </GlassCard>
-
-      <GlassCard padding="p-0">
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
-          <SectionHeader
-            icon={User}
-            title="Personal Details"
-            subtitle="Update your basic profile information"
-            accent="indigo"
-          />
-          {!editing && (
-            <ActionButton
-              icon={Pencil}
-              onClick={() => setEditing(true)}
-              tone="ghost"
-            >
-              Edit
-            </ActionButton>
-          )}
-        </div>
-        <div className="p-5">
-          {editing ? (
-            <form action={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Display Name">
-                  <Input
-                    name="full_name"
-                    defaultValue={user.full_name}
-                    placeholder="e.g. John Doe"
-                  />
-                </Field>
-                <Field label="Phone Number">
-                  <Input
-                    name="phone"
-                    defaultValue={user.phone ?? ''}
-                    placeholder="+880 1XXX XXXXXX"
-                    type="tel"
-                  />
-                </Field>
-              </div>
-              <Field label="Email Address (Linked via OAuth)">
-                <Input
-                  defaultValue={user.email}
-                  readOnly
-                  className="opacity-60"
-                />
-              </Field>
-
-              {error && (
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-400">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-400/10 px-4 py-3 text-[12.5px] text-emerald-400">
-                  Profile updated successfully.
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/20 px-5 py-2.5 text-[12.5px] font-bold text-violet-300 transition hover:bg-violet-500/30"
-                >
-                  {isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Check className="size-4" />
-                  )}
-                  Save Changes
-                </button>
-                <ActionButton
-                  icon={X}
-                  onClick={() => setEditing(false)}
-                  tone="ghost"
-                >
-                  Cancel
-                </ActionButton>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-1">
-              <InfoRow icon={User} label="Full Name" value={user.full_name} />
-              <InfoRow icon={Mail} label="Email Address" value={user.email} />
-              <InfoRow
-                icon={Phone}
-                label="Phone Number"
-                value={user.phone || 'Not set'}
-              />
-              <InfoRow
-                icon={Globe}
-                label="Auth Provider"
-                value={user.provider?.toUpperCase() || 'Password'}
-              />
-            </div>
-          )}
-        </div>
-      </GlassCard>
-    </div>
-  );
-}
 
 // ─── Section: Notifications ───────────────────────────────────────────────────
 function NotificationsSection() {
@@ -1047,7 +795,7 @@ export default function MemberSettingsClient({ user }) {
       const p = new URLSearchParams(window.location.search).get('tab');
       if (p && SECTIONS.some((t) => t.id === p)) return p;
     }
-    return 'account';
+    return 'notifications';
   });
 
   const handleTabChange = useCallback((tabId) => {
@@ -1060,7 +808,6 @@ export default function MemberSettingsClient({ user }) {
   }, []);
 
   const content = {
-    account: <AccountSection user={user} />,
     notifications: <NotificationsSection />,
     appearance: <AppearanceSection />,
     security: <SecuritySection user={user} />,

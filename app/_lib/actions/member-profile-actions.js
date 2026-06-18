@@ -25,7 +25,7 @@ async function requireActiveMember() {
 
   const user = await getUserByEmail(session.user.email);
   if (!user) throw new Error('User not found');
-  if (user.account_status !== 'active' || user.is_online === false)
+  if (user.account_status !== 'active')
     throw new Error('Account not active');
 
   return user;

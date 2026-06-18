@@ -191,8 +191,16 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
     return getSidebarNavigation(currentRole, SIDEBAR_STATS, session);
   }, [currentRole, session]);
 
+  if (hideSidebar) {
+    return (
+      <div className="w-full bg-[#030408]">
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("relative flex bg-[#0B1121] w-full", hideSidebar ? "min-h-screen overflow-x-hidden" : "h-screen overflow-hidden")}>
+    <div className={cn("relative flex w-full", hideSidebar ? "overflow-x-hidden bg-[#030408]" : "h-screen overflow-hidden bg-[#0B1121]")}>
       <AccountSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}

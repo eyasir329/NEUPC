@@ -59,49 +59,52 @@ export default async function AccountPage() {
 
   return (
     <AccountPageClient redirectPath={redirectPath}>
-      <div className="relative w-full overflow-x-hidden bg-[#060810] px-4 pt-24 pb-28 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32">
+      <div className="relative w-full overflow-x-hidden bg-[#030408] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32 selection:bg-[#7C5CFF]/30">
         {/* Decorative gradient blobs */}
         <div className="pointer-events-none absolute inset-0 z-0">
           <div className="from-primary-500/10 absolute -top-20 -left-20 h-96 w-96 rounded-full bg-linear-to-br to-transparent blur-3xl" />
           <div className="from-secondary-500/10 absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-linear-to-tl to-transparent blur-3xl" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl space-y-6">
-          {/* Profile card (avatar embedded inside) */}
-          <AccountHeader
-            session={session.user}
-            accountStatus={user?.account_status}
-            user={user}
-            userRoles={userRoles}
-          />
+        <div className="relative z-10 mx-auto max-w-5xl w-full">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            {/* Left: sticky profile card */}
+            <div className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-8">
+              <AccountHeader
+                session={session.user}
+                accountStatus={user?.account_status}
+                user={user}
+                userRoles={userRoles}
+              />
+            </div>
 
-          {/* Role selection grid */}
-          <AvailableRoles
-            availableRoles={availableRoles}
-            accountStatus={user?.account_status}
-          />
+            {/* Right: main content */}
+            <div className="min-w-0 flex-1 space-y-6">
+              <AvailableRoles
+                availableRoles={availableRoles}
+                accountStatus={user?.account_status}
+              />
 
-          {/* Pending assignment notice */}
-          {userRoles.length === 0 && user?.account_status === 'active' && (
-            <PendingRoleAssignment />
-          )}
+              {userRoles.length === 0 && user?.account_status === 'active' && (
+                <PendingRoleAssignment />
+              )}
 
-          {/* Status messages (pending approval, rejected, suspended, etc.) */}
-          <AccountStatusMessages
-            accountStatus={user?.account_status}
-            statusReason={user?.status_reason}
-            statusChangedBy={user?.status_changed_by}
-            suspensionExpiresAt={user?.suspension_expires_at}
-            userId={user?.id}
-            userName={session.user?.name ?? ''}
-            userEmail={session.user?.email ?? ''}
-          />
+              <AccountStatusMessages
+                accountStatus={user?.account_status}
+                statusReason={user?.status_reason}
+                statusChangedBy={user?.status_changed_by}
+                suspensionExpiresAt={user?.suspension_expires_at}
+                userId={user?.id}
+                userName={session.user?.name ?? ''}
+                userEmail={session.user?.email ?? ''}
+              />
 
-          {/* Upgrade banner for guest-only users */}
-          <UpgradeBanner
-            accountStatus={user?.account_status}
-            userRoles={userRoles}
-          />
+              <UpgradeBanner
+                accountStatus={user?.account_status}
+                userRoles={userRoles}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </AccountPageClient>

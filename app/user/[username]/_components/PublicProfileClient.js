@@ -63,6 +63,7 @@ export default function PublicProfileClient() {
   // Competitive handles / DSA progress
   const [dsaPlatform, setDsaPlatform] = useState('leetcode');
   const [heatmapRange, setHeatmapRange] = useState('12');
+  const [dailyFilter, setDailyFilter] = useState('all');
 
   // Helper function to generate grid cells based on range and platform type
   const generateGridCells = (range, platformType) => {
@@ -86,8 +87,14 @@ export default function PublicProfileClient() {
                 (profile.activity.codechef[dateStr] || 0) +
                 (profile.activity.atcoder[dateStr] || 0);
       } else if (platformType === 'daily') {
-        count = (profile.activity.todolist?.[dateStr] || 0) +
-                (profile.activity.courseWatchTime?.[dateStr] || 0);
+        if (dailyFilter === 'all') {
+          count = (profile.activity.todolist?.[dateStr] || 0) +
+                  (profile.activity.courseWatchTime?.[dateStr] || 0);
+        } else if (dailyFilter === 'todolist') {
+          count = profile.activity.todolist?.[dateStr] || 0;
+        } else if (dailyFilter === 'courseWatchTime') {
+          count = profile.activity.courseWatchTime?.[dateStr] || 0;
+        }
       } else if (platformType === 'github') {
         count = profile.activity.github[dateStr] || 0;
       }
@@ -103,7 +110,7 @@ export default function PublicProfileClient() {
 
   const dailyActivityCells = useMemo(() => {
     return generateGridCells(heatmapRange, 'daily');
-  }, [heatmapRange]);
+  }, [heatmapRange, dailyFilter]);
 
   const githubCells = useMemo(() => {
     return generateGridCells(heatmapRange, 'github');
@@ -153,15 +160,18 @@ export default function PublicProfileClient() {
     return 'bg-emerald-400 border border-emerald-300/40 shadow-[0_0_10px_rgba(52,211,153,0.3)]';
   };
 
-  const renderHeatmap = (title, icon, cols, totalCount, labelColorClass = 'text-[#B6F36B]') => {
+  const renderHeatmap = (title, icon, cols, totalCount, labelColorClass = 'text-[#B6F36B]', filterElement = null) => {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-white/[0.03] pb-2">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0">{icon}</span>
-            <span className="text-[11px] font-bold font-mono text-zinc-350 tracking-wider uppercase">{title}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="shrink-0">{icon}</span>
+              <span className="text-[11px] font-bold font-mono text-zinc-350 tracking-wider uppercase">{title}</span>
+            </div>
+            {filterElement}
           </div>
-          <span className="text-[10px] font-mono text-zinc-500">
+          <span className="text-[10px] font-mono text-zinc-550">
             Total logs: <strong className={labelColorClass}>{totalCount}</strong>
           </span>
         </div>
@@ -437,11 +447,26 @@ export default function PublicProfileClient() {
                           </select>
                         </div>
 
-                        {/* 1. Problem Solving Activity Heatmap */}
-                        {renderHeatmap('Problem Solving Activity', <Code2 size={13} className="text-[#B6F36B]" />, problemSolvingCols, totalProblemSolving, 'text-[#B6F36B]')}
+                        {/* 1. Daily Platform Activity Heatmap */}
+                        {renderHeatmap(
+                          'Daily Platform Activity',
+                          <Activity size={13} className="text-[#7C5CFF]" />,
+                          dailyActivityCols,
+                          totalDailyActivity,
+                          'text-[#7C5CFF]',
+                          <select
+                            value={dailyFilter}
+                            onChange={(e) => setDailyFilter(e.target.value)}
+                            className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-400 border border-white/[0.06] rounded-xl px-2.5 py-1 text-[10px] focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
+                          >
+                            <option value="all">All Daily Activity</option>
+                            <option value="todolist">To-Do List</option>
+                            <option value="courseWatchTime">Course Watch Time</option>
+                          </select>
+                        )}
 
-                        {/* 2. Daily Platform Activity Heatmap */}
-                        {renderHeatmap('Daily Platform Activity', <Activity size={13} className="text-[#7C5CFF]" />, dailyActivityCols, totalDailyActivity, 'text-[#7C5CFF]')}
+                        {/* 2. Problem Solving Activity Heatmap */}
+                        {renderHeatmap('Problem Solving Activity', <Code2 size={13} className="text-[#B6F36B]" />, problemSolvingCols, totalProblemSolving, 'text-[#B6F36B]')}
 
                         {/* 3. GitHub Contributions Heatmap */}
                         {renderHeatmap('GitHub Contributions', <Github size={13} className="text-sky-400" />, githubCols, totalGithubContributions, 'text-sky-400')}
@@ -697,10 +722,10 @@ export default function PublicProfileClient() {
 
                   {/* TAB 4: AWARDS & CREDENTIALS */}
                   {activeTab === 'awards' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Non-redundant achievements */}
+                    <div className="flex flex-col gap-6">
+                      {/* Awards */}
                       <GlassCard className="p-5">
-                        <SectionTitle icon={Trophy} label="Academic Honors" />
+                        <SectionTitle icon={Trophy} label="Honors & Achievements" />
                         <div className="space-y-4">
                           {profile.achievements.map((item, i) => (
                             <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
@@ -708,7 +733,7 @@ export default function PublicProfileClient() {
                                 <div className="font-bold text-zinc-200">{item.title}</div>
                                 <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
+                              <span className="text-[10.5px] text-zinc-550 font-mono shrink-0">{item.date}</span>
                             </div>
                           ))}
                         </div>
@@ -724,7 +749,7 @@ export default function PublicProfileClient() {
                                 <div className="font-bold text-zinc-200">{item.title}</div>
                                 <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
+                              <span className="text-[10.5px] text-zinc-555 font-mono shrink-0">{item.date}</span>
                             </div>
                           ))}
                         </div>
