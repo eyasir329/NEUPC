@@ -275,27 +275,23 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       onClick={onClick}
       className={cn(
         'group relative flex w-full touch-manipulation items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 active:bg-white/5',
-        level === 3 ? 'pl-8' : 'pl-3',
+        level === 3 ? 'pl-8' : 'pl-4',
         isActive
-          ? 'text-neon-emerald'
-          : isPast
-            ? 'text-zinc-500 hover:text-zinc-300'
-            : 'text-zinc-600 hover:text-zinc-400'
+          ? 'text-emerald-400 font-semibold'
+          : 'text-zinc-400 hover:text-zinc-200'
       )}
     >
       {isActive && (
-        <span className="bg-neon-emerald absolute inset-y-1 left-0 w-0.5 rounded-full" />
+        <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-emerald-500" />
       )}
       <span className="flex min-w-0 items-center gap-2">
         {level === 2 && sectionNum != null && (
           <span
             className={cn(
-              'shrink-0 font-mono text-[9px] font-bold tabular-nums',
+              'shrink-0 font-mono text-[10px] font-bold tabular-nums',
               isActive
-                ? 'text-neon-emerald/70'
-                : isPast
-                  ? 'text-zinc-600'
-                  : 'text-zinc-700'
+                ? 'text-emerald-400/80'
+                : 'text-zinc-600'
             )}
           >
             {String(sectionNum).padStart(2, '0')}
@@ -306,28 +302,21 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
             className={cn(
               'mt-0.5 h-1 w-1 shrink-0 rounded-full',
               isActive
-                ? 'bg-neon-emerald'
-                : isPast
-                  ? 'bg-zinc-600'
-                  : 'bg-zinc-700'
+                ? 'bg-emerald-500'
+                : 'bg-zinc-700'
             )}
           />
         )}
-        <span
-          className={cn(
-            'font-heading line-clamp-2 text-[10px] leading-snug font-bold tracking-widest uppercase',
-            isActive && 'font-black'
-          )}
-        >
+        <span className="font-sans line-clamp-2 text-[12px] leading-snug">
           {section.title}
         </span>
       </span>
       <svg
         className={cn(
-          'h-3.5 w-3.5 shrink-0 transition-transform',
+          'h-3 w-3 shrink-0 transition-transform',
           isActive
-            ? 'text-neon-emerald translate-x-0.5'
-            : 'hidden text-zinc-700 group-hover:block group-hover:text-zinc-500'
+            ? 'text-emerald-400 translate-x-0.5'
+            : 'hidden text-zinc-650 group-hover:block group-hover:text-zinc-400'
         )}
         fill="none"
         viewBox="0 0 24 24"
@@ -352,15 +341,15 @@ function RelatedBlogCard({ blog }) {
   return (
     <Link
       href={`/blogs/${blog.slug || blog.id}`}
-      className="holographic-card group focus-visible:ring-neon-emerald hover:border-neon-emerald/40 block rounded-2xl p-6 transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none"
+      className="group block rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
     >
-      <div className="text-neon-emerald mb-4 font-mono text-[9px] font-bold tracking-widest uppercase">
+      <div className="mb-4 font-mono text-[9px] font-bold tracking-wider text-emerald-400 uppercase">
         {getCategoryLabel(blog.category) || 'Article'}
       </div>
-      <h4 className="font-heading group-hover:text-neon-emerald line-clamp-2 text-xl font-black tracking-tighter text-white uppercase transition-colors">
+      <h4 className="font-heading line-clamp-2 text-lg font-bold text-white transition-colors group-hover:text-emerald-400">
         {blog.title}
       </h4>
-      <div className="mt-6 flex items-center gap-4 font-mono text-[9px] tracking-widest text-zinc-600 uppercase">
+      <div className="mt-6 flex items-center gap-4 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
         <span>{blog.read_time || blog.readTime || '5'} min</span>
         {(blog.views ?? 0) > 0 && (
           <>
@@ -812,10 +801,10 @@ export default function BlogDetailClient({
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setShowMobileTOC(false)}
             />
-            <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
+            <div className="absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-955/95 shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-                <h3 className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.6em] uppercase">
-                  Protocol_Overview
+                <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
+                  Table of Contents
                 </h3>
                 <button
                   onClick={() => setShowMobileTOC(false)}
@@ -858,7 +847,7 @@ export default function BlogDetailClient({
         )}
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <section className="relative overflow-hidden pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
+        <section className="relative overflow-hidden pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pt-40 lg:pb-20">
           {/* Background cover image */}
           {meta.thumbnail && (
             <div className="absolute inset-0 z-0">
@@ -876,16 +865,16 @@ export default function BlogDetailClient({
           {/* Ambient */}
           <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <div className="grid-overlay absolute inset-0 opacity-15" />
-            <div className="bg-neon-emerald/8 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
-            <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
+            <div className="bg-emerald-500/5 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
+            <div className="bg-violet-500/5 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
           </div>
 
-          <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative z-10 mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8 xl:px-12">
             {/* Back link */}
             <nav className="mb-6 sm:mb-8">
               <Link
                 href="/blogs"
-                className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
+                className="group font-heading hover:border-emerald-500/30 hover:text-emerald-400 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
               >
                 <svg
                   className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
@@ -910,14 +899,14 @@ export default function BlogDetailClient({
                 className={cn(
                   'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
                   meta.featured
-                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-                    : 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    : 'border-zinc-700 bg-white/5 text-zinc-300'
                 )}
               >
                 <span
                   className={cn(
                     'h-1.5 w-1.5 animate-pulse rounded-full',
-                    meta.featured ? 'bg-neon-lime' : 'bg-neon-emerald'
+                    meta.featured ? 'bg-emerald-400' : 'bg-zinc-405'
                   )}
                 />
                 {meta.featured
@@ -932,14 +921,14 @@ export default function BlogDetailClient({
             </div>
 
             {/* Title */}
-            <h1 className="kinetic-headline font-heading max-w-4xl text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] [line-height:1.05] font-black text-white uppercase sm:[line-height:0.95]">
+            <h1 className="font-heading max-w-4xl text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl lg:leading-[1.15]">
               {meta.title}
             </h1>
 
             {/* Author + meta chips */}
             <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
               <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-                <div className="border-neon-emerald/30 h-8 w-8 shrink-0 rounded-full border p-0.5">
+                <div className="border-white/10 h-8 w-8 shrink-0 rounded-full border p-0.5">
                   {meta.authorAvatar ? (
                     <SafeImg
                       src={driveImageUrl(meta.authorAvatar)}
@@ -948,13 +937,13 @@ export default function BlogDetailClient({
                       fallback=""
                     />
                   ) : (
-                    <div className="bg-neon-emerald/20 font-heading text-neon-emerald flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
+                    <div className="bg-white/10 font-heading text-zinc-300 flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
                       {meta.authorInitials}
                     </div>
                   )}
                 </div>
                 <div>
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                     Author
                   </span>
                   <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -964,7 +953,7 @@ export default function BlogDetailClient({
               </div>
               {meta.blogDate && (
                 <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                     Published
                   </span>
                   <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -973,7 +962,7 @@ export default function BlogDetailClient({
                 </div>
               )}
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                   Read Time
                 </span>
                 <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -981,11 +970,11 @@ export default function BlogDetailClient({
                 </span>
               </div>
               {meta.views > 0 && (
-                <div className="border-neon-lime/15 bg-neon-lime/5 rounded-xl border px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
+                <div className="border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                     Views
                   </span>
-                  <span className="font-heading text-neon-lime mt-0.5 block text-[13px] font-bold sm:text-sm">
+                  <span className="font-heading text-white mt-0.5 block text-[13px] font-bold sm:text-sm">
                     {meta.views.toLocaleString()}
                   </span>
                 </div>
@@ -1005,7 +994,7 @@ export default function BlogDetailClient({
                 {meta.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="border-neon-emerald/20 bg-neon-emerald/10 text-neon-emerald inline-block rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase"
+                    className="border-white/10 bg-white/5 text-zinc-400 inline-block rounded-full border px-3 py-1 font-mono text-[10px] font-semibold tracking-wider"
                   >
                     #{tag}
                   </span>
@@ -1019,7 +1008,7 @@ export default function BlogDetailClient({
         <div className="h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
         {/* ── Main Reading Layout ───────────────────────────────────────────── */}
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[96rem] px-4 py-10 sm:px-6 lg:px-8 xl:px-12">
           <div
             className={cn(
               'flex transition-[gap] duration-300',
@@ -1028,18 +1017,13 @@ export default function BlogDetailClient({
             )}
           >
             {/* ── Article Column ────────────────────────────────────────────── */}
-            <article
-              className={cn(
-                'w-full min-w-0 transition-all duration-300',
-                hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3')
-              )}
-            >
+            <article className="w-full min-w-0 flex-1 transition-all duration-300">
               {/* Reading controls */}
               <div className="mb-6 space-y-3">
-                <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 backdrop-blur-sm">
                   <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg
-                      className="text-neon-emerald h-4 w-4"
+                      className="text-emerald-400 h-4 w-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1051,8 +1035,8 @@ export default function BlogDetailClient({
                         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                       />
                     </svg>
-                    <span className="hidden sm:inline">Reading_Config</span>
-                    <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 tabular-nums sm:flex">
+                    <span className="hidden sm:inline">Appearance</span>
+                    <span className="hidden items-center gap-1 rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500 tabular-nums sm:flex">
                       <span
                         style={{
                           fontFamily: FONT_FAMILIES.find(
@@ -1062,7 +1046,7 @@ export default function BlogDetailClient({
                       >
                         {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
                       </span>
-                      <span className="text-zinc-700">·</span>
+                      <span className="text-zinc-600">·</span>
                       <span>
                         {FONT_SIZES.find((f) => f.id === fontSize)?.label}
                       </span>
@@ -1077,7 +1061,7 @@ export default function BlogDetailClient({
                           className={cn(
                             'rounded px-2 py-0.5 text-xs font-semibold transition-all',
                             fontSize === fs.id
-                              ? 'bg-neon-emerald/20 text-neon-emerald'
+                              ? 'bg-emerald-500/10 text-emerald-400'
                               : 'text-zinc-500 hover:text-zinc-300'
                           )}
                         >
@@ -1091,8 +1075,8 @@ export default function BlogDetailClient({
                       className={cn(
                         'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all',
                         showReadingSettings
-                          ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
-                          : 'border-[#3F3F46] bg-white/5 text-zinc-500 hover:text-zinc-300'
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                          : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300'
                       )}
                     >
                       <svg
@@ -1121,7 +1105,7 @@ export default function BlogDetailClient({
 
                 {/* Reading settings panel */}
                 {showReadingSettings && (
-                  <div className="holographic-card no-lift rounded-xl p-5 shadow-2xl">
+                  <div className="rounded-xl border border-white/5 bg-zinc-900/95 p-5 shadow-2xl backdrop-blur-sm">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                       <div className="space-y-2.5">
                         <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
@@ -1135,7 +1119,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'rounded-lg border px-2 py-2 text-xs transition-all',
                                 fontFamily === f.id
-                                  ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                               style={{ fontFamily: f.style }}
@@ -1157,7 +1141,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all',
                                 fontSize === fs.id
-                                  ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                             >
@@ -1184,7 +1168,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all',
                                 textAlign === a.id
-                                  ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                               )}
                             >
@@ -1242,7 +1226,7 @@ export default function BlogDetailClient({
                                   className={cn(
                                     'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all',
                                     state === k
-                                      ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                                       : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                                   )}
                                 >
@@ -1266,7 +1250,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'h-8 w-8 rounded-lg transition-all',
                                 bgTheme === t.id
-                                  ? 'ring-neon-emerald scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
+                                  ? 'ring-emerald-500 scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
                                   : 'ring-1 ring-white/15 hover:ring-white/30'
                               )}
                               style={{ background: t.bg }}
@@ -1285,7 +1269,7 @@ export default function BlogDetailClient({
                                 className={cn(
                                   'rounded-lg border py-1.5 text-xs capitalize transition-all',
                                   contentWidth === id
-                                    ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                                     : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                                 )}
                               >
@@ -1299,7 +1283,7 @@ export default function BlogDetailClient({
                           className={cn(
                             'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all',
                             focusMode
-                              ? 'border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald'
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                               : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
                           )}
                         >
@@ -1308,7 +1292,7 @@ export default function BlogDetailClient({
                             className={cn(
                               'relative flex h-4 w-7 items-center rounded-full border transition-all',
                               focusMode
-                                ? 'border-neon-emerald/50 bg-neon-emerald/30'
+                                ? 'border-emerald-500/50 bg-emerald-500/30'
                                 : 'border-white/15 bg-white/5'
                             )}
                           >
@@ -1316,7 +1300,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'absolute h-3 w-3 rounded-full transition-all duration-200',
                                 focusMode
-                                  ? 'bg-neon-emerald left-3.5'
+                                  ? 'bg-emerald-500 left-3.5'
                                   : 'left-0.5 bg-gray-600'
                               )}
                             />
@@ -1354,7 +1338,7 @@ export default function BlogDetailClient({
               <div
                 ref={contentRef}
                 className={cn(
-                  'holographic-card no-lift blog-content mx-auto rounded-2xl p-6 transition-all duration-300 md:p-8 lg:p-10',
+                  'blog-content mx-auto p-4 sm:p-6 md:p-8 lg:p-10 transition-all duration-300',
                   CONTENT_WIDTHS[contentWidth],
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
@@ -1381,7 +1365,7 @@ export default function BlogDetailClient({
               </div>
 
               {/* Article footer: reactions + tags + share */}
-              <div className="holographic-card no-lift mt-8 rounded-2xl p-6">
+              <div className="mt-8 rounded-2xl border border-white/5 bg-white/[0.01] p-6 md:p-8">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/6 pb-5">
                   <div className="flex items-center gap-3">
                     <button
@@ -1391,10 +1375,10 @@ export default function BlogDetailClient({
                       className={cn(
                         'flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200',
                         liked
-                          ? 'cursor-default border-rose-500/40 bg-rose-500/10 text-rose-400'
+                          ? 'cursor-default border-rose-500/40 bg-rose-500/10 text-rose-405'
                           : liking
                             ? 'cursor-wait border-white/10 bg-white/5 text-zinc-400'
-                            : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-rose-500/30 hover:bg-rose-500/8 hover:text-rose-300 active:scale-95'
+                            : 'border-white/10 bg-white/5 text-zinc-400 hover:border-rose-500/30 hover:bg-rose-500/8 hover:text-rose-300 active:scale-95'
                       )}
                     >
                       <svg
@@ -1419,11 +1403,11 @@ export default function BlogDetailClient({
                       {liked ? (
                         <span className="text-xs text-rose-400/70">Liked</span>
                       ) : (
-                        <span className="text-xs text-zinc-600">Like</span>
+                        <span className="text-xs text-zinc-500">Like</span>
                       )}
                     </button>
                   </div>
-                  <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-600 uppercase">
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg
                       className="h-4 w-4"
                       fill="none"
@@ -1451,13 +1435,13 @@ export default function BlogDetailClient({
 
                 {meta.tags.length > 0 && (
                   <div className="mb-5 flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
+                    <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                       Tags:
                     </span>
                     {meta.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="hover:text-neon-emerald rounded-full border border-[#3F3F46] bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-500 transition-colors"
+                        className="rounded-full border border-white/10 bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-400 transition-colors hover:text-emerald-450 hover:border-emerald-500/20"
                       >
                         #{tag}
                       </span>
@@ -1465,16 +1449,16 @@ export default function BlogDetailClient({
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
-                    Broadcast:
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-550 uppercase">
+                    Share:
                   </span>
                   {SHARE_PLATFORMS.map((p) => (
                     <button
                       key={p.key}
                       onClick={() => handleShare(p.key)}
                       title={`Share on ${p.label}`}
-                      className="hover:border-neon-emerald/40 hover:text-neon-emerald flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/5"
                     >
                       <svg
                         className="h-4 w-4"
@@ -1488,10 +1472,10 @@ export default function BlogDetailClient({
                   <button
                     onClick={handleCopy}
                     className={cn(
-                      'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                      'flex h-9 items-center gap-1.5 rounded-full border px-3.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                       copied
-                        ? 'border-neon-emerald/40 bg-neon-emerald/10 text-neon-emerald'
-                        : 'hover:border-neon-emerald/30 hover:text-neon-emerald border-[#3F3F46] bg-white/5 text-zinc-400'
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                        : 'border-white/10 bg-white/5 text-zinc-400 hover:border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/5'
                     )}
                   >
                     {copied ? (
@@ -1523,7 +1507,7 @@ export default function BlogDetailClient({
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
                           />
                         </svg>
                         Copy link
@@ -1533,20 +1517,14 @@ export default function BlogDetailClient({
                 </div>
               </div>
 
-              {/* ── Discussion Terminal ────────────────────────────────────── */}
-              <div className="border-neon-emerald/20 mt-10 overflow-hidden rounded-[2rem] border bg-[#050505] shadow-2xl">
-                <div className="flex items-center justify-between border-b border-[#27272A] bg-[#0A0A0B] p-3 px-6">
-                  <div className="flex space-x-2.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/50" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/50" />
-                    <div className="bg-neon-emerald h-2.5 w-2.5 rounded-full" />
-                  </div>
-                  <span className="text-neon-emerald font-mono text-[9px] font-bold tracking-[0.4em] uppercase">
-                    Discussion_Gateway
-                  </span>
-                  <div />
+              {/* ── Discussion Section ────────────────────────────────────── */}
+              <div className="mt-12 border-t border-white/5 pt-10">
+                <div className="mb-8 flex items-center justify-between">
+                  <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wider">
+                    Discussion
+                  </h3>
                 </div>
-                <div className="p-6 md:p-10">
+                <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-6 md:p-8">
                   <BlogComments
                     blogId={blog.id}
                     initialComments={initialComments}
@@ -1561,23 +1539,23 @@ export default function BlogDetailClient({
               <aside
                 className={cn(
                   'hidden shrink-0 transition-[width] duration-300 ease-out xl:block',
-                  tocCollapsed ? 'xl:w-12' : 'xl:w-1/3'
+                  tocCollapsed ? 'xl:w-12' : 'xl:w-80'
                 )}
               >
                 <div
                   className={cn(
-                    'sticky top-20 space-y-6 transition-opacity duration-300',
+                    'sticky top-24 space-y-6 transition-opacity duration-300',
                     focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
                   )}
                 >
                   {/* TOC Glass Panel */}
                   {tocCollapsed ? (
-                    <div className="holographic-card no-lift flex flex-col items-center gap-3 rounded-2xl px-1 py-4">
+                    <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-zinc-955/70 px-2 py-4">
                       <button
                         onClick={() => setTocCollapsed(false)}
                         title="Expand contents"
                         aria-label="Expand table of contents"
-                        className="hover:bg-neon-emerald/10 hover:text-neon-emerald flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-emerald-500/10 hover:text-emerald-400"
                       >
                         <svg
                           className="h-4 w-4"
@@ -1599,7 +1577,7 @@ export default function BlogDetailClient({
                         title={`${Math.round(scrollProgress)}% read`}
                       >
                         <div
-                          className="bg-neon-emerald absolute top-0 left-0 w-full rounded-full transition-all duration-300"
+                          className="absolute top-0 left-0 w-full rounded-full bg-emerald-550 transition-all duration-300"
                           style={{ height: `${scrollProgress}%` }}
                         />
                       </div>
@@ -1608,7 +1586,7 @@ export default function BlogDetailClient({
                       </span>
                       <div className="h-px w-6 bg-white/10" />
                       <span
-                        className="text-neon-emerald/70 font-mono text-[9px] font-bold tracking-widest tabular-nums"
+                        className="font-mono text-[9px] font-bold tracking-widest text-emerald-400/80 tabular-nums"
                         title={`Section ${activeIdx >= 0 ? activeIdx + 1 : 0} of ${tableOfContents.length}`}
                       >
                         {String(activeIdx >= 0 ? activeIdx + 1 : 0).padStart(
@@ -1621,25 +1599,25 @@ export default function BlogDetailClient({
                     </div>
                   ) : (
                     <div
-                      className="border-neon-emerald/10 overflow-hidden rounded-[2rem] border"
+                      className="overflow-hidden rounded-2xl border border-white/10"
                       style={{
-                        background: 'rgba(20, 20, 22, 0.7)',
-                        backdropFilter: 'blur(40px)',
-                        boxShadow: '0 0 60px 0 rgba(139, 92, 246, 0.1)',
+                        background: 'rgba(20, 20, 22, 0.45)',
+                        backdropFilter: 'blur(24px)',
+                        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
                       }}
                     >
-                      <div className="flex items-center justify-between border-b border-[#27272A]/50 px-8 py-5">
-                        <h3 className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.6em] uppercase">
-                          Protocol_Overview
+                      <div className="flex items-center justify-between border-b border-[#27272A]/50 px-6 py-4">
+                        <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
+                          Table of Contents
                         </h3>
                         <div className="flex items-center gap-3">
-                          <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
+                          <span className="rounded-md bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 tabular-nums">
                             {tocItems.filter((s) => s.level === 2).length}
                           </span>
                           <button
                             onClick={() => setTocCollapsed(true)}
                             title="Collapse"
-                            className="hover:text-neon-emerald flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8"
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 transition-all hover:bg-white/8 hover:text-white"
                           >
                             <svg
                               className="h-3.5 w-3.5"
@@ -1679,27 +1657,27 @@ export default function BlogDetailClient({
                         ))}
                       </nav>
 
-                      <div className="border-t border-[#27272A]/50 px-8 py-5">
-                        <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-600">
+                      <div className="border-t border-[#27272A]/50 px-6 py-4">
+                        <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-550">
                           <span>
                             {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                             {tableOfContents.length} sections
                           </span>
-                          <span className="text-neon-emerald font-bold tabular-nums">
+                          <span className="font-bold text-emerald-400 tabular-nums">
                             {Math.round(scrollProgress)}%
                           </span>
                         </div>
                         <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                           <div
-                            className="bg-neon-emerald h-full rounded-full transition-all duration-300"
+                            className="h-full rounded-full bg-emerald-500 transition-all duration-300"
                             style={{ width: `${scrollProgress}%` }}
                           />
                         </div>
 
-                        {/* Broadcast Signal */}
-                        <div className="mt-8 space-y-4">
-                          <h4 className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
-                            Broadcast_Signal
+                        {/* Share Article */}
+                        <div className="mt-6 space-y-3">
+                          <h4 className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                            Share Article
                           </h4>
                           <div className="flex gap-3">
                             {[
@@ -1741,10 +1719,10 @@ export default function BlogDetailClient({
                                 key={tip}
                                 title={tip}
                                 onClick={action}
-                                className="hover:border-neon-emerald/50 hover:bg-neon-emerald/8 group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all"
+                                className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
                               >
                                 <svg
-                                  className="group-hover:text-neon-emerald h-4 w-4 text-zinc-400 transition-colors"
+                                  className="h-4 w-4 text-zinc-450 transition-colors group-hover:text-emerald-400"
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
@@ -1767,7 +1745,7 @@ export default function BlogDetailClient({
                   {/* Related Logs — hidden when sidebar collapsed */}
                   {!tocCollapsed && relatedBlogs.length > 0 && (
                     <div className="space-y-4 pt-4">
-                      <h3 className="text-neon-emerald px-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
+                      <h3 className="px-2 font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
                         Related Articles
                       </h3>
                       <div className="space-y-3">

@@ -359,127 +359,102 @@ async function EventDetailPage({ params }) {
         ]}
       />
 
-      {/* ── Hero Redesign ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-28 pb-12 sm:pt-36 sm:pb-16 lg:pt-40 lg:pb-24 border-b border-white/5">
-        {/* Ambient backglows */}
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="grid-overlay absolute inset-0 opacity-15" />
-          <div className="bg-neon-violet/12 absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full blur-[150px]" />
-          <div className="bg-neon-lime/8 absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full blur-[150px]" />
+      {/* Ambient backglows */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="grid-overlay absolute inset-0 opacity-15" />
+        <div className="bg-neon-violet/12 absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full blur-[150px]" />
+        <div className="bg-neon-lime/8 absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full blur-[150px]" />
+      </div>
+
+      {/* Backdrop Cover Blur */}
+      {heroImage && (
+        <div className="absolute inset-0 z-0 overflow-hidden opacity-30 select-none pointer-events-none">
+          <img
+            src={heroImage}
+            alt=""
+            aria-hidden
+            className="h-full w-full object-cover blur-[90px] scale-110 opacity-30 grayscale"
+          />
+          <div className="absolute inset-0 bg-[#05060B]/80" />
+        </div>
+      )}
+
+      {/* Main Content Container */}
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 pb-12 sm:pt-36 sm:pb-16 lg:pt-40 lg:pb-20">
+        
+        {/* Navigation Breadcrumbs */}
+        <nav className="mb-8">
+          <Link
+            href="/events"
+            className="group font-heading hover:border-white/20 hover:text-white flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/2 px-4.5 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all backdrop-blur-md"
+          >
+            <svg
+              className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            All Events
+          </Link>
+        </nav>
+
+        {/* Title Block */}
+        <div className="space-y-4 mb-10 max-w-5xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] backdrop-blur-md ${statusCfg.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
+              {statusCfg.label}
+            </span>
+            {event.category && (
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px] backdrop-blur-md">
+                {event.category}
+              </span>
+            )}
+          </div>
+
+          <h1 className="kinetic-headline font-heading text-[clamp(2.2rem,5vw+1rem,5.2rem)] [line-height:1.02] font-black text-white uppercase sm:[line-height:0.95] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            {event.title}
+          </h1>
+
+          {event.description && (
+            <p className="text-zinc-400 text-sm sm:text-base lg:text-[18px] leading-relaxed max-w-3xl font-light">
+              {event.description}
+            </p>
+          )}
         </div>
 
-        {/* Backdrop Cover Blur */}
-        {heroImage && (
-          <div className="absolute inset-0 z-0 overflow-hidden opacity-30 select-none pointer-events-none">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={heroImage}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-cover blur-[90px] scale-110 opacity-30 grayscale"
-            />
-            <div className="absolute inset-0 bg-[#05060B]/80" />
-          </div>
-        )}
-
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Back link */}
-          <nav className="mb-6 sm:mb-8">
-            <Link
-              href="/events"
-              className="group font-heading hover:border-white/20 hover:text-white flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/2 px-4.5 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all backdrop-blur-md"
-            >
-              <svg
-                className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              All Events
-            </Link>
-          </nav>
-
-          {/* Split Grid Banner */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12 items-center">
+        {/* Dashboard 2-Column Grid */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
+          
+          {/* LEFT COLUMN: MAIN CONTENT (Poster, Overview, Glance, Requirements) */}
+          <div className="lg:col-span-8 space-y-6 sm:space-y-8">
             
-            {/* Left Info Column */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] backdrop-blur-md ${statusCfg.badge}`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
-                  {statusCfg.label}
-                </span>
-                {event.category && (
-                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px] backdrop-blur-md">
-                    {event.category}
-                  </span>
-                )}
-              </div>
-
-              <h1 className="kinetic-headline font-heading text-[clamp(2.2rem,5vw+1rem,5rem)] [line-height:1.02] font-black text-white uppercase sm:[line-height:0.95] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                {event.title}
-              </h1>
-
-              {event.description && (
-                <p className="text-zinc-400 text-sm sm:text-base lg:text-[17px] leading-relaxed max-w-2xl font-light">
-                  {event.description.length > 200
-                    ? `${event.description.substring(0, 200)}...`
-                    : event.description}
-                </p>
-              )}
-
-              {/* Urgency and CTAs */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                {isActive && event.registration_required && (
-                  <a
-                    href="#register"
-                    className="group bg-neon-lime font-heading inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-full px-8 py-3.5 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-all duration-300 hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] hover:scale-[1.01]"
-                  >
-                    Register Now
-                    <span
-                      aria-hidden
-                      className="transition-transform group-hover:translate-x-0.5"
-                    >
-                      →
-                    </span>
-                  </a>
-                )}
-                {isActive && event.registration_required && event.registration_deadline && (
-                  <div className="flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/5 px-4 py-2 text-[10px] font-mono tracking-widest text-amber-400 uppercase backdrop-blur-md">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
-                    Reg Deadline: {formatDateShort(event.registration_deadline)}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Interactive Image Column */}
-            <div className="lg:col-span-5 flex justify-center">
+            {/* Visual Cover Banner */}
+            <div className="holographic-card relative overflow-hidden rounded-2xl border border-white/5 bg-white/2 p-4 sm:p-5 backdrop-blur-md">
               <div
-                className={`relative group w-full max-w-md aspect-video sm:aspect-4/3 lg:aspect-square overflow-hidden rounded-2xl border bg-slate-900/40 p-1.5 transition-all duration-500 hover:-translate-y-1 hover:scale-[1.01] ${
+                className={`relative group w-full aspect-video overflow-hidden rounded-xl border bg-slate-900/40 p-1 transition-all duration-500 hover:-translate-y-0.5 ${
                   isCompleted
-                    ? 'border-neon-violet/20 hover:border-neon-violet/40 shadow-[0_0_50px_-15px_rgba(124,92,255,0.25)]'
-                    : 'border-neon-lime/20 hover:border-neon-lime/40 shadow-[0_0_50px_-15px_rgba(182,243,107,0.25)]'
+                    ? 'border-neon-violet/20 hover:border-neon-violet/40 shadow-[0_0_40px_-15px_rgba(124,92,255,0.25)]'
+                    : 'border-neon-lime/20 hover:border-neon-lime/40 shadow-[0_0_40px_-15px_rgba(182,243,107,0.25)]'
                 }`}
               >
                 {heroImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={heroImage}
                     alt={event.title}
-                    className="h-full w-full object-cover rounded-xl transition-all duration-700 group-hover:scale-[1.02]"
+                    className="h-full w-full object-cover rounded-lg transition-all duration-700 group-hover:scale-[1.02]"
                   />
                 ) : (
-                  <div className="relative h-full w-full rounded-xl bg-linear-to-br from-[#0c0d14] via-[#161726] to-[#07080d] overflow-hidden flex flex-col justify-between p-6">
+                  <div className="relative h-full w-full rounded-lg bg-linear-to-br from-[#0c0d14] via-[#161726] to-[#07080d] overflow-hidden flex flex-col justify-between p-6">
                     <div className="absolute inset-0 grid-overlay opacity-10" />
                     <div className="absolute -top-16 -right-16 h-36 w-36 bg-neon-lime/10 rounded-full blur-2xl" />
                     <div className="absolute -bottom-16 -left-16 h-36 w-36 bg-neon-violet/10 rounded-full blur-2xl" />
@@ -503,329 +478,319 @@ async function EventDetailPage({ params }) {
                     </div>
                   </div>
                 )}
-                
-                <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-tr from-white/0 via-white/3 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="pointer-events-none absolute inset-0 rounded-xl bg-linear-to-tr from-white/0 via-white/3 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
-            </div>
 
-          </div>
-        </div>
-      </section>
-
-      {/* ── About & Sidebar Grid ────────────────────────────────────────── */}
-      <section id="about" className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="bg-neon-violet/5 absolute top-10 left-1/2 h-[600px] w-[800px] -translate-x-1/2 rounded-full blur-[150px]" />
-          <div className="grid-overlay absolute inset-0 opacity-10" />
-        </div>
-
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-12">
-            
-            {/* Left Content Column */}
-            <div className="lg:col-span-8 space-y-6 sm:space-y-8">
-              {/* Description & Rich Content */}
-              {(event.description || event.content) && (
-                <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
-                  <div className="mb-6">
-                    <SectionLabel accent="lime">Overview</SectionLabel>
-                  </div>
-                  {event.description && (
-                    <p className="text-sm sm:text-base lg:text-[17px] leading-relaxed text-zinc-300">
-                      {event.description}
-                    </p>
-                  )}
-                  {event.content && (
-                    <div
-                      className={`${event.description ? 'mt-6 border-t border-white/5 pt-6' : ''}`}
-                    >
-                      <EventContentRenderer content={event.content} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* At a Glance */}
-              {(event.eligibility || venueLabel || event.participation_type || event.category) && (
-                <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
-                  <div className="mb-6">
-                    <SectionLabel accent="violet">At a Glance</SectionLabel>
-                  </div>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {event.category && (
-                      <div>
-                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
-                          <IconTag className="h-3.5 w-3.5 shrink-0 text-neon-lime" /> Category
-                        </dt>
-                        <dd className="text-sm font-bold text-white">
-                          {event.category}
-                        </dd>
-                      </div>
-                    )}
-                    {event.participation_type && (
-                      <div>
-                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
-                          <IconGroups className="h-3.5 w-3.5 shrink-0 text-neon-violet" /> Format
-                        </dt>
-                        <dd className="text-sm font-bold text-white">
-                          {event.participation_type === 'team'
-                            ? `Team${event.team_size ? ` of ${event.team_size}` : ''}`
-                            : 'Individual'}
-                        </dd>
-                      </div>
-                    )}
-                    {venueLabel && (
-                      <div>
-                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
-                          {event.venue_type === 'online' ? (
-                            <IconGlobe className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
-                          ) : event.venue_type === 'hybrid' ? (
-                            <IconSync className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
-                          ) : (
-                            <IconLocation className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
-                          )}
-                          Venue
-                        </dt>
-                        <dd className="text-sm font-bold text-white">
-                          {venueLabel}
-                        </dd>
-                      </div>
-                    )}
-                    {event.eligibility && (
-                      <div>
-                        <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
-                          <IconShield className="h-3.5 w-3.5 shrink-0 text-neon-violet" /> Eligibility
-                        </dt>
-                        <dd className="text-sm font-bold text-white">
-                          {event.eligibility}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                </div>
-              )}
-
-              {/* Requirements */}
-              {event.prerequisites && (
-                <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
-                  <div className="mb-6">
-                    <SectionLabel accent="lime">Requirements</SectionLabel>
-                  </div>
-                  <div className="space-y-2.5">
-                    {event.prerequisites
-                      .split('\n')
-                      .filter(Boolean)
-                      .map((line, i) => (
-                        <div
-                          key={i}
-                          className="border-white/5 hover:border-neon-lime/30 bg-white/1 flex gap-3.5 rounded-xl border p-3 sm:p-4 transition-all duration-300 hover:bg-white/2"
-                        >
-                          <span className="text-neon-lime/60 shrink-0 font-mono text-[10px] font-bold tracking-widest">
-                            {String(i + 1).padStart(2, '0')}
-                          </span>
-                          <p className="text-sm leading-relaxed text-zinc-300">
-                            {line.trim()}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tags */}
-              {tags.length > 0 && (
-                <div className="space-y-3">
-                  <SectionLabel accent="violet">Topics</SectionLabel>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {tags.map((tag) => (
-                      <TagBadge key={tag}>{tag}</TagBadge>
-                    ))}
-                  </div>
+              {isActive && event.registration_required && event.registration_deadline && (
+                <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2 text-[10px] font-mono tracking-widest text-amber-400 uppercase backdrop-blur-md">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+                  Reg Deadline: {formatDateShort(event.registration_deadline)}
                 </div>
               )}
             </div>
 
-            {/* Right Sticky Sidebar */}
-            <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
-              
-              {/* Dynamic Action Component (Countdown & Sharing) */}
-              <EventInteractiveActions event={event} />
-
-              {/* Registration Component */}
-              <div id="register">
-                {isCompleted ? (
-                  <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md">
-                    <div className="mb-4 flex items-center gap-3">
-                      <IconCheck className="text-neon-lime h-4.5 w-4.5 shrink-0" />
-                      <div>
-                        <h3 className="font-heading text-sm font-bold text-white uppercase tracking-wider">
-                          Event Concluded
-                        </h3>
-                        <p className="font-mono text-[9px] text-zinc-500 sm:text-[10px] uppercase tracking-wider">
-                          {formatDateShort(event.end_date || event.start_date)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {galleryItems.length > 0 && (
-                      <div className="mb-4 space-y-2">
-                        <div className="flex gap-1.5 overflow-hidden rounded-xl">
-                          {galleryItems.slice(0, 3).map((gItem, gi) => (
-                            <div
-                              key={gItem.id}
-                              className="relative h-16 flex-1 overflow-hidden rounded-lg bg-white/3 sm:h-20"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={driveImageUrl(gItem.url)}
-                                alt={gItem.caption || `Photo ${gi + 1}`}
-                                className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
-                              />
-                              {gi === 2 && galleryItems.length > 3 && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                  <span className="font-mono text-xs font-bold text-white">
-                                    +{galleryItems.length - 3}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <a
-                          href="#event-gallery"
-                          className="border-neon-violet/20 bg-neon-violet/8 text-neon-violet hover:bg-neon-violet/16 flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 font-mono text-[9px] font-bold tracking-widest uppercase transition-colors sm:text-[10px]"
-                        >
-                          <IconCamera className="h-3.5 w-3.5" />
-                          View {galleryItems.length} Photos
-                        </a>
-                      </div>
-                    )}
-
-                    <p className="mb-4 text-xs leading-relaxed text-zinc-500">
-                      This event has concluded. We hope to see you at our next workshop or contest!
-                    </p>
-                    <Link
-                      href="/events"
-                      className="font-heading hover:border-neon-lime/30 hover:text-neon-lime flex w-full items-center justify-center rounded-full border border-white/10 bg-white/4 px-5 py-3.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all"
-                    >
-                      Browse Events →
-                    </Link>
+            {/* Overview & Rich Content */}
+            {(event.description || event.content) && (
+              <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
+                <div className="mb-6">
+                  <SectionLabel accent="lime">Overview</SectionLabel>
+                </div>
+                {event.description && (
+                  <p className="text-sm sm:text-base leading-relaxed text-zinc-300">
+                    {event.description}
+                  </p>
+                )}
+                {event.content && (
+                  <div
+                    className={`${event.description ? 'mt-6 border-t border-white/5 pt-6' : ''}`}
+                  >
+                    <EventContentRenderer content={event.content} />
                   </div>
-                ) : (
-                  <EventRegistrationCard event={event} session={session} />
                 )}
               </div>
+            )}
 
-              {/* Occupancy card */}
-              {!isCompleted && event.max_participants && (
-                <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
-                      Spot Occupancy
-                    </span>
-                    <span className="font-mono text-xs font-bold text-white">
-                      {registrationCount} / {event.max_participants} Spots
-                    </span>
-                  </div>
-                  
-                  <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-linear-to-r from-neon-lime to-neon-violet h-1.5 rounded-full"
-                      style={{
-                        width: `${Math.min(100, (registrationCount / event.max_participants) * 100)}%`,
-                      }}
-                    />
-                  </div>
-
-                  <p className="font-mono text-[9px] text-zinc-500 leading-normal uppercase tracking-wide">
-                    {event.max_participants - registrationCount > 0
-                      ? `Only ${event.max_participants - registrationCount} seats remaining`
-                      : 'Registration Full!'}
-                  </p>
+            {/* At a Glance */}
+            {(event.eligibility || venueLabel || event.participation_type || event.category) && (
+              <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
+                <div className="mb-6">
+                  <SectionLabel accent="violet">At a Glance</SectionLabel>
                 </div>
-              )}
-
-              {/* Polished Details Row */}
-              <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md">
-                <div className="mb-4">
-                  <SectionLabel accent="lime">Quick Details</SectionLabel>
-                </div>
-                <ul className="space-y-0.5">
-                  {event.start_date && (
-                    <SidebarRow
-                      label="Date"
-                      value={formatDateShort(event.start_date)}
-                    />
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+                  {event.category && (
+                    <div>
+                      <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                        <IconTag className="h-3.5 w-3.5 shrink-0 text-neon-lime" /> Category
+                      </dt>
+                      <dd className="text-sm font-bold text-white">
+                        {event.category}
+                      </dd>
+                    </div>
                   )}
-                  {formatTime(event.start_date) && (
-                    <SidebarRow
-                      label="Time"
-                      value={formatTime(event.start_date)}
-                    />
+                  {event.participation_type && (
+                    <div>
+                      <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                        <IconGroups className="h-3.5 w-3.5 shrink-0 text-neon-violet" /> Format
+                      </dt>
+                      <dd className="text-sm font-bold text-white">
+                        {event.participation_type === 'team'
+                          ? `Team${event.team_size ? ` of ${event.team_size}` : ''}`
+                          : 'Individual'}
+                      </dd>
+                    </div>
                   )}
-                  {duration && (
-                    <SidebarRow label="Duration" value={duration} />
+                  {venueLabel && (
+                    <div>
+                      <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                        {event.venue_type === 'online' ? (
+                          <IconGlobe className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
+                        ) : event.venue_type === 'hybrid' ? (
+                          <IconSync className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
+                        ) : (
+                          <IconLocation className="h-3.5 w-3.5 shrink-0 text-neon-lime" />
+                        )}
+                        Venue
+                      </dt>
+                      <dd className="text-sm font-bold text-white">
+                        {venueLabel}
+                      </dd>
+                    </div>
                   )}
-                  {event.location && (
-                    <SidebarRow label="Location" value={event.location} />
-                  )}
-                  <SidebarRow
-                    label="Format"
-                    value={event.participation_type === 'team' ? 'Team' : 'Individual'}
-                  />
                   {event.eligibility && (
-                    <SidebarRow label="Eligibility" value={event.eligibility} />
+                    <div>
+                      <dt className="mb-1 flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
+                        <IconShield className="h-3.5 w-3.5 shrink-0 text-neon-violet" /> Eligibility
+                      </dt>
+                      <dd className="text-sm font-bold text-white">
+                        {event.eligibility}
+                      </dd>
+                    </div>
                   )}
-                </ul>
+                </dl>
               </div>
+            )}
 
-              {/* Help Widget */}
-              <Link
-                href="/contact"
-                className="holographic-card group flex items-center gap-3.5 rounded-2xl border border-white/5 bg-white/2 p-4 sm:p-5 backdrop-blur-md hover:border-white/10"
-              >
-                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl bg-white/5 border border-white/5">
-                  <svg
-                    className="group-hover:text-neon-lime h-4.5 w-4.5 text-zinc-400 transition-colors"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
+            {/* Requirements */}
+            {event.prerequisites && (
+              <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
+                <div className="mb-6">
+                  <SectionLabel accent="lime">Requirements</SectionLabel>
+                </div>
+                <div className="space-y-2.5">
+                  {event.prerequisites
+                    .split('\n')
+                    .filter(Boolean)
+                    .map((line, i) => (
+                      <div
+                        key={i}
+                        className="border-white/5 hover:border-neon-lime/30 bg-white/1 flex gap-3.5 rounded-xl border p-3 sm:p-4 transition-all duration-300 hover:bg-white/2"
+                      >
+                        <span className="text-neon-lime/60 shrink-0 font-mono text-[10px] font-bold tracking-widest">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <p className="text-sm leading-relaxed text-zinc-300">
+                          {line.trim()}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="space-y-3">
+                <SectionLabel accent="violet">Topics</SectionLabel>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.map((tag) => (
+                    <TagBadge key={tag}>{tag}</TagBadge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: STICKY SIDEBAR (Registration, Actions, Occupancy, Details, Help) */}
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-28">
+            
+            {/* Registration Card */}
+            <div id="register">
+              {isCompleted ? (
+                <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md">
+                  <div className="mb-4 flex items-center gap-3">
+                    <IconCheck className="text-neon-lime h-4.5 w-4.5 shrink-0" />
+                    <div>
+                      <h3 className="font-heading text-sm font-bold text-white uppercase tracking-wider">
+                        Event Concluded
+                      </h3>
+                      <p className="font-mono text-[9px] text-zinc-500 sm:text-[10px] uppercase tracking-wider">
+                        {formatDateShort(event.end_date || event.start_date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {galleryItems.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex gap-1.5 overflow-hidden rounded-xl">
+                        {galleryItems.slice(0, 3).map((gItem, gi) => (
+                          <div
+                            key={gItem.id}
+                            className="relative h-16 flex-1 overflow-hidden rounded-lg bg-white/3 sm:h-20"
+                          >
+                            <img
+                              src={driveImageUrl(gItem.url)}
+                              alt={gItem.caption || `Photo ${gi + 1}`}
+                              className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
+                            />
+                            {gi === 2 && galleryItems.length > 3 && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                <span className="font-mono text-xs font-bold text-white">
+                                  +{galleryItems.length - 3}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <a
+                        href="#event-gallery"
+                        className="border-neon-violet/20 bg-neon-violet/8 text-neon-violet hover:bg-neon-violet/16 flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 font-mono text-[9px] font-bold tracking-widest uppercase transition-colors sm:text-[10px]"
+                      >
+                        <IconCamera className="h-3.5 w-3.5" />
+                        View {galleryItems.length} Photos
+                      </a>
+                    </div>
+                  )}
+
+                  <p className="mb-4 text-xs leading-relaxed text-zinc-500">
+                    This event has concluded. We hope to see you at our next workshop or contest!
+                  </p>
+                  <Link
+                    href="/events"
+                    className="font-heading hover:border-neon-lime/30 hover:text-neon-lime flex w-full items-center justify-center rounded-full border border-white/10 bg-white/4 px-5 py-3.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
+                    Browse Events →
+                  </Link>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-heading text-[10px] font-bold tracking-widest text-white uppercase">
-                    Need Help?
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    Questions about this event?
-                  </p>
+              ) : (
+                <EventRegistrationCard event={event} session={session} />
+              )}
+            </div>
+
+            {/* Interactive Actions Widget */}
+            <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md">
+              <EventInteractiveActions event={event} />
+            </div>
+
+            {/* Occupancy Card */}
+            {!isCompleted && event.max_participants && (
+              <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                    Spot Occupancy
+                  </span>
+                  <span className="font-mono text-xs font-bold text-white">
+                    {registrationCount} / {event.max_participants} Spots
+                  </span>
                 </div>
+                
+                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-linear-to-r from-neon-lime to-neon-violet h-1.5 rounded-full"
+                    style={{
+                      width: `${Math.min(100, (registrationCount / event.max_participants) * 100)}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="font-mono text-[9px] text-zinc-500 leading-normal uppercase tracking-wide">
+                  {event.max_participants - registrationCount > 0
+                    ? `Only ${event.max_participants - registrationCount} seats remaining`
+                    : 'Registration Full!'}
+                </p>
+              </div>
+            )}
+
+            {/* Details Card */}
+            <div className="holographic-card no-lift rounded-2xl border border-white/5 bg-white/2 p-5 sm:p-6 backdrop-blur-md">
+              <div className="mb-4">
+                <SectionLabel accent="lime">Quick Details</SectionLabel>
+              </div>
+              <ul className="space-y-0.5">
+                {event.start_date && (
+                  <SidebarRow
+                    label="Date"
+                    value={formatDateShort(event.start_date)}
+                  />
+                )}
+                {formatTime(event.start_date) && (
+                  <SidebarRow
+                    label="Time"
+                    value={formatTime(event.start_date)}
+                  />
+                )}
+                {duration && (
+                  <SidebarRow label="Duration" value={duration} />
+                )}
+                {event.location && (
+                  <SidebarRow label="Location" value={event.location} />
+                )}
+                <SidebarRow
+                  label="Format"
+                  value={event.participation_type === 'team' ? 'Team' : 'Individual'}
+                />
+                {event.eligibility && (
+                  <SidebarRow label="Eligibility" value={event.eligibility} />
+                )}
+              </ul>
+            </div>
+
+            {/* Help Widget */}
+            <Link
+              href="/contact"
+              className="holographic-card group flex items-center gap-3.5 rounded-2xl border border-white/5 bg-white/2 p-4 sm:p-5 backdrop-blur-md hover:border-white/10"
+            >
+              <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl bg-white/5 border border-white/5">
                 <svg
-                  className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5"
+                  className="group-hover:text-neon-lime h-4.5 w-4.5 text-zinc-400 transition-colors"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
-                  strokeWidth={2.5}
+                  strokeWidth={1.8}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-              </Link>
-            </div>
-
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-[10px] font-bold tracking-widest text-white uppercase">
+                  Need Help?
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Questions about this event?
+                </p>
+              </div>
+              <svg
+                className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </Link>
           </div>
+
         </div>
-      </section>
+      </div>
 
       {/* ── Schedule Timeline Section ───────────────────────────────────── */}
       {event.end_date && event.start_date && (
@@ -845,11 +810,9 @@ async function EventDetailPage({ params }) {
             </div>
 
             <div className="relative">
-              {/* Vertical spine */}
               <div className="from-neon-lime/40 to-neon-violet/30 absolute top-3.5 bottom-3.5 left-3.5 w-px bg-gradient-to-b via-white/5 sm:left-1/2 sm:-translate-x-1/2" />
 
               <div className="space-y-6 sm:space-y-8">
-                {/* Start node */}
                 <div className="relative flex items-start gap-5 sm:items-center sm:gap-0">
                   <div className="bg-neon-lime relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_14px_rgba(182,243,107,0.55)] sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                     <div className="h-2 w-2 rounded-full bg-black/50" />
@@ -886,9 +849,8 @@ async function EventDetailPage({ params }) {
                   </div>
                 </div>
 
-                {/* Multi-Timeline Intermediate Sessions */}
                 {timeline.map((tm, idx) => {
-                  const isLeft = idx % 2 === 0; // Alternates left and right sides
+                  const isLeft = idx % 2 === 0;
                   return (
                     <div
                       key={tm.id}
@@ -896,12 +858,10 @@ async function EventDetailPage({ params }) {
                         isLeft ? 'sm:flex-row-reverse' : ''
                       }`}
                     >
-                      {/* Node Dot */}
                       <div className="bg-neon-lime relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_14px_rgba(182,243,107,0.45)] sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                         <div className="h-2 w-2 rounded-full bg-black/50" />
                       </div>
 
-                      {/* Desktop Date Display */}
                       <div
                         className={`hidden sm:flex sm:w-5/12 sm:flex-col ${
                           isLeft ? 'sm:items-start sm:pl-8' : 'sm:items-end sm:pr-8'
@@ -919,13 +879,11 @@ async function EventDetailPage({ params }) {
                         )}
                       </div>
 
-                      {/* Card Content */}
                       <div
                         className={`holographic-card border border-white/5 bg-white/2 min-w-0 flex-1 rounded-xl p-4 sm:w-5/12 sm:flex-none backdrop-blur-xs ${
                           isLeft ? 'sm:mr-auto sm:pr-6' : 'sm:ml-auto sm:pl-6'
                         }`}
                       >
-                        {/* Mobile Date Display */}
                         <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:hidden">
                           {tm.start_date && (
                             <span className="text-neon-lime font-mono text-[9px] font-bold tracking-widest uppercase">
@@ -955,7 +913,6 @@ async function EventDetailPage({ params }) {
                   );
                 })}
 
-                {/* End node */}
                 <div className="relative flex items-start gap-5 sm:flex-row-reverse sm:items-center sm:gap-0">
                   <div className="bg-neon-violet relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] shadow-[0_0_14px_rgba(124,92,255,0.55)] sm:absolute sm:left-1/2 sm:-translate-x-1/2">
                     <div className="h-2 w-2 rounded-full bg-black/50" />
@@ -1008,7 +965,6 @@ async function EventDetailPage({ params }) {
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {/* Gallery Header */}
             <div className="mb-7 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <SectionLabel accent="violet">Gallery</SectionLabel>

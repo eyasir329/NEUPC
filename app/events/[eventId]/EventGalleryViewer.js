@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import { driveImageUrl } from '@/app/_lib/utils/utils';
 
@@ -16,7 +17,12 @@ import { driveImageUrl } from '@/app/_lib/utils/utils';
 
 export default function EventGalleryViewer({ items, eventTitle }) {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [mounted, setMounted] = useState(false);
   const isOpen = lightboxIndex >= 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* ── Lightbox helpers ── */
   const open = (i) => setLightboxIndex(i);
@@ -117,10 +123,10 @@ export default function EventGalleryViewer({ items, eventTitle }) {
         })}
       </div>
 
-      {/* ── Full-screen Lightbox ── */}
-      {isOpen && (
+      {/* ── Full-screen Lightbox — Rendered in Portal to escape stacking context ── */}
+      {mounted && isOpen && createPortal(
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center bg-black/95 backdrop-blur-2xl"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
           onClick={close}
           role="dialog"
           aria-modal="true"
@@ -255,7 +261,8 @@ export default function EventGalleryViewer({ items, eventTitle }) {
               </div>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
