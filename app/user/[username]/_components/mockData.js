@@ -72,12 +72,9 @@ export const MOCK_PROFILE = {
   ],
 
   achievements: [
-    { title: 'Guardian Rank — Top 1.5% LeetCode',        issuer: 'LeetCode',                  date: '2024-03' },
-    { title: 'Specialist Rank — Codeforces',              issuer: 'Codeforces',                date: '2024-05' },
-    { title: '3-Star Rating — CodeChef',                  issuer: 'CodeChef',                  date: '2024-02' },
-    { title: '9th Place National DevHackathon',           issuer: 'National CP Community',      date: '2023-11' },
-    { title: 'ACM ICPC Bangladesh — Honorable Mention',   issuer: 'ICPC Committee',             date: '2023-09' },
     { title: 'Academic Excellence Honors Award',          issuer: 'University of Netrokona',    date: '2024-01' },
+    { title: 'Champion – Intra-University Programming Contest', issuer: 'NEUPC',               date: '2023-08' },
+    { title: 'Dean\'s List Award (First Class Honours)',   issuer: 'University of Netrokona',    date: '2022-09' },
   ],
 
   certificates: [
