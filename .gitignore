@@ -100,6 +100,7 @@ scripts/*-progress.json
 scripts/codeforces-scrape-progress.json
 
 # Sensitive database files
+supabase/
 supabase/remote_data.sql
 supabase/seed.sql
 supabase/migrations/

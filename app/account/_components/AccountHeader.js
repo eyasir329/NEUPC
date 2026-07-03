@@ -10,6 +10,7 @@ import {
   Settings,
   User,
   ExternalLink,
+  FileText,
 } from 'lucide-react';
 import {
   getInitials,
@@ -57,7 +58,7 @@ function InlineAvatar({ session }) {
   );
 }
 
-export default function AccountHeader({ session, accountStatus, user, userRoles = [] }) {
+export default function AccountHeader({ session, accountStatus, user, userRoles = [], bio, skills = [], username }) {
   const name = session?.name || 'Guest User';
   const email = session?.email || '';
   const isNew = accountStatus === 'pending';
@@ -87,7 +88,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
     ? userRoles[0].charAt(0).toUpperCase() + userRoles[0].slice(1)
     : 'Guest';
 
-  const username = user?.username;
+  const resolvedUsername = username || user?.username;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c1020]/70 shadow-2xl backdrop-blur-2xl">
@@ -97,7 +98,7 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
       <div className="h-16 w-full bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-transparent" />
 
       <div className="relative z-10 px-5 pb-5">
-        {/* Avatar — overlaps the cover */}
+        {/* Avatar overlapping the cover */}
         <div className="-mt-10 mb-3 flex items-end justify-between">
           <InlineAvatar session={session} />
           <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${statusColor}`}>
@@ -121,6 +122,30 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
             <p className="mt-0.5 truncate text-xs text-gray-500">{email}</p>
           )}
         </div>
+
+        {/* Bio */}
+        {bio && (
+          <p className="mt-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5 text-xs leading-relaxed text-gray-400 italic">
+            &ldquo;{bio}&rdquo;
+          </p>
+        )}
+
+        {/* Skills */}
+        {skills?.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-gray-600">Skills</p>
+            <div className="flex flex-wrap gap-1.5">
+              {skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-md border border-indigo-500/15 bg-indigo-500/8 px-2 py-0.5 text-[10px] font-medium text-indigo-300/80"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stat chips */}
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -149,11 +174,14 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
           </div>
         </div>
 
+        {/* Scratchpad */}
+        <ScratchpadSection />
+
         {/* Quick actions */}
         <div className="mt-4 flex flex-col gap-2">
-          {username && (
+          {resolvedUsername && (
             <Link
-              href={`/user/${username}`}
+              href={`/user/${resolvedUsername}`}
               className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               <User className="h-4 w-4 text-indigo-400/70" />
@@ -177,6 +205,36 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Client-only scratchpad — persisted to localStorage
+function ScratchpadSection() {
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('neupc_scratchpad') || '';
+  });
+
+  const handleChange = (e) => {
+    setValue(e.target.value);
+    localStorage.setItem('neupc_scratchpad', e.target.value);
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <FileText className="h-3.5 w-3.5 text-indigo-400/60" />
+        <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-600">Scratchpad</p>
+        <span className="ml-auto text-[9px] text-gray-700">autosaved</span>
+      </div>
+      <textarea
+        value={value}
+        onChange={handleChange}
+        placeholder="Quick notes, links, tasks..."
+        rows={3}
+        className="w-full resize-none rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5 text-xs text-gray-300 placeholder-gray-700 transition-colors focus:border-indigo-500/30 focus:outline-none focus:ring-0 hover:border-white/[0.08]"
+      />
     </div>
   );
 }
