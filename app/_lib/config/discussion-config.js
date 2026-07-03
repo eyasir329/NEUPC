@@ -69,6 +69,15 @@ export const DISCUSSION_TYPES = {
     color: 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/30',
     badge: 'border-teal-500/30 bg-teal-500/10 text-teal-300',
   },
+  announcement: {
+    key: 'announcement',
+    label: 'Announcement',
+    short: 'Announce',
+    description: 'System announcements and updates',
+    icon: 'Megaphone',
+    color: 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/30',
+    badge: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  },
 };
 
 export const DISCUSSION_TYPE_KEYS = Object.keys(DISCUSSION_TYPES);

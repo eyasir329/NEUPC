@@ -336,6 +336,13 @@ const SECTIONS = [
         desc: 'JSON array of subject option strings',
         category: 'contact',
       },
+      {
+        key: 'faqs',
+        label: 'FAQ Items',
+        type: 'json',
+        desc: 'JSON array of {question, answer} objects',
+        category: 'contact',
+      },
 
       // Footer
       { type: 'divider', label: 'Footer' },
@@ -345,16 +352,6 @@ const SECTIONS = [
         type: 'textarea',
         placeholder: 'Short description shown in footer…',
         category: 'footer',
-      },
-
-      // FAQs
-      { type: 'divider', label: 'FAQs' },
-      {
-        key: 'faqs',
-        label: 'FAQ Items',
-        type: 'json',
-        desc: 'JSON array of {question, answer} objects',
-        category: 'content',
       },
 
       // Join Page

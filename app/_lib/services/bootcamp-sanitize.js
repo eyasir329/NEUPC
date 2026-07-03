@@ -47,10 +47,35 @@ export function cleanPlainText(value, maxLength = 5000) {
 export function cleanLessonContent(content) {
   if (content == null) return content;
 
+  let parsedContent = content;
+  let isJson = false;
+
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) || (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks))) {
+        parsedContent = parsed;
+        isJson = true;
+      }
+    } catch (e) {
+      // Not a JSON block content string, treat as legacy rich-text string
+    }
+  }
+
   const sanitizeBlock = (block) => {
     if (!block || typeof block !== 'object') return block;
     const next = { ...block };
-    if (typeof next.content === 'string') {
+    if (next.type === 'html') {
+      // Bypass rich-text sanitization for HTML block types to preserve custom admin-authored styling
+    } else if (next.type === 'lessonPlan' && typeof next.content === 'string') {
+      try {
+        const parsed = JSON.parse(next.content);
+        const cleaned = cleanLessonContent(parsed);
+        next.content = JSON.stringify(cleaned);
+      } catch (e) {
+        // Keep as-is if parsing fails
+      }
+    } else if (typeof next.content === 'string') {
       next.content = sanitizeRichText(next.content);
     }
     // Block `data` may carry nested text. Sanitize known fields conservatively.
@@ -66,16 +91,21 @@ export function cleanLessonContent(content) {
     return next;
   };
 
-  if (Array.isArray(content)) {
-    return content.map(sanitizeBlock);
+  let cleaned;
+  if (Array.isArray(parsedContent)) {
+    cleaned = parsedContent.map(sanitizeBlock);
+  } else if (typeof parsedContent === 'object' && Array.isArray(parsedContent.blocks)) {
+    cleaned = { ...parsedContent, blocks: parsedContent.blocks.map(sanitizeBlock) };
+  } else if (typeof parsedContent === 'string') {
+    cleaned = sanitizeRichText(parsedContent);
+  } else {
+    cleaned = parsedContent;
   }
-  if (typeof content === 'object' && Array.isArray(content.blocks)) {
-    return { ...content, blocks: content.blocks.map(sanitizeBlock) };
+
+  if (isJson) {
+    return JSON.stringify(cleaned);
   }
-  if (typeof content === 'string') {
-    return sanitizeRichText(content);
-  }
-  return content;
+  return cleaned;
 }
 
 /**

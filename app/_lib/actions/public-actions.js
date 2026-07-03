@@ -266,7 +266,7 @@ export const getFaqsData = unstable_cache(
   async () => {
     try {
       const setting = await getSetting('faqs');
-      return parseJsonSetting(setting?.value, []);
+      return parseJsonSetting(setting, []);
     } catch {
       return [];
     }
@@ -283,8 +283,8 @@ export const getJoinPageData = unstable_cache(
         getSetting('join_features'),
       ]);
       return {
-        benefits: parseJsonSetting(benefitsSetting?.value, []),
-        features: parseJsonSetting(featuresSetting?.value, []),
+        benefits: parseJsonSetting(benefitsSetting, []),
+        features: parseJsonSetting(featuresSetting, []),
       };
     } catch {
       return { benefits: [], features: [] };

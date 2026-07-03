@@ -1,31 +1,73 @@
-/**
- * @file Account welcome header with user greeting.
- * @module AccountHeader
- */
-
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
 import {
   Calendar,
-  Shield,
   ShieldCheck,
-  LayoutDashboard,
-  Mail,
-  Award
+  Award,
+  Settings,
+  User,
+  ExternalLink,
 } from 'lucide-react';
+import {
+  getInitials,
+  getFallbackAvatarUrl,
+  driveImageUrl,
+} from '@/app/_lib/utils/utils';
 
-/** @param {{ session: Object, accountStatus: string, user: Object, userRoles: string[] }} props */
+function InlineAvatar({ session }) {
+  const [imgError, setImgError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  const name = session?.name || session?.email || '?';
+  const initials = getInitials(name);
+  const rawAvatarSrc = session?.avatar_url || session?.image;
+  const avatarSrc = rawAvatarSrc ? driveImageUrl(rawAvatarSrc) : '';
+  const fallbackSrc = getFallbackAvatarUrl(session?.email || name);
+  const isValidImage = avatarSrc && !avatarSrc.match(/^[A-Z?]{1,3}$/) && !imgError;
+
+  const handleImageError = () => {
+    if (!useFallback) setUseFallback(true);
+    else setImgError(true);
+  };
+
+  return (
+    <div className="relative shrink-0">
+      <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-indigo-500/30 via-purple-500/20 to-pink-500/25 opacity-70 blur-[4px]" />
+      <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-white/10 bg-[#0d1226] shadow-xl ring-1 ring-white/[0.06]">
+        {isValidImage && !useFallback ? (
+          avatarSrc.startsWith('/api/image/') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarSrc} alt={name} className="h-full w-full object-cover" onError={handleImageError} />
+          ) : (
+            <Image src={avatarSrc} alt={name} fill sizes="80px" className="object-cover" onError={handleImageError} priority />
+          )
+        ) : !imgError && useFallback ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fallbackSrc} alt={name} className="h-full w-full object-cover" onError={handleImageError} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600/40 to-purple-600/30">
+            <span className="text-2xl font-extrabold tracking-wider text-white">{initials}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AccountHeader({ session, accountStatus, user, userRoles = [] }) {
   const name = session?.name || 'Guest User';
-  const email = session?.email || 'guest@example.com';
+  const email = session?.email || '';
   const isNew = accountStatus === 'pending';
   const isActive = accountStatus === 'active';
 
   const statusLabel =
     {
-      active: 'Account Active',
-      pending: 'Awaiting Approval',
-      rejected: 'Access Denied',
+      active: 'Active',
+      pending: 'Pending',
+      rejected: 'Rejected',
       suspended: 'Suspended',
       banned: 'Restricted',
       locked: 'Locked',
@@ -33,131 +75,108 @@ export default function AccountHeader({ session, accountStatus, user, userRoles 
     }[accountStatus] ?? 'Unknown';
 
   const statusColor = isActive
-    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-    : 'border-amber-500/25 bg-amber-500/10 text-amber-300';
-
+    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
+    : 'border-amber-500/20 bg-amber-500/8 text-amber-400';
   const dotColor = isActive ? 'bg-emerald-400' : 'bg-amber-400';
 
-  // Format joined date
   const joinedDate = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric',
-      })
+    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : 'Recent';
 
-  // Capitalize primary role nicely
   const highestRole = userRoles?.[0]
     ? userRoles[0].charAt(0).toUpperCase() + userRoles[0].slice(1)
     : 'Guest';
 
-  const dashboardsCount = `${userRoles?.length || 0} ${userRoles?.length === 1 ? 'Portal' : 'Portals'}`;
+  const username = user?.username;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* Outer Card Wrapper (Premium Glassmorphic Panel) */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0c1020]/50 p-6 shadow-2xl backdrop-blur-2xl sm:p-8 md:p-10">
-        {/* Subtle Ambient Glowing Background inside card */}
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-[100px] select-none" />
-        <div className="pointer-events-none absolute -bottom-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-purple-500/5 blur-[100px] select-none" />
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c1020]/70 shadow-2xl backdrop-blur-2xl">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
 
-        <div className="relative z-10 text-center">
-          {/* Eyebrow badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-1.5 text-xs font-semibold backdrop-blur-sm">
-            <span className="text-lg">{isNew ? '🎉' : '👋'}</span>
-            <span className="text-indigo-300 tracking-wide">
-              {isNew ? 'Welcome to NEUPC' : 'Welcome Back'}
+      {/* Cover gradient strip */}
+      <div className="h-16 w-full bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-transparent" />
+
+      <div className="relative z-10 px-5 pb-5">
+        {/* Avatar — overlaps the cover */}
+        <div className="-mt-10 mb-3 flex items-end justify-between">
+          <InlineAvatar session={session} />
+          <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${statusColor}`}>
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${dotColor}`} />
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColor}`} />
             </span>
+            <span className="text-[10px] font-bold tracking-[0.12em] uppercase">{statusLabel}</span>
           </div>
+        </div>
 
-          {/* Gradient title */}
-          <h1 className="mb-3 bg-gradient-to-r from-white via-indigo-100 to-purple-200 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl md:text-5xl">
+        {/* Identity */}
+        <div className="mb-1">
+          <p className="text-[10px] font-semibold tracking-[0.15em] text-indigo-400/70 uppercase">
+            {isNew ? 'New Member' : 'Welcome Back'}
+          </p>
+          <h1 className="mt-0.5 truncate bg-gradient-to-r from-white via-indigo-100 to-purple-200 bg-clip-text text-xl font-bold tracking-tight text-transparent">
             {name}
           </h1>
+          {email && (
+            <p className="mt-0.5 truncate text-xs text-gray-500">{email}</p>
+          )}
+        </div>
 
-          {/* Email with Icon */}
-          <div className="mb-6 flex items-center justify-center gap-2 text-gray-400">
-            <Mail className="h-4 w-4 text-indigo-400/85" />
-            <span className="text-sm font-medium tracking-wide sm:text-base">{email}</span>
+        {/* Stat chips */}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.03] px-2.5 py-2">
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400/60" />
+            <div>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-gray-600">Joined</p>
+              <p className="text-[11px] font-semibold text-gray-300">{joinedDate}</p>
+            </div>
           </div>
+          <div className="flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.03] px-2.5 py-2">
+            <Award className="h-3.5 w-3.5 shrink-0 text-purple-400/60" />
+            <div>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-gray-600">Role</p>
+              <p className="text-[11px] font-semibold text-gray-300">{highestRole}</p>
+            </div>
+          </div>
+          <div className="col-span-2 flex items-center gap-2 rounded-lg border border-white/[0.05] bg-white/[0.03] px-2.5 py-2">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400/60" />
+            <div>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-gray-600">Portals</p>
+              <p className="text-[11px] font-semibold text-gray-300">
+                {userRoles?.length || 0} {userRoles?.length === 1 ? 'portal accessible' : 'portals accessible'}
+              </p>
+            </div>
+          </div>
+        </div>
 
-          {/* Status pill */}
-          <div
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 ${statusColor}`}
+        {/* Quick actions */}
+        <div className="mt-4 flex flex-col gap-2">
+          {username && (
+            <Link
+              href={`/user/${username}`}
+              className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+            >
+              <User className="h-4 w-4 text-indigo-400/70" />
+              <span>Public Profile</span>
+              <ExternalLink className="ml-auto h-3.5 w-3.5 text-gray-600" />
+            </Link>
+          )}
+          <Link
+            href="/account/member/profile"
+            className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
           >
-            <span className="relative flex h-1.5 w-1.5">
-              <span
-                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${dotColor}`}
-              />
-              <span
-                className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColor}`}
-              />
-            </span>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
-              {statusLabel}
-            </span>
-          </div>
-
-          {/* Premium Thin Divider Line */}
-          <div className="my-8 h-[1px] w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-          {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {/* Card 1: Member Since */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/15">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Member Since
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {joinedDate}
-              </p>
-            </div>
-
-            {/* Card 2: Account Level */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/15">
-                <Award className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Account Level
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {highestRole}
-              </p>
-            </div>
-
-            {/* Card 3: Security */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/15">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Security
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                Verified
-              </p>
-            </div>
-
-            {/* Card 4: Access Portals */}
-            <div className="group rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.08] hover:bg-white/[0.04] will-change-transform">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/15">
-                <LayoutDashboard className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                Access Portals
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {dashboardsCount}
-              </p>
-            </div>
-          </div>
+            <User className="h-4 w-4 text-purple-400/70" />
+            <span>Edit Profile</span>
+          </Link>
+          <Link
+            href="/account/member/settings"
+            className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+          >
+            <Settings className="h-4 w-4 text-cyan-400/70" />
+            <span>Settings</span>
+          </Link>
         </div>
       </div>
     </div>
   );
 }
-

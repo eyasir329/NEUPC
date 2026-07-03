@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { requireApiSession, isAuthError } from '@/app/_lib/auth/api-guard';
 
 /**
  * Teaching-only system prompt.
@@ -113,6 +114,11 @@ async function tryPollinations(modelId, messages, timeoutMs = 40_000) {
 // ── Route handler ────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
+    const authResult = await requireApiSession();
+    if (isAuthError(authResult)) {
+      return authResult;
+    }
+
     const body = await request.json();
     const {
       code,

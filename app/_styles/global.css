@@ -1043,91 +1043,38 @@
 /* ─── Headings — markdown-preview style with hash prefixes ─ */
 
 .blog-content h2 {
-  font-size: 1.65em;
+  font-size: 1.8em;
   font-weight: 700;
-  margin-top: 3rem;
+  margin-top: 3.5rem;
   margin-bottom: 1.25rem;
   color: #e6edf3;
   font-family: var(--font-sora), 'Sora', 'Outfit', system-ui, sans-serif;
   letter-spacing: -0.025em;
-  position: relative;
-  padding: 0.8rem 1rem 0.8rem 3.25rem;
-  background: linear-gradient(
-    90deg,
-    rgba(139, 92, 246, 0.12) 0%,
-    rgba(139, 92, 246, 0.04) 55%,
-    transparent 100%
-  );
-  border-left: 3px solid #8B5CF6;
-  border-radius: 0 0.5rem 0.5rem 0;
   scroll-margin-top: 6rem;
-}
-
-.blog-content h2::before {
-  content: '##';
-  position: absolute;
-  left: 0.9rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
-  font-size: 0.6em;
-  font-weight: 400;
-  color: rgba(139, 92, 246, 0.55);
-  letter-spacing: -0.04em;
-  pointer-events: none;
+  line-height: 1.3;
 }
 
 .blog-content h3 {
-  font-size: 1.3em;
+  font-size: 1.45em;
   font-weight: 600;
-  margin-top: 2.5rem;
+  margin-top: 2.75rem;
   margin-bottom: 1rem;
   color: #cdd9e5;
   font-family: var(--font-sora), 'Sora', 'Outfit', system-ui, sans-serif;
   letter-spacing: -0.02em;
-  position: relative;
-  padding-left: 3rem;
   scroll-margin-top: 6rem;
-}
-
-.blog-content h3::before {
-  content: '###';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
-  font-size: 0.58em;
-  font-weight: 400;
-  color: rgba(139, 92, 246, 0.38);
-  letter-spacing: -0.04em;
-  pointer-events: none;
+  line-height: 1.3;
 }
 
 .blog-content h4 {
-  font-size: 1.05em;
+  font-size: 1.2em;
   font-weight: 600;
-  margin-top: 2rem;
+  margin-top: 2.25rem;
   margin-bottom: 0.75rem;
   color: #adbac7;
   font-family: var(--font-sora), 'Sora', 'Outfit', system-ui, sans-serif;
   letter-spacing: -0.01em;
-  position: relative;
-  padding-left: 2.75rem;
-}
-
-.blog-content h4::before {
-  content: '####';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
-  font-size: 0.56em;
-  font-weight: 400;
-  color: rgba(139, 92, 246, 0.22);
-  letter-spacing: -0.04em;
-  pointer-events: none;
+  line-height: 1.3;
 }
 
 /* ─── Paragraphs ──────────────────────────────────────────── */
@@ -1159,114 +1106,45 @@
   border-bottom-color: rgba(196, 181, 253, 0.65);
 }
 
-/* ─── Unordered lists ─────────────────────────────────────── */
+/* ─── Lists ────────────────────────────────────────────────── */
 
 .blog-content ul {
-  list-style: none;
-  padding-left: 0;
-  margin-bottom: 1.25rem;
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
 }
-
-.blog-content ul > li {
-  position: relative;
-  padding-left: 1.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.blog-content ul > li::before {
-  content: '';
-  position: absolute;
-  left: 0.2rem;
-  top: 0.67em;
-  width: 0.38em;
-  height: 0.38em;
-  border-radius: 50%;
-  background: #8B5CF6;
-}
-
-/* Nested ul — hollow ring */
-.blog-content ul ul > li::before {
-  background: transparent;
-  border: 1.5px solid rgba(139, 92, 246, 0.5);
-}
-
-/* Triple nested — dash */
-.blog-content ul ul ul > li::before {
-  border-radius: 0;
-  width: 0.45em;
-  height: 2px;
-  top: 0.73em;
-  border: none;
-  background: rgba(139, 92, 246, 0.38);
-}
-
-/* ─── Ordered lists ────────────────────────────────────────── */
 
 .blog-content ol {
-  list-style: none;
-  padding-left: 0;
-  margin-bottom: 1.25rem;
-  counter-reset: ol-counter;
-}
-
-.blog-content ol > li {
-  position: relative;
-  padding-left: 2.25rem;
-  margin-bottom: 0.5rem;
-  counter-increment: ol-counter;
-}
-
-.blog-content ol > li::before {
-  content: counter(ol-counter);
-  position: absolute;
-  left: 0;
-  top: 0.08em;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.22);
-  border-radius: 0.3rem;
-  font-size: 0.67em;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
-  color: #a78bfa;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-/* Nested ol — alpha */
-.blog-content ol ol {
-  counter-reset: ol-nested;
-}
-
-.blog-content ol ol > li {
-  counter-increment: ol-nested;
-  padding-left: 1.9rem;
-}
-
-.blog-content ol ol > li::before {
-  content: counter(ol-nested, lower-alpha);
-  background: rgba(139, 92, 246, 0.05);
-  border-color: rgba(139, 92, 246, 0.13);
-  color: rgba(167, 139, 250, 0.65);
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .blog-content li {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
   line-height: 1.8;
   color: #adbac7;
+  padding-left: 0.25rem;
+}
+
+/* Nested lists */
+.blog-content ul ul,
+.blog-content ol ol,
+.blog-content ul ol,
+.blog-content ol ul {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 /* ─── Blockquote ──────────────────────────────────────────── */
 
 .blog-content blockquote {
-  border-left: 3px solid rgba(139, 92, 246, 0.65);
-  margin: 2.25rem 0;
-  padding: 0.6rem 1.25rem;
-  background: rgba(139, 92, 246, 0.05);
+  border-left: 4px solid #10B981;
+  margin: 2.5rem 0;
+  padding: 0.8rem 1.5rem;
+  background: rgba(16, 185, 129, 0.04);
   border-radius: 0 0.5rem 0.5rem 0;
 }
 
@@ -1274,8 +1152,8 @@
   color: #8b949e;
   font-style: italic;
   font-family: var(--font-lora), 'Lora', 'Playfair Display', Georgia, serif;
-  font-size: 1.05em;
-  line-height: 1.78;
+  font-size: 1.1em;
+  line-height: 1.75;
 }
 
 .blog-content blockquote p:last-child {
@@ -1359,11 +1237,11 @@
 
 .blog-content code {
   background: rgba(110, 118, 129, 0.12);
-  color: #e3b341;
+  color: #e6edf3;
   border: 1px solid rgba(110, 118, 129, 0.2);
   padding: 0.12em 0.5em;
   border-radius: 0.3rem;
-  font-size: 0.83em;
+  font-size: 0.85em;
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
   white-space: nowrap;
   letter-spacing: 0;

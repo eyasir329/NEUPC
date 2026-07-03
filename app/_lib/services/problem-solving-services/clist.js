@@ -25,6 +25,65 @@ import { CodeChefService } from './codechef';
 import { CodeforcesService } from './codeforces';
 import { LeetCodeService } from './leetcode';
 
+// Helper functions for parsing CLIST problem results
+export function isSolvedClist(value) {
+  if (!value) return false;
+  if (value.solved === true) return true;
+  if (value.verdict === 'AC' || value.verdict === 'OK') return true;
+  if (value.binary === true || value.binary === 'true' || value.binary === 1 || value.binary === '1') return true;
+
+  const resultStr = value.result != null ? String(value.result) : '';
+  if (resultStr.includes('+') || resultStr === 'AC') return true;
+
+  // Check if result is a positive number
+  const numResult = parseFloat(resultStr);
+  if (!isNaN(numResult) && numResult > 0) return true;
+
+  return false;
+}
+
+export function isAttemptedClist(value) {
+  if (!value) return false;
+  if (value.attempted === true) return true;
+  if (value.verdict && value.verdict !== 'AC' && value.verdict !== 'OK') return true;
+
+  const resultStr = value.result != null ? String(value.result) : '';
+  if (resultStr.includes('-') || resultStr.includes('+')) return true;
+
+  const numResult = parseFloat(resultStr);
+  if (!isNaN(numResult) && (numResult > 0 || numResult < 0)) return true;
+
+  return false;
+}
+
+export function isUpsolveClist(value) {
+  if (!value) return false;
+  if (value.upsolve === true || value.isUpsolve === true) return true;
+  if (value.upsolving) return true;
+  return false;
+}
+
+export function wrongAttemptsClist(value) {
+  if (!value) return 0;
+  if (value.wrongAttempts != null) return value.wrongAttempts;
+
+  const resultStr = value.result != null ? String(value.result) : '';
+  
+  // Check for +/- followed by number, e.g. "+2" -> 2, "-3" -> 3
+  const match = resultStr.match(/^[+-](\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+
+  // If it's a negative number like -2, return 2
+  const numResult = parseFloat(resultStr);
+  if (!isNaN(numResult) && numResult < 0) {
+    return Math.abs(numResult);
+  }
+
+  return 0;
+}
+
 // ============================================
 // CLIST SERVICE - Unified API for all platforms
 // ============================================
@@ -357,9 +416,14 @@ export class ClistService {
 
     // Method 3 removed: broad unfiltered scans are expensive and may cause false matches.
 
-    console.warn(
-      `CLIST: No account found for ${handle} on ${platform} after all search methods`
-    );
+    // LeetCode handles are generally not indexed as CLIST accounts; the caller
+    // falls back to the native LeetCode API, so a miss here is expected and not
+    // worth warning about on every sync.
+    if (platform !== 'leetcode') {
+      console.warn(
+        `CLIST: No account found for ${handle} on ${platform} after all search methods`
+      );
+    }
     return null;
   }
 
@@ -510,17 +574,39 @@ export class ClistService {
 
     // First, get the account to obtain account_id (required by statistics endpoint)
     const account = await this.findAccount(platform, handle, userId);
-    if (!account?.id) {
-      console.warn(
-        `CLIST: Could not find account for ${handle} on ${platform}`
-      );
+    let data = null;
+
+    if (account?.id) {
+      data = await this.fetchApi('statistics', {
+        account_id: account.id,
+        ...baseStatsParams,
+      });
+    } else if (platform === 'facebookhackercup') {
+      // FBHC accounts are often not indexed by handle; try direct handle lookup
+      // against each known resource slug
+      for (const host of hosts) {
+        const result = await this.fetchApi('statistics', {
+          account__handle: handle,
+          account__resource__host: host,
+          ...baseStatsParams,
+        });
+        if (result?.objects?.length) {
+          data = result;
+          break;
+        }
+      }
+      if (!data?.objects?.length) {
+        console.warn(`CLIST: No statistics found for FBHC handle ${handle}`);
+        return [];
+      }
+    } else {
+      if (platform !== 'leetcode') {
+        console.warn(
+          `CLIST: Could not find account for ${handle} on ${platform}`
+        );
+      }
       return [];
     }
-
-    const data = await this.fetchApi('statistics', {
-      account_id: account.id,
-      ...baseStatsParams,
-    });
 
     if (!data?.objects) {
       console.warn(
@@ -532,6 +618,7 @@ export class ClistService {
     return data.objects.map((stat) => {
       const contestId = stat.contest_id?.toString();
       const contestName =
+        stat.event ||
         stat.contest?.title ||
         stat.contest_title ||
         (contestId ? `Contest #${contestId}` : null);
@@ -559,14 +646,18 @@ export class ClistService {
 
       if (rawProblems && typeof rawProblems === 'object') {
         problems = Object.entries(rawProblems).map(([key, value]) => {
-          const isSolved = value?.result?.includes('+') || false;
+          const isSolved = isSolvedClist(value);
+          const isUpsolve = isUpsolveClist(value);
+          const isAttempted = isAttemptedClist(value) || isSolved || isUpsolve;
+          const wrongAttempts = wrongAttemptsClist(value);
           return {
             label: key,
-            solved: isSolved,
+            solved: isSolved || isUpsolve,
             // CLIST data is from contest standings, so if solved, it was during contest
-            solvedDuringContest: isSolved,
-            upsolve: false, // CLIST doesn't track upsolves
-            attempted: value?.result ? true : false,
+            solvedDuringContest: isSolved && !isUpsolve,
+            upsolve: isUpsolve,
+            attempted: isAttempted,
+            wrongAttempts,
             result: value?.result,
             time: value?.time,
             url: value?.url,
@@ -647,8 +738,10 @@ export class ClistService {
       const penalty = stat.addition?.penalty || stat.penalty || null;
 
       // Calculate problems attempted from problems data
+      let solvedCount = 0;
       let problemsAttempted = null;
       if (problems && problems.length > 0) {
+        solvedCount = problems.filter((p) => p.solved || p.solvedDuringContest).length;
         problemsAttempted = problems.filter((p) => p.attempted).length;
       }
 
@@ -676,7 +769,7 @@ export class ClistService {
         rank: stat.place,
         totalParticipants: stat.contest?.n_statistics,
         score: stat.score || stat.solving || null,
-        solved: stat.solved,
+        solved: solvedCount > 0 ? solvedCount : (stat.solved || 0),
         totalProblems,
         problems,
         problemsAttempted,
@@ -919,7 +1012,10 @@ export class ClistService {
                   date: c.startTime,
                   endDate: null,
                   rank: c.ranking,
-                  totalParticipants: contestData.totalParticipants || null,
+                  // LeetCode's GraphQL only exposes a global participant count
+                  // (total users ever), not per-contest. Applying it would make
+                  // the percentile meaningless, so leave it null.
+                  totalParticipants: null,
                   score: c.problemsSolved,
                   solved: c.problemsSolved,
                   totalProblems: c.totalProblems || 4,
@@ -1089,6 +1185,9 @@ export class ClistService {
     }
     // STEP 1: Enrich contests with real names AND platform contest IDs (must be done first)
     const nameEnrichedContests = await this.enrichContestNames(allContests);
+    // STEP 1b: LeetCode contests come from the native API (no CLIST account),
+    // so they lack participant counts. Look them up on CLIST by contest title.
+    await this.enrichLeetCodeParticipants(nameEnrichedContests);
     // STEP 2: Enrich with problem-level data from native platform APIs (now that we have platform contest IDs)
     let finalContests = nameEnrichedContests;
     if (enrichWithProblems) {
@@ -1187,6 +1286,16 @@ export class ClistService {
         continue;
       }
 
+      // LeetCode contests come through the native API, so their contestId is a
+      // title slug (e.g. "weekly-contest-394"), not a numeric CLIST id. CLIST's
+      // /contest id__in filter only accepts numeric ids, so querying it here
+      // returns 400. Names are already populated by the native API and
+      // participant counts are filled by enrichLeetCodeParticipants(), so skip.
+      if (platform === 'leetcode') {
+        enrichedContests.push(...platformContests);
+        continue;
+      }
+
       // Extract unique contest IDs for this platform
       const contestIds = [...new Set(platformContests.map((c) => c.contestId))];
 
@@ -1198,6 +1307,10 @@ export class ClistService {
         const cachedData = await this.getCache(cacheKey);
         if (cachedData) {
           contestNameMap[contestId] = cachedData;
+          // Re-fetch if cached entry is missing totalParticipants (stale cache)
+          if (!cachedData.totalParticipants) {
+            uncachedIds.push(contestId);
+          }
         } else {
           uncachedIds.push(contestId);
         }
@@ -1272,117 +1385,45 @@ export class ClistService {
       }
 
       // Apply enriched data to contests
-      let addedParticipantsCount = 0;
-      let noEnrichedDataCount = 0;
-      const contestsMissingParticipants = [];
-
       platformContests.forEach((contest) => {
         const enrichedData = contestNameMap[contest.contestId];
-        if (enrichedData) {
-          if (enrichedData.name && enrichedData.name.trim()) {
-            contest.name = enrichedData.name;
-            if (contest.contestName !== undefined) {
-              contest.contestName = enrichedData.name;
-            }
+        if (!enrichedData) return;
+
+        if (enrichedData.name && enrichedData.name.trim()) {
+          contest.name = enrichedData.name;
+          if (contest.contestName !== undefined) {
+            contest.contestName = enrichedData.name;
           }
-          // Add platform-specific contest ID for matching with submissions (prefer enriched, fallback to existing)
-          if (enrichedData.platformContestId && !contest.platformContestId) {
-            contest.platformContestId = enrichedData.platformContestId;
-          }
-          // Add total problems if not already set
-          if (enrichedData.totalProblems && !contest.totalProblems) {
-            contest.totalProblems = enrichedData.totalProblems;
-          }
-          // Add total participants if not already set
-          if (enrichedData.totalParticipants && !contest.totalParticipants) {
-            contest.totalParticipants = enrichedData.totalParticipants;
-            addedParticipantsCount++;
-          } else if (
-            !enrichedData.totalParticipants &&
-            !contest.totalParticipants
-          ) {
-            // Track contests missing participant counts for fallback fetch
-            contestsMissingParticipants.push(contest);
-          }
-          // Add contest URL if not already set
-          if (enrichedData.url && !contest.url) {
-            contest.url = enrichedData.url;
-          }
-        } else {
-          // No enriched data from CLIST, but contest might still have platformContestId from URL
-          // Track for fallback if missing totalParticipants
-          if (!contest.totalParticipants) {
-            contestsMissingParticipants.push(contest);
-          }
-          noEnrichedDataCount++;
         }
-      });
-
-      // For Codeforces contests missing participant counts, try fetching from native CF API
-      if (platform === 'codeforces' && contestsMissingParticipants.length > 0) {
-        const cfService = new CodeforcesService();
-        let cfFetchedCount = 0;
-
-        // Get unique platform contest IDs that need participant counts
-        const cfContestIds = contestsMissingParticipants
-          .map((c) => c.platformContestId)
-          .filter((id) => id); // Filter out nulls
-
-        const missingPlatformIds = contestsMissingParticipants.filter(
-          (c) => !c.platformContestId
-        ).length;
-        if (missingPlatformIds > 0) {
+        if (enrichedData.platformContestId && !contest.platformContestId) {
+          contest.platformContestId = enrichedData.platformContestId;
         }
-
-        if (cfContestIds.length > 0) {
-          try {
-            const participantCounts =
-              await cfService.getContestParticipantCounts(cfContestIds);
-
-            // Apply the fetched counts to contests
-            for (const contest of contestsMissingParticipants) {
-              if (
-                contest.platformContestId &&
-                participantCounts[contest.platformContestId]
-              ) {
-                contest.totalParticipants =
-                  participantCounts[contest.platformContestId];
-                cfFetchedCount++;
-
-                // Update the cache with the new participant count
-                const cacheKey = `contest_data:${platform}:${contest.contestId}`;
-                const cachedData = contestNameMap[contest.contestId];
-                if (cachedData) {
-                  cachedData.totalParticipants = contest.totalParticipants;
-                  await this.setCache(cacheKey, cachedData, 7 * 24 * 60 * 60);
-                }
+        // Always use the real contest problem count from CLIST /contest endpoint
+        if (enrichedData.totalProblems) {
+          contest.totalProblems = enrichedData.totalProblems;
+          // Fill placeholder badges for problems the user never touched
+          if (!contest.problems) contest.problems = [];
+          if (contest.problems.length < enrichedData.totalProblems) {
+            const existingLabels = new Set(contest.problems.map((p) => p.label));
+            const isNumeric = contest.problems.length > 0 && /^\d+$/.test(contest.problems[0].label);
+            for (let i = contest.problems.length; i < enrichedData.totalProblems; i++) {
+              const label = isNumeric
+                ? (i + 1).toString()
+                : String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26).toString() : '');
+              if (!existingLabels.has(label)) {
+                contest.problems.push({ label, solved: false, solvedDuringContest: false, upsolve: false, attempted: false });
               }
             }
-
-            if (cfFetchedCount > 0) {
-            }
-          } catch (error) {
-            console.error(
-              `[enrichContestNames] Error fetching participant counts from CF API:`,
-              error.message
-            );
+            contest.problems.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
           }
         }
-
-        // Update count of still-missing contests
-        const stillMissingCount = contestsMissingParticipants.filter(
-          (c) => !c.totalParticipants
-        ).length;
-        if (stillMissingCount > 0) {
+        if (enrichedData.totalParticipants) {
+          contest.totalParticipants = enrichedData.totalParticipants;
         }
-      } else if (contestsMissingParticipants.length > 0) {
-      }
-
-      // Log summary
-      if (addedParticipantsCount > 0) {
-      }
-      if (noEnrichedDataCount > 0) {
-      }
+        if (enrichedData.url && !contest.url) {
+          contest.url = enrichedData.url;
+        }
+      });
 
       enrichedContests.push(...platformContests);
     }
@@ -1391,6 +1432,53 @@ export class ClistService {
       (c) => c.name && !c.name.startsWith('Contest #')
     ).length;
     return enrichedContests;
+  }
+
+  /**
+   * Populate totalParticipants for LeetCode contests by looking them up on
+   * CLIST by contest title. LeetCode comes through the native API (CLIST has
+   * no account for our handles), so its rows lack participant counts; CLIST's
+   * /contest endpoint does carry n_statistics for ingested LeetCode contests.
+   * Mutates the passed contest objects in place.
+   */
+  async enrichLeetCodeParticipants(contests) {
+    const lcContests = (contests || []).filter(
+      (c) => c.platform === 'leetcode' && !c.totalParticipants
+    );
+    if (lcContests.length === 0) return;
+
+    // Unique contest titles to look up
+    const titles = [
+      ...new Set(lcContests.map((c) => c.name || c.contestName).filter(Boolean)),
+    ];
+
+    const participantsByTitle = {};
+    for (const title of titles) {
+      const cacheKey = `lc_participants:${title}`;
+      const cached = await this.getCache(cacheKey);
+      if (cached?.n != null) {
+        participantsByTitle[title] = cached.n;
+        continue;
+      }
+
+      const data = await this.fetchApi('contest', {
+        resource: 'leetcode.com',
+        event: title,
+        limit: 1,
+      });
+      const n = data?.objects?.[0]?.n_statistics;
+      if (n) {
+        participantsByTitle[title] = n;
+        // Cache 7 days; participant count is stable once standings are ingested
+        await this.setCache(cacheKey, { n }, 7 * 24 * 60 * 60);
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    for (const c of lcContests) {
+      const n = participantsByTitle[c.name || c.contestName];
+      if (n) c.totalParticipants = n;
+    }
   }
 
   // Cache helpers (reuse from other services)

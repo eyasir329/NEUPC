@@ -297,35 +297,41 @@ export function GradientBar({
 // ---------- Tab bar ----------
 export function TabBar({ tabs, value, onChange }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-      {tabs.map((t) => {
-        const active = t.value === value;
-        const Icon = t.icon;
-        return (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => onChange(t.value)}
-            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-              active
-                ? 'bg-white/[0.06] text-white shadow-sm'
-                : 'text-gray-400 hover:bg-white/[0.03] hover:text-gray-200'
-            }`}
-          >
-            {Icon && <Icon className="h-4 w-4" />}
-            {t.label}
-            {typeof t.count === 'number' && (
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                  active ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-500'
-                }`}
-              >
-                {t.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
+    <div className="relative w-full overflow-hidden">
+      {/* Subtle fade indicator overlays for horizontal overflow */}
+      <div className="pointer-events-none absolute bottom-1 left-1 top-1 z-10 w-6 bg-gradient-to-r from-[#0a0a0b] via-[#0a0a0b]/40 to-transparent sm:hidden" />
+      <div className="pointer-events-none absolute bottom-1 right-1 top-1 z-10 w-6 bg-gradient-to-l from-[#0a0a0b] via-[#0a0a0b]/40 to-transparent sm:hidden" />
+
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {tabs.map((t) => {
+          const active = t.value === value;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => onChange(t.value)}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                active
+                  ? 'bg-white/[0.06] text-white shadow-sm'
+                  : 'text-gray-400 hover:bg-white/[0.03] hover:text-gray-200'
+              }`}
+            >
+              {Icon && <Icon className="h-4 w-4" />}
+              {t.label}
+              {typeof t.count === 'number' && (
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    active ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-500'
+                  }`}
+                >
+                  {t.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

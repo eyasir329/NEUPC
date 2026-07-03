@@ -25,7 +25,7 @@ async function requireActiveMember() {
 
   const user = await getUserByEmail(session.user.email);
   if (!user) throw new Error('User not found');
-  if (user.account_status !== 'active' || user.is_online === false)
+  if (user.account_status !== 'active')
     throw new Error('Account not active');
 
   return user;
@@ -86,6 +86,26 @@ export async function updateMemberProfileAction(formData) {
     const facebookHandle = sanitizeText(formData.get('facebook'), 100) || null;
     const xHandle = sanitizeText(formData.get('x_handle'), 50) || null;
 
+    // Username validation
+    const rawUsername = sanitizeText(formData.get('username'), 30) || null;
+    let username = rawUsername?.toLowerCase() ?? null;
+    if (username) {
+      if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
+        return {
+          error:
+            'Username must be 3-30 characters (lowercase letters, numbers, hyphens, underscores).',
+        };
+      }
+      // Check uniqueness
+      const { data: existing } = await supabaseAdmin
+        .from('member_profiles')
+        .select('user_id')
+        .eq('username', username)
+        .neq('user_id', user.id)
+        .maybeSingle();
+      if (existing) return { error: 'Username is already taken.' };
+    }
+
     // member_profiles update — no handle columns
     const updates = {
       bio: sanitizeText(formData.get('bio'), 1000) || null,
@@ -93,6 +113,7 @@ export async function updateMemberProfileAction(formData) {
       github: githubHandle,
       facebook: facebookHandle,
       x_handle: xHandle,
+      username,
       skills: skills.length > 0 ? skills : null,
       interests: interests.length > 0 ? interests : null,
       updated_at: new Date().toISOString(),
@@ -166,6 +187,7 @@ export async function updateMemberProfileAction(formData) {
     revalidatePath('/account');
     revalidatePath('/committee');
     revalidateTag('committee');
+    if (username) revalidatePath(`/user/${username}`);
     return { success: true };
   } catch (err) {
     console.error('updateMemberProfileAction error:', err);

@@ -13,7 +13,6 @@ import { requireAuth } from '@/app/_lib/auth/auth-guard';
 import { roleDashboards } from '@/app/_lib/config/roleDashboardConfig';
 import AccountPageClient from './_components/AccountPageClient';
 import AccountHeader from './_components/AccountHeader';
-import UserAvatar from './_components/UserAvatar';
 import AvailableRoles from './_components/AvailableRoles';
 import AccountStatusMessages from './_components/AccountStatusMessages';
 import PendingRoleAssignment from './_components/PendingRoleAssignment';
@@ -60,51 +59,54 @@ export default async function AccountPage() {
 
   return (
     <AccountPageClient redirectPath={redirectPath}>
-      <div className="relative w-full overflow-x-hidden bg-[#060810] px-4 pt-24 pb-28 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32">
-        {/* Decorative gradient blobs (matches public-page hero language) */}
+      <div className="relative w-full overflow-x-hidden bg-[#030408] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32 selection:bg-[#7C5CFF]/30">
+        {/* Decorative gradient blobs */}
         <div className="pointer-events-none absolute inset-0 z-0">
           <div className="from-primary-500/10 absolute -top-20 -left-20 h-96 w-96 rounded-full bg-linear-to-br to-transparent blur-3xl" />
           <div className="from-secondary-500/10 absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-linear-to-tl to-transparent blur-3xl" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl">
-          {/* Hero: avatar above gradient title (centered, matches PageHero) */}
-          <div className="mb-10 sm:mb-12">
-            <UserAvatar
-              session={session.user}
-              userId={user?.id}
-            />
-            <AccountHeader
-              session={session.user}
-              accountStatus={user?.account_status}
-              user={user}
-              userRoles={userRoles}
-            />
+        <div className="relative z-10 mx-auto max-w-5xl w-full">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            {/* Left: sticky profile card */}
+            <div className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-8">
+              <AccountHeader
+                session={session.user}
+                accountStatus={user?.account_status}
+                user={user}
+                userRoles={userRoles}
+              />
+            </div>
+
+            {/* Right: main content */}
+            <div className="min-w-0 flex-1 space-y-6">
+              <AvailableRoles
+                availableRoles={availableRoles}
+                accountStatus={user?.account_status}
+              />
+
+              {userRoles.length === 0 && user?.account_status === 'active' && (
+                <PendingRoleAssignment />
+              )}
+
+              <AccountStatusMessages
+                accountStatus={user?.account_status}
+                statusReason={user?.status_reason}
+                statusChangedBy={user?.status_changed_by}
+                suspensionExpiresAt={user?.suspension_expires_at}
+                userId={user?.id}
+                userName={session.user?.name ?? ''}
+                userEmail={session.user?.email ?? ''}
+              />
+
+              <UpgradeBanner
+                accountStatus={user?.account_status}
+                userRoles={userRoles}
+              />
+            </div>
           </div>
-          <AvailableRoles
-            availableRoles={availableRoles}
-            accountStatus={user?.account_status}
-          />
-          {userRoles.length === 0 && user?.account_status === 'active' && (
-            <PendingRoleAssignment />
-          )}
-          <AccountStatusMessages
-            accountStatus={user?.account_status}
-            statusReason={user?.status_reason}
-            statusChangedBy={user?.status_changed_by}
-            suspensionExpiresAt={user?.suspension_expires_at}
-            userId={user?.id}
-            userName={session.user?.name ?? ''}
-            userEmail={session.user?.email ?? ''}
-          />
-          <UpgradeBanner
-            accountStatus={user?.account_status}
-            userRoles={userRoles}
-          />
         </div>
       </div>
     </AccountPageClient>
   );
 }
-
-

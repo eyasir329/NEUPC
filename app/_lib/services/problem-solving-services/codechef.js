@@ -295,8 +295,8 @@ export class CodeChefService {
    * @param {string} contestCode - CodeChef contest code
    * @returns {Array} - Array of problem objects
    */
-  async getContestProblems(contestCode) {
-    const cacheKey = `cc_contest_problems_${contestCode}`;
+  async getContestProblems(contestCode, division) {
+    const cacheKey = `cc_contest_problems_${contestCode}_${division || 'all'}`;
     const cached = await this.getCache(cacheKey);
     if (cached) return cached;
 
@@ -315,14 +315,69 @@ export class CodeChefService {
       }
 
       const data = await response.json();
-      const problems = (data.problemsList || []).map((p) => ({
-        code: p.problemCode || p,
-        name: p.problemName || p.problemCode || p,
-        url: `${this.baseUrl}/problems/${p.problemCode || p}`,
-      }));
 
-      // Cache for 7 days
-      await this.setCache(cacheKey, problems, 7 * 24 * 60 * 60);
+      const toProblem = (p, code) => ({
+        code: p?.problemCode || p?.code || code || p,
+        name: p?.problemName || p?.name || p?.problemCode || code || p,
+        url: `${this.baseUrl}/problems/${p?.problemCode || p?.code || code || p}`,
+      });
+
+      let problems = [];
+
+      // Shape 1: live contests expose a flat problemsList array.
+      if (Array.isArray(data.problemsList) && data.problemsList.length > 0) {
+        problems = data.problemsList.map((p) => toProblem(p));
+      }
+
+      // Shape 2: ended single-division contests expose problems as an
+      // object keyed by problem code.
+      if (
+        problems.length === 0 &&
+        data.problems &&
+        typeof data.problems === 'object'
+      ) {
+        problems = Object.entries(data.problems).map(([code, p]) =>
+          toProblem(p, code)
+        );
+      }
+
+      // Shape 3: divisioned contests (Starters) nest problems under
+      // child_contests. Prefer the user's division; fall back to the union
+      // of all divisions' distinct problems.
+      if (
+        problems.length === 0 &&
+        data.child_contests &&
+        typeof data.child_contests === 'object'
+      ) {
+        const children = Object.values(data.child_contests);
+        const divNum = division ? String(division).match(/\d+/)?.[0] : null;
+        const matched = divNum
+          ? children.find((c) => {
+              const name = (c?.name || c?.contest_name || '').toString();
+              return name.match(/division\s*(\d+)/i)?.[1] === divNum;
+            })
+          : null;
+        const sources = matched ? [matched] : children;
+
+        const seen = new Set();
+        sources.forEach((child) => {
+          const childProblems = child?.problems;
+          if (childProblems && typeof childProblems === 'object') {
+            Object.entries(childProblems).forEach(([code, p]) => {
+              const entry = toProblem(p, code);
+              if (!seen.has(entry.code)) {
+                seen.add(entry.code);
+                problems.push(entry);
+              }
+            });
+          }
+        });
+      }
+
+      // Only cache real results so a transient empty response isn't sticky.
+      if (problems.length > 0) {
+        await this.setCache(cacheKey, problems, 7 * 24 * 60 * 60);
+      }
       return problems;
     } catch (error) {
       console.error(
@@ -375,15 +430,48 @@ export class CodeChefService {
         contestEnd = new Date(contestStart.getTime() + durationMs);
       }
       // Fetch problems for this contest
-      const contestProblems = await this.getContestProblems(matchId);
+      const contestProblems = await this.getContestProblems(
+        matchId,
+        contest.division
+      );
+
+      // Initialize problem map from existing CLIST problems
+      const problemMap = {};
+      if (contest.problems && Array.isArray(contest.problems)) {
+        contest.problems.forEach((p) => {
+          const key = p.label || p.id || p.name;
+          problemMap[key] = {
+            label: p.label,
+            name: p.name,
+            url: p.url || contest.url,
+            solved: p.solved === true || p.solvedDuringContest === true || p.upsolve === true,
+            solvedDuringContest: p.solvedDuringContest === true,
+            upsolve: p.upsolve === true,
+            attempted: p.attempted === true,
+            wrongAttempts: p.wrongAttempts || 0,
+            submissions: [],
+          };
+        });
+      }
 
       // Build problem map from submissions
-      const problemMap = {};
       contestSubs.forEach((sub) => {
+        let matchedKey = null;
+        for (const [key, value] of Object.entries(problemMap)) {
+          if (
+            key.toLowerCase() === sub.problem_id.toLowerCase() ||
+            (value.url && value.url.toLowerCase().includes(sub.problem_id.toLowerCase()))
+          ) {
+            matchedKey = key;
+            break;
+          }
+        }
+
+        const targetKey = matchedKey || sub.problem_id;
         const subTime = new Date(sub.submitted_at);
 
-        if (!problemMap[sub.problem_id]) {
-          problemMap[sub.problem_id] = {
+        if (!problemMap[targetKey]) {
+          problemMap[targetKey] = {
             label: sub.problem_id,
             name: sub.problem_name,
             url: sub.problem_url,
@@ -391,21 +479,25 @@ export class CodeChefService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
+            wrongAttempts: 0,
             submissions: [],
           };
         }
 
-        problemMap[sub.problem_id].submissions.push(sub);
-        problemMap[sub.problem_id].attempted = true;
+        const prob = problemMap[targetKey];
+        prob.submissions.push(sub);
+        prob.attempted = true;
 
         if (sub.verdict === 'AC') {
-          problemMap[sub.problem_id].solved = true;
+          prob.solved = true;
           if (subTime <= contestEnd) {
-            problemMap[sub.problem_id].solvedDuringContest = true;
-            problemMap[sub.problem_id].upsolve = false;
-          } else if (!problemMap[sub.problem_id].solvedDuringContest) {
-            problemMap[sub.problem_id].upsolve = true;
+            prob.solvedDuringContest = true;
+            prob.upsolve = false;
+          } else if (!prob.solvedDuringContest) {
+            prob.upsolve = true;
           }
+        } else {
+          prob.wrongAttempts = (prob.wrongAttempts || 0) + 1;
         }
       });
 
@@ -420,13 +512,14 @@ export class CodeChefService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
+            wrongAttempts: 0,
             submissions: [],
           };
         }
       });
 
       const problems = Object.values(problemMap).sort((a, b) =>
-        a.label.localeCompare(b.label)
+        a.label.localeCompare(b.label, undefined, { numeric: true })
       );
 
       const solvedCount = problems.filter((p) => p.solvedDuringContest).length;

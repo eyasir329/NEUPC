@@ -551,16 +551,25 @@ function AchievementDetailModal({ achievement, onClose }) {
         className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Cover image ── */}
-        <div className="relative h-56 w-full shrink-0 overflow-hidden rounded-t-3xl sm:h-72">
+        {/* ── Cover image — full & uncropped ── */}
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-t-3xl bg-black">
+          {/* Blurred backdrop fill so the full image can show uncropped */}
+          <Image
+            src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
+            alt=""
+            aria-hidden
+            fill
+            className="scale-110 object-cover opacity-25 blur-2xl"
+            unoptimized
+          />
+          {/* Full image, uncropped */}
           <Image
             src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
             alt={achievement.title}
             fill
-            className="object-cover"
+            className="object-contain"
             unoptimized
           />
-          <div className="absolute inset-0 bg-linear-to-t from-gray-950 via-gray-950/50 to-transparent" />
 
           {/* Close button */}
           <button
@@ -573,42 +582,38 @@ function AchievementDetailModal({ achievement, onClose }) {
             </svg>
           </button>
 
-          {/* Top-left badges */}
-          <div className="absolute top-4 left-4 flex items-center gap-2">
-            {achievement.is_featured && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/20 px-2.5 py-1 text-[10px] font-bold text-amber-300 backdrop-blur-sm">
-                ⭐ Featured
-              </span>
-            )}
-            {achievement.year && (
-              <span className="rounded-lg bg-black/60 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                {achievement.year}
-              </span>
-            )}
-          </div>
-
-          {/* Bottom content overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-            {categories.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {categories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm"
-                  >
-                    {cat}
-                  </span>
-                ))}
-              </div>
-            )}
-            <h2 className="text-xl leading-snug font-bold text-white sm:text-2xl">
-              {achievement.title}
-            </h2>
-          </div>
+          {/* Featured badge — top-left over image */}
+          {achievement.is_featured && (
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/20 px-2.5 py-1 text-[10px] font-bold text-amber-300 backdrop-blur-sm">
+              ⭐ Featured
+            </span>
+          )}
         </div>
 
         {/* ── Body ── */}
         <div className="px-5 pt-5 pb-10 sm:px-6">
+          {/* Title block */}
+          <div className="mb-5 border-b border-white/8 pb-5">
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              {achievement.year && (
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-zinc-300">
+                  {achievement.year}
+                </span>
+              )}
+              {categories.map((cat) => (
+                <span
+                  key={cat}
+                  className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-300"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+            <h2 className="text-2xl leading-tight font-bold text-white sm:text-3xl">
+              {achievement.title}
+            </h2>
+          </div>
+
           {/* Result + date row */}
           <div className="mb-5 flex flex-wrap items-center gap-2.5">
             {rs && (
@@ -910,16 +915,25 @@ function ParticipationDetailModal({ record, onClose }) {
         className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Cover image ── */}
-        <div className="relative h-52 w-full shrink-0 overflow-hidden rounded-t-3xl sm:h-64">
+        {/* ── Cover image — full & uncropped ── */}
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-t-3xl bg-black">
+          {/* Blurred backdrop fill so the full image can show uncropped */}
+          <Image
+            src={record.featured_photo?.url ?? '/placeholder-event.png'}
+            alt=""
+            aria-hidden
+            fill
+            className="scale-110 object-cover opacity-25 blur-2xl"
+            unoptimized
+          />
+          {/* Full image, uncropped */}
           <Image
             src={record.featured_photo?.url ?? '/placeholder-event.png'}
             alt={record.contest_name}
             fill
-            className="object-cover"
+            className="object-contain"
             unoptimized
           />
-          <div className="absolute inset-0 bg-linear-to-t from-gray-950 via-gray-950/50 to-transparent" />
 
           <button
             onClick={onClose}
@@ -931,38 +945,39 @@ function ParticipationDetailModal({ record, onClose }) {
             </svg>
           </button>
 
-          <div className="absolute top-4 left-4 flex items-center gap-2">
-            {record.is_team && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/20 px-2.5 py-1 text-[10px] font-bold text-sky-300 backdrop-blur-sm">
-                👥 Team
-              </span>
-            )}
-            <span className="rounded-lg bg-black/60 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
-              {record.year}
+          {record.is_team && (
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/20 px-2.5 py-1 text-[10px] font-bold text-sky-300 backdrop-blur-sm">
+              👥 Team
             </span>
-          </div>
+          )}
+        </div>
 
-          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-            {record.category && (
-              <div className="mb-2">
+        {/* ── Body ── */}
+        <div className="px-5 pt-5 pb-10 sm:px-6">
+          {/* Title block */}
+          <div className="mb-5 border-b border-white/8 pb-5">
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              {record.year && (
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-zinc-300">
+                  {record.year}
+                </span>
+              )}
+              {record.category && (
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold backdrop-blur-sm',
+                    'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
                     catColor
                   )}
                 >
                   {catEmoji} {record.category}
                 </span>
-              </div>
-            )}
-            <h2 className="text-xl leading-snug font-bold text-white sm:text-2xl">
+              )}
+            </div>
+            <h2 className="text-2xl leading-tight font-bold text-white sm:text-3xl">
               {record.contest_name}
             </h2>
           </div>
-        </div>
 
-        {/* ── Body ── */}
-        <div className="px-5 pt-5 pb-10 sm:px-6">
           {/* Result + date */}
           <div className="mb-5 flex flex-wrap items-center gap-2.5">
             {rs && (
@@ -1252,19 +1267,23 @@ function AchievementCard({ achievement, onClick }) {
         }
       }}
       aria-label={`View details for ${achievement.title}`}
-      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:-translate-y-1 hover:border-neon-lime/40 hover:shadow-[0_24px_60px_-20px_rgba(182,243,107,0.35)] focus-visible:ring-2 focus-visible:outline-none"
     >
+      {/* Accent glow line on hover */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent via-neon-lime/70 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
       {/* Cover image */}
       <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
           alt={achievement.featured_photo?.name ?? achievement.title}
           fill
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-[#08090f]/40 to-transparent" />
+        <div className="absolute inset-0 bg-neon-lime/0 transition-colors duration-500 group-hover:bg-neon-lime/[0.04]" />
         {/* Top badges row */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           {rs && (
@@ -1320,8 +1339,8 @@ function AchievementCard({ achievement, onClick }) {
         <div className="mt-auto" />
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-white/6 pt-3">
-          <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
+        <div className="flex items-center justify-between gap-3 border-t border-white/6 pt-3.5">
+          <div className="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-zinc-500">
             {achievement.is_team ? (
               <>
                 <span>👥</span>
@@ -1338,9 +1357,9 @@ function AchievementCard({ achievement, onClick }) {
               </>
             ) : null}
           </div>
-          <span className="text-neon-lime flex items-center gap-1 font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
-            Details
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-neon-lime/20 bg-neon-lime/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-neon-lime transition-all duration-300 group-hover:border-neon-lime/50 group-hover:bg-neon-lime group-hover:text-black">
+            Read Story
+            <svg className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </span>
         </div>
       </div>
@@ -1369,19 +1388,23 @@ function ParticipationRecordCard({ record, onClick }) {
         }
       }}
       aria-label={`View details for ${record.contest_name}`}
-      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:border-neon-lime/30 hover:shadow-[0_0_40px_-12px_rgba(182,243,107,0.2)] focus-visible:ring-2 focus-visible:outline-none"
+      className="group focus-visible:ring-neon-lime/50 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] transition-all duration-500 hover:-translate-y-1 hover:border-neon-lime/40 hover:shadow-[0_24px_60px_-20px_rgba(182,243,107,0.35)] focus-visible:ring-2 focus-visible:outline-none"
     >
+      {/* Accent glow line on hover */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent via-neon-lime/70 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
       {/* Cover */}
       <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={record.featured_photo?.url ?? '/placeholder-event.png'}
           alt={record.featured_photo?.name ?? record.contest_name}
           fill
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-[#08090f]/40 to-transparent" />
+        <div className="absolute inset-0 bg-neon-lime/0 transition-colors duration-500 group-hover:bg-neon-lime/[0.04]" />
         {/* Top badges */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           {rs && (
@@ -1459,9 +1482,9 @@ function ParticipationRecordCard({ record, onClick }) {
                 </>
               )}
             </div>
-            <span className="text-neon-lime flex items-center gap-1 font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-neon-lime/20 bg-neon-lime/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-neon-lime transition-all duration-300 group-hover:border-neon-lime/50 group-hover:bg-neon-lime group-hover:text-black">
               Details
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              <svg className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </span>
           </div>
 

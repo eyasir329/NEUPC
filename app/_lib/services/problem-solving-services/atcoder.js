@@ -118,8 +118,12 @@ export class AtCoderService {
                 for (const [label, value] of Object.entries(
                   stat.addition.problems
                 )) {
+                  const resultStr = value?.result != null ? String(value.result) : '';
+                  const numResult = parseFloat(resultStr);
                   const isSolved =
-                    value?.result?.includes('+') || value?.result === 'AC';
+                    resultStr.includes('+') ||
+                    resultStr === 'AC' ||
+                    (!isNaN(numResult) && numResult > 0);
                   if (!isSolved) continue;
 
                   // Try to derive problem_id from contest_id and label
@@ -359,17 +363,54 @@ export class AtCoderService {
       // Fetch ALL problems for this contest
       const contestProblems = await this.getContestProblems(matchId);
 
-      // Build problem map from user's submissions
+      // Initialize problem map from existing CLIST problems
       const problemMap = {};
+      if (contest.problems && Array.isArray(contest.problems)) {
+        contest.problems.forEach((p) => {
+          const key = p.label || p.id || p.name;
+          problemMap[key] = {
+            label: p.label,
+            name: p.name,
+            url: p.url || contest.url,
+            solved: p.solved === true || p.solvedDuringContest === true || p.upsolve === true,
+            solvedDuringContest: p.solvedDuringContest === true,
+            upsolve: p.upsolve === true,
+            attempted: p.attempted === true,
+            wrongAttempts: p.wrongAttempts || 0,
+            submissions: [],
+          };
+        });
+      }
+
+      // Build problem map from user's submissions
       contestSubs.forEach((sub) => {
-        const problemId = sub.problem_id;
+        let matchedKey = null;
+        for (const [key, value] of Object.entries(problemMap)) {
+          if (
+            key.toLowerCase() === sub.problem_id.toLowerCase() ||
+            (value.url && value.url.toLowerCase().includes(sub.problem_id.toLowerCase()))
+          ) {
+            matchedKey = key;
+            break;
+          }
+        }
+        
+        if (!matchedKey) {
+          const label = sub.problem_id.split('_').pop().toUpperCase();
+          for (const [key, value] of Object.entries(problemMap)) {
+            if (value.label && value.label.toUpperCase() === label) {
+              matchedKey = key;
+              break;
+            }
+          }
+        }
+
+        const targetKey = matchedKey || sub.problem_id;
         const subTime = new Date(sub.submitted_at);
 
-        if (!problemMap[problemId]) {
-          // Extract problem label from problem_id (e.g., "abc123_a" -> "A")
-          const label = problemId.split('_').pop().toUpperCase();
-
-          problemMap[problemId] = {
+        if (!problemMap[targetKey]) {
+          const label = sub.problem_id.split('_').pop().toUpperCase();
+          problemMap[targetKey] = {
             label,
             name: sub.problem_name,
             url: sub.problem_url,
@@ -377,31 +418,25 @@ export class AtCoderService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
-            attemptedDuringContest: false,
+            wrongAttempts: 0,
             submissions: [],
           };
         }
 
-        problemMap[problemId].submissions.push(sub);
-        problemMap[problemId].attempted = true;
-
-        // Check if this attempt was during the contest
-        if (subTime <= contestEnd) {
-          problemMap[problemId].attemptedDuringContest = true;
-        }
+        const prob = problemMap[targetKey];
+        prob.submissions.push(sub);
+        prob.attempted = true;
 
         if (sub.verdict === 'AC') {
-          problemMap[problemId].solved = true;
-          // Check if solved during contest or after (upsolve)
-          // Priority: solvedDuringContest > upsolve (if solved during contest, don't mark as upsolve)
+          prob.solved = true;
           if (subTime <= contestEnd) {
-            problemMap[problemId].solvedDuringContest = true;
-            // If we already marked it as upsolve but now found an earlier AC during contest, remove upsolve flag
-            problemMap[problemId].upsolve = false;
-          } else if (!problemMap[problemId].solvedDuringContest) {
-            // Only mark as upsolve if not already solved during contest
-            problemMap[problemId].upsolve = true;
+            prob.solvedDuringContest = true;
+            prob.upsolve = false;
+          } else if (!prob.solvedDuringContest) {
+            prob.upsolve = true;
           }
+        } else {
+          prob.wrongAttempts = (prob.wrongAttempts || 0) + 1;
         }
       });
 
@@ -417,7 +452,7 @@ export class AtCoderService {
             solvedDuringContest: false,
             upsolve: false,
             attempted: false,
-            attemptedDuringContest: false,
+            wrongAttempts: 0,
             submissions: [],
           };
         }
@@ -425,7 +460,7 @@ export class AtCoderService {
 
       // Convert to array and sort by label (A, B, C, ...)
       const problems = Object.values(problemMap).sort((a, b) =>
-        a.label.localeCompare(b.label)
+        a.label.localeCompare(b.label, undefined, { numeric: true })
       );
 
       const solvedCount = problems.filter((p) => p.solvedDuringContest).length;

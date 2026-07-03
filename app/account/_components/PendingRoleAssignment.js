@@ -13,7 +13,7 @@ import Link from 'next/link';
 
 export default function PendingRoleAssignment() {
   return (
-    <div className="mt-6">
+    <div>
       <div className="overflow-hidden rounded-2xl border border-cyan-500/20 bg-linear-to-b from-cyan-500/5 to-transparent shadow-lg shadow-cyan-500/5">
         <div className="h-0.5 w-full bg-linear-to-r from-cyan-500/60 via-blue-400/60 to-transparent" />
 

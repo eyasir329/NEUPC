@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { TrendingUp, Calendar, Filter, Trophy, Activity } from 'lucide-react';
 import { PROBLEM_SOLVING_PLATFORMS } from '@/app/_lib/services/problem-solving-platforms';
@@ -53,15 +54,36 @@ function ChartTooltip({ data, position, isClickable }) {
     year: 'numeric',
   });
 
+  // Estimated tooltip size, used to keep it inside the viewport on every edge.
+  const TOOLTIP_WIDTH = 220;
+  const TOOLTIP_HEIGHT = 130;
+  const MARGIN = 8;
+
+  // Horizontal: prefer right of cursor, but flip to the left side when it
+  // would overflow the right edge, then clamp to both edges as a safety net.
+  const fitsRight = position.x + 12 + TOOLTIP_WIDTH + MARGIN <= window.innerWidth;
+  const left = Math.max(
+    MARGIN,
+    Math.min(
+      fitsRight ? position.x + 12 : position.x - TOOLTIP_WIDTH - 12,
+      window.innerWidth - TOOLTIP_WIDTH - MARGIN
+    )
+  );
+
+  // Vertical: prefer above cursor, but flip below when it would underflow the
+  // top of the viewport, and clamp to the bottom edge.
+  const above = position.y - TOOLTIP_HEIGHT - 12;
+  const top =
+    above >= MARGIN
+      ? above
+      : Math.min(position.y + 16, window.innerHeight - TOOLTIP_HEIGHT - MARGIN);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="pointer-events-none fixed z-50 rounded-xl border border-white/10 bg-gray-900/95 px-4 py-3 shadow-2xl backdrop-blur-sm"
-      style={{
-        left: Math.min(position.x + 10, window.innerWidth - 200),
-        top: position.y - 80,
-      }}
+      className="pointer-events-none fixed rounded-xl border border-white/10 bg-gray-900/95 px-4 py-3 shadow-2xl backdrop-blur-sm"
+      style={{ left, top, zIndex: 999 }}
     >
       <div className="mb-2 flex items-center gap-2">
         <div
@@ -272,6 +294,7 @@ function LineChart({
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="pointer-events-none"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 1, ease: 'easeOut' }}
@@ -287,30 +310,44 @@ function LineChart({
             strokeLinejoin="round"
             opacity={0.2}
             filter="blur(4px)"
+            className="pointer-events-none"
           />
 
           {/* Data points */}
-          {points.map((point, i) => (
-            <motion.circle
-              key={i}
-              cx={xScale(point.date)}
-              cy={yScale(point.rating)}
-              r={4}
-              fill={color}
-              stroke="#1a1a1a"
-              strokeWidth={2}
-              className="cursor-pointer"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5 + i * 0.02 }}
-              onMouseEnter={(e) =>
-                onHover(point, { x: e.clientX, y: e.clientY })
-              }
-              onMouseLeave={onLeave}
-              onClick={() => onClick && onClick(point)}
-              whileHover={{ scale: 1.5 }}
-            />
-          ))}
+          {points.map((point, i) => {
+            const cx = xScale(point.date);
+            const cy = yScale(point.rating);
+            return (
+              <g key={i}>
+                <motion.circle
+                  cx={cx}
+                  cy={cy}
+                  r={4}
+                  fill={color}
+                  stroke="#1a1a1a"
+                  strokeWidth={2}
+                  className="pointer-events-none"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5 + i * 0.02 }}
+                  whileHover={{ scale: 1.5 }}
+                />
+                {/* Invisible larger hit target so points are easy to hover */}
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={12}
+                  fill="transparent"
+                  className="cursor-pointer"
+                  onMouseEnter={(e) =>
+                    onHover(point, { x: e.clientX, y: e.clientY })
+                  }
+                  onMouseLeave={onLeave}
+                  onClick={() => onClick && onClick(point)}
+                />
+              </g>
+            );
+          })}
         </g>
       ))}
 
@@ -691,14 +728,18 @@ export default function RatingChart({
         )}
       </div>
 
-      {/* Tooltip */}
-      {tooltip.data && (
-        <ChartTooltip
-          data={tooltip.data}
-          position={tooltip.position}
-          isClickable={!!onContestClick}
-        />
-      )}
+      {/* Tooltip — portaled to body so it can render outside the chart box
+          (the animated motion.div ancestor would otherwise clip it). */}
+      {tooltip.data &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <ChartTooltip
+            data={tooltip.data}
+            position={tooltip.position}
+            isClickable={!!onContestClick}
+          />,
+          document.body
+        )}
 
       {/* Platform Statistics Section */}
       {Object.keys(platformStats).length > 0 && (

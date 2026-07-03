@@ -459,7 +459,7 @@ const DEFAULT_SETTINGS = [
   // ── Content (FAQs, Join, Developers) ─────────────────────────
   {
     key: 'faqs',
-    category: 'content',
+    category: 'contact',
     description: 'FAQ items',
     value: [
       {

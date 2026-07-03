@@ -1080,13 +1080,18 @@ async function handleV2Sync(userId, data) {
       .eq('user_id', userId)
       .single();
 
+    const { count: actualSolveCount } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     if (currentStats) {
       await supabaseAdmin
         .from(V2_TABLES.USER_STATS)
         .update({
-          total_solved: isFirstSolve
+          total_solved: actualSolveCount ?? (isFirstSolve
             ? (currentStats.total_solved || 0) + 1
-            : currentStats.total_solved,
+            : currentStats.total_solved),
           total_solutions: (currentStats.total_solutions || 0) + 1,
           updated_at: new Date().toISOString(),
         })
@@ -1094,7 +1099,7 @@ async function handleV2Sync(userId, data) {
     } else {
       await supabaseAdmin.from(V2_TABLES.USER_STATS).insert({
         user_id: userId,
-        total_solved: 1,
+        total_solved: actualSolveCount ?? 1,
         total_solutions: 1,
       });
     }

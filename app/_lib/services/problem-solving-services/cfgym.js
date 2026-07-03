@@ -37,34 +37,65 @@ export class CFGymService {
     const cached = await this.getCache(cacheKey);
     if (cached) return cached;
 
-    // Get gym submissions only (contest ID >= 100000)
-    const response = await fetch(
-      `${this.baseUrl}/user.status?handle=${handle}&count=100000`
-    );
-    const data = await response.json();
+    // Paginate through all submissions (CF API max 10000 per request)
+    let allSubmissions = [];
+    let from = 1;
+    let hasMore = true;
+    const BATCH_SIZE = 10000;
 
-    if (data.status !== 'OK') {
-      throw new Error(`Codeforces API error: ${data.comment}`);
+    while (hasMore) {
+      const url = `${this.baseUrl}/user.status?handle=${handle}&from=${from}&count=${BATCH_SIZE}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status !== 'OK') {
+        if (allSubmissions.length > 0) break;
+        throw new Error(`Codeforces API error: ${data.comment}`);
+      }
+
+      if (!data.result || data.result.length === 0) break;
+
+      const gymSubs = data.result
+        .filter((sub) => sub.problem.contestId >= 100000)
+        .map((sub) => ({
+          submission_id: `gym_${sub.id}`,
+          problem_id: `${sub.problem.contestId}${sub.problem.index}`,
+          problem_name: sub.problem.name,
+          problem_url: `https://codeforces.com/gym/${sub.problem.contestId}/problem/${sub.problem.index}`,
+          contest_id: sub.problem.contestId?.toString(),
+          verdict: this.mapVerdict(sub.verdict),
+          language: sub.programmingLanguage,
+          execution_time_ms: sub.timeConsumedMillis,
+          memory_kb: Math.round((sub.memoryConsumedBytes || 0) / 1024),
+          submitted_at: new Date(sub.creationTimeSeconds * 1000).toISOString(),
+          difficulty_rating: sub.problem.rating || null,
+          tags: sub.problem.tags || [],
+        }));
+
+      allSubmissions = allSubmissions.concat(gymSubs);
+
+      if (fromTimestamp && data.result.length > 0) {
+        const oldest = data.result[data.result.length - 1];
+        if (
+          new Date(oldest.creationTimeSeconds * 1000) <= new Date(fromTimestamp)
+        ) {
+          break;
+        }
+      }
+
+      if (data.result.length < BATCH_SIZE) {
+        hasMore = false;
+      } else {
+        from += BATCH_SIZE;
+        await new Promise((resolve) => setTimeout(resolve, 12000));
+      }
     }
 
-    const submissions = data.result
-      .filter((sub) => sub.problem.contestId >= 100000) // Gym contests
-      .map((sub) => ({
-        submission_id: `gym_${sub.id}`,
-        problem_id: `${sub.problem.contestId}${sub.problem.index}`,
-        problem_name: sub.problem.name,
-        problem_url: `https://codeforces.com/gym/${sub.problem.contestId}/problem/${sub.problem.index}`,
-        contest_id: sub.problem.contestId?.toString(),
-        verdict: this.mapVerdict(sub.verdict),
-        language: sub.programmingLanguage,
-        submitted_at: new Date(sub.creationTimeSeconds * 1000).toISOString(),
-      }));
-
     const filtered = fromTimestamp
-      ? submissions.filter(
+      ? allSubmissions.filter(
           (s) => new Date(s.submitted_at) > new Date(fromTimestamp)
         )
-      : submissions;
+      : allSubmissions;
 
     await this.setCache(cacheKey, filtered, 60);
     return filtered;

@@ -26,7 +26,6 @@ import {
   User as UserIcon,
   Settings,
   Search,
-  Funnel,
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -36,13 +35,25 @@ import {
   Radar,
   LineChart,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import {
   useProblemSolving,
   useConnectHandle,
 } from '@/app/_hooks/useProblemSolving';
-import { getUpcomingContestsAction } from '@/app/_lib/actions/problem-solving-actions';
+import {
+  getUpcomingContestsAction,
+  getUserAllProblems,
+} from '@/app/_lib/actions/problem-solving-actions';
 import ProblemDetailModal from './ProblemDetailModal';
+import AddPlatformSection from './AddPlatformSection';
+import ContestHistory from './ContestHistory';
+import ExtensionGuide from './ExtensionGuide';
+import ActivityHeatmap from './ActivityHeatmap';
+import {
+  PROBLEM_SOLVING_PLATFORMS,
+  getAllPlatformConfigs,
+} from '@/app/_lib/services/problem-solving-platforms';
 import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 // =====================================================================
@@ -51,6 +62,38 @@ import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
+}
+
+function getPaginationRange(currentPageIndex, totalPages) {
+  const currentPage = currentPageIndex + 1;
+  const delta = 1;
+  const range = [];
+  const rangeWithDots = [];
+  let l;
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - delta && i <= currentPage + delta)
+    ) {
+      range.push(i);
+    }
+  }
+
+  for (let i of range) {
+    if (l) {
+      if (i - l === 2) {
+        rangeWithDots.push(l + 1);
+      } else if (i - l > 2) {
+        rangeWithDots.push('...');
+      }
+    }
+    rangeWithDots.push(i);
+    l = i;
+  }
+
+  return rangeWithDots.map((item) => (item === '...' ? '...' : item - 1));
 }
 
 const TABS = [
@@ -118,6 +161,15 @@ const PLATFORM_META = {
     tagText: 'text-[#94a3b8]',
     tagBorder: 'border-[#94a3b8]/20',
   },
+  cfgym: {
+    short: 'CG',
+    name: 'CF Gym',
+    color: 'bg-[#f472b6]',
+    dot: 'bg-[#f472b6]',
+    tagBg: 'bg-[#f472b6]/10',
+    tagText: 'text-[#f472b6]',
+    tagBorder: 'border-[#f472b6]/20',
+  },
 };
 
 function getPlatformMeta(code) {
@@ -160,6 +212,13 @@ const getErrorMessage = (error, fallbackMessage) => {
 function buildProblemUrl(platform, problemId) {
   if (!problemId) return null;
   const p = (platform || '').toLowerCase();
+  if (p === 'cfgym') {
+    // problemId is like "100001A" (contestId >= 100000)
+    const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
+    if (match)
+      return `https://codeforces.com/gym/${match[1]}/problem/${match[2]}`;
+    return null;
+  }
   if (p === 'codeforces') {
     // problemId is typically "1234A" or "1234/A"
     const match = String(problemId).match(/^(\d+)([A-Za-z]\d*)$/);
@@ -317,48 +376,6 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-function ConnectModal({ platform, onClose, onConnect }) {
-  const [handle, setHandle] = useState('');
-  if (!platform) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0b]/80 p-4 backdrop-blur-sm">
-      <div className="flex w-full max-w-[400px] flex-col gap-2 rounded-xl border border-[#222228] bg-[#111114] p-6 shadow-xl">
-        <h3 className="text-[16px] font-semibold text-white">
-          Connect {platform.name || 'Platform'}
-        </h3>
-        <p className="mb-2 text-[13px] text-[#94a3b8]">
-          Enter your handle to link your account and start syncing submissions.
-        </p>
-        <input
-          type="text"
-          autoFocus
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder="Your handle..."
-          className="h-9 w-full rounded-md border border-[#334155] bg-[#1e1e24] px-3 font-mono text-[13px] text-white transition-colors outline-none focus:border-[#60a5fa]"
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-1.5 text-sm font-medium text-[#e2e8f0] transition-colors hover:bg-[#1e1e24]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              if (handle.trim()) onConnect(platform.code, handle.trim());
-            }}
-            disabled={!handle.trim()}
-            className="flex items-center gap-2 rounded-md bg-[#60a5fa] px-4 py-1.5 text-sm font-medium text-[#0a0a0b] transition-colors hover:bg-[#3b82f6] disabled:opacity-50"
-          >
-            <ExternalLink className="h-4 w-4" /> Connect
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function SettingsModal({ open, onClose }) {
   if (!open) return null;
   return (
@@ -414,145 +431,6 @@ function SettingsModal({ open, onClose }) {
           </div>
         </div>
       </motion.div>
-    </div>
-  );
-}
-
-// =====================================================================
-// Activity heatmap (52 cols x 7 rows)
-// =====================================================================
-function HeatmapCell({ level, count }) {
-  const colors = [
-    'bg-[#222228]',
-    'bg-[#4ade80]/20',
-    'bg-[#4ade80]/40',
-    'bg-[#4ade80]/60',
-    'bg-[#4ade80]',
-  ];
-  return (
-    <div
-      className={cn(
-        'h-3 w-3 cursor-pointer rounded-[2.5px] ring-[#334155] ring-offset-1 ring-offset-[#111114] transition-all hover:ring-1',
-        colors[level]
-      )}
-      title={`${count} solve${count === 1 ? '' : 's'}`}
-    />
-  );
-}
-
-function ActivityHeatmap({ data }) {
-  // data: array of { activity_date, problems_solved }
-  // Build 52 columns x 7 rows matrix (last 364 days, ending today)
-  const grid = useMemo(() => {
-    const map = new Map();
-    (data || []).forEach((d) => {
-      if (d.activity_date) map.set(d.activity_date, d.problems_solved || 0);
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cols = [];
-    let total = 0;
-    for (let week = 51; week >= 0; week--) {
-      const col = [];
-      for (let day = 0; day < 7; day++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - (week * 7 + (6 - day)));
-        const key = date.toISOString().split('T')[0];
-        const count = map.get(key) || 0;
-        total += count;
-        const level =
-          count === 0
-            ? 0
-            : count <= 1
-              ? 1
-              : count <= 3
-                ? 2
-                : count <= 6
-                  ? 3
-                  : 4;
-        col.push({ date, count, level });
-      }
-      cols.push(col);
-    }
-    return { cols, total };
-  }, [data]);
-
-  return (
-    <div className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
-      <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-emerald-500/5 blur-[100px]" />
-      <div className="relative z-10 flex items-center justify-between border-b border-white/5 pb-4">
-        <h3 className="flex items-center gap-2 font-semibold text-white">
-          <Calendar className="h-4 w-4 text-emerald-400" />
-          Activity Heatmap
-        </h3>
-        <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-          365 Days
-        </span>
-      </div>
-      <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 relative z-10 w-full overflow-x-auto pb-2">
-        <div className="flex min-w-[720px] flex-col gap-2.5">
-          <div className="flex pt-1 pl-8 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-            {[
-              'Jan',
-              'Feb',
-              'Mar',
-              'Apr',
-              'May',
-              'Jun',
-              'Jul',
-              'Aug',
-              'Sep',
-              'Oct',
-              'Nov',
-              'Dec',
-            ].map((m) => (
-              <div key={m} style={{ flex: 1 }}>
-                {m}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <div className="flex flex-col justify-between py-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-              <span>Mon</span>
-              <span>Wed</span>
-              <span>Fri</span>
-            </div>
-            <div className="flex flex-1 gap-1">
-              {grid.cols.map((col, i) => (
-                <div key={i} className="flex flex-col gap-1">
-                  {col.map((cell, j) => (
-                    <HeatmapCell
-                      key={j}
-                      level={cell.level}
-                      count={cell.count}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="relative z-10 mt-auto flex items-center justify-between border-t border-white/5 pt-2 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-        <span className="text-zinc-400">
-          Total: {formatNumber(grid.total)} solves
-        </span>
-        <div className="flex items-center gap-2">
-          <span>Less</span>
-          <div
-            className="mx-2 flex cursor-help gap-1.5 opacity-90 transition-opacity hover:opacity-100"
-            title="0, 1, 2-3, 4-6, 7+ solves"
-          >
-            <div className="h-3 w-3 rounded-[3px] bg-zinc-800 ring-1 ring-white/5" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/20 ring-1 ring-emerald-500/20" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/40 ring-1 ring-emerald-500/40" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500/70 ring-1 ring-emerald-500/50" />
-            <div className="h-3 w-3 rounded-[3px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-400" />
-          </div>
-          <span>More</span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -629,7 +507,7 @@ function DifficultyDonut({ statistics }) {
       </div>
 
       {/* Donut + rows side by side */}
-      <div className="relative z-10 flex items-center gap-6">
+      <div className="relative z-10 flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
         {/* SVG donut */}
         <div className="relative shrink-0">
           <svg width="140" height="140" viewBox="0 0 140 140">
@@ -674,7 +552,7 @@ function DifficultyDonut({ statistics }) {
         </div>
 
         {/* Tier rows */}
-        <div className="flex flex-1 flex-col gap-3.5">
+        <div className="flex w-full flex-col gap-3.5 sm:flex-1">
           {tiers.map((t) => {
             const pct = Math.round((t.count / total) * 100);
             return (
@@ -831,6 +709,27 @@ function OverviewTab({
   syncingPlatform,
   onTabChange,
 }) {
+  const [platformPage, setPlatformPage] = useState(0);
+  const PLATFORM_PAGE_SIZE = 5;
+
+  const totalPlatformPages = Math.ceil(
+    (handles?.length || 0) / PLATFORM_PAGE_SIZE
+  );
+  const visiblePlatforms = (handles || []).slice(
+    platformPage * PLATFORM_PAGE_SIZE,
+    (platformPage + 1) * PLATFORM_PAGE_SIZE
+  );
+  const platformPaginationRange = getPaginationRange(
+    platformPage,
+    totalPlatformPages
+  );
+
+  useEffect(() => {
+    if (platformPage >= totalPlatformPages && totalPlatformPages > 0) {
+      setPlatformPage(totalPlatformPages - 1);
+    }
+  }, [handles, totalPlatformPages, platformPage]);
+
   const stats = [
     {
       l: 'Total Solved',
@@ -910,13 +809,13 @@ function OverviewTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,1fr)_200px]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s, i) => (
           <motion.div
             key={i}
             whileHover={{ y: -4, scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20"
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:p-6"
           >
             <div
               className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-linear-to-br opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -924,7 +823,7 @@ function OverviewTab({
             />
 
             <div className="relative z-10 mb-4 flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+              <span className="text-[10px] font-semibold tracking-wide text-zinc-400 uppercase sm:text-xs">
                 {s.l}
               </span>
               <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -942,7 +841,7 @@ function OverviewTab({
                 {s.v}
               </span>
               {s.sub && (
-                <span className="text-sm font-medium text-zinc-500">
+                <span className="text-[11px] font-medium whitespace-nowrap text-zinc-500 sm:text-xs">
                   {s.sub}
                 </span>
               )}
@@ -954,7 +853,7 @@ function OverviewTab({
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-5 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 lg:col-span-1 xl:col-span-1"
+          className="group relative col-span-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20 sm:col-span-2 sm:p-5 lg:col-span-1"
         >
           <div
             className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-30"
@@ -962,7 +861,7 @@ function OverviewTab({
           />
 
           <div className="relative z-10 mb-1 flex items-center justify-between">
-            <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+            <span className="text-[10px] font-semibold tracking-wide text-zinc-400 uppercase sm:text-xs">
               Avg Accuracy
             </span>
             <div className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10">
@@ -1041,8 +940,8 @@ function OverviewTab({
         <DifficultyDonut statistics={statistics} />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-[1fr_340px]">
-        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl lg:col-span-2 xl:col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
               <Sparkles className="h-5 w-5 text-indigo-400" />
@@ -1125,7 +1024,7 @@ function OverviewTab({
           </div>
         </div>
 
-        <div className="flex h-fit flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl lg:col-span-1">
+        <div className="flex h-fit flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
               <House className="h-5 w-5 text-indigo-400" />
@@ -1139,65 +1038,212 @@ function OverviewTab({
             </button>
           </div>
           <div className="flex flex-col gap-1.5 pt-2">
-            {Object.keys(PLATFORM_META).map((code) => {
-              const meta = getPlatformMeta(code);
-              const handle = (handles || []).find((h) => h.platform === code);
-              const connected = !!handle;
-              const handleName = handle?.handle;
-              return (
-                <div
-                  key={code}
-                  className="flex items-center gap-3 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
-                >
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
-                      meta.color
-                    )}
-                  >
-                    {meta.short}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-zinc-200">
-                      {meta.name}
-                    </div>
-                    <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-                      {connected ? `@${handleName}` : 'Not connected'}
-                    </div>
-                  </div>
-                  {connected ? (
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                        Active
-                      </span>
-                      <button
-                        onClick={() => onSyncPlatform(code)}
-                        className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                        title="Sync now"
-                        disabled={syncingPlatform === code}
-                      >
-                        <RefreshCw
+            {!handles || handles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-xs text-zinc-500">
+                  No platforms connected yet.
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  Connect your first platform to start tracking solves!
+                </p>
+              </div>
+            ) : (
+              <>
+                {visiblePlatforms.map((h) => {
+                  const code = h.platform;
+                  const meta = getPlatformMeta(code);
+                  const handleName = h.handle;
+                  const ps = statistics?.platform_stats?.[code];
+                  const isSyncing = syncingPlatform === code;
+                  const syncStatus = ps?.sync_status || 'pending';
+                  const hasError = !!ps?.error_message;
+                  const rating = ps?.rating || 0;
+                  const solvedCount = ps?.solved_count || 0;
+                  const lastSynced = ps?.last_synced_at;
+
+                  const statusBadge = isSyncing ? (
+                    <span className="flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-indigo-400 uppercase">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
+                      Syncing
+                    </span>
+                  ) : hasError ? (
+                    <span
+                      className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-rose-400 uppercase"
+                      title={ps.error_message}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      Error
+                    </span>
+                  ) : syncStatus === 'completed' || lastSynced ? (
+                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400 uppercase">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      Synced
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-800/50 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-zinc-500 uppercase">
+                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                      Pending
+                    </span>
+                  );
+
+                  return (
+                    <div
+                      key={code}
+                      className="flex flex-col gap-2 rounded-xl border border-white/5 bg-zinc-950/50 p-3 transition-colors hover:bg-white/5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
                           className={cn(
-                            'h-3.5 w-3.5',
-                            syncingPlatform === code
-                              ? 'animate-spin text-indigo-400'
-                              : ''
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-zinc-900 shadow-inner',
+                            meta.color
                           )}
-                        />
+                        >
+                          {meta.short}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-200">
+                            {meta.name}
+                          </div>
+                          <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
+                            @{handleName}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {statusBadge}
+                          <button
+                            onClick={() => onSyncPlatform(code)}
+                            className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                            title={
+                              lastSynced
+                                ? `Last synced ${relativeTime(lastSynced)}`
+                                : 'Sync now'
+                            }
+                            disabled={isSyncing}
+                          >
+                            <RefreshCw
+                              className={cn(
+                                'h-3.5 w-3.5',
+                                isSyncing ? 'animate-spin text-indigo-400' : ''
+                              )}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {(rating > 0 || solvedCount > 0) && (
+                        <div className="flex items-center gap-3 border-t border-white/5 pt-2">
+                          {rating > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">
+                                Rating
+                              </span>
+                              <span
+                                className={cn(
+                                  'font-mono text-xs font-bold',
+                                  meta.tagText
+                                )}
+                              >
+                                {formatNumber(rating)}
+                              </span>
+                            </div>
+                          )}
+                          {rating > 0 && solvedCount > 0 && (
+                            <span className="h-3 w-px bg-white/10" />
+                          )}
+                          {solvedCount > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">
+                                Solved
+                              </span>
+                              <span className="font-mono text-xs font-bold text-emerald-400">
+                                {formatNumber(solvedCount)}
+                              </span>
+                            </div>
+                          )}
+                          {lastSynced && (
+                            <>
+                              <span className="ml-auto text-[10px] text-zinc-600">
+                                {relativeTime(lastSynced)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {hasError && (
+                        <p
+                          className="truncate rounded-lg bg-rose-500/5 px-2 py-1 text-[10px] text-rose-400"
+                          title={ps.error_message}
+                        >
+                          {ps.error_message}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {totalPlatformPages > 1 && (
+                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
+                    <p className="text-[10px] font-medium text-zinc-500">
+                      {platformPage * PLATFORM_PAGE_SIZE + 1}–
+                      {Math.min(
+                        (platformPage + 1) * PLATFORM_PAGE_SIZE,
+                        (handles || []).length
+                      )}{' '}
+                      of {(handles || []).length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          setPlatformPage((p) => Math.max(0, p - 1))
+                        }
+                        disabled={platformPage === 0}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      {platformPaginationRange.map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span
+                              key={`dots-${idx}`}
+                              className="flex h-7 w-7 items-center justify-center text-[10px] font-semibold text-zinc-600"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => setPlatformPage(p)}
+                            className={cn(
+                              'flex h-7 w-7 items-center justify-center rounded-lg border text-[10px] font-semibold transition-colors',
+                              p === platformPage
+                                ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                                : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                            )}
+                          >
+                            {p + 1}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() =>
+                          setPlatformPage((p) =>
+                            Math.min(totalPlatformPages - 1, p + 1)
+                          )
+                        }
+                        disabled={platformPage === totalPlatformPages - 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => onConnectClick({ code, name: meta.name })}
-                      className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300 transition-all hover:bg-white/10 hover:text-white"
-                    >
-                      Connect
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1205,25 +1251,34 @@ function OverviewTab({
   );
 }
 
-function ProblemsTab({ submissions }) {
+function ProblemsTab({ problems, loading, handles, recentSubmissions }) {
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'solved' | 'unsolved'
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | '7d' | '30d' | '90d' | '1y' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [now] = useState(() => Date.now());
   const [page, setPage] = useState(0);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const PAGE_SIZE = 15;
 
+  // All connected platforms from handles; fall back to platforms seen in problems
+  const availablePlatforms = useMemo(() => {
+    if (handles && handles.length > 0) {
+      return [
+        ...new Set(
+          handles.map((h) => (h.platform || '').toLowerCase()).filter(Boolean)
+        ),
+      ].sort();
+    }
+    return [
+      ...new Set((problems || []).map((s) => s.platform).filter(Boolean)),
+    ].sort();
+  }, [handles, problems]);
+
   const list = useMemo(() => {
-    const seen = new Map();
-    (submissions || []).forEach((s) => {
-      const key = `${s.platform}:${s.problem_id}`;
-      // Sort properly rather than just relying on whatever appeared first
-      if (
-        !seen.has(key) ||
-        new Date(s.submitted_at) > new Date(seen.get(key).submitted_at)
-      ) {
-        seen.set(key, s);
-      }
-    });
-    let arr = Array.from(seen.values());
+    let arr = problems || [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       arr = arr.filter(
@@ -1232,15 +1287,57 @@ function ProblemsTab({ submissions }) {
           (s.problem_id || '').toLowerCase().includes(q)
       );
     }
-    // Default sort by submitted_at desc
-    arr.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
-    return arr;
-  }, [submissions, search]);
+    if (statusFilter === 'solved') arr = arr.filter((s) => s.solved);
+    if (statusFilter === 'unsolved') arr = arr.filter((s) => !s.solved);
+    if (platformFilter !== 'all')
+      arr = arr.filter((s) => s.platform === platformFilter);
+    if (dateFilter !== 'all') {
+      if (dateFilter === 'custom') {
+        const startTime = customStartDate
+          ? new Date(`${customStartDate}T00:00:00`).getTime()
+          : null;
+        const endTime = customEndDate
+          ? new Date(`${customEndDate}T23:59:59.999`).getTime()
+          : null;
 
-  const totalSolved = list.filter((s) => {
-    const v = String(s.verdict || '').toUpperCase();
-    return v === 'OK' || v === 'AC' || v === 'ACCEPTED';
-  }).length;
+        if (startTime !== null || endTime !== null) {
+          arr = arr.filter((s) => {
+            if (!s.submitted_at) return false;
+            const submittedTime = new Date(s.submitted_at).getTime();
+            if (Number.isNaN(submittedTime)) return false;
+            if (startTime !== null && submittedTime < startTime) return false;
+            if (endTime !== null && submittedTime > endTime) return false;
+            return true;
+          });
+        }
+      } else {
+        const cutoffMs =
+          {
+            '7d': 7,
+            '30d': 30,
+            '90d': 90,
+            '1y': 365,
+          }[dateFilter] * 86400000;
+        const cutoff = now - cutoffMs;
+        arr = arr.filter((s) => {
+          if (!s.submitted_at) return false;
+          return new Date(s.submitted_at).getTime() >= cutoff;
+        });
+      }
+    }
+    return arr;
+  }, [
+    problems,
+    search,
+    statusFilter,
+    platformFilter,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    now,
+  ]);
+
+  const totalSolved = (problems || []).filter((s) => s.solved).length;
 
   const easy = list.filter(
     (s) => (s.difficulty_rating || 0) > 0 && (s.difficulty_rating || 0) < 1400
@@ -1253,6 +1350,17 @@ function ProblemsTab({ submissions }) {
 
   const start = page * PAGE_SIZE;
   const visible = list.slice(start, start + PAGE_SIZE);
+  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  const paginationRange = getPaginationRange(page, totalPages);
+
+  if (loading) {
+    return (
+      <div className="animate-in fade-in mt-2 flex items-center justify-center rounded-2xl border border-white/5 bg-zinc-900/50 p-24 shadow-lg backdrop-blur-xl duration-500">
+        <RefreshCw className="h-6 w-6 animate-spin text-zinc-500" />
+        <span className="ml-3 text-sm text-zinc-500">Loading problems…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in mt-2 space-y-6 rounded-2xl border border-white/5 bg-zinc-900/50 p-6 pb-12 shadow-lg backdrop-blur-xl duration-500 md:p-8">
@@ -1266,7 +1374,7 @@ function ProblemsTab({ submissions }) {
             <div className="flex items-baseline gap-2 text-4xl font-black tracking-tight text-white">
               {formatNumber(totalSolved)}{' '}
               <span className="text-sm font-medium text-zinc-600">
-                / {formatNumber(list.length)}
+                / {formatNumber((problems || []).length)}
               </span>
             </div>
           </div>
@@ -1309,32 +1417,147 @@ function ProblemsTab({ submissions }) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">
-        <div className="group relative w-full sm:w-[360px]">
-          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-indigo-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search problems by name or ID..."
-            className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20"
-          />
+      <div className="flex flex-col gap-3 pt-2">
+        {/* Row 1: search + status */}
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="group relative w-full sm:w-[360px]">
+            <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-indigo-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search problems by name or ID..."
+              className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pr-4 pl-10 text-sm text-zinc-200 transition-all outline-none placeholder:text-zinc-600 focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
+            {['all', 'solved', 'unsolved'].map((f) => (
+              <button
+                key={f}
+                onClick={() => {
+                  setStatusFilter(f);
+                  setPage(0);
+                }}
+                className={cn(
+                  'rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap capitalize transition-colors',
+                  statusFilter === f
+                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                    : 'border-white/5 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
-          <button className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
-            <Funnel className="h-4 w-4 text-zinc-400" /> Topic Tags
-          </button>
-          <button className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
-            <Crown className="h-4 w-4 text-amber-400" /> Difficulty
-          </button>
-          <div className="mx-1 hidden h-6 w-px bg-white/10 sm:block" />
-          <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-zinc-400 transition-colors hover:text-white">
-            <SlidersHorizontal className="h-4 w-4" /> Sort
-          </button>
+
+        {/* Row 2: platform + date filters */}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          {/* Platform filter */}
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+              Platform
+            </span>
+            <select
+              value={platformFilter}
+              onChange={(e) => {
+                setPlatformFilter(e.target.value);
+                setPage(0);
+              }}
+              className="cursor-pointer rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="all">All platforms</option>
+              {availablePlatforms.map((p) => (
+                <option key={p} value={p}>
+                  {getPlatformMeta(p).name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden h-4 w-px bg-white/10 sm:block" />
+
+          {/* Date filter */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <span className="shrink-0 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+              Date
+            </span>
+            {[
+              { value: 'all', label: 'All time' },
+              { value: '7d', label: '7 days' },
+              { value: '30d', label: '30 days' },
+              { value: '90d', label: '3 months' },
+              { value: '1y', label: '1 year' },
+              { value: 'custom', label: 'Custom' },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => {
+                  setDateFilter(value);
+                  setPage(0);
+                }}
+                className={cn(
+                  'rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
+                  dateFilter === value
+                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                    : 'border-white/5 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {dateFilter === 'custom' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3 sm:flex-row sm:items-end">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+                Start date
+              </span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setPage(0);
+                }}
+                style={{ colorScheme: 'dark' }}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <span className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
+                End date
+              </span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setPage(0);
+                }}
+                style={{ colorScheme: 'dark' }}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFilter('all');
+                setCustomStartDate('');
+                setCustomEndDate('');
+                setPage(0);
+              }}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Clear custom range
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -1345,7 +1568,7 @@ function ProblemsTab({ submissions }) {
               <th className="w-12 px-5 py-4 text-center font-semibold">
                 Status
               </th>
-              <th className="px-5 py-4 font-semibold">Problem</th>
+              <th className="min-w-[220px] px-5 py-4 font-semibold">Problem</th>
               <th className="w-[140px] px-5 py-4 font-semibold">Tags</th>
               <th className="w-36 px-5 py-4 font-semibold">Platform</th>
               <th className="w-28 px-5 py-4 text-right font-semibold">
@@ -1366,15 +1589,17 @@ function ProblemsTab({ submissions }) {
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
                     <Search className="h-8 w-8 text-zinc-600" />
                   </div>
-                  No problems match your filters.
+                  {(problems || []).length === 0
+                    ? 'No problems synced yet. Sync your platforms to see all your problems here.'
+                    : 'No problems match your filters.'}
                 </td>
               </tr>
             )}
             {visible.map((s, i) => {
+              const isAc = s.solved === true;
               const verdict = String(s.verdict || '').toUpperCase();
-              const isAc =
-                verdict === 'OK' || verdict === 'AC' || verdict === 'ACCEPTED';
-              const isWa = verdict.includes('WRONG') || verdict === 'WA';
+              const isWa =
+                !isAc && (verdict.includes('WRONG') || verdict === 'WA');
               const meta = getPlatformMeta(s.platform);
               const diff = s.difficulty_rating;
               const title = s.problem_name || s.problem_id;
@@ -1396,7 +1621,12 @@ function ProblemsTab({ submissions }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-zinc-200 transition-colors group-hover:text-indigo-300">
-                      {title}
+                      <span
+                        className="max-w-[180px] truncate sm:max-w-[320px]"
+                        title={title}
+                      >
+                        {title}
+                      </span>
                       {(s.problem_url ||
                         buildProblemUrl(s.platform, s.problem_id)) && (
                         <ExternalLink
@@ -1482,33 +1712,66 @@ function ProblemsTab({ submissions }) {
 
       <div className="flex items-center justify-between border-t border-white/5 pt-4">
         <div className="text-sm font-medium text-zinc-500">
-          Showing <span className="text-white">{start + 1}</span> to{' '}
+          Showing{' '}
+          <span className="text-white">
+            {list.length === 0 ? 0 : start + 1}
+          </span>{' '}
+          to{' '}
           <span className="text-white">
             {Math.min(start + PAGE_SIZE, list.length)}
           </span>{' '}
           of <span className="text-white">{list.length}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <button
-            disabled={start + PAGE_SIZE >= list.length}
-            onClick={() => setPage((p) => p + 1)}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {paginationRange.map((p, idx) => {
+              if (p === '...') {
+                return (
+                  <span
+                    key={`dots-${idx}`}
+                    className="flex h-8 w-8 items-center justify-center text-xs font-semibold text-zinc-600"
+                  >
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors',
+                    p === page
+                      ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                      : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {p + 1}
+                </button>
+              );
+            })}
+            <button
+              disabled={page === totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedProblem && (
         <ProblemDetailModal
           problem={selectedProblem}
+          recentSubmissions={recentSubmissions}
           onClose={() => setSelectedProblem(null)}
         />
       )}
@@ -1517,21 +1780,220 @@ function ProblemsTab({ submissions }) {
 }
 
 // Simple SVG line chart for ratings
-function RatingLineChart({ ratingHistory }) {
+// Position the hover tooltip relative to the Rating History box so it always
+// stays inside it: coordinates are converted from viewport space to box space,
+// the tooltip is centered over the point and placed above it by default
+// (flipped below near the top), then clamped to the box's bounds.
+function getTooltipStyle(pos, box) {
+  const WIDTH = 260;
+  const EST_HEIGHT = 200;
+  const MARGIN = 8;
+  const GAP = 14;
+  if (!box) return { left: 0, top: 0 };
+
+  const rect = box.getBoundingClientRect();
+  const px = pos.x - rect.left;
+  const py = pos.y - rect.top;
+
+  const maxLeft = rect.width - WIDTH - MARGIN;
+  const left = Math.max(MARGIN, Math.min(px - WIDTH / 2, maxLeft));
+
+  const above = py - GAP - EST_HEIGHT;
+  const maxTop = rect.height - EST_HEIGHT - MARGIN;
+  let top = above >= MARGIN ? above : py + GAP + 12;
+  top = Math.max(MARGIN, Math.min(top, maxTop));
+
+  return { left, top };
+}
+
+function RatingLineChart({
+  ratingHistory,
+  contestHistory,
+  onSyncRating,
+  syncingRating,
+}) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Create a map of contests by date+platform for quick lookup
+  const contestMap = useMemo(() => {
+    const map = new Map();
+    (contestHistory || []).forEach((contest) => {
+      const contestPlatform = contest.platform || contest.platforms?.code;
+      const contestDateStr = contest.date || contest.contest_date;
+      if (!contestDateStr || !contestPlatform) return;
+      const contestDate = new Date(contestDateStr);
+      const dateKey = contestDate.toISOString().split('T')[0];
+      const key = `${contestPlatform.toLowerCase()}-${dateKey}`;
+      map.set(key, contest);
+
+      const newRating = contest.newRating || contest.new_rating;
+      if (newRating) {
+        const ratingKey = `${contestPlatform.toLowerCase()}-${newRating}`;
+        if (!map.has(ratingKey)) {
+          map.set(ratingKey, contest);
+        }
+      }
+    });
+    return map;
+  }, [contestHistory]);
+
+  // Enrich rating data with contest names and other metadata
+  const enrichedRatingHistory = useMemo(() => {
+    return (ratingHistory || []).map((rating) => {
+      const ratingPlatform = (
+        rating.platform ||
+        rating.platforms?.code ||
+        ''
+      ).toLowerCase();
+      const ratingDateStr = rating.date || rating.recorded_at;
+      if (!ratingDateStr || !ratingPlatform) return rating;
+
+      const ratingDate = new Date(ratingDateStr);
+      const dateKey = ratingDate.toISOString().split('T')[0];
+      const key = `${ratingPlatform}-${dateKey}`;
+
+      let matchedContest = contestMap.get(key);
+
+      // Fallback 1: match by rating value
+      const ratingValue = rating.rating;
+      if (!matchedContest && ratingValue) {
+        const ratingKey = `${ratingPlatform}-${ratingValue}`;
+        matchedContest = contestMap.get(ratingKey);
+      }
+
+      // Fallback 2: search through contest history for close date match
+      if (!matchedContest) {
+        matchedContest = (contestHistory || []).find((contest) => {
+          const contestPlatform = (
+            contest.platform ||
+            contest.platforms?.code ||
+            ''
+          ).toLowerCase();
+          if (contestPlatform !== ratingPlatform) return false;
+          const contestDateStr = contest.date || contest.contest_date;
+          if (!contestDateStr) return false;
+          const contestDate = new Date(contestDateStr);
+          const timeDiff = Math.abs(ratingDate - contestDate);
+
+          const contestNewRating = contest.newRating || contest.new_rating;
+          // Match if within 1.5 days and rating matches
+          return timeDiff < 129600000 && contestNewRating === ratingValue;
+        });
+      }
+
+      // Fallback 3: match by platform + rating change
+      const ratingChange = rating.change || rating.rating_change;
+      if (!matchedContest && ratingChange) {
+        matchedContest = (contestHistory || []).find((contest) => {
+          const contestPlatform = (
+            contest.platform ||
+            contest.platforms?.code ||
+            ''
+          ).toLowerCase();
+          if (contestPlatform !== ratingPlatform) return false;
+
+          const contestRatingChange =
+            contest.ratingChange || contest.rating_change;
+          const contestDateStr = contest.date || contest.contest_date;
+          if (!contestDateStr) return false;
+          const contestDate = new Date(contestDateStr);
+          const timeDiff = Math.abs(ratingDate - contestDate);
+
+          return timeDiff < 129600000 && contestRatingChange === ratingChange;
+        });
+      }
+
+      // Prefer the row's own contest data (joined authoritatively via the
+      // contest_id FK in transformRatingHistory); fall back to the heuristic
+      // match only when the FK join was empty.
+      const contestName =
+        rating.contestName ||
+        rating.contest_history?.contest_name ||
+        matchedContest?.name ||
+        matchedContest?.contest_name;
+      const contestId =
+        rating.contestId ||
+        rating.contest_history?.external_contest_id ||
+        matchedContest?.contestId ||
+        matchedContest?.external_contest_id;
+      const contestUrl =
+        rating.contestUrl ||
+        rating.contest_history?.contest_url ||
+        matchedContest?.url ||
+        matchedContest?.contest_url;
+      const rank = rating.rank ?? matchedContest?.rank;
+      const totalParticipants =
+        rating.totalParticipants ??
+        matchedContest?.totalParticipants ??
+        matchedContest?.total_participants;
+      const problemsSolved =
+        rating.problemsSolved ??
+        matchedContest?.solved ??
+        matchedContest?.problems_solved;
+      const problemsAttempted =
+        rating.problemsAttempted ??
+        matchedContest?.problemsAttempted ??
+        matchedContest?.problems_attempted;
+
+      // Derive the real contest size from the problems array (already fetched
+      // by the sync and stored in problems_data → transformContestHistory sets
+      // matchedContest.problems). The DB total_problems column often equals
+      // problems_solved (a sync bug) so we can't trust it directly.
+      const totalProblems = (() => {
+        if (rating.totalProblems != null) return rating.totalProblems;
+        const probs = matchedContest?.problems;
+        if (Array.isArray(probs) && probs.length > 0) {
+          const hasUnattempted = probs.some(
+            (p) =>
+              !p.solved && !p.solvedDuringContest && !p.upsolve && !p.attempted
+          );
+          if (hasUnattempted) return probs.length;
+        }
+        const dbTotal =
+          matchedContest?.totalProblems ?? matchedContest?.total_problems;
+        const solved = problemsSolved;
+        return dbTotal && dbTotal > solved ? dbTotal : null;
+      })();
+
+      return {
+        ...rating,
+        platform: ratingPlatform,
+        date: ratingDate.getTime(),
+        rating: ratingValue,
+        change: ratingChange,
+        contestName,
+        contestId,
+        contestUrl,
+        rank,
+        totalParticipants,
+        problemsSolved,
+        problemsAttempted,
+        totalProblems,
+      };
+    });
+  }, [ratingHistory, contestHistory, contestMap]);
+
   // Group by platform code
   const grouped = useMemo(() => {
     const map = new Map();
-    (ratingHistory || []).forEach((r) => {
+    enrichedRatingHistory.forEach((r) => {
       if (!r.platform || r.rating == null) return;
       if (!map.has(r.platform)) map.set(r.platform, []);
-      map.get(r.platform).push({
-        date: new Date(r.date).getTime(),
-        rating: r.rating,
-      });
+      map.get(r.platform).push(r);
     });
     map.forEach((arr) => arr.sort((a, b) => a.date - b.date));
     return map;
-  }, [ratingHistory]);
+  }, [enrichedRatingHistory]);
 
   const platforms = Array.from(grouped.keys());
 
@@ -1549,6 +2011,21 @@ function RatingLineChart({ ratingHistory }) {
               Platform ratings over time
             </p>
           </div>
+          {onSyncRating && (
+            <button
+              onClick={onSyncRating}
+              disabled={syncingRating}
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+              title="Refresh Rating History"
+            >
+              <RefreshCw
+                className={cn(
+                  'h-4 w-4',
+                  syncingRating && 'animate-spin text-indigo-400'
+                )}
+              />
+            </button>
+          )}
         </div>
         <div className="relative z-10 flex h-72 w-full items-center justify-center text-sm font-medium text-zinc-500">
           No rating data yet
@@ -1575,9 +2052,11 @@ function RatingLineChart({ ratingHistory }) {
     maxR = maxR + 100;
   }
 
-  const W = 800;
-  const H = 280;
-  const PAD = { l: 50, r: 20, t: 20, b: 30 };
+  const W = isMobile ? 380 : 800;
+  const H = isMobile ? 220 : 280;
+  const PAD = isMobile
+    ? { l: 35, r: 15, t: 15, b: 25 }
+    : { l: 50, r: 20, t: 20, b: 30 };
   const innerW = W - PAD.l - PAD.r;
   const innerH = H - PAD.t - PAD.b;
 
@@ -1595,7 +2074,10 @@ function RatingLineChart({ ratingHistory }) {
   };
 
   return (
-    <div className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl">
+    <div
+      ref={boxRef}
+      className="relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-6 shadow-lg backdrop-blur-xl"
+    >
       <div className="pointer-events-none absolute -right-32 -bottom-32 h-64 w-64 rounded-full bg-indigo-500/5 blur-[100px]" />
       <div className="relative z-10 flex items-center justify-between border-b border-white/5 pb-4">
         <div>
@@ -1607,24 +2089,41 @@ function RatingLineChart({ ratingHistory }) {
             Platform ratings over time
           </p>
         </div>
-        <div className="flex gap-4">
-          {platforms.map((p) => (
-            <div
-              key={p}
-              className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase"
+        <div className="flex items-center gap-4">
+          <div className="flex gap-4">
+            {platforms.map((p) => (
+              <div
+                key={p}
+                className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-400 uppercase"
+              >
+                <span
+                  className="h-2 w-2 rounded-[2px] shadow-sm"
+                  style={{ backgroundColor: colors[p] || '#94a3b8' }}
+                />
+                {getPlatformMeta(p).name}
+              </div>
+            ))}
+          </div>
+          {onSyncRating && (
+            <button
+              onClick={onSyncRating}
+              disabled={syncingRating}
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-white/5"
+              title="Refresh Rating History"
             >
-              <span
-                className="h-2 w-2 rounded-[2px] shadow-sm"
-                style={{ backgroundColor: colors[p] || '#94a3b8' }}
+              <RefreshCw
+                className={cn(
+                  'h-4 w-4',
+                  syncingRating && 'animate-spin text-indigo-400'
+                )}
               />
-              {getPlatformMeta(p).name}
-            </div>
-          ))}
+            </button>
+          )}
         </div>
       </div>
       <div
         className="relative z-10 w-full"
-        style={{ aspectRatio: '16/5', minHeight: 200 }}
+        style={{ aspectRatio: isMobile ? '16/8' : '16/5', minHeight: 200 }}
       >
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -1662,7 +2161,7 @@ function RatingLineChart({ ratingHistory }) {
           })}
           {/* x-axis date labels */}
           {(() => {
-            const tickCount = 5;
+            const tickCount = isMobile ? 3 : 5;
             return Array.from({ length: tickCount }, (_, i) => {
               const t = minTime + (i / (tickCount - 1)) * (maxTime - minTime);
               const x = xOf(t);
@@ -1693,6 +2192,9 @@ function RatingLineChart({ ratingHistory }) {
             y2={PAD.t + innerH}
             stroke="rgba(255,255,255,0.06)"
           />
+          {/* Areas + lines: non-interactive layer drawn first so a later
+              platform's area fill never covers or steals hover from another
+              platform's points. */}
           {platforms.map((p) => {
             const arr = grouped.get(p);
             if (!arr || arr.length < 1) return null;
@@ -1707,7 +2209,7 @@ function RatingLineChart({ ratingHistory }) {
             // area fill path
             const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD.t + innerH} L ${pts[0].x} ${PAD.t + innerH} Z`;
             return (
-              <g key={p}>
+              <g key={p} className="pointer-events-none">
                 {/* subtle area fill */}
                 <path d={areaPath} fill={color} opacity={0.06} />
                 <path
@@ -1718,23 +2220,228 @@ function RatingLineChart({ ratingHistory }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {arr.map((pt, i) => (
-                  <circle
-                    key={i}
-                    cx={xOf(pt.date)}
-                    cy={yOf(pt.rating)}
-                    r="3.5"
-                    fill="#18181b"
-                    stroke={color}
-                    strokeWidth="2"
-                    className="cursor-pointer"
-                  />
-                ))}
+              </g>
+            );
+          })}
+
+          {/* Points: drawn on top of every area/line so each platform's data
+              points stay visible and hoverable. */}
+          {platforms.map((p) => {
+            const arr = grouped.get(p);
+            if (!arr || arr.length < 1) return null;
+            const color = colors[p] || '#94a3b8';
+            return (
+              <g key={p}>
+                {arr.map((pt, i) => {
+                  const cx = xOf(pt.date);
+                  const cy = yOf(pt.rating);
+                  const isActive =
+                    hoveredPoint?.date === pt.date &&
+                    hoveredPoint?.platform === pt.platform;
+                  return (
+                    <g key={i}>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={isActive ? '5.5' : '3.5'}
+                        fill={isActive ? color : '#18181b'}
+                        stroke={color}
+                        strokeWidth="2"
+                        className="pointer-events-none transition-all duration-150"
+                      />
+                      {/* Invisible larger hit target so dense/middle points
+                          are easy to hover. */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="11"
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setTooltipPos({
+                            x: rect.left + rect.width / 2,
+                            y: rect.top,
+                          });
+                          setHoveredPoint(pt);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredPoint(null);
+                        }}
+                        onClick={() => {
+                          if (pt.contestUrl) {
+                            window.open(
+                              pt.contestUrl,
+                              '_blank',
+                              'noopener,noreferrer'
+                            );
+                          }
+                        }}
+                      />
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
         </svg>
       </div>
+
+      <AnimatePresence>
+        {hoveredPoint && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 5 }}
+            transition={{ duration: 0.15 }}
+            className="pointer-events-none absolute z-50 w-[260px] rounded-xl border border-white/10 bg-zinc-950/95 p-4 shadow-2xl backdrop-blur-md"
+            style={getTooltipStyle(tooltipPos, boxRef.current)}
+          >
+            {(() => {
+              const meta = getPlatformMeta(hoveredPoint.platform);
+              const date = new Date(hoveredPoint.date).toLocaleDateString(
+                'en-US',
+                {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                }
+              );
+              const changeFormatted =
+                hoveredPoint.change > 0
+                  ? `+${hoveredPoint.change}`
+                  : hoveredPoint.change;
+              const changeColor =
+                hoveredPoint.change > 0
+                  ? 'text-emerald-400'
+                  : hoveredPoint.change < 0
+                    ? 'text-rose-400'
+                    : 'text-zinc-500';
+
+              const getPercentile = (rank, total) => {
+                if (!rank || !total || total <= 0) return null;
+                const pct = (rank / total) * 100;
+                return Math.max(0.01, Math.min(pct, 100));
+              };
+
+              const getRankPercentileColor = (percentile) => {
+                if (percentile <= 1) return 'text-rose-400';
+                if (percentile <= 5) return 'text-orange-400';
+                if (percentile <= 10) return 'text-amber-400';
+                if (percentile <= 25) return 'text-yellow-400';
+                if (percentile <= 50) return 'text-emerald-400';
+                if (percentile <= 75) return 'text-cyan-400';
+                return 'text-blue-400';
+              };
+
+              const pct = getPercentile(
+                hoveredPoint.rank,
+                hoveredPoint.totalParticipants
+              );
+
+              return (
+                <div className="flex flex-col gap-1.5 text-left">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn('h-2 w-2 rounded-full', meta.dot)} />
+                      <span
+                        className={cn(
+                          'text-[10px] font-bold tracking-wider uppercase',
+                          meta.tagText
+                        )}
+                      >
+                        {meta.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">{date}</span>
+                  </div>
+
+                  {hoveredPoint.contestName ? (
+                    <h4 className="max-w-[230px] text-xs leading-tight font-bold text-zinc-100">
+                      {hoveredPoint.contestName}
+                    </h4>
+                  ) : (
+                    <h4 className="text-xs font-semibold text-zinc-400 italic">
+                      Platform Rating Update
+                    </h4>
+                  )}
+
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-white/5 pt-2 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">New Rating</span>
+                      <span className="font-mono font-bold text-zinc-200">
+                        {hoveredPoint.rating}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Change</span>
+                      <span className={cn('font-mono font-bold', changeColor)}>
+                        {hoveredPoint.change !== null &&
+                        hoveredPoint.change !== undefined
+                          ? changeFormatted
+                          : '—'}
+                      </span>
+                    </div>
+
+                    {hoveredPoint.rank !== null &&
+                      hoveredPoint.rank !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-500">Rank</span>
+                          <span className="font-mono font-bold text-zinc-200">
+                            {hoveredPoint.rank}
+                            {hoveredPoint.totalParticipants ? (
+                              <span className="text-[10px] font-normal text-zinc-500">
+                                {' '}
+                                / {hoveredPoint.totalParticipants}
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
+                      )}
+
+                    {pct !== null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Percentile</span>
+                        <span
+                          className={cn(
+                            'font-mono font-bold',
+                            getRankPercentileColor(pct)
+                          )}
+                        >
+                          Top {pct.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {hoveredPoint.problemsSolved !== null &&
+                      hoveredPoint.problemsSolved !== undefined && (
+                        <div className="col-span-2 flex items-center justify-between border-t border-white/[0.03] pt-1.5">
+                          <span className="text-zinc-500">Solved</span>
+                          <span className="font-mono font-semibold text-emerald-400">
+                            {hoveredPoint.problemsSolved}
+                            {hoveredPoint.totalProblems ? (
+                              <span className="text-zinc-500">
+                                {' '}
+                                of {hoveredPoint.totalProblems} Problems
+                              </span>
+                            ) : (
+                              ' Problems'
+                            )}
+                          </span>
+                        </div>
+                      )}
+                  </div>
+                  {hoveredPoint.contestUrl && (
+                    <div className="mt-1.5 border-t border-white/5 pt-1.5 text-center text-[9px] text-zinc-500">
+                      Click to view contest page
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1747,8 +2454,12 @@ function ContestsTab({
   upcomingContests,
   onSync,
   syncing,
+  onSyncHistory,
+  syncingHistory,
+  onSyncRating,
+  syncingRating,
+  handles,
 }) {
-  const [expanded, setExpanded] = useState(null);
   const [upcomingPage, setUpcomingPage] = useState(0);
 
   const totalPages = Math.ceil(
@@ -1761,7 +2472,12 @@ function ContestsTab({
 
   return (
     <div className="space-y-6">
-      <RatingLineChart ratingHistory={ratingHistory} />
+      <RatingLineChart
+        ratingHistory={ratingHistory}
+        contestHistory={contestHistory}
+        onSyncRating={onSyncRating}
+        syncingRating={syncingRating}
+      />
 
       <div className="flex flex-col gap-6">
         <div className="flex h-max flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl">
@@ -1906,169 +2622,12 @@ function ContestsTab({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 shadow-lg backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] p-5">
-            <h3 className="flex items-center gap-2 font-semibold text-white">
-              <Trophy className="h-4 w-4 text-amber-400" />
-              Contest History
-            </h3>
-          </div>
-          <div className="w-full overflow-x-auto p-1">
-            <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-              <thead className="border-b border-white/10 text-[11px] font-bold tracking-widest text-zinc-500 uppercase">
-                <tr>
-                  <th className="px-5 py-4">Contest Name</th>
-                  <th className="w-28 px-5 py-4">Platform</th>
-                  <th className="w-24 px-5 py-4">Rank</th>
-                  <th className="w-28 px-5 py-4">Δ Rating</th>
-                  <th className="w-24 px-5 py-4">Solved</th>
-                  <th className="w-28 px-5 py-4">Date</th>
-                  <th className="w-12 px-5 py-4 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 font-medium text-zinc-300">
-                {(contestHistory || []).length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="py-16 text-center text-sm text-zinc-500"
-                    >
-                      <Trophy className="mx-auto mb-3 h-10 w-10 text-zinc-700" />
-                      No contest history yet
-                    </td>
-                  </tr>
-                )}
-                {(contestHistory || []).slice(0, 20).map((c, i) => {
-                  const meta = getPlatformMeta(c.platform);
-                  const delta = Number(c.ratingChange || 0);
-                  const isOpen = expanded === i;
-                  return (
-                    <Fragment key={c.id || i}>
-                      <tr
-                        onClick={() => setExpanded(isOpen ? null : i)}
-                        className={cn(
-                          'group cursor-pointer transition-colors hover:bg-white/[0.04]',
-                          isOpen && 'bg-white/[0.02]'
-                        )}
-                      >
-                        <td className="px-5 py-4">
-                          <span className="font-semibold text-zinc-200 transition-colors group-hover:text-indigo-400">
-                            {c.name}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={cn(
-                              'rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase',
-                              meta.tagBg,
-                              meta.tagBorder,
-                              meta.tagText
-                            )}
-                          >
-                            {meta.short}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 font-mono font-semibold text-zinc-400">
-                          {c.rank ? `#${c.rank}` : '—'}
-                        </td>
-                        <td className="px-5 py-4">
-                          {delta !== 0 ? (
-                            <span
-                              className={cn(
-                                'inline-flex min-w-[3rem] items-center justify-center rounded px-2 py-1 font-mono font-bold',
-                                delta > 0
-                                  ? 'bg-emerald-400/10 text-emerald-400'
-                                  : 'bg-rose-400/10 text-rose-400'
-                              )}
-                            >
-                              {delta > 0 ? `+${delta}` : delta}
-                            </span>
-                          ) : (
-                            <span className="font-mono text-zinc-600">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 font-mono text-zinc-400">
-                          <span className="font-semibold text-zinc-300">
-                            {c.solved ?? '—'}
-                          </span>
-                          {c.totalProblems ? (
-                            <span className="text-zinc-600">
-                              /{c.totalProblems}
-                            </span>
-                          ) : (
-                            ''
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-xs text-zinc-500">
-                          {shortDate(c.date)}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex justify-end">
-                            <ChevronRight
-                              className={cn(
-                                'h-5 w-5 text-zinc-600 transition-transform group-hover:text-zinc-300',
-                                isOpen && 'rotate-90 text-indigo-400'
-                              )}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                      {isOpen && (
-                        <tr className="bg-black/20">
-                          <td
-                            colSpan={7}
-                            className="border-t-0 px-6 py-5 shadow-inner"
-                          >
-                            <div className="flex flex-col gap-4 text-xs sm:flex-row sm:items-center">
-                              <span className="font-bold tracking-widest text-zinc-600 uppercase">
-                                Problems
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                {(c.problems || []).map((p, j) => {
-                                  const verdict = String(
-                                    p.result || p.verdict || ''
-                                  ).toUpperCase();
-                                  const ac =
-                                    p.solved === true ||
-                                    verdict === 'AC' ||
-                                    verdict === 'OK';
-                                  const wa =
-                                    !ac &&
-                                    (verdict.includes('WRONG') ||
-                                      verdict === 'WA');
-                                  return (
-                                    <div
-                                      key={j}
-                                      className={cn(
-                                        'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 font-mono text-[11px] font-bold shadow-sm',
-                                        ac
-                                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                          : wa
-                                            ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-                                            : 'border-white/5 bg-white/5 text-zinc-400'
-                                      )}
-                                    >
-                                      <span>{p.label || p.id || j + 1}</span>
-                                    </div>
-                                  );
-                                })}
-                                {(!c.problems || c.problems.length === 0) && (
-                                  <span className="text-[#64748b]">
-                                    No problem data
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ContestHistory
+          contestHistory={contestHistory}
+          handles={handles}
+          onSync={onSyncHistory}
+          syncing={syncingHistory}
+        />
       </div>
     </div>
   );
@@ -2179,6 +2738,14 @@ function TopicsTab({ submissions }) {
 }
 
 function LeaderboardTab({ leaderboard, currentUserId }) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // leaderboard might be just user rank object, not full list. Use defensive.
   const list = useMemo(() => {
     if (Array.isArray(leaderboard)) return leaderboard;
@@ -2228,8 +2795,12 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
     },
   ];
 
-  // Order: 2nd, 1st, 3rd visually
-  const podiumOrder = top3.length >= 3 ? [2, 0, 1] : top3.map((_, i) => i);
+  // Order: 2nd, 1st, 3rd visually on desktop; 1st, 2nd, 3rd on mobile
+  const podiumOrder = isMobile
+    ? top3.map((_, i) => i)
+    : top3.length >= 3
+      ? [1, 0, 2]
+      : top3.map((_, i) => i);
 
   if (list.length === 0) {
     return (
@@ -2243,7 +2814,7 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
   return (
     <div className="space-y-10">
       {top3.length > 0 && (
-        <div className="mx-auto mt-8 flex h-72 w-full max-w-3xl items-end justify-center gap-1 px-4 md:gap-4">
+        <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-4 md:h-72 md:flex-row md:items-end md:gap-4">
           {podiumOrder.map((idx) => {
             const user = top3[idx];
             if (!user) return null;
@@ -2252,12 +2823,17 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
               <div
                 key={idx}
                 className={cn(
-                  'relative flex flex-col items-center rounded-t-3xl border bg-black/40 bg-linear-to-t from-black/80',
+                  'relative flex flex-col items-center border bg-black/40 bg-linear-to-t from-black/80',
                   style.ring,
                   style.gradient,
-                  style.width,
-                  style.pad,
-                  style.transform
+                  isMobile
+                    ? 'mt-12 w-full max-w-[280px] rounded-3xl pt-6 pb-6'
+                    : cn(
+                        'rounded-t-3xl',
+                        style.width,
+                        style.pad,
+                        style.transform
+                      )
                 )}
               >
                 <div
@@ -2354,10 +2930,10 @@ function LeaderboardTab({ leaderboard, currentUserId }) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-zinc-400">
+                    <td className="px-5 py-4 text-right font-mono whitespace-nowrap text-zinc-400">
                       {formatNumber(u.total_solved)}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono font-bold text-zinc-200">
+                    <td className="px-5 py-4 text-right font-mono font-bold whitespace-nowrap text-zinc-200">
                       {formatNumber(u.total_score || u.score)}
                     </td>
                   </tr>
@@ -2462,7 +3038,15 @@ function RecommendationsTab({ submissions }) {
   );
 }
 
-function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
+function ProfileTab({
+  statistics,
+  handles,
+  badges,
+  contestHistory,
+  userId,
+  onConnectClick,
+  onDisconnectClick,
+}) {
   // Derive a display name from the first connected handle, fallback to 'Member'
   const displayName =
     (handles || [])[0]?.handle ||
@@ -2575,16 +3159,45 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
       </div>
 
       {/* ── Platform accounts ────────────────────────────────────────── */}
-      {hasHandles && (
-        <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-            <h3 className="text-sm font-semibold text-gray-300">
-              Connected Platforms
-            </h3>
+      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-900">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+          <h3 className="text-sm font-semibold text-gray-300">
+            Connected Platforms
+          </h3>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onConnectClick}
+              className="flex items-center gap-1 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
+            >
+              Connect New
+            </button>
             <span className="text-[11px] font-medium text-gray-500">
-              {handles.length} account{handles.length !== 1 ? 's' : ''}
+              {handles?.length || 0} account
+              {(handles?.length || 0) !== 1 ? 's' : ''}
             </span>
           </div>
+        </div>
+
+        {!handles || handles.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-b-2xl bg-gray-900 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-3xl">
+              🔗
+            </div>
+            <p className="text-sm font-medium text-gray-400">
+              No connected platforms yet
+            </p>
+            <p className="max-w-xs text-[12px] text-gray-600">
+              Connect your competitive programming accounts to track your
+              statistics, solves, and progress.
+            </p>
+            <button
+              onClick={onConnectClick}
+              className="mt-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-500"
+            >
+              Connect a Platform
+            </button>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 gap-px bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
             {(handles || []).map((h, idx) => {
               const meta = getPlatformMeta(h.platform);
@@ -2620,13 +3233,22 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
                         </p>
                       </div>
                     </div>
-                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        </span>
+                        Live
                       </span>
-                      Live
-                    </span>
+                      <button
+                        onClick={() => onDisconnectClick(h.platform)}
+                        className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/5 hover:text-rose-400"
+                        title="Disconnect platform"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Stats */}
@@ -2653,8 +3275,8 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Achievements ─────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-white/[0.08] bg-gray-900">
@@ -2715,6 +3337,21 @@ function ProfileTab({ statistics, handles, badges, contestHistory, userId }) {
 // React Fragment shim (avoid import bloat)
 const Fragment = ({ children }) => children;
 
+// Platforms that require the browser extension for submission sync
+const EXTENSION_ONLY_PLATFORMS = new Set([
+  'leetcode',
+  'spoj',
+  'toph',
+  'cses',
+  'hackerrank',
+  'kattis',
+  'uva',
+  'lightoj',
+  'vjudge',
+  'beecrowd',
+  'dmoj',
+]);
+
 // =====================================================================
 // Main Component
 // =====================================================================
@@ -2722,10 +3359,14 @@ export default function ProblemSolvingClient({ userId }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [connectTarget, setConnectTarget] = useState(null);
+  const [addPlatformOpen, setAddPlatformOpen] = useState(false);
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
   const [upcomingContests, setUpcomingContests] = useState([]);
   const [upcomingSyncing, setUpcomingSyncing] = useState(false);
   const upcomingLoadedRef = useRef(false);
+  const [allProblems, setAllProblems] = useState(null);
+  const [allProblemsLoading, setAllProblemsLoading] = useState(false);
+  const allProblemsLoadedRef = useRef(false);
   const toastTimeoutRef = useRef(null);
 
   const {
@@ -2733,12 +3374,20 @@ export default function ProblemSolvingClient({ userId }) {
     loading,
     error,
     syncing,
+    syncingRating,
     syncingPlatform,
     sync,
     syncPlatform,
+    syncContestHistory,
+    syncRatingHistory,
     refetch,
   } = useProblemSolving();
-  const { connect } = useConnectHandle();
+  const {
+    connect,
+    disconnect,
+    loading: isConnecting,
+    error: connectError,
+  } = useConnectHandle();
 
   const loadUpcomingContests = useCallback(async ({ refresh = false } = {}) => {
     setUpcomingSyncing(true);
@@ -2760,6 +3409,18 @@ export default function ProblemSolvingClient({ userId }) {
       loadUpcomingContests();
     }
   }, [activeTab, loadUpcomingContests]);
+
+  // Lazy-load all problems the first time the Problems tab opens.
+  useEffect(() => {
+    if (activeTab === 'problems' && !allProblemsLoadedRef.current) {
+      allProblemsLoadedRef.current = true;
+      setAllProblemsLoading(true);
+      getUserAllProblems()
+        .then((result) => setAllProblems(result?.problems || []))
+        .catch(() => setAllProblems([]))
+        .finally(() => setAllProblemsLoading(false));
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     return () => {
@@ -2800,9 +3461,39 @@ export default function ProblemSolvingClient({ userId }) {
     }
   }, [loadUpcomingContests, showToast]);
 
+  const handleSyncContestHistory = useCallback(async () => {
+    showToast('Refreshing contest history...', 'info');
+    try {
+      const result = await syncContestHistory(true);
+      showToast(result?.message || 'Contest history updated!', 'success');
+    } catch (err) {
+      showToast(
+        getErrorMessage(err, 'Failed to refresh contest history'),
+        'error'
+      );
+    }
+  }, [syncContestHistory, showToast]);
+
+  const handleSyncRatingHistory = useCallback(async () => {
+    showToast('Refreshing rating history...', 'info');
+    try {
+      const result = await syncRatingHistory();
+      showToast(result?.message || 'Rating history updated!', 'success');
+    } catch (err) {
+      showToast(
+        getErrorMessage(err, 'Failed to refresh rating history'),
+        'error'
+      );
+    }
+  }, [syncRatingHistory, showToast]);
+
   const handleSyncPlatform = useCallback(
     async (platform) => {
       if (!platform) return;
+      if (EXTENSION_ONLY_PLATFORMS.has(platform.toLowerCase())) {
+        setExtensionModalOpen(true);
+        return;
+      }
       showToast(`Syncing ${platform}...`, 'info');
       try {
         const result = await syncPlatform(platform, true);
@@ -2820,13 +3511,45 @@ export default function ProblemSolvingClient({ userId }) {
       try {
         await connect(platform, handle);
         showToast(`Connected ${handle} on ${platform}`, 'success');
-        setConnectTarget(null);
+        setAddPlatformOpen(false);
         refetch();
       } catch (err) {
         showToast(getErrorMessage(err, 'Failed to connect'), 'error');
       }
     },
     [connect, refetch, showToast]
+  );
+
+  const handleDisconnect = useCallback(
+    async (platform) => {
+      if (!platform) return;
+      if (
+        !confirm(
+          `Are you sure you want to disconnect your ${platform} account?`
+        )
+      ) {
+        return;
+      }
+      showToast(`Disconnecting ${platform}...`, 'info');
+      try {
+        const result = await disconnect(platform);
+        if (result?.success) {
+          showToast(`Disconnected ${platform} successfully!`, 'success');
+          refetch();
+        } else {
+          showToast(
+            result?.error || `Failed to disconnect ${platform}`,
+            'error'
+          );
+        }
+      } catch (err) {
+        showToast(
+          getErrorMessage(err, `Failed to disconnect ${platform}`),
+          'error'
+        );
+      }
+    },
+    [disconnect, refetch, showToast]
   );
 
   const handleTabChange = useCallback((tabId) => {
@@ -2849,6 +3572,13 @@ export default function ProblemSolvingClient({ userId }) {
     contestHistory,
   } = problemSolvingData;
 
+  const unconnectedPlatforms = useMemo(() => {
+    const connectedIds = (handles || []).map((h) => h.platform);
+    return PROBLEM_SOLVING_PLATFORMS.filter(
+      (p) => !connectedIds.includes(p.id)
+    );
+  }, [handles]);
+
   const renderTab = () => {
     if (loading) return <LoadingState />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
@@ -2861,14 +3591,21 @@ export default function ProblemSolvingClient({ userId }) {
             dailyActivity={dailyActivity}
             recentSubmissions={recentSubmissions}
             handles={handles}
-            onConnectClick={(p) => setConnectTarget(p)}
+            onConnectClick={() => setAddPlatformOpen(true)}
             onSyncPlatform={handleSyncPlatform}
             syncingPlatform={syncingPlatform}
             onTabChange={handleTabChange}
           />
         );
       case 'problems':
-        return <ProblemsTab submissions={recentSubmissions} />;
+        return (
+          <ProblemsTab
+            problems={allProblems}
+            loading={allProblemsLoading}
+            handles={handles}
+            recentSubmissions={recentSubmissions}
+          />
+        );
       case 'contests':
         return (
           <ContestsTab
@@ -2877,6 +3614,11 @@ export default function ProblemSolvingClient({ userId }) {
             upcomingContests={upcomingContests}
             onSync={handleRefreshUpcoming}
             syncing={upcomingSyncing}
+            onSyncHistory={handleSyncContestHistory}
+            syncingHistory={syncing}
+            onSyncRating={handleSyncRatingHistory}
+            syncingRating={syncingRating}
+            handles={handles}
           />
         );
       case 'topics':
@@ -2895,6 +3637,8 @@ export default function ProblemSolvingClient({ userId }) {
             badges={badges}
             contestHistory={contestHistory}
             userId={userId}
+            onConnectClick={() => setAddPlatformOpen(true)}
+            onDisconnectClick={handleDisconnect}
           />
         );
       default:
@@ -2962,11 +3706,16 @@ export default function ProblemSolvingClient({ userId }) {
 
       {/* Connect modal */}
       <AnimatePresence>
-        {connectTarget && (
-          <ConnectModal
-            platform={connectTarget}
-            onClose={() => setConnectTarget(null)}
+        {addPlatformOpen && (
+          <AddPlatformSection
+            availablePlatforms={unconnectedPlatforms}
+            platformConfig={getAllPlatformConfigs()}
             onConnect={handleConnect}
+            isConnecting={isConnecting}
+            error={connectError}
+            isExpanded={addPlatformOpen}
+            onToggleExpanded={() => setAddPlatformOpen(!addPlatformOpen)}
+            hasConnected={(handles || []).length > 0}
           />
         )}
       </AnimatePresence>
@@ -2977,6 +3726,48 @@ export default function ProblemSolvingClient({ userId }) {
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
         />
+      </AnimatePresence>
+
+      {/* Browser Extension modal for extension-only platforms */}
+      <AnimatePresence>
+        {extensionModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={() => setExtensionModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+                <h2 className="text-sm font-semibold text-white">
+                  Browser Extension Required
+                </h2>
+                <button
+                  onClick={() => setExtensionModalOpen(false)}
+                  className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                <p className="mb-5 text-xs text-gray-500">
+                  This platform doesn&apos;t support direct API sync. Use the
+                  browser extension to automatically capture your solutions as
+                  you submit.
+                </p>
+                <ExtensionGuide />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </PageShell>
   );

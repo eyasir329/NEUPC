@@ -34,15 +34,27 @@ export async function getExternalContestsSyncedAt() {
 export async function upsertExternalContests(rows) {
   if (!rows || rows.length === 0) return { count: 0 };
 
+  // Clear the table to remove stale or duplicate future contests
   await supabaseAdmin
     .from('external_contests')
-    .delete()
-    .lt('start_time', new Date().toISOString());
+    .delete();
+
+  // Deduplicate rows in memory by platform, normalized name, and start_time
+  const seen = new Set();
+  const uniqueRows = [];
+  for (const row of rows) {
+    const normName = String(row.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const key = `${row.platform}|${normName}|${row.start_time}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRows.push(row);
+    }
+  }
 
   const { error } = await supabaseAdmin
     .from('external_contests')
-    .upsert(rows, { onConflict: 'clist_id' });
+    .upsert(uniqueRows, { onConflict: 'clist_id' });
   if (error) throw new Error(error.message);
 
-  return { count: rows.length };
+  return { count: uniqueRows.length };
 }

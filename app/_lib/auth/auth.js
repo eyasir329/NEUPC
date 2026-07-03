@@ -201,23 +201,6 @@ const {
       }
     },
 
-    async signOut({ token }) {
-      try {
-        if (token?.email) {
-          const dbUser = await getUserByEmail(token.email);
-          if (dbUser) {
-            await updateUser(dbUser.id, {
-              is_online: false,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error during sign out:', error);
-      }
-      return true;
-    },
-
     async session({ session, token }) {
       if (token?.sub) {
         session.user = session.user || {};
@@ -274,6 +257,24 @@ const {
       return session;
     },
   },
+  events: {
+    async signOut(message) {
+      const { token } = message;
+      try {
+        if (token?.email) {
+          const dbUser = await getUserByEmail(token.email);
+          if (dbUser) {
+            await updateUser(dbUser.id, {
+              is_online: false,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error during sign out:', error);
+      }
+    },
+  },
 });
 
 export { signIn, signOut, GET, POST };
@@ -290,7 +291,7 @@ export const auth = async (...args) => {
   ) {
     return {
       user: {
-        id: '4d4f226e-3324-4680-936e-25c8e4aa41df',
+        id: '8de9b724-3787-42a8-abf7-4d5ff3725425',
         name: 'Eyasir Ahamed',
         email: 'eyasir329@gmail.com',
         image: '/api/image/1-gBTtrlFeMI6J__GZg6_VFqQbqe5X-x3',

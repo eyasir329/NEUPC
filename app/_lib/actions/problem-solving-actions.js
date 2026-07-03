@@ -284,47 +284,82 @@ async function purgePlatformDataForUser({ userId, platformId }) {
     throw new Error('userId and platformId are required for platform cleanup');
   }
 
-  const { data: existingSubmissions, error: existingSubmissionsError } =
-    await supabaseAdmin
-      .from(V2_TABLES.SUBMISSIONS)
-      .select('id')
-      .eq('user_id', userId)
-      .eq('platform_id', platformId);
+  const fetchAllIds = async (table, filters) => {
+    const ids = [];
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      let q = supabaseAdmin.from(table).select('id').range(from, from + PAGE - 1);
+      for (const [col, val] of Object.entries(filters)) q = q.eq(col, val);
+      const { data: page, error } = await q;
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      ids.push(...page.map((r) => r.id));
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+    return ids;
+  };
 
-  if (existingSubmissionsError) throw existingSubmissionsError;
-  const submissionIds = (existingSubmissions || []).map((row) => row.id);
+  const submissionIds = await fetchAllIds(V2_TABLES.SUBMISSIONS, {
+    user_id: userId,
+    platform_id: platformId,
+  });
 
-  const { data: existingSolves, error: existingSolvesError } =
-    await supabaseAdmin
-      .from(V2_TABLES.USER_SOLVES)
-      .select('id, problems!inner(platform_id)')
-      .eq('user_id', userId)
-      .eq('problems.platform_id', platformId);
-
-  if (existingSolvesError) throw existingSolvesError;
-  const solveIds = (existingSolves || []).map((row) => row.id);
+  let solveIds = [];
+  {
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error } = await supabaseAdmin
+        .from(V2_TABLES.USER_SOLVES)
+        .select('id, problems!inner(platform_id)')
+        .eq('user_id', userId)
+        .eq('problems.platform_id', platformId)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      solveIds.push(...page.map((r) => r.id));
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+  }
 
   let existingAttempts = [];
   let unsolvedAttemptStorageAvailable = true;
 
-  const { data: existingAttemptsData, error: existingAttemptsError } =
-    await supabaseAdmin
-      .from(V2_TABLES.UNSOLVED_ATTEMPTS)
-      .select('id, external_problem_id')
-      .eq('user_id', userId)
-      .eq('platform_id', platformId);
-
-  if (existingAttemptsError) {
+  try {
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error } = await supabaseAdmin
+        .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+        .select('id, external_problem_id')
+        .eq('user_id', userId)
+        .eq('platform_id', platformId)
+        .range(from, from + PAGE - 1);
+      if (error) {
+        if (isMissingUnsolvedAttemptsTableError(error)) {
+          unsolvedAttemptStorageAvailable = false;
+          console.warn(
+            '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
+          );
+        } else {
+          throw error;
+        }
+        break;
+      }
+      if (!page || page.length === 0) break;
+      existingAttempts = existingAttempts.concat(page);
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
+  } catch (existingAttemptsError) {
     if (isMissingUnsolvedAttemptsTableError(existingAttemptsError)) {
       unsolvedAttemptStorageAvailable = false;
-      console.warn(
-        '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
-      );
     } else {
       throw existingAttemptsError;
     }
-  } else {
-    existingAttempts = existingAttemptsData || [];
   }
 
   const attemptIds = (existingAttempts || []).map((row) => row.id);
@@ -747,63 +782,93 @@ async function getUserSyncStatusByPlatform(userId) {
  * Transform contest history to the format expected by components
  * Maps contest_history table columns to component-expected field names
  */
-function transformContestHistory(contestHistoryData) {
-  return (contestHistoryData || []).map((ch) => {
-    // Parse problems_data - handle both direct objects and double-stringified data
-    let problems = null;
-    if (ch.problems_data) {
-      try {
-        let data = ch.problems_data;
-        // If it's a string, parse it
-        if (typeof data === 'string') {
-          data = JSON.parse(data);
-        }
-        // Handle double-stringified case (jsonb stored as JSON string)
-        // This happens when the data looks like: "[{\"label\":\"A\"...}]" (starts with quote)
-        if (typeof data === 'string') {
-          data = JSON.parse(data);
-        }
-        problems = Array.isArray(data) ? data : null;
-      } catch (e) {
-        console.warn('Failed to parse problems_data:', e);
-      }
-    }
+// Score a transformed contest by data completeness, for picking the best
+// row among duplicates (same contest stored under different external IDs).
+function contestCompletenessScore(c) {
+  let score = 0;
+  if (c.totalParticipants != null) score += 8;
+  if (Array.isArray(c.problems) && c.problems.length > 0) score += 4;
+  if (c.rank != null) score += 2;
+  if (c.newRating != null) score += 1;
+  return score;
+}
 
-    return {
-      ...ch,
-      // Map database fields to component-expected fields
-      // contest_history uses platform code from join, not platform_id directly
-      platform: ch.platform || ch.platforms?.code,
-      date: ch.contest_date,
-      endDate: ch.contest_end_date,
-      name: ch.contest_name,
-      contestId: ch.external_contest_id,
-      platformContestId: ch.platform_contest_id,
-      ratingChange: ch.rating_change,
-      newRating: ch.new_rating,
-      oldRating: ch.old_rating,
-      solved: ch.problems_solved,
-      problemsAttempted: ch.problems_attempted,
-      totalProblems: ch.total_problems || ch.problems_attempted,
-      problems: problems,
-      rank: ch.rank,
-      totalParticipants: ch.total_participants,
-      score: ch.score,
-      maxScore: ch.max_score,
-      penalty: ch.penalty,
-      isRated: ch.is_rated,
-      isVirtual: ch.is_virtual,
-      division: ch.division,
-      duration: ch.duration_minutes,
-      // Construct contest URL based on platform
-      url:
-        ch.contest_url ||
-        getContestUrl(
-          ch.platform || ch.platforms?.code,
-          ch.platform_contest_id || ch.external_contest_id
-        ),
-    };
-  });
+function transformContestHistory(contestHistoryData) {
+  const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+  const transformed = (contestHistoryData || [])
+    .map((ch) => {
+      // Parse problems_data - handle both direct objects and double-stringified data
+      let problems = null;
+      if (ch.problems_data) {
+        try {
+          let data = ch.problems_data;
+          // If it's a string, parse it
+          if (typeof data === 'string') {
+            data = JSON.parse(data);
+          }
+          // Handle double-stringified case (jsonb stored as JSON string)
+          // This happens when the data looks like: "[{\"label\":\"A\"...}]" (starts with quote)
+          if (typeof data === 'string') {
+            data = JSON.parse(data);
+          }
+          problems = Array.isArray(data) ? data : null;
+        } catch (e) {
+          console.warn('Failed to parse problems_data:', e);
+        }
+      }
+
+      return {
+        ...ch,
+        // Map database fields to component-expected fields
+        // contest_history uses platform code from join, not platform_id directly
+        platform: ch.platform || ch.platforms?.code,
+        date: ch.contest_date,
+        endDate: ch.contest_end_date,
+        name: ch.contest_name,
+        contestId: ch.external_contest_id,
+        platformContestId: ch.platform_contest_id,
+        ratingChange: ch.rating_change,
+        newRating: ch.new_rating,
+        oldRating: ch.old_rating,
+        solved: ch.problems_solved,
+        problemsAttempted: ch.problems_attempted,
+        totalProblems: ch.total_problems || ch.problems_attempted,
+        problems: problems,
+        rank: ch.rank,
+        totalParticipants: ch.total_participants,
+        score: ch.score,
+        maxScore: ch.max_score,
+        penalty: ch.penalty,
+        isRated: ch.is_rated,
+        isVirtual: ch.is_virtual,
+        division: ch.division,
+        duration: ch.duration_minutes,
+        // Construct contest URL based on platform
+        url:
+          ch.contest_url ||
+          getContestUrl(
+            ch.platform || ch.platforms?.code,
+            ch.platform_contest_id || ch.external_contest_id
+          ),
+      };
+    })
+    .filter((ch) => allowedPlatforms.includes(ch.platform));
+
+  // Dedupe rows that represent the same contest stored under different
+  // external IDs (legacy native-API rows vs CLIST rows). Group by
+  // platform + native contest id, keep the most complete row.
+  const bestByContest = new Map();
+  for (const c of transformed) {
+    const key = `${c.platform}:${c.platformContestId || c.contestId}`;
+    const existing = bestByContest.get(key);
+    if (
+      !existing ||
+      contestCompletenessScore(c) > contestCompletenessScore(existing)
+    ) {
+      bestByContest.set(key, c);
+    }
+  }
+  return Array.from(bestByContest.values());
 }
 
 /**
@@ -811,17 +876,26 @@ function transformContestHistory(contestHistoryData) {
  * Maps rating_history table columns to component-expected field names
  */
 function transformRatingHistory(ratingHistoryData) {
-  return (ratingHistoryData || []).map((rh) => ({
-    ...rh,
-    // Map database fields to component-expected fields
-    platform: rh.platform || rh.platforms?.code,
-    date: rh.recorded_at,
-    rating: rh.rating,
-    change: rh.rating_change,
-    // Contest info from joined contest_history if available
-    contestName: rh.contest_history?.contest_name,
-    contestId: rh.contest_history?.external_contest_id,
-  }));
+  const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+  return (ratingHistoryData || [])
+    .map((rh) => ({
+      ...rh,
+      // Map database fields to component-expected fields
+      platform: rh.platform || rh.platforms?.code,
+      date: rh.recorded_at,
+      rating: rh.rating,
+      change: rh.rating_change,
+      // Contest info from joined contest_history if available
+      contestName: rh.contest_history?.contest_name,
+      contestId: rh.contest_history?.external_contest_id,
+      contestUrl: rh.contest_history?.contest_url,
+      rank: rh.contest_history?.rank,
+      totalParticipants: rh.contest_history?.total_participants,
+      problemsSolved: rh.contest_history?.problems_solved,
+      problemsAttempted: rh.contest_history?.problems_attempted,
+      totalProblems: rh.contest_history?.total_problems,
+    }))
+    .filter((rh) => allowedPlatforms.includes(rh.platform));
 }
 
 /**
@@ -890,14 +964,13 @@ function isValueBetter(existingVal, newVal, fieldName) {
     if (existingVal === 0 && newVal !== 0) {
       return true;
     }
-    // For participant counts, ranks - keep existing non-zero values
-    if (
-      fieldName === 'total_participants' ||
-      fieldName === 'rank' ||
-      fieldName === 'problems_solved'
-    ) {
-      // Only update if existing is 0 or null-ish
+    // For ranks and solved counts - keep existing non-zero values
+    if (fieldName === 'rank' || fieldName === 'problems_solved') {
       return existingVal === 0 || !existingVal;
+    }
+    // For participant counts - prefer the larger (more complete) value from CLIST
+    if (fieldName === 'total_participants') {
+      return newVal > existingVal;
     }
     // For scores, prefer higher
     if (fieldName === 'score' || fieldName === 'max_score') {
@@ -960,52 +1033,47 @@ function mergeProblemsData(existingProblems, newProblems) {
       // Problem exists - merge intelligently
       const merged = { ...existing };
 
-      // If existing shows upsolve, preserve it
-      if (existing.upsolve || existing.isUpsolve) {
-        merged.upsolve = true;
-        merged.isUpsolve = true;
-      }
+      // Determine solve, upsolve, and attempted status by combining existing and new
+      const isSolvedNew = newP.solved === true || newP.solvedDuringContest === true || newP.upsolve === true || newP.isUpsolve === true;
+      const isSolvedExisting = existing.solved === true || existing.solvedDuringContest === true || existing.upsolve === true || existing.isUpsolve === true;
+      
+      const isUpsolveNew = newP.upsolve === true || newP.isUpsolve === true;
+      const isUpsolveExisting = existing.upsolve === true || existing.isUpsolve === true;
 
-      // If new shows solved during contest, update
-      if (newP.solved && !newP.upsolve && !newP.isUpsolve) {
-        merged.solved = true;
-        // If it was marked as upsolve but now shows contest solve, keep as contest solve
-        if (merged.upsolve || merged.isUpsolve) {
-          // This is rare - keep as solved during contest if API says so
-          merged.upsolve = false;
-          merged.isUpsolve = false;
-        }
-      }
-
-      // If new shows upsolve and existing doesn't have solve status
-      if (
-        (newP.upsolve || newP.isUpsolve) &&
-        !existing.solved &&
-        !existing.upsolve
-      ) {
-        merged.upsolve = true;
-        merged.isUpsolve = true;
+      if (isSolvedNew || isSolvedExisting) {
         merged.solved = true;
       }
+      
+      if (isUpsolveNew || isUpsolveExisting) {
+        merged.upsolve = true;
+        merged.isUpsolve = true;
+        merged.solvedDuringContest = false;
+      } else if (newP.solvedDuringContest === true || existing.solvedDuringContest === true) {
+        merged.solvedDuringContest = true;
+        merged.upsolve = false;
+        merged.isUpsolve = false;
+      } else if (isSolvedNew && !isUpsolveNew) {
+        merged.solvedDuringContest = true;
+        merged.upsolve = false;
+        merged.isUpsolve = false;
+      }
 
-      // Preserve attempted status
-      if (newP.attempted || existing.attempted) {
+      if (newP.attempted || existing.attempted || isSolvedNew || isSolvedExisting) {
         merged.attempted = true;
       }
 
-      // Copy over any other useful fields from new data
-      if (newP.problemId && !merged.problemId) {
-        merged.problemId = newP.problemId;
-      }
-      if (newP.url && !merged.url) {
-        merged.url = newP.url;
-      }
-      if (newP.name && !merged.name) {
-        merged.name = newP.name;
-      }
-      if (newP.rating && !merged.rating) {
-        merged.rating = newP.rating;
-      }
+      // Copy over or update specific values
+      if (newP.problemId) merged.problemId = newP.problemId;
+      if (newP.url) merged.url = newP.url;
+      if (newP.name) merged.name = newP.name;
+      if (newP.rating) merged.rating = newP.rating;
+      if (newP.time || newP.solveTime) merged.time = newP.time || newP.solveTime;
+      if (newP.result) merged.result = newP.result;
+      
+      // Update wrong attempts (prefer the higher count or newer count)
+      const wrongNew = newP.wrongAttempts || 0;
+      const wrongExist = existing.wrongAttempts || 0;
+      merged.wrongAttempts = Math.max(wrongNew, wrongExist);
 
       existingMap.set(key, merged);
     }
@@ -1306,7 +1374,7 @@ export async function getProblemSolvingData() {
           `
           *,
           platforms!inner(code, name),
-          contest_history(contest_name, external_contest_id, contest_url)
+          contest_history(contest_name, external_contest_id, contest_url, rank, total_participants, problems_solved, problems_attempted, total_problems)
         `
         )
         .eq('user_id', user.id)
@@ -1330,15 +1398,25 @@ export async function getProblemSolvingData() {
     let solvedRowsForDashboard = [];
     try {
       if (useV2) {
-        // V2 schema: user_solves -> problems -> platforms
-        const { data } = await supabaseAdmin
-          .from(V2_TABLES.USER_SOLVES)
-          .select(
-            'first_solved_at, problem_id, problems!inner(external_id, name, url, difficulty_rating, platform_id, platforms!inner(code))'
-          )
-          .eq('user_id', user.id);
-
-        solvedRowsForDashboard = data || [];
+        // V2 schema: user_solves -> problems -> platforms (paginated — no row cap)
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from(V2_TABLES.USER_SOLVES)
+              .select(
+                'first_solved_at, problem_id, problems!inner(external_id, name, url, difficulty_rating, platform_id, platforms!inner(code))'
+              )
+              .eq('user_id', user.id)
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            if (!page || page.length === 0) break;
+            solvedRowsForDashboard = solvedRowsForDashboard.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         // Count unique solved problems per platform code
         const solvedByPlatform = {};
@@ -1352,15 +1430,25 @@ export async function getProblemSolvingData() {
         platformSolvedCounts = solvedByPlatform;
         platformSolvedCountsLoaded = true;
       } else {
-        // V1 schema: user_solves -> problems -> platforms
-        const { data } = await supabaseAdmin
-          .from('user_solves')
-          .select(
-            'first_solved_at, problem_id, problems!inner(problem_id, problem_name, problem_url, difficulty_rating, platform_id, platforms!inner(code))'
-          )
-          .eq('user_id', user.id);
-
-        solvedRowsForDashboard = data || [];
+        // V1 schema: user_solves -> problems -> platforms (paginated — no row cap)
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from('user_solves')
+              .select(
+                'first_solved_at, problem_id, problems!inner(problem_id, problem_name, problem_url, difficulty_rating, platform_id, platforms!inner(code))'
+              )
+              .eq('user_id', user.id)
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            if (!page || page.length === 0) break;
+            solvedRowsForDashboard = solvedRowsForDashboard.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         // Count unique solved problems per platform code
         const solvedByPlatform = {};
@@ -1378,22 +1466,30 @@ export async function getProblemSolvingData() {
       console.error('Error fetching platform solved counts:', e.message);
     }
 
-    // Get total submissions per platform
+    // Get total submissions per platform (paginated)
     let platformSubmissionCounts = {};
     let platformSubmissionCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('platform_id, platforms!inner(code)')
-        .eq('user_id', user.id);
-
-      (data || []).forEach((sub) => {
-        const platformCode = sub.platforms?.code;
-        if (platformCode) {
-          platformSubmissionCounts[platformCode] =
-            (platformSubmissionCounts[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from(V2_TABLES.SUBMISSIONS)
+          .select('platform_id, platforms!inner(code)')
+          .eq('user_id', user.id)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((sub) => {
+          const platformCode = sub.platforms?.code;
+          if (platformCode) {
+            platformSubmissionCounts[platformCode] =
+              (platformSubmissionCounts[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSubmissionCountsLoaded = true;
     } catch (e) {
       console.error('Error fetching platform submission counts:', e.message);
@@ -1531,7 +1627,7 @@ export async function getProblemSolvingData() {
     // Transform statistics to expected format
     const transformedStatistics = statistics
       ? {
-          total_solved: dashboardMetrics.total_solved,
+          total_solved: statistics.total_solved || dashboardMetrics.total_solved,
           total_solutions: statistics.total_solutions || 0,
           total_submissions: effectiveTotalSubmissions,
           acceptance_rate: dashboardMetrics.acceptance_rate,
@@ -1614,8 +1710,23 @@ export async function getProblemSolvingData() {
           platform_stats: {},
         };
 
-    // Generate daily activity from recent solves
-    const dailyActivity = generateDailyActivity(problemSolves || []);
+    // Load daily activity from user_daily_activity table (full history)
+    let dailyActivity = [];
+    try {
+      if (useV2) {
+        const { data: activityRows } = await supabaseAdmin
+          .from(V2_TABLES.USER_DAILY_ACTIVITY)
+          .select('activity_date, problems_solved')
+          .eq('user_id', user.id)
+          .order('activity_date', { ascending: true });
+        dailyActivity = activityRows || [];
+      } else {
+        dailyActivity = generateDailyActivity(problemSolves || []);
+      }
+    } catch (e) {
+      console.error('Error fetching daily activity:', e.message);
+      dailyActivity = generateDailyActivity(problemSolves || []);
+    }
 
     // Transform submissions: resolve platform code + problem name via JOIN
     const transformedSubmissions = (recentSubmissions || []).map((sub) => ({
@@ -1879,7 +1990,7 @@ export async function getMemberProblemSolvingData(targetUserId) {
           `
           *,
           platforms!inner(code, name),
-          contest_history(contest_name, external_contest_id, contest_url)
+          contest_history(contest_name, external_contest_id, contest_url, rank, total_participants, problems_solved, problems_attempted, total_problems)
         `
         )
         .eq('user_id', targetUserId)
@@ -1896,50 +2007,62 @@ export async function getMemberProblemSolvingData(targetUserId) {
     // Get latest sync status per platform from merged sync_jobs table.
     const syncCheckpoints = await getUserSyncStatusByPlatform(targetUserId);
 
-    // Get solved counts per platform from user_solves table (unique problems solved)
-    // This joins user_solves -> problems -> platforms to get accurate counts
+    // Get solved counts per platform from user_solves table (paginated)
     let platformSolvedCounts = {};
     let platformSolvedCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from('user_solves')
-        .select(
-          'problem_id, problems!inner(platform_id, platforms!inner(code))'
-        )
-        .eq('user_id', targetUserId);
-
-      // Count unique solved problems per platform code
       const solvedByPlatform = {};
-      (data || []).forEach((solve) => {
-        const platformCode = solve.problems?.platforms?.code;
-        if (platformCode) {
-          solvedByPlatform[platformCode] =
-            (solvedByPlatform[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('user_solves')
+          .select('problem_id, problems!inner(platform_id, platforms!inner(code))')
+          .eq('user_id', targetUserId)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((solve) => {
+          const platformCode = solve.problems?.platforms?.code;
+          if (platformCode) {
+            solvedByPlatform[platformCode] =
+              (solvedByPlatform[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSolvedCounts = solvedByPlatform;
       platformSolvedCountsLoaded = true;
     } catch (e) {
       console.error('Error fetching platform solved counts:', e.message);
     }
 
-    // Get total submissions per platform (joined with platforms)
+    // Get total submissions per platform (paginated)
     let platformSubmissionCounts = {};
     let platformSubmissionCountsLoaded = false;
     try {
-      const { data } = await supabaseAdmin
-        .from('submissions')
-        .select('platform_id, platforms!inner(code)')
-        .eq('user_id', targetUserId);
-
       const countsByPlatform = {};
-      (data || []).forEach((sub) => {
-        const platformCode = sub.platforms?.code;
-        if (platformCode) {
-          countsByPlatform[platformCode] =
-            (countsByPlatform[platformCode] || 0) + 1;
-        }
-      });
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('submissions')
+          .select('platform_id, platforms!inner(code)')
+          .eq('user_id', targetUserId)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!page || page.length === 0) break;
+        page.forEach((sub) => {
+          const platformCode = sub.platforms?.code;
+          if (platformCode) {
+            countsByPlatform[platformCode] =
+              (countsByPlatform[platformCode] || 0) + 1;
+          }
+        });
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
       platformSubmissionCounts = countsByPlatform;
       platformSubmissionCountsLoaded = true;
     } catch (e) {
@@ -2055,15 +2178,29 @@ export async function getMemberProblemSolvingData(targetUserId) {
           platform_stats: {},
         };
 
-    // Generate daily activity from recent solves
-    const dailyActivity = generateDailyActivity(recentSolves || []);
+    // Load daily activity from user_daily_activity table (full history)
+    let dailyActivity = [];
+    try {
+      if (useV2) {
+        const { data: activityRows } = await supabaseAdmin
+          .from(V2_TABLES.USER_DAILY_ACTIVITY)
+          .select('activity_date, problems_solved')
+          .eq('user_id', targetUserId)
+          .order('activity_date', { ascending: true });
+        dailyActivity = activityRows || [];
+      } else {
+        dailyActivity = generateDailyActivity(recentSolves || []);
+      }
+    } catch (e) {
+      console.error('Error fetching daily activity:', e.message);
+      dailyActivity = generateDailyActivity(recentSolves || []);
+    }
 
-    // Transform recentSubmissions from problem_submissions table (ALL verdicts)
-    // V2 uses problem_external_id, legacy uses problem_id - support both
+    // Transform recentSubmissions — V2 column is external_problem_id
     const transformedSubmissions = (recentSubmissions || []).map((sub) => ({
       id: sub.id,
       platform: sub.platform || 'unknown',
-      problem_id: sub.problem_external_id || sub.problem_id || '',
+      problem_id: sub.external_problem_id || sub.problem_id || '',
       problem_name: sub.problem_name || '',
       problem_url: sub.problem_url || '',
       submission_id: sub.submission_id || '',
@@ -2633,11 +2770,19 @@ export async function syncContestHistoryAction(forceUpdate = true) {
   try {
     const { user } = await requireRole('member');
 
-    // Get user's connected handles
-    const { data: handles } = await supabaseAdmin
-      .from('user_handles')
-      .select('platform, handle')
-      .eq('user_id', user.id);
+    // Get user's connected handles (V2-aware)
+    const useV2 = await isV2SchemaAvailable();
+    let handles = [];
+
+    if (useV2) {
+      handles = await getUserHandlesV2(user.id);
+    } else {
+      const { data } = await supabaseAdmin
+        .from('user_handles')
+        .select('platform, handle')
+        .eq('user_id', user.id);
+      handles = data || [];
+    }
 
     if (!handles || handles.length === 0) {
       return {
@@ -2657,15 +2802,29 @@ export async function syncContestHistoryAction(forceUpdate = true) {
 
     // Starting contest history sync
 
-    const handlesList = handles.map((h) => ({
-      platform: h.platform,
-      handle: h.handle,
-    }));
+    const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+    const handlesList = handles
+      .filter((h) => allowedPlatforms.includes(h.platform))
+      .map((h) => ({
+        platform: h.platform,
+        handle: h.handle,
+      }));
+
+    if (handlesList.length === 0) {
+      return {
+        success: true,
+        data: {
+          synced: 0,
+          message: 'No contest history sync needed: none of the supported platforms (Codeforces, CodeChef, AtCoder, LeetCode) are connected.',
+        },
+      };
+    }
 
     // Fetch contest history from CLIST
     const contestHistory = await clistService.getAggregatedContestHistory(
       handlesList,
-      10000 // Fetch ALL contests
+      10000, // Fetch ALL contests
+      false  // Skip native platform API enrichment - CLIST data is sufficient
     );
 
     if (!contestHistory || contestHistory.length === 0) {
@@ -2854,6 +3013,106 @@ export async function syncContestHistoryAction(forceUpdate = true) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Sync rating history specifically
+ * Fetches rating history from CLIST for all connected handles of the allowed 4 platforms
+ */
+export async function syncRatingHistoryAction() {
+  try {
+    const { user } = await requireRole('member');
+
+    // Get user's connected handles (V2-aware)
+    const useV2 = await isV2SchemaAvailable();
+    let handles = [];
+
+    if (useV2) {
+      handles = await getUserHandlesV2(user.id);
+    } else {
+      const { data } = await supabaseAdmin
+        .from('user_handles')
+        .select('platform, handle')
+        .eq('user_id', user.id);
+      handles = data || [];
+    }
+
+    if (handles.length === 0) {
+      return {
+        success: false,
+        error: 'No handles connected. Connect a platform first.',
+      };
+    }
+
+    const clistService = new ClistService();
+    const clistConfigured = clistService.isConfigured();
+
+    if (!clistConfigured) {
+      return {
+        success: false,
+        error: 'CLIST service is not configured on the server.',
+      };
+    }
+
+    const allowedPlatforms = ['codeforces', 'codechef', 'atcoder', 'leetcode'];
+    const handlesList = handles
+      .filter((h) => allowedPlatforms.includes(h.platform))
+      .map((h) => ({
+        platform: h.platform,
+        handle: h.handle,
+      }));
+
+    if (handlesList.length === 0) {
+      return {
+        success: true,
+        data: {
+          synced: 0,
+          message: 'No supported handles connected.',
+        },
+      };
+    }
+
+    let totalSaved = 0;
+    for (const { platform, handle } of handlesList) {
+      try {
+        const ratingHistory = await clistService.getRatingHistory(
+          platform,
+          handle,
+          user.id // Pass userId for caching
+        );
+
+        if (ratingHistory && ratingHistory.length > 0) {
+          const ratingResult = await clistService.saveRatingHistory(
+            user.id,
+            ratingHistory,
+            'clist'
+          );
+          totalSaved += ratingResult.saved || 0;
+        }
+      } catch (err) {
+        console.error(
+          `[syncRatingHistoryAction] Error syncing rating history for ${platform}/${handle}:`,
+          err.message
+        );
+      }
+    }
+
+    // Revalidate problem-solving pages to show updated rating data
+    revalidatePath('/account/member/problem-solving', 'page');
+    revalidatePath('/api/problem-solving/stats', 'page');
+
+    return {
+      success: true,
+      data: {
+        synced: totalSaved,
+        message: `Synced ${totalSaved} rating entries across platforms.`,
+      },
+    };
+  } catch (error) {
+    console.error('[syncRatingHistoryAction] Error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 
 /**
  * Update contest names in database with real names from CLIST API
@@ -3128,12 +3387,11 @@ export async function fullSyncAction(forceFullSync = false) {
           handle: h.handle,
         }));
 
-        // Fetch aggregated contest history with problem data enrichment
         const aggregatedContests =
           await clistService.getAggregatedContestHistory(
             handlesList,
             10000, // Fetch ALL contests
-            true // Enable problem enrichment
+            false  // Skip native platform API enrichment
           );
 
         if (aggregatedContests && aggregatedContests.length > 0) {
@@ -3352,7 +3610,7 @@ const UPCOMING_CONTEST_PLATFORMS = [
   'leetcode',
   'codechef',
 ];
-const UPCOMING_CONTESTS_STALE_MS = 30 * 60 * 1000;
+const UPCOMING_CONTESTS_STALE_MS = 6 * 60 * 60 * 1000;
 
 /**
  * Get upcoming CP contests (Codeforces, AtCoder, LeetCode, CodeChef) for the
@@ -3666,4 +3924,371 @@ function _getDefaultStatistics() {
       usaco: { solved: 0, division: null },
     },
   };
+}
+
+/**
+ * Fetch every problem a user has touched (solved or attempted).
+ * Returns a flat list deduplicated by platform+problem_id, each with a
+ * `solved` boolean derived from whether any AC submission exists.
+ */
+export async function getUserAllProblems() {
+  const { user } = await requireRole('member');
+  const useV2 = await isV2SchemaAvailable();
+
+  const isAC = (v) => {
+    const u = String(v || '').toUpperCase().trim();
+    return u === 'AC' || u === 'OK' || u === 'ACCEPTED';
+  };
+
+  if (useV2) {
+    // 1. Solved problems from user_solves (one row per unique problem solved)
+    const { data: solves, error: solvesError } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select(
+        `first_solved_at,
+         problems!user_solves_problem_id_fkey(
+           id, external_id, name, url, difficulty_rating,
+           platforms!problems_platform_id_fkey(code, name)
+         )`
+      )
+      .eq('user_id', user.id)
+      .limit(10000);
+
+    if (solvesError) {
+      console.error('[getUserAllProblems] solves query error:', solvesError.message);
+    }
+
+    const solvedByProblemId = new Map();
+    for (const row of solves || []) {
+      const p = row.problems;
+      if (!p) continue;
+      const platform = p.platforms?.code || '';
+      const key = `${platform}:${p.external_id}`;
+      solvedByProblemId.set(key, {
+        problem_id: p.external_id,
+        problem_name: p.name,
+        problem_url: p.url,
+        platform,
+        difficulty_rating: p.difficulty_rating ?? null,
+        submitted_at: row.first_solved_at,
+        verdict: 'AC',
+        solved: true,
+      });
+    }
+
+    // 2. All submissions to catch unsolved attempts not in user_solves
+    const { data: subs, error: subsError } = await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select(
+        `external_problem_id, problem_name, verdict, submitted_at,
+         platforms!submissions_platform_id_fkey(code)`
+      )
+      .eq('user_id', user.id)
+      .order('submitted_at', { ascending: false })
+      .limit(10000);
+
+    if (subsError) {
+      console.error('[getUserAllProblems] subs query error:', subsError.message);
+    }
+
+    const attemptMap = new Map();
+    for (const sub of subs || []) {
+      if (!sub.external_problem_id) continue;
+      const platform = sub.platforms?.code || '';
+      const key = `${platform}:${sub.external_problem_id}`;
+      // Already have it as solved — skip
+      if (solvedByProblemId.has(key)) continue;
+      // Keep the best (AC) or most recent entry
+      const existing = attemptMap.get(key);
+      if (!existing || (!isAC(existing.verdict) && isAC(sub.verdict))) {
+        attemptMap.set(key, {
+          problem_id: sub.external_problem_id,
+          problem_name: sub.problem_name || sub.external_problem_id,
+          problem_url: null,
+          platform,
+          difficulty_rating: null,
+          submitted_at: sub.submitted_at,
+          verdict: sub.verdict,
+          solved: isAC(sub.verdict),
+        });
+      }
+    }
+
+    const all = [
+      ...Array.from(solvedByProblemId.values()),
+      ...Array.from(attemptMap.values()),
+    ];
+    all.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    return { problems: all };
+  }
+
+  // Legacy schema
+  const { data: subs } = await supabaseAdmin
+    .from('problem_submissions')
+    .select(
+      'problem_id, platform, problem_name, problem_url, verdict, submitted_at, difficulty_rating'
+    )
+    .eq('user_id', user.id)
+    .order('submitted_at', { ascending: false });
+
+  const seen = new Map();
+  for (const sub of subs || []) {
+    if (!sub.problem_id) continue;
+    const key = `${sub.platform}:${sub.problem_id}`;
+    const existing = seen.get(key);
+    if (!existing || (!isAC(existing.verdict) && isAC(sub.verdict))) {
+      seen.set(key, {
+        problem_id: sub.problem_id,
+        problem_name: sub.problem_name || sub.problem_id,
+        problem_url: sub.problem_url,
+        platform: sub.platform,
+        difficulty_rating: sub.difficulty_rating ?? null,
+        submitted_at: sub.submitted_at,
+        verdict: sub.verdict,
+        solved: isAC(sub.verdict),
+      });
+    }
+  }
+
+  const all = Array.from(seen.values());
+  all.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+  return { problems: all };
+}
+
+// ============================================
+// PROBLEM DETAIL ACTIONS
+// ============================================
+
+/**
+ * Fetch full problem details from DB (description, examples, analysis, editorial)
+ */
+export async function getProblemDetailsAction(platform, externalId) {
+  try {
+    await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, data: null };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, data: null };
+
+    const { data: problem, error } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select(
+        `
+        id, name, description, input_format, output_format, constraints, examples, notes, url,
+        problem_analysis(summary, key_concepts, hints, common_mistakes, time_complexity, space_complexity),
+        problem_editorials(tutorial_url, tutorial_content, tutorial_solutions)
+      `
+      )
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[getProblemDetailsAction] Error:', error.message);
+      return { success: false, data: null };
+    }
+
+    if (!problem) return { success: true, data: null };
+
+    const analysis = Array.isArray(problem.problem_analysis)
+      ? problem.problem_analysis[0]
+      : problem.problem_analysis;
+    const editorial = Array.isArray(problem.problem_editorials)
+      ? problem.problem_editorials[0]
+      : problem.problem_editorials;
+
+    return {
+      success: true,
+      data: {
+        description: problem.description || null,
+        input_format: problem.input_format || null,
+        output_format: problem.output_format || null,
+        constraints: problem.constraints || [],
+        examples: problem.examples || [],
+        notes: problem.notes || null,
+        url: problem.url || null,
+        analysis: analysis
+          ? {
+              summary: analysis.summary || null,
+              key_concepts: analysis.key_concepts || [],
+              hints: analysis.hints || [],
+              common_mistakes: analysis.common_mistakes || [],
+              time_complexity: analysis.time_complexity || null,
+              space_complexity: analysis.space_complexity || null,
+            }
+          : null,
+        editorial: editorial
+          ? {
+              tutorial_url: editorial.tutorial_url || null,
+              tutorial_content: editorial.tutorial_content || null,
+              tutorial_solutions: editorial.tutorial_solutions || [],
+            }
+          : null,
+      },
+    };
+  } catch (err) {
+    console.error('[getProblemDetailsAction] Exception:', err.message);
+    return { success: false, data: null };
+  }
+}
+
+/**
+ * Fetch ALL user submissions for a specific problem
+ */
+export async function getProblemSubmissionsAction(platform, externalId) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, submissions: [] };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, submissions: [] };
+
+    const { data: subs, error } = await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select(
+        `
+        id, verdict, execution_time_ms, memory_kb, submitted_at, language_id, external_problem_id,
+        solutions(id, source_code, is_primary, languages(name))
+      `
+      )
+      .eq('user_id', user.id)
+      .eq('platform_id', platformId)
+      .eq('external_problem_id', externalId)
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('[getProblemSubmissionsAction] Error:', error.message);
+      return { success: false, submissions: [] };
+    }
+
+    const submissions = (subs || []).map((sub) => {
+      const primarySol = (sub.solutions || []).find((s) => s.is_primary) || sub.solutions?.[0];
+      return {
+        id: sub.id,
+        verdict: sub.verdict,
+        execution_time_ms: sub.execution_time_ms,
+        memory_kb: sub.memory_kb,
+        submitted_at: sub.submitted_at,
+        language: primarySol?.languages?.name || null,
+        source_code: primarySol?.source_code || null,
+        problem_id: sub.external_problem_id,
+        platform,
+      };
+    });
+
+    return { success: true, submissions };
+  } catch (err) {
+    console.error('[getProblemSubmissionsAction] Exception:', err.message);
+    return { success: false, submissions: [] };
+  }
+}
+
+/**
+ * Fetch user's personal note for a problem
+ */
+export async function getProblemNoteAction(platform, externalId) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false, note: '' };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false, note: '' };
+
+    const { data: problem } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select('id')
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (!problem) return { success: true, note: '' };
+
+    const { data: solve } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select('notes')
+      .eq('user_id', user.id)
+      .eq('problem_id', problem.id)
+      .maybeSingle();
+
+    return { success: true, note: solve?.notes || '' };
+  } catch (err) {
+    console.error('[getProblemNoteAction] Exception:', err.message);
+    return { success: false, note: '' };
+  }
+}
+
+/**
+ * Save user's personal note for a problem
+ */
+export async function saveProblemNoteAction(platform, externalId, note) {
+  try {
+    const user = await requireRole('member');
+
+    const v2 = await isV2SchemaAvailable();
+    if (!v2) return { success: false };
+
+    const platformId = await getPlatformId(platform);
+    if (!platformId) return { success: false };
+
+    const { data: problem } = await supabaseAdmin
+      .from(V2_TABLES.PROBLEMS)
+      .select('id')
+      .eq('platform_id', platformId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (!problem) return { success: false, error: 'Problem not found in DB' };
+
+    const { error } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .update({ notes: note, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('problem_id', problem.id);
+
+    if (error) {
+      console.error('[saveProblemNoteAction] Error:', error.message);
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[saveProblemNoteAction] Exception:', err.message);
+    return { success: false };
+  }
+}
+
+/**
+ * Chat about a problem using available LLM providers
+ */
+export async function chatAboutProblemAction(platform, externalId, problemName, userMessages) {
+  try {
+    await requireRole('member');
+
+    const { generateCompletion } = await import('@/app/_lib/integrations/llm');
+
+    const systemPrompt = `You are an expert competitive programmer helping a user understand a problem.
+Problem: ${problemName || externalId} (${platform})
+Be concise and focused. Answer only what is asked. Do not spoil the full solution unless asked.`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...userMessages.map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    const { content, provider } = await generateCompletion(messages, {
+      temperature: 0.4,
+      maxTokens: 800,
+    });
+
+    return { success: true, content, provider };
+  } catch (err) {
+    console.error('[chatAboutProblemAction] Exception:', err.message);
+    return { success: false, error: err.message };
+  }
 }

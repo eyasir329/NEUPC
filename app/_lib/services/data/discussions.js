@@ -2,7 +2,10 @@
  * @file discussions data-access — split from the data-service module.
  */
 
-import { supabase } from '@/app/_lib/integrations/supabase';
+// Discussion tables have RLS enabled but no policies, and these functions run
+// server-side behind auth guards (requireRole / requireActionSession), so they
+// use the service-role client to perform reads and writes.
+import { supabaseAdmin as supabase } from '@/app/_lib/integrations/supabase';
 
 // Get all discussion categories.
 export async function getDiscussionCategories() {
@@ -594,7 +597,45 @@ export async function getUserDiscussionStats(userId) {
     stats.byType[thread.type] = (stats.byType[thread.type] || 0) + 1;
   });
 
+  // Count replies authored by the user.
+  const { count: repliesCount } = await supabase
+    .from('discussion_replies')
+    .select('id', { count: 'exact', head: true })
+    .eq('author_id', userId);
+
+  stats.repliesCount = repliesCount || 0;
+
   return stats;
+}
+
+/**
+ * Get top discussion contributors ranked by number of replies authored.
+ */
+export async function getTopDiscussionContributors(limit = 5) {
+  const { data, error } = await supabase
+    .from('discussion_replies')
+    .select(
+      'author_id, author:users!discussion_replies_author_id_fkey(id, full_name, avatar_url)'
+    );
+
+  if (error) throw new Error(error.message);
+
+  const byUser = new Map();
+  for (const reply of data || []) {
+    if (!reply.author_id) continue;
+    const current = byUser.get(reply.author_id) || {
+      id: reply.author_id,
+      name: reply.author?.full_name || 'Unknown User',
+      avatar_url: reply.author?.avatar_url || null,
+      score: 0,
+    };
+    current.score += 1;
+    byUser.set(reply.author_id, current);
+  }
+
+  return Array.from(byUser.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 /**

@@ -30,7 +30,7 @@
 import { randomUUID } from 'node:crypto';
 import { google } from 'googleapis';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
-import { GCAL_COLOR_MAP, LAYER_DEFAULTS } from '@/app/account/member/daily-activity/_components/utils';
+import { GCAL_COLOR_MAP, LAYER_DEFAULTS } from '@/app/account/_components/daily-activity/utils';
 
 export const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar',   // read + write all calendars

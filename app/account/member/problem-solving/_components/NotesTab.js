@@ -8,50 +8,37 @@ import {
   Check,
   Users,
   User,
-  Clock,
   Sparkles,
   MessageSquarePlus,
   Lock,
   Globe,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const CLUB_NOTES = [
-  {
-    id: 1,
-    author: 'sarah_coder',
-    role: 'Elite',
-    content:
-      "Remember that for Two Sum, the hash map approach only works if we don't need to worry about duplicate elements used twice. The problem guarantees exactly one solution, which simplifies things.",
-    timestamp: '1 hour ago',
-  },
-  {
-    id: 2,
-    author: 'alex_dev',
-    role: 'Member',
-    content:
-      'Using unordered_map in C++ is faster than map because it uses a hash table instead of a balanced tree. Important for competitive programming!',
-    timestamp: '3 hours ago',
-  },
-  {
-    id: 3,
-    author: 'coder_pro',
-    role: 'Member',
-    content:
-      "Always check for empty input array edge cases, even if the constraints say it won't happen. Good defensive practice.",
-    timestamp: '1 day ago',
-  },
-];
 
 const TABS = [
   { id: 'Personal', icon: User, label: 'My Notes' },
   { id: 'Club', icon: Users, label: 'Club Notes' },
 ];
 
-export default function NotesTab() {
+export default function NotesTab({ note = '', onSaveNote, saving = false }) {
   const [viewMode, setViewMode] = useState('Personal');
-  const [noteText, setNoteText] = useState('');
+  const [noteText, setNoteText] = useState(note);
+  const [saveTimer, setSaveTimer] = useState(null);
+
+  // Sync if parent note changes (e.g., different problem opened)
+  useEffect(() => {
+    setNoteText(note);
+  }, [note]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setNoteText(val);
+    if (onSaveNote) {
+      clearTimeout(saveTimer);
+      setSaveTimer(setTimeout(() => onSaveNote(val), 1500));
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
@@ -84,7 +71,6 @@ export default function NotesTab() {
         })}
       </div>
 
-      {/* Tab content */}
       <AnimatePresence mode="wait">
         {/* ── Personal notes ──────────────────────────────────────────── */}
         {viewMode === 'Personal' && (
@@ -96,7 +82,6 @@ export default function NotesTab() {
             transition={{ duration: 0.16 }}
             className="space-y-5"
           >
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-900/60">
@@ -107,23 +92,22 @@ export default function NotesTab() {
                     Personal Workspace
                   </h3>
                   <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                    Private · Encrypted
+                    Private · Saved to DB
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5">
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
                 <span className="font-mono text-[10px] tracking-widest text-emerald-400 uppercase">
-                  Auto-saved
+                  {saving ? 'Saving...' : 'Auto-saved'}
                 </span>
               </div>
             </div>
 
-            {/* Textarea */}
             <div className="relative">
               <textarea
                 value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
+                onChange={handleChange}
                 className="h-72 w-full resize-none rounded-xl border border-white/[0.07] bg-zinc-900/50 p-5 font-mono text-xs leading-relaxed text-zinc-300 shadow-inner transition-colors outline-none placeholder:text-zinc-600 focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/10"
                 placeholder="Write your notes, approach ideas, or observations here..."
               />
@@ -134,15 +118,6 @@ export default function NotesTab() {
               )}
             </div>
 
-            {/* Save button */}
-            <div className="flex justify-end">
-              <button className="flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-300 transition-all hover:border-violet-400/50 hover:bg-violet-500/20 hover:text-violet-200">
-                <Check className="h-3.5 w-3.5" />
-                Save Note
-              </button>
-            </div>
-
-            {/* Privacy notice */}
             <div className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-zinc-900/50 p-4">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10">
                 <Sparkles className="h-3.5 w-3.5 text-violet-400" />
@@ -152,8 +127,7 @@ export default function NotesTab() {
                   Privacy
                 </h4>
                 <p className="text-xs leading-relaxed text-zinc-500">
-                  Personal notes are private and never visible to other club
-                  members. Only notes you post to the Club tab are shared.
+                  Personal notes are saved to the database (auto-saved after 1.5s of inactivity). Only visible to you.
                 </p>
               </div>
             </div>
@@ -170,7 +144,6 @@ export default function NotesTab() {
             transition={{ duration: 0.16 }}
             className="space-y-5"
           >
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-900/60">
@@ -181,56 +154,29 @@ export default function NotesTab() {
                     Club Collective
                   </h3>
                   <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                    {CLUB_NOTES.length} contributions
+                    Shared with members
                   </p>
                 </div>
               </div>
-              <button className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/4 px-3.5 py-2 text-xs font-semibold text-zinc-300 transition-all hover:border-white/20 hover:bg-white/7 hover:text-white">
+              <button
+                disabled
+                className="flex cursor-not-allowed items-center gap-2 rounded-xl border border-white/[0.07] bg-white/4 px-3.5 py-2 text-xs font-semibold text-zinc-500 opacity-50"
+              >
                 <MessageSquarePlus className="h-3.5 w-3.5" />
                 Contribute
               </button>
             </div>
 
-            {/* Notes list */}
-            <div className="space-y-3">
-              {CLUB_NOTES.map((note, idx) => (
-                <motion.div
-                  key={note.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05, duration: 0.18 }}
-                  className="overflow-hidden rounded-xl border border-white/[0.07] bg-zinc-900/50 p-5"
-                >
-                  {/* Author row */}
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.07] bg-zinc-800">
-                        <User className="h-3.5 w-3.5 text-zinc-400" />
-                      </div>
-                      <div>
-                        <span className="text-sm font-semibold text-white">
-                          {note.author}
-                        </span>
-                        <div className="mt-0.5 flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                            {note.role}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-md border border-white/[0.07] bg-zinc-900/60 px-2.5 py-1 font-mono text-[10px] text-zinc-500">
-                      <Clock className="h-3 w-3" />
-                      {note.timestamp}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <blockquote className="border-l-2 border-violet-500/30 pl-4 text-sm leading-relaxed text-zinc-300">
-                    {note.content}
-                  </blockquote>
-                </motion.div>
-              ))}
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.07] bg-zinc-900/40 py-16 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-zinc-800/60">
+                <Users className="h-4 w-4 text-zinc-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-zinc-400">No club notes yet.</p>
+                <p className="text-xs text-zinc-600">
+                  Club discussion notes for specific problems are coming soon.
+                </p>
+              </div>
             </div>
           </motion.div>
         )}

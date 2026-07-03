@@ -19,7 +19,7 @@ import {
 } from './_shared';
 import { AtCoderService } from './atcoder';
 import { CFGymService } from './cfgym';
-import { ClistService } from './clist';
+import { ClistService, isSolvedClist } from './clist';
 import { CodeChefService } from './codechef';
 import { CodeforcesService } from './codeforces';
 import { CSAcademyService } from './csacademy';
@@ -424,17 +424,17 @@ export class ProblemSolvingAggregator {
    * Universal fallback to fetch submissions/solved problems using Clist API's contest statistics.
    * This handles platforms that don't have a dedicated scraper/API client.
    */
-  async getSubmissionsFromClist(platform, handle, fromTimestamp = null) {
+  async getSubmissionsFromClist(platform, handle, fromTimestamp = null, userId = null) {
     const clistService = new ClistService();
     if (!clistService.isConfigured()) {
       console.warn(`[Clist Fallback] Clist API not configured.`);
       return [];
     }
-    // Fetch all contests for this user on this platform
     const contests = await clistService.getContestStatistics(
       platform,
       handle,
-      10000
+      10000,
+      userId
     );
     if (!contests || contests.length === 0) return [];
 
@@ -448,28 +448,43 @@ export class ProblemSolvingAggregator {
         : new Date().getTime();
       const fromTime = fromTimestamp ? new Date(fromTimestamp).getTime() : 0;
 
-      // If the contest happened before our fromTimestamp, we can skip it
-      if (fromTimestamp && contestTime <= fromTime) {
-        continue;
-      }
+      if (fromTimestamp && contestTime <= fromTime) continue;
 
       for (const prob of contest.problems) {
-        if (prob.solved || prob.result?.includes('+') || prob.result === 'AC') {
-          submissions.push({
-            submission_id: `clist_${contest.contestId}_${prob.label}`,
-            problem_id:
-              prob.name || prob.label || `${contest.contestId}_${prob.label}`,
-            problem_name:
-              prob.name ||
-              `${contest.contestName || 'Contest'} - ${prob.label}`,
-            problem_url: prob.url || null,
-            contest_id: contest.contestId?.toString(),
-            verdict: 'AC',
-            language: 'Unknown',
-            // Use contest date as an approximation of submission date
-            submitted_at: contest.date || new Date().toISOString(),
-          });
+        // isSolvedClist covers all clist result formats (binary, verdict, result, +N)
+        const solved = prob.solved || isSolvedClist({ result: prob.result, solved: prob.solved, verdict: prob.result });
+        if (!solved) continue;
+
+        // Use per-problem time offset if available (e.g. FBHC provides seconds since contest start)
+        let submittedAt = contest.date || new Date().toISOString();
+        if (prob.time != null && contest.date) {
+          const contestStartMs = new Date(contest.date).getTime();
+          const offsetMs =
+            typeof prob.time === 'number'
+              ? prob.time * 1000
+              : parseFloat(prob.time) * 1000;
+          if (Number.isFinite(offsetMs) && offsetMs >= 0) {
+            submittedAt = new Date(contestStartMs + offsetMs).toISOString();
+          }
         }
+
+        // Build a stable problem_id: prefer problem name slug, fall back to contest+label
+        const problemId = prob.name
+          ? `${contest.contestId}_${prob.label}_${prob.name.replace(/\s+/g, '_').slice(0, 40)}`
+          : `${contest.contestId}_${prob.label}`;
+
+        submissions.push({
+          submission_id: `clist_${contest.contestId}_${prob.label}`,
+          problem_id: problemId,
+          problem_name:
+            prob.name ||
+            `${contest.contestName || 'Contest'} - ${prob.label}`,
+          problem_url: prob.url || contest.contestUrl || null,
+          contest_id: contest.contestId?.toString(),
+          verdict: 'AC',
+          language: 'Unknown',
+          submitted_at: submittedAt,
+        });
       }
     }
 
@@ -704,12 +719,12 @@ export class ProblemSolvingAggregator {
               }
               break;
             case 'facebookhackercup':
-              // Try CLIST contest statistics first; fall back to extension guidance if empty.
               try {
                 submissions = await this.getSubmissionsFromClist(
                   handle.platform,
                   handle.handle,
-                  fromTimestamp
+                  fromTimestamp,
+                  userId
                 );
               } catch (fbhcError) {
                 console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);
@@ -992,12 +1007,17 @@ export class ProblemSolvingAggregator {
                           stat.problems
                         )) {
                           const solveContext = probData.upsolving || probData;
-                          if (
-                            solveContext &&
-                            (solveContext.result === 100 ||
+                          const isSolved =
+                            solveContext && (
+                              solveContext.result === 100 ||
                               solveContext.verdict === 'AC' ||
-                              solveContext.verdict === 'OK')
-                          ) {
+                              solveContext.verdict === 'OK' ||
+                              (solveContext.result != null && (
+                                String(solveContext.result).includes('+') ||
+                                (!isNaN(parseFloat(solveContext.result)) && parseFloat(solveContext.result) > 0)
+                              ))
+                            );
+                          if (solveContext && isSolved) {
                             const subTime = solveContext.submission_time
                               ? new Date(
                                   solveContext.submission_time * 1000
@@ -1102,12 +1122,12 @@ export class ProblemSolvingAggregator {
           }
           break;
         case 'facebookhackercup':
-          // Try CLIST contest statistics first; fall back to extension guidance if empty.
           try {
             submissions = await this.getSubmissionsFromClist(
               platform,
               handle.handle,
-              fromTimestamp
+              fromTimestamp,
+              userId
             );
           } catch (fbhcError) {
             console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);
@@ -1675,24 +1695,48 @@ export class ProblemSolvingAggregator {
         return;
       }
 
-      const { data } = await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('platform_id', platformId)
-        .order('submitted_at', { ascending: true });
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from(V2_TABLES.SUBMISSIONS)
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform_id', platformId)
+            .order('submitted_at', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
-      submissions = (data || []).filter(
+      submissions = submissions.filter(
         (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
       );
     } else {
       // Legacy: Query from problem_submissions
-      const { data } = await supabaseAdmin
-        .from('problem_submissions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('platform', platform)
-        .order('submitted_at', { ascending: true });
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_submissions')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform', platform)
+            .order('submitted_at', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       submissions = (data || []).filter(
         (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
@@ -1775,12 +1819,25 @@ export class ProblemSolvingAggregator {
       const validProblemKeys = new Set(Object.keys(solvesByProblem));
 
       try {
-        const { data: existingSolveRows, error: existingSolveError } =
-          await supabaseAdmin
-            .from(V2_TABLES.USER_SOLVES)
-            .select('id, problems!inner(external_id, platform_id)')
-            .eq('user_id', userId)
-            .eq('problems.platform_id', platformId);
+        let existingSolveRows = [];
+        let existingSolveError = null;
+        {
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabaseAdmin
+              .from(V2_TABLES.USER_SOLVES)
+              .select('id, problems!inner(external_id, platform_id)')
+              .eq('user_id', userId)
+              .eq('problems.platform_id', platformId)
+              .range(from, from + PAGE - 1);
+            if (error) { existingSolveError = error; break; }
+            if (!page || page.length === 0) break;
+            existingSolveRows = existingSolveRows.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+        }
 
         if (existingSolveError) {
           console.warn(
@@ -1976,11 +2033,23 @@ export class ProblemSolvingAggregator {
       // ═══════════════════════════════════════════════════════════════════════
 
       // ── CLEANUP ORPHANED SOLVES ──────────────────────────────────────────────
-      const { data: existingSolves } = await supabaseAdmin
-        .from('problem_solves')
-        .select('problem_id')
-        .eq('user_id', userId)
-        .eq('platform', platform);
+      let existingSolves = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_solves')
+            .select('problem_id')
+            .eq('user_id', userId)
+            .eq('platform', platform)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          existingSolves = existingSolves.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       if (existingSolves) {
         const validProblemIds = new Set(Object.keys(solvesByProblem));
@@ -2157,12 +2226,24 @@ export class ProblemSolvingAggregator {
    */
   async backfillTagsForUser(userId) {
     try {
-      // Get all submissions with tags
-      const { data: submissions } = await supabaseAdmin
-        .from('problem_submissions')
-        .select('platform, problem_id, tags')
-        .eq('user_id', userId)
-        .not('tags', 'is', null);
+      // Get all submissions with tags (paginated)
+      let submissions = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from('problem_submissions')
+            .select('platform, problem_id, tags')
+            .eq('user_id', userId)
+            .not('tags', 'is', null)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          submissions = submissions.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       if (!submissions || submissions.length === 0) return 0;
 
@@ -2210,12 +2291,24 @@ export class ProblemSolvingAggregator {
   }
 
   async updateDailyActivity(userId) {
-    const { data: solves } = await supabaseAdmin
-      .from('problem_solves')
-      .select('first_solved_at, platform')
-      .eq('user_id', userId);
+    let solves = [];
+    {
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from('problem_solves')
+          .select('first_solved_at, platform')
+          .eq('user_id', userId)
+          .range(from, from + PAGE - 1);
+        if (error || !page || page.length === 0) break;
+        solves = solves.concat(page);
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
+    }
 
-    if (!solves) return;
+    if (solves.length === 0) return;
 
     const byDate = {};
     for (const solve of solves) {
@@ -2245,22 +2338,34 @@ export class ProblemSolvingAggregator {
   async updateUserStatistics(userId, fetchPlatformStats = false) {
     const statsTable = V2_TABLES.USER_STATS;
 
-    // V2/V3: join user_solves → problems → difficulty_tiers for proper tier counts
-    const { data: solves } = await supabaseAdmin
-      .from(V2_TABLES.USER_SOLVES)
-      .select(
-        `first_solved_at,
-         problems(
-           difficulty_rating,
-           difficulty_tier_id,
-           platform_id,
-           difficulty_tiers(id, min_rating, max_rating),
-           platforms(code)
-         )`
-      )
-      .eq('user_id', userId);
+    // V2/V3: join user_solves → problems → difficulty_tiers for proper tier counts (paginated)
+    let solves = [];
+    {
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await supabaseAdmin
+          .from(V2_TABLES.USER_SOLVES)
+          .select(
+            `first_solved_at,
+             problems(
+               difficulty_rating,
+               difficulty_tier_id,
+               platform_id,
+               difficulty_tiers(id, min_rating, max_rating),
+               platforms(code)
+             )`
+          )
+          .eq('user_id', userId)
+          .range(from, from + PAGE - 1);
+        if (error || !page || page.length === 0) break;
+        solves = solves.concat(page);
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
+    }
 
-    if (!solves) return;
+    if (solves.length === 0) return;
 
     const totalSolved = solves.length;
     const now = new Date();
@@ -2504,13 +2609,25 @@ export class ProblemSolvingAggregator {
         return hasAttemptInProblemsPayload(contest.problems_data);
       };
 
-      // Count active contests per platform (submission attempt during contest time)
-      const { data: contests } = await supabaseAdmin
-        .from(V2_TABLES.CONTEST_HISTORY)
-        .select(
-          'platform_id, is_virtual, problems_attempted, problems_solved, score, problems_data'
-        )
-        .eq('user_id', userId);
+      // Count active contests per platform (paginated)
+      let contests = [];
+      {
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabaseAdmin
+            .from(V2_TABLES.CONTEST_HISTORY)
+            .select(
+              'platform_id, is_virtual, problems_attempted, problems_solved, score, problems_data'
+            )
+            .eq('user_id', userId)
+            .range(from, from + PAGE - 1);
+          if (error || !page || page.length === 0) break;
+          contests = contests.concat(page);
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+      }
 
       const contestsByPlatform = {};
       (contests || []).forEach((contest) => {

@@ -8,12 +8,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, ChevronRight, Search } from 'lucide-react';
+import { Bell, ChevronRight, Search, Terminal } from 'lucide-react';
 import { cn } from '@/app/_lib/utils/utils';
 import { buildBreadcrumbs } from './breadcrumbConfig';
 import { getRoleTheme } from './roleTheme';
 
-export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
+export default function DashboardTopbar({
+  activeRole,
+  notificationCount = 0,
+  onCodeRunnerOpen,
+}) {
   const pathname = usePathname();
   const crumbs = buildBreadcrumbs(pathname);
   const theme = getRoleTheme(activeRole);
@@ -83,6 +87,18 @@ export default function DashboardTopbar({ activeRole, notificationCount = 0 }) {
       </nav>
 
       <div className="flex-1" />
+
+      {/* Code Runner Button (only for member role) */}
+      {activeRole === 'member' && (
+        <button
+          onClick={onCodeRunnerOpen}
+          title="Code Runner"
+          aria-label="Code Runner"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1E293B] bg-[#131B2C] text-slate-400 transition-colors outline-none hover:border-[#334155] hover:bg-[#1A233A] hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-white/40"
+        >
+          <Terminal className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Search — icon only on mobile, full pill on md+ */}
       <button

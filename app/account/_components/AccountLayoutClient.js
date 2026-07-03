@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { useRole } from './RoleContext';
 import AccountSidebar from './AccountSidebar';
 import DashboardTopbar from './DashboardTopbar';
+import CodeRunnerClient from '../member/code-runner/_components/CodeRunnerClient';
 import { getSidebarNavigation } from '@/app/_lib/config/sidebarConfig';
 import { cn } from '@/app/_lib/utils/utils';
 
@@ -147,14 +148,22 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   // Hide sidebar only on the account selection page
   const hideSidebar = pathname === '/account';
 
-  // Close sidebar on escape key
+  const [codeRunnerOpen, setCodeRunnerOpen] = useState(false);
+
+  // Close sidebar and code runner on escape key
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && sidebarOpen) setSidebarOpen(false);
+      if (e.key === 'Escape') {
+        if (codeRunnerOpen) {
+          setCodeRunnerOpen(false);
+        } else if (sidebarOpen) {
+          setSidebarOpen(false);
+        }
+      }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [sidebarOpen]);
+  }, [sidebarOpen, codeRunnerOpen]);
 
   // Prevent body scroll + restore scroll position when mobile sidebar is open
   useEffect(() => {
@@ -171,9 +180,10 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
     };
   }, [sidebarOpen]);
 
-  // Close sidebar on route changes
+  // Close sidebar and code runner on route changes
   useEffect(() => {
     setSidebarOpen(false);
+    setCodeRunnerOpen(false);
   }, [pathname]);
 
   // Get sidebar navigation based on current role
@@ -181,8 +191,16 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
     return getSidebarNavigation(currentRole, SIDEBAR_STATS, session);
   }, [currentRole, session]);
 
+  if (hideSidebar) {
+    return (
+      <div className="w-full bg-[#030408]">
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("relative flex bg-[#0B1121] w-full", hideSidebar ? "min-h-screen overflow-x-hidden" : "h-screen overflow-hidden")}>
+    <div className={cn("relative flex w-full", hideSidebar ? "overflow-x-hidden bg-[#030408]" : "h-screen overflow-hidden bg-[#0B1121]")}>
       <AccountSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -201,12 +219,16 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
           <DashboardTopbar
             activeRole={currentRole}
             notificationCount={SIDEBAR_STATS.notifications}
+            onCodeRunnerOpen={() => setCodeRunnerOpen(true)}
           />
         )}
         <div className={cn("flex-1", hideSidebar ? "w-full" : "overflow-x-hidden overflow-y-auto")}>
           {children}
         </div>
       </main>
+
+      {/* Code Runner overlay popup */}
+      <CodeRunnerClient isOpen={codeRunnerOpen} onClose={() => setCodeRunnerOpen(false)} />
     </div>
   );
 }

@@ -14,22 +14,36 @@ import {
   fullSyncAction,
   syncPlatformAction,
   syncContestHistoryAction,
+  syncRatingHistoryAction,
   getLeaderboardAction,
   connectHandleAction,
   disconnectHandleAction,
   cleanupLeetCodeDataAction,
 } from '@/app/_lib/actions/problem-solving-actions';
 
-import { dummyData } from './useProblemSolving.mock';
+const EMPTY_DATA = {
+  profile: null,
+  handles: [],
+  statistics: null,
+  recentSolves: [],
+  recentSolutions: [],
+  recentSubmissions: [],
+  dailyActivity: [],
+  badges: [],
+  leaderboard: null,
+  ratingHistory: [],
+  contestHistory: [],
+};
 
 /**
  * Hook for fetching current user's problem solving data
  */
 export function useProblemSolving() {
-  const [data, setData] = useState(dummyData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(EMPTY_DATA);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncingRating, setSyncingRating] = useState(false);
   const [syncingPlatform, setSyncingPlatform] = useState(null);
   const isFetchingRef = useRef(false);
 
@@ -46,10 +60,6 @@ export function useProblemSolving() {
         setLoading(true);
       }
 
-      // Temporary mock data mapping
-      setData(dummyData);
-      setError(null);
-      /*
       const result = await getProblemSolvingData();
 
       if (!result.success) {
@@ -58,8 +68,11 @@ export function useProblemSolving() {
         );
       }
 
-      setData(result.data);
-      */
+      setData({
+        ...EMPTY_DATA,
+        ...result.data,
+      });
+      setError(null);
     } catch (err) {
       if (!background) {
         setError(err.message);
@@ -144,6 +157,25 @@ export function useProblemSolving() {
     [fetchData]
   );
 
+  const syncRatingHistory = useCallback(async () => {
+    try {
+      setSyncingRating(true);
+      const result = await syncRatingHistoryAction();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to sync rating history');
+      }
+
+      await fetchData();
+      return result.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setSyncingRating(false);
+    }
+  }, [fetchData]);
+
   const cleanupLeetCodeData = useCallback(async () => {
     try {
       setSyncing(true);
@@ -201,11 +233,13 @@ export function useProblemSolving() {
     loading,
     error,
     syncing,
+    syncingRating,
     syncingPlatform,
     refetch: fetchData,
     sync: syncData,
     syncPlatform,
     syncContestHistory,
+    syncRatingHistory,
     cleanupLeetCodeData,
   };
 }

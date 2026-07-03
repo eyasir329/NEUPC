@@ -801,9 +801,7 @@ export async function POST(request) {
           normalizedSubmission.submission_id = canonicalVJudgeSubmissionId;
         }
 
-        if (normalizedTimestamp) {
-          normalizedSubmission.submitted_at = normalizedTimestamp;
-        }
+        normalizedSubmission.submitted_at = normalizedTimestamp ?? null;
 
         normalizedSubmission.verdict = normalizeSubmissionVerdict(
           rawSubmission.verdict ??
@@ -2260,11 +2258,16 @@ export async function POST(request) {
             .eq('user_id', userId)
             .single();
 
+          const { count: actualSolveCount } = await supabaseAdmin
+            .from(V2_TABLES.USER_SOLVES)
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
           if (currentStats) {
             await supabaseAdmin
               .from(V2_TABLES.USER_STATS)
               .update({
-                total_solved: (currentStats.total_solved || 0) + solvesCreated,
+                total_solved: actualSolveCount ?? (currentStats.total_solved || 0) + solvesCreated,
                 total_solutions:
                   (currentStats.total_solutions || 0) + solutionsCreated,
                 updated_at: new Date().toISOString(),
@@ -2273,7 +2276,7 @@ export async function POST(request) {
           } else {
             await supabaseAdmin.from(V2_TABLES.USER_STATS).insert({
               user_id: userId,
-              total_solved: solvesCreated,
+              total_solved: actualSolveCount ?? solvesCreated,
               total_solutions: solutionsCreated,
             });
           }

@@ -388,7 +388,7 @@ export default function AccountStatusMessages({
   // ── Pending ────────────────────────────────────────────────────────────────
   if (accountStatus === 'pending') {
     return (
-      <div className="mt-6 space-y-4">
+      <div className="space-y-4">
         {/* Admin access required — prominent callout */}
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4">
           <ShieldAlert className="h-6 w-6 shrink-0 text-amber-400" />
@@ -466,7 +466,7 @@ export default function AccountStatusMessages({
             </div>
 
             {/* Message thread */}
-            <div className="mt-6">
+            <div>
               <MessageThread
                 messages={messages}
                 isLoading={isLoadingMessages}
@@ -497,7 +497,7 @@ export default function AccountStatusMessages({
   // ── Rejected ───────────────────────────────────────────────────────────────
   if (accountStatus === 'rejected') {
     return (
-      <div className="mt-6">
+      <div>
         <div className="overflow-hidden rounded-2xl border border-red-500/20 bg-linear-to-b from-red-500/5 to-transparent shadow-lg shadow-red-500/5">
           <div className="h-0.5 w-full bg-linear-to-r from-red-500/60 via-rose-400/60 to-transparent" />
 
@@ -524,7 +524,7 @@ export default function AccountStatusMessages({
             </div>
 
             {/* Message thread */}
-            <div className="mt-6">
+            <div>
               <MessageThread
                 messages={messages}
                 isLoading={isLoadingMessages}
@@ -622,7 +622,7 @@ export default function AccountStatusMessages({
     const { Icon, palette } = cfg;
 
     return (
-      <div className="mt-6">
+      <div>
         <div
           className={`overflow-hidden rounded-2xl border ${palette.border} bg-linear-to-b from-white/3 to-transparent shadow-lg`}
         >
@@ -654,7 +654,7 @@ export default function AccountStatusMessages({
             </div>
 
             {/* Message thread */}
-            <div className="mt-6">
+            <div>
               <MessageThread
                 messages={messages}
                 isLoading={isLoadingMessages}
@@ -692,7 +692,7 @@ export default function AccountStatusMessages({
   // ── Inactive ──────────────────────────────────────────────────────────────
   if (accountStatus === 'inactive') {
     return (
-      <div className="mt-6">
+      <div>
         <div className="overflow-hidden rounded-2xl border border-gray-500/20 bg-linear-to-b from-gray-500/5 to-transparent shadow-lg shadow-gray-500/5">
           <div className="h-0.5 w-full bg-linear-to-r from-gray-500/60 via-slate-400/60 to-transparent" />
 

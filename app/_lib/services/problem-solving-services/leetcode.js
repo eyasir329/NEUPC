@@ -502,44 +502,91 @@ export class LeetCodeService {
       // Fetch contest problems from LeetCode API
       const contestProblems = await this.getContestProblems(contestSlug);
 
-      let problems = [];
+      // Initialize problem map from existing CLIST problems
+      const problemMap = {};
+      if (contest.problems && Array.isArray(contest.problems)) {
+        contest.problems.forEach((p) => {
+          const key = p.label || p.id || p.name;
+          problemMap[key] = {
+            label: p.label,
+            name: p.name,
+            url: p.url || contest.url,
+            solved: p.solved === true || p.solvedDuringContest === true || p.upsolve === true,
+            solvedDuringContest: p.solvedDuringContest === true,
+            upsolve: p.upsolve === true,
+            attempted: p.attempted === true,
+            wrongAttempts: p.wrongAttempts || 0,
+            result: p.result,
+          };
+        });
+      }
+
       const totalSolvedFromContest =
         contest.solved || contest.problemsSolved || 0;
 
       if (contestProblems && contestProblems.length > 0) {
-        // We have actual contest problem data
-        problems = contestProblems.map((cp, index) => {
+        // Overlay actual contest problem data from LeetCode API
+        contestProblems.forEach((cp, index) => {
+          // Find matching problem in map
+          let matchedKey = null;
+          for (const [key, value] of Object.entries(problemMap)) {
+            if (
+              key.toLowerCase() === cp.titleSlug.toLowerCase() ||
+              (value.name && value.name.toLowerCase() === cp.title.toLowerCase())
+            ) {
+              matchedKey = key;
+              break;
+            }
+          }
+
           const isSolvedInContest = index < totalSolvedFromContest;
           const isSolvedEver = solvedSlugs.has(cp.titleSlug);
 
-          return {
-            label: cp.index || String.fromCharCode(65 + index),
-            name: cp.title,
-            url: cp.url,
-            solved: isSolvedInContest || isSolvedEver,
-            solvedDuringContest: isSolvedInContest,
-            upsolve: !isSolvedInContest && isSolvedEver,
-            attempted: isSolvedInContest || isSolvedEver,
-            result: isSolvedInContest ? '+' : isSolvedEver ? '+' : null,
-          };
+          const targetKey = matchedKey || cp.titleSlug;
+          if (!problemMap[targetKey]) {
+            problemMap[targetKey] = {
+              label: cp.index || String.fromCharCode(65 + index),
+              name: cp.title,
+              url: cp.url,
+              solved: isSolvedInContest || isSolvedEver,
+              solvedDuringContest: isSolvedInContest,
+              upsolve: !isSolvedInContest && isSolvedEver,
+              attempted: isSolvedInContest || isSolvedEver,
+              wrongAttempts: 0,
+            };
+          } else {
+            const prob = problemMap[targetKey];
+            if (isSolvedInContest) {
+              prob.solved = true;
+              prob.solvedDuringContest = true;
+              prob.upsolve = false;
+            } else if (isSolvedEver) {
+              prob.solved = true;
+              if (!prob.solvedDuringContest) {
+                prob.upsolve = true;
+              }
+            }
+            if (cp.url) prob.url = cp.url;
+            if (cp.title) prob.name = cp.title;
+          }
         });
-      } else {
-        // Fallback: generate generic problem labels
-        const totalProblems = contest.totalProblems || 4;
-        for (let i = 0; i < totalProblems; i++) {
-          const isSolved = i < totalSolvedFromContest;
-          problems.push({
-            label: String.fromCharCode(65 + i),
-            name: `${contest.name || contest.contestName || 'Contest'} - Q${i + 1}`,
-            url: `https://leetcode.com/contest/${contestSlug}/`,
-            solved: isSolved,
-            solvedDuringContest: isSolved,
-            upsolve: false,
-            attempted: isSolved,
-            result: isSolved ? '+' : null,
-          });
+      }
+
+      // Update with any remaining solvedSlugs matches for upsolves
+      for (const [key, prob] of Object.entries(problemMap)) {
+        const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        if (solvedSlugs.has(slug) || (prob.name && solvedSlugs.has(prob.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')))) {
+          prob.solved = true;
+          if (!prob.solvedDuringContest) {
+            prob.upsolve = true;
+          }
+          prob.attempted = true;
         }
       }
+
+      const problems = Object.values(problemMap).sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { numeric: true })
+      );
 
       const solvedCount = problems.filter((p) => p.solvedDuringContest).length;
       const upsolveCount = problems.filter(
@@ -970,8 +1017,12 @@ export class LeetCodeService {
                 for (const [label, value] of Object.entries(
                   stat.addition.problems
                 )) {
+                  const resultStr = value?.result != null ? String(value.result) : '';
+                  const numResult = parseFloat(resultStr);
                   const isSolved =
-                    value?.result?.includes('+') || value?.result === 'AC';
+                    resultStr.includes('+') ||
+                    resultStr === 'AC' ||
+                    (!isNaN(numResult) && numResult > 0);
                   if (!isSolved) continue;
 
                   const titleSlug =

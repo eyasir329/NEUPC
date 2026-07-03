@@ -35,6 +35,7 @@ import {
   voteOnThread,
   voteOnReply,
   removeVote,
+  getTopDiscussionContributors,
 } from '@/app/_lib/services/data-service';
 import {
   CHARACTER_LIMITS,
@@ -100,7 +101,7 @@ export async function createDiscussionAction({
   courseId = null,
   moduleId = null,
   lessonId = null,
-  platform = 'web',
+  platform = 'website',
   tags = [],
   categoryId = null,
 }) {
@@ -141,6 +142,20 @@ export async function createDiscussionAction({
         .filter(Boolean)
         .slice(0, 10)
     : [];
+
+  const role = await getUserRole(userId);
+  if (type === 'announcement') {
+    const isReleaseLog = parsedTags.includes('Release Log');
+    if (isReleaseLog) {
+      if (role !== 'admin') {
+        return { error: 'Only admins can post release logs.' };
+      }
+    } else {
+      if (role !== 'admin' && role !== 'executive' && role !== 'mentor') {
+        return { error: 'Only admins, executives, and mentors can post announcements.' };
+      }
+    }
+  }
 
   try {
     const thread = await createHelpDeskThread({
@@ -516,6 +531,54 @@ export async function updateStatusAction({ threadId, status }) {
     return { error: 'Staff access required.' };
   }
 
+  // Get thread to verify type and bootcamp association
+  const { data: thread, error: threadError } = await supabaseAdmin
+    .from('discussion_threads')
+    .select('type, bootcamp_id')
+    .eq('id', threadId)
+    .single();
+
+  if (threadError || !thread) {
+    return { error: 'Discussion thread not found.' };
+  }
+
+  const role = await getUserRole(userId);
+
+  if (status === 'resolved') {
+    // 1. Feature Request: only be solve by admin
+    if (thread.type === 'feature_request') {
+      if (role !== 'admin') {
+        return { error: 'Only admins can resolve feature requests.' };
+      }
+    }
+    // 2. Discussion (course_problem or assignment_issue): only solved by mentor who are related to that bootcamp
+    else if (thread.type === 'course_problem' || thread.type === 'assignment_issue') {
+      if (role !== 'mentor') {
+        return { error: 'Only mentors can resolve course discussions.' };
+      }
+      if (!thread.bootcamp_id) {
+        return { error: 'This discussion is not associated with any bootcamp.' };
+      }
+      // Check if this mentor is related to the bootcamp
+      const { data: mentorBootcamp, error: mbError } = await supabaseAdmin
+        .from('bootcamp_mentors')
+        .select('bootcamp_id')
+        .eq('user_id', userId)
+        .eq('bootcamp_id', thread.bootcamp_id);
+
+      if (mbError || !mentorBootcamp || mentorBootcamp.length === 0) {
+        return { error: 'You are not assigned as a mentor to the bootcamp associated with this discussion.' };
+      }
+    }
+    // 3. Help & Support (general_question, bug_report, ui_issue): can be solve by mentor, executive, advisor, admin
+    else if (thread.type === 'general_question' || thread.type === 'bug_report' || thread.type === 'ui_issue') {
+      const allowedRoles = ['mentor', 'executive', 'advisor', 'admin'];
+      if (!allowedRoles.includes(role)) {
+        return { error: 'You do not have permission to resolve help & support tickets.' };
+      }
+    }
+  }
+
   try {
     const thread = await updateDiscussionStatus(threadId, status, userId);
     revalidateDiscussionPaths();
@@ -867,6 +930,22 @@ export async function fetchAssignableStaffAction() {
     return {
       error: err.message || 'Failed to fetch staff members. Please try again.',
     };
+  }
+}
+
+/**
+ * Fetch top discussion contributors for the sidebar leaderboard.
+ */
+export async function fetchTopContributorsAction({ limit = 5 } = {}) {
+  const authResult = await requireActionSession();
+  if (authResult.error) return { error: authResult.error };
+
+  try {
+    const contributors = await getTopDiscussionContributors(limit);
+    return { success: true, contributors };
+  } catch (err) {
+    console.error('Error fetching top contributors:', err);
+    return { error: 'Failed to fetch contributors.' };
   }
 }
 
