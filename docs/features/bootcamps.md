@@ -382,7 +382,7 @@ this module.
 - Folder layout: `NEUPC_Bootcamps/{bootcamp_id}/thumbnails/...` and
   `NEUPC_Bootcamps/{bootcamp_id}/videos/{lesson_id}/...`.
 - `bootcamp-video.js` — streaming proxy + `getFileMetadata`, `canAccessFile`.
-- Refresh-token rotation runbook: [`docs/google-drive-token-refresh.md`](../google-drive-token-refresh.md).
+- Refresh-token rotation runbook: [`docs/google-drive-token-refresh.md`](../operations/google-drive-token-refresh.md).
 
 ### Streaming endpoint
 - `app/api/video/[lessonId]/route.js` — gates Drive playback by lesson access.

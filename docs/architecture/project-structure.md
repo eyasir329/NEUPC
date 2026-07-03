@@ -224,7 +224,7 @@ app/api/
 └── debug/users/            # Dev-only user debug
 ```
 
-See [api-routes.md](api-routes.md) for full API documentation.
+See [api-routes.md](../reference/api-routes.md) for full API documentation.
 
 ---
 

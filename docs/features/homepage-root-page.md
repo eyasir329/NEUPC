@@ -58,12 +58,12 @@ Shared UI/wrapper components used directly on root page:
 
 All diagrams in this document are available as editable Draw.io files:
 
-- Multi-page bundle: [docs/architecture/diagrams/homepage-root-page-diagrams.drawio](docs/architecture/diagrams/homepage-root-page-diagrams.drawio)
-- Runtime Flow: [docs/architecture/diagrams/homepage-runtime-flow.drawio](docs/architecture/diagrams/homepage-runtime-flow.drawio)
-- ER Diagram: [docs/architecture/diagrams/homepage-er-diagram.drawio](docs/architecture/diagrams/homepage-er-diagram.drawio)
-- DFD Level 0: [docs/architecture/diagrams/homepage-dfd-level-0.drawio](docs/architecture/diagrams/homepage-dfd-level-0.drawio)
-- DFD Level 1: [docs/architecture/diagrams/homepage-dfd-level-1.drawio](docs/architecture/diagrams/homepage-dfd-level-1.drawio)
-- Request Sequence: [docs/architecture/diagrams/homepage-request-sequence.drawio](docs/architecture/diagrams/homepage-request-sequence.drawio)
+- Multi-page bundle: [docs/architecture/diagrams/homepage-root-page-diagrams.drawio](../diagrams/homepage-root-page-diagrams.drawio)
+- Runtime Flow: [docs/architecture/diagrams/homepage-runtime-flow.drawio](../diagrams/homepage-runtime-flow.drawio)
+- ER Diagram: [docs/architecture/diagrams/homepage-er-diagram.drawio](../diagrams/homepage-er-diagram.drawio)
+- DFD Level 0: [docs/architecture/diagrams/homepage-dfd-level-0.drawio](../diagrams/homepage-dfd-level-0.drawio)
+- DFD Level 1: [docs/architecture/diagrams/homepage-dfd-level-1.drawio](../diagrams/homepage-dfd-level-1.drawio)
+- Request Sequence: [docs/architecture/diagrams/homepage-request-sequence.drawio](../diagrams/homepage-request-sequence.drawio)
 
 ---
 

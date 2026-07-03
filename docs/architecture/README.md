@@ -242,9 +242,9 @@ Sync button → fullSyncAction()
 - [Project Structure](./project-structure.md) — detailed file tree
 - [Data Service](./data-service.md) — how the DB layer works
 - [Server Actions](./server-actions.md) — mutation patterns
-- [API Routes](./api-routes.md) — REST endpoint reference
-- [Bootcamps](./bootcamps.md) — bootcamp feature: data model, server actions, role panels, sync gaps
-- [Bootcamps — Panels](./bootcamps-panels.md) — per-role (admin/executive/advisor/mentor/member) functionality walkthrough
-- [Bootcamps — Security](./bootcamps-security.md) — auth helpers, role enforcement, audit notes
-- [Daily Activity](./daily-activity.md) — member planner: data model, read-only feed, two-way Google/Todoist sync
-- [Database Schema](../database/index.md) — table catalogue
+- [API Routes](../reference/api-routes.md) — REST endpoint reference
+- [Bootcamps](../features/bootcamps.md) — bootcamp feature: data model, server actions, role panels, sync gaps
+- [Bootcamps — Panels](../features/bootcamps-panels.md) — per-role (admin/executive/advisor/mentor/member) functionality walkthrough
+- [Bootcamps — Security](../features/bootcamps-security.md) — auth helpers, role enforcement, audit notes
+- [Daily Activity](../features/daily-activity.md) — member planner: data model, read-only feed, two-way Google/Todoist sync
+- [Database Schema](../reference/database-schema.md) — table catalogue
