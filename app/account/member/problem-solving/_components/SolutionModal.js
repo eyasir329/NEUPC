@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import CodeViewer from './CodeViewer';
+import posthog from 'posthog-js';
 
 const LANGUAGES = [
   'cpp',
@@ -286,6 +287,13 @@ function UploadMode({ problem, onClose, onSuccess }) {
       if (!response.ok) throw new Error('Failed to upload solution');
 
       const result = await response.json();
+      posthog.capture('solution_uploaded', {
+        platform: problem.platform,
+        language: formData.language,
+        difficulty_tier: formData.difficultyTier,
+        has_source_code: !!formData.sourceCode,
+        has_file: !!file,
+      });
       onSuccess?.(result);
       onClose();
     } catch (err) {

@@ -138,3 +138,4 @@ scratch/
 
 # planning docs (keep local only)
 plans/
+.env.local

@@ -44,3 +44,30 @@ Enforcement via an ESLint boundary rule (`import/no-restricted-paths` or
 
 - **Convention only** — rejected (erodes silently; the seams are load-bearing for
   the redesign).
+
+## Phase-0 audit result (2026-07-03) — the invariant is currently violated
+
+The audit found the "DAL is the only door" invariant is **aspirational, not
+enforced**: **133 files** import the Supabase client (`supabaseAdmin` /
+`integrations/supabase`) and run queries directly, outside `services/data/`:
+
+| Area | Files |
+|---|---|
+| API routes (`app/api/**`) | 50 |
+| Server actions (`app/_lib/actions/**`) | 44 |
+| Non-DAL services (`app/_lib/services/**`) | 30 |
+| Other `_lib` | 5 |
+| Pages / components | 4 |
+
+**Consequence for rollout:** a hard `error`-level boundary rule cannot be turned
+on today — it would fail every build. The professional path is a **ratchet**:
+
+1. Ship the boundary rule at **`warn`** severity (stops *new* violations; existing
+   133 keep building).
+2. Migrate violations into the DAL **incrementally**, area by area, each change
+   independently testable.
+3. Flip the rule to **`error`** per-directory as each area reaches zero
+   (`app/api/**` first, then actions, then services), until it's global.
+
+This makes the invariant real without a big-bang refactor. Tracked as ongoing
+work in [`../08-roadmap.md`](../08-roadmap.md) Phase 1.

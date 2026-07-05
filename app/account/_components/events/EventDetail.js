@@ -5,8 +5,10 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { Calendar, Clock, MapPin, FileText, ChevronLeft } from 'lucide-react';
 import { GlassCard } from '@/app/account/_components/ui';
+import posthog from 'posthog-js';
 
 /**
  * Shared event detail view used by all role views.
@@ -25,6 +27,18 @@ export default function EventDetail({
   ctaSlot,
   sidebarSlot,
 }) {
+  useEffect(() => {
+    if (event?.id) {
+      posthog.capture('event_viewed', {
+        event_id: event.id,
+        event_title: event.title,
+        event_type: event._type,
+        event_status: event._bucket,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id]);
+
   return (
     <div className="flex flex-col gap-6 pb-12 lg:gap-8">
       <button

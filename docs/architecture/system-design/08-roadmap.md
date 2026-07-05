@@ -11,13 +11,23 @@ Establish the baseline the whole redesign is judged against, and the boundaries
 that keep it from eroding.
 
 - [ ] Enable `pg_stat_statements`; capture top slow/frequent queries + p95 latency
-      + connection counts (baseline). → verifies P2 later
-- [ ] Audit **direct Supabase usage outside the DAL** (R7) — list every offender.
-- [ ] Confirm how the 3 cron routes are triggered (R2); confirm pooler vs direct
-      connection (R6).
+      + connection counts (baseline). → verifies P2 later *(SQL prepared: `scripts/db/phase0-baseline.sql` — run in Supabase SQL editor)*
+- [x] **Audit direct Supabase usage outside the DAL (R7)** → **133 files** query
+      Supabase directly (50 API routes, 44 actions, 30 non-DAL services, 9 other).
+      See [`09-adr/0003-strict-layering.md`](09-adr/0003-strict-layering.md) — the
+      invariant is not yet enforced; requires a **ratchet**, not a big-bang rule.
+- [x] **Cron trigger config (R2)** → `vercel.json` `crons: []` is **empty** while 3
+      routes check `CRON_SECRET`. Jobs rely on an **external scheduler** (or aren't
+      running). **Action:** confirm the external scheduler exists, or add Vercel
+      cron entries. Addressed in Phase 3.
+- [x] **Connection type (R6)** → app uses `@supabase/supabase-js` over **HTTP
+      (PostgREST)**, not a direct Postgres TCP connection. The serverless
+      connection-exhaustion cliff **does not apply** to current usage. Pooler work
+      in Phase 1 is therefore **only needed if** a direct DB driver is added later.
 - [ ] Stand up the **first dashboard** (5 tiles, [`06-observability.md`](06-observability.md)).
 
-**Exit:** baseline committed; risks R2/R6/R7 sized with real numbers.
+**Exit:** baseline committed; risks R2/R6/R7 sized with real numbers. **✅ R2/R6/R7
+sized (see above).** Remaining: run the baseline SQL + first dashboard.
 
 ---
 
@@ -49,29 +59,43 @@ reads. **If perf/availability goals are met, you can pause here.**
 
 ## Phase 3 — Async / resilience tier (availability — highest impact)
 
-- [ ] Introduce the **queue + idempotent workers** (start: `jobs` table / pg-boss /
-      Supabase Queues). (A3)
-- [ ] Move judge sync, leaderboard recompute, LLM, email, Google sync **off the
-      request/cron path** into jobs. (P3)
-- [ ] Fix cron triggers + make jobs idempotent + retried + dead-lettered (R2, A3).
-- [ ] Add **circuit breakers, timeouts, bulkheads** to every adapter. (A2)
-- [ ] Implement the **degradation contract** per the failure-mode matrix. (A2)
+- [x] **Queue + idempotent workers** — Postgres `jobs` table
+      (`20260703130000_create_jobs_queue.sql`) with atomic `claim_jobs`
+      (FOR UPDATE SKIP LOCKED), DAL (`services/data/jobs.js`), worker + registry
+      (`services/job-worker.js`, `job-handlers.js`), drain route
+      (`/api/jobs/drain`). Retries w/ backoff + jitter; dead-letters on exhaustion. (A3)
+- [x] **Circuit breaker** utility (`utils/circuit-breaker.js`) — per-dependency
+      fail-fast, composes with existing `fetchWithTimeout` (timeouts/retries
+      already present in `problem-solving-services/_shared.js`). (A2)
+- [x] **Fix cron triggers (R2)** — `vercel.json` now schedules the 3 existing
+      crons + the drain route (was `[]`). Auth compatible with Vercel Cron.
+- [~] **Move slow work into jobs** — seam is live; `email.send` handler wired as
+      the reference. Remaining enqueue-site migrations (LLM, leaderboard, Google
+      sync) are incremental, per handler, using the same pattern. (P3)
+- [~] **Wrap each adapter in its breaker** — `withBreaker('<judge>', …)` around
+      the existing `fetchWithTimeout` calls; incremental per adapter. (A2)
 
 **Exit:** no external call on a user request path; a killed dependency degrades
-only its own section; jobs retry and alert on dead-letter.
+only its own section; jobs retry and alert on dead-letter. **Infra needed:** run
+the `jobs` migration; set `CRON_SECRET` in Vercel env for scheduled drains.
 
 ---
 
 ## Phase 4 — Observability & SLOs (make it provable)
 
-- [ ] Structured logs + correlation ids across tiers.
-- [ ] Instrument routes/actions, adapters (breaker state), jobs, cache, data tier.
+- [x] **Readiness endpoint** — `/api/health/ready` probes primary DB (gates
+      readiness → 200/503), plus replica, cache, queue depth, and breaker states
+      (informational). `/api/health` stays as the lightweight liveness probe.
+- [~] **Error monitoring** — PostHog error tracking is live (`capture_exceptions`
+      in `instrumentation-client.js`). **Infra step (you):** add `@sentry/nextjs`
+      *or* rely on PostHog; wire source-map upload for de-minified stack traces.
+- [ ] Structured logs + correlation ids across tiers. (incremental)
 - [ ] Define SLOs + alerts ([`06-observability.md`](06-observability.md)); write a
-      **runbook per alert**.
-- [ ] Extend `/api/health` to a per-dependency **readiness** check.
+      **runbook per alert**. (in PostHog / your monitoring tool)
 
 **Exit:** every NFR has a metric and an alert; incidents are detected by alerts,
-not users.
+not users. **Partially met:** readiness + client error capture live; SLO/alert
+config is a dashboard task in PostHog.
 
 ---
 

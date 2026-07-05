@@ -53,16 +53,17 @@ for, with a fraction of the risk.
 
 ---
 
-## Connection pooling (fixes R6 — a real scaling cliff)
+## Connection pooling (R6 — re-scoped after Phase 0)
 
-Serverless functions open many short-lived connections; Postgres has a hard
-connection ceiling. Under any burst you hit it and requests fail — a cliff, not a
-slope.
+**Phase 0 finding:** the app talks to Postgres via `@supabase/supabase-js` over
+**HTTP (PostgREST)**, not a direct Postgres TCP driver. PostgREST does its own
+server-side pooling, so the classic serverless connection-exhaustion cliff **does
+not apply to current usage**. R6 is therefore **not an active risk today**.
 
-- [ ] Use Supabase's **Supavisor / PgBouncer pooler** connection string in the app
-      (transaction mode) — not the direct connection.
-- [ ] DAL owns the client; one pooled client per runtime.
-- [ ] Verify: connection count stays flat while concurrency rises. (P2, S1)
+- [x] Confirmed: no direct `postgres`/Prisma/Drizzle connection in the app.
+- [ ] **Only if** a direct DB driver is later added (e.g. for a background worker
+      or heavy analytics query): use Supabase's **Supavisor pooler** connection
+      string (transaction mode), owned by the DAL. Until then, no action.
 
 ---
 
@@ -90,6 +91,15 @@ shape:
   it selects primary vs replica, applies cache-aside, and is the single place a
   future data-tier change (partitioning, extraction, or — if ever — the cluster
   split) is wired. No route/action/component queries Supabase directly.
+
+### Replica routing seam (implemented — inert until a replica exists)
+
+`app/_lib/integrations/supabase.js` now exposes `supabaseRead()` and
+`hasReadReplica`. `supabaseRead()` returns the replica client when
+`SUPABASE_REPLICA_URL` is set, else the primary — so heavy/public reads in the
+DAL can opt into the replica with a one-line change, and today's behavior is
+unchanged. **Infra step (you):** provision a Supabase read replica, then set
+`SUPABASE_REPLICA_URL` to its REST endpoint.
 
 ---
 

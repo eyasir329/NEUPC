@@ -372,6 +372,13 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/admin/analytics',
           },
           {
+            id: 'posthog',
+            label: 'PostHog',
+            icon: TrendingUp,
+            href: '/account/admin/posthog',
+            condition: ({ activeRole }) => activeRole === 'admin',
+          },
+          {
             id: 'notices',
             label: 'Inbox',
             icon: Bell,

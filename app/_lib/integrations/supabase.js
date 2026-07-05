@@ -122,6 +122,40 @@ export function createClient() {
   return supabase;
 }
 
+// ── Read-replica seam (Phase 1 — data tier) ─────────────────────────────────
+// When a Supabase read replica is provisioned, set SUPABASE_REPLICA_URL (the
+// replica's REST endpoint). Heavy/public reads can then be routed to the
+// replica via `supabaseRead()` to offload the primary and gain read-HA.
+//
+// Inert until configured: with no SUPABASE_REPLICA_URL, `supabaseRead()`
+// returns the primary admin client, so behavior is identical to today.
+// Docs: docs/architecture/system-design/03-data-tier.md (replica routing, A1).
+const supabaseReplicaUrl = process.env.SUPABASE_REPLICA_URL;
+
+/** True when a read replica endpoint is configured. */
+export const hasReadReplica = !!(supabaseReplicaUrl && supabaseServiceKey);
+
+/**
+ * Read-replica client — same service-role key, pointed at the replica REST
+ * endpoint. Null when no replica is configured (use `supabaseRead()` instead
+ * of importing this directly).
+ */
+export const supabaseReadReplica = hasReadReplica
+  ? createSupabaseClient(supabaseReplicaUrl, supabaseServiceKey)
+  : null;
+
+/**
+ * Returns the client to use for a READ. Prefers the read replica when
+ * configured, otherwise the primary admin client. The DAL should call this
+ * for heavy/public reads that tolerate slight replication lag; use
+ * `supabaseAdmin` directly for read-your-write and transactional reads.
+ *
+ * @returns {import('@supabase/supabase-js').SupabaseClient}
+ */
+export function supabaseRead() {
+  return supabaseReadReplica || supabaseAdmin;
+}
+
 /**
  * Get Supabase connection info for debugging.
  * @returns {Object} Connection details (safe to log, no secrets)

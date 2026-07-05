@@ -12,6 +12,7 @@ import {
   getUserRoles,
   updateUser,
 } from '@/app/_lib/services/data-service';
+import { getPostHogClient } from '@/app/_lib/posthog-server';
 
 async function withTimeout(
   promise,
@@ -139,6 +140,17 @@ const {
             updated_at: new Date().toISOString(),
           });
 
+          const posthog = getPostHogClient();
+          posthog.capture({
+            distinctId: user.email,
+            event: 'user_signed_up',
+            properties: {
+              provider: account?.provider || 'google',
+              email: user.email,
+            },
+          });
+          await posthog.shutdown();
+
           // Now that the user record exists, try uploading the Google
           // profile image to Google Drive "avatars" folder.
           if (user.image) {
@@ -188,6 +200,21 @@ const {
             last_login: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
+
+          const posthog = getPostHogClient();
+          posthog.capture({
+            distinctId: existingUser.id,
+            event: 'user_signed_in',
+            properties: {
+              provider: account?.provider || 'google',
+              email: user.email,
+            },
+          });
+          posthog.identify({
+            distinctId: existingUser.id,
+            properties: { email: user.email, name: user.name },
+          });
+          await posthog.shutdown();
         }
 
         return true;

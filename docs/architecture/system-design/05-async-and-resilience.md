@@ -24,11 +24,14 @@ AFTER:   user request ──► enqueue job ──► fast response (202/optimis
 A queue + idempotent workers. Concrete options (pick per ADR
 [`09-adr/0002-async-tier.md`](09-adr/0002-async-tier.md)):
 
-- **Lightweight (recommended start):** a `jobs` table in Postgres as the queue +
-  a Vercel Cron that drains it, or **Supabase Queues / pg-boss**. No new infra,
-  fits current scale.
+- **Lightweight (implemented):** a `jobs` table in Postgres as the queue, drained
+  by `/api/jobs/drain` on a schedule. **Scheduler = GitHub Actions**
+  (`.github/workflows/scheduled-jobs.yml`), not Vercel Cron — the free plan
+  doesn't include usable cron, so a scheduled Actions workflow hits the
+  `CRON_SECRET`-protected endpoints instead. No new infra, fits current scale.
 - **[headroom]:** a managed queue (Upstash QStash / SQS) + dedicated workers when
-  job volume or fan-out grows.
+  job volume or fan-out grows. QStash is also a good fit if GitHub Actions
+  minutes become a constraint on a private repo (see the workflow's billing note).
 
 ### What moves to the worker tier
 
@@ -51,9 +54,11 @@ A queue + idempotent workers. Concrete options (pick per ADR
 4. **Observable** — each job emits start/end/outcome + duration
    ([`06-observability.md`](06-observability.md)).
 
-> **Fix R2 first:** the 3 existing cron routes must have a **known, monitored
-> trigger** (Vercel Cron entries or an external scheduler) and be **idempotent**.
-> An empty `vercel.json` crons array with live cron code is a silent-failure trap.
+> **R2 fixed:** the 3 existing cron routes + the drain route are now triggered by
+> **GitHub Actions** (`.github/workflows/scheduled-jobs.yml`) on a schedule,
+> authenticated with `CRON_SECRET`. `vercel.json` crons is intentionally empty
+> (Vercel's free plan has no usable cron). Requires repo `APP_URL` variable +
+> `CRON_SECRET` secret to be set.
 
 ---
 

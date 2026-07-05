@@ -129,6 +129,8 @@ const nextConfig = {
                 isDev ? 'ws:' : null,
                 'https://fgfvuckrafohyjiuidnw.supabase.co',
                 'https://accounts.google.com',
+                'https://us.i.posthog.com',
+                'https://us-assets.i.posthog.com',
               ]
                 .filter(Boolean)
                 .join(' '),
@@ -144,12 +146,38 @@ const nextConfig = {
     ];
   },
 
+  // ── PostHog Reverse Proxy ────────────────────────────────────────────────
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/array/:path*',
+        destination: 'https://us-assets.i.posthog.com/array/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ];
+  },
+
+  // Required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
+
   // Disable the X-Powered-By header (hides Next.js fingerprint)
   poweredByHeader: false,
 
   // ── Server External Packages ────────────────────────────────────────────
   // Keep heavy server-only packages out of the client bundle
-  serverExternalPackages: ['nodemailer', 'sanitize-html', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg'],
+  serverExternalPackages: [
+    'nodemailer',
+    'sanitize-html',
+    'fluent-ffmpeg',
+    '@ffmpeg-installer/ffmpeg',
+  ],
 
   // ── Experimental ──────────────────────────────────────────────────────────
   experimental: {

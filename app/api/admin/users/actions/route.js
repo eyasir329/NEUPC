@@ -12,6 +12,7 @@ import {
   deleteUser,
   approveMember,
 } from '@/app/_lib/services/data-service';
+import { getPostHogClient } from '@/app/_lib/posthog-server';
 
 export async function POST(request) {
   try {
@@ -37,12 +38,20 @@ export async function POST(request) {
     }
 
     switch (action) {
-      case 'suspend':
+      case 'suspend': {
         await suspendUser(userId, adminId, reason);
+        const posthogSuspend = getPostHogClient();
+        posthogSuspend.capture({
+          distinctId: adminId,
+          event: 'user_suspended',
+          properties: { userId, reason },
+        });
+        await posthogSuspend.shutdown();
         return NextResponse.json({
           success: true,
           message: 'User suspended successfully',
         });
+      }
 
       case 'activate':
         await activateUser(userId, adminId, reason);
@@ -65,12 +74,20 @@ export async function POST(request) {
           message: 'User deleted successfully',
         });
 
-      case 'approve':
+      case 'approve': {
         await approveMember(userId, adminId);
+        const posthogApprove = getPostHogClient();
+        posthogApprove.capture({
+          distinctId: adminId,
+          event: 'user_approved',
+          properties: { userId },
+        });
+        await posthogApprove.shutdown();
         return NextResponse.json({
           success: true,
           message: 'User approved successfully',
         });
+      }
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

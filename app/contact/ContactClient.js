@@ -22,6 +22,7 @@ import ScrollCue from '@/app/_components/ui/ScrollCue';
 import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { submitContactFormAction } from '@/app/_lib/actions/contact-actions';
 import { cn } from '@/app/_lib/utils/utils';
+import posthog from 'posthog-js';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -159,17 +160,17 @@ function FaqItem({ faq, isActive, onToggle }) {
       {/* Neon accent left line */}
       <div
         className={cn(
-          'absolute bottom-0 left-0 top-0 w-[3px] bg-neon-lime transition-transform duration-300 ease-out origin-top',
+          'bg-neon-lime absolute top-0 bottom-0 left-0 w-[3px] origin-top transition-transform duration-300 ease-out',
           isActive ? 'scale-y-100' : 'scale-y-0'
         )}
       />
       <button
         onClick={onToggle}
-        className="flex w-full items-start justify-between gap-4 p-5 text-left relative z-10"
+        className="relative z-10 flex w-full items-start justify-between gap-4 p-5 text-left"
       >
         <span
           className={cn(
-            'font-heading text-sm leading-snug font-bold sm:text-base transition-colors duration-200',
+            'font-heading text-sm leading-snug font-bold transition-colors duration-200 sm:text-base',
             isActive ? 'text-neon-lime' : 'text-white'
           )}
         >
@@ -209,7 +210,7 @@ function FaqItem({ faq, isActive, onToggle }) {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="border-t border-white/6 bg-white/[0.01] px-5 pb-5 pt-4 text-sm leading-relaxed text-zinc-400 relative z-10">
+            <div className="relative z-10 border-t border-white/6 bg-white/[0.01] px-5 pt-4 pb-5 text-sm leading-relaxed text-zinc-400">
               {faq.answer}
             </div>
           </motion.div>
@@ -292,6 +293,9 @@ export default function ContactClient({
       if (result?.error) {
         setErrors({ submit: result.error });
       } else {
+        posthog.capture('contact_form_submitted', {
+          subject: formData.subject,
+        });
         setSubmitSuccess(true);
         setFormData(INITIAL_FORM);
         setTimeout(() => setSubmitSuccess(false), 6000);
@@ -361,13 +365,18 @@ export default function ContactClient({
               variants={fadeUp}
               className="flex flex-wrap items-center gap-4 border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:px-5 sm:py-2.5 sm:text-[11px] h-[38px] sm:h-[42px]">
+              <div className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex h-[38px] items-center gap-2.5 rounded-full border px-4 py-2 font-mono text-[10px] tracking-[0.18em] uppercase sm:h-[42px] sm:px-5 sm:py-2.5 sm:text-[11px]">
                 <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
                 Responding within 24–48 hrs
               </div>
 
               {[
-                { value: faqs.length, label: 'FAQ Answered', mobile: 'FAQs', accent: true },
+                {
+                  value: faqs.length,
+                  label: 'FAQ Answered',
+                  mobile: 'FAQs',
+                  accent: true,
+                },
                 {
                   value: keyContacts.length,
                   label: 'Key Contacts',
@@ -377,18 +386,18 @@ export default function ContactClient({
               ].map((stat, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 rounded-full border border-white/8 bg-white/[0.015] px-4 py-1.5 sm:px-5 sm:py-2 backdrop-blur-md transition-all duration-300 hover:border-white/16 hover:bg-white/[0.03] h-[38px] sm:h-[42px]"
+                  className="flex h-[38px] items-center gap-3 rounded-full border border-white/8 bg-white/[0.015] px-4 py-1.5 backdrop-blur-md transition-all duration-300 hover:border-white/16 hover:bg-white/[0.03] sm:h-[42px] sm:px-5 sm:py-2"
                 >
                   <span
                     className={cn(
-                      'font-heading text-lg font-black leading-none tabular-nums stat-numeral sm:text-xl',
+                      'font-heading stat-numeral text-lg leading-none font-black tabular-nums sm:text-xl',
                       stat.accent ? 'text-neon-lime' : 'text-white'
                     )}
                   >
                     {stat.value}
                   </span>
                   <div className="flex flex-col justify-center">
-                    <span className="font-mono text-[8px] font-bold tracking-[0.15em] text-zinc-400 uppercase leading-none sm:text-[9px]">
+                    <span className="font-mono text-[8px] leading-none font-bold tracking-[0.15em] text-zinc-400 uppercase sm:text-[9px]">
                       <span className="sm:hidden">{stat.mobile}</span>
                       <span className="hidden sm:inline">{stat.label}</span>
                     </span>
@@ -413,7 +422,7 @@ export default function ContactClient({
                 variants={fadeUp}
                 initial="hidden"
                 animate="visible"
-                className="glass-panel rounded-2xl p-6 sm:p-8 relative overflow-hidden group hover:border-neon-lime/20 transition-all duration-300"
+                className="glass-panel group hover:border-neon-lime/20 relative overflow-hidden rounded-2xl p-6 transition-all duration-300 sm:p-8"
               >
                 <div className="mb-6 flex items-center gap-3">
                   <span className="bg-neon-lime h-px w-7" />
@@ -431,12 +440,15 @@ export default function ContactClient({
                         ? `${prefix}${format ? format(value) : value}`
                         : undefined;
                       return (
-                        <div key={key} className="group/item flex items-start gap-4 p-2.5 -mx-2.5 rounded-xl transition-all duration-300 hover:bg-white/[0.02]">
-                          <div className="border-white/10 bg-white/[0.02] text-zinc-400 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300 group-hover/item:border-neon-lime/30 group-hover/item:bg-neon-lime/5 group-hover/item:text-neon-lime group-hover/item:shadow-[0_0_15px_-3px_rgba(182,243,107,0.2)]">
+                        <div
+                          key={key}
+                          className="group/item -mx-2.5 flex items-start gap-4 rounded-xl p-2.5 transition-all duration-300 hover:bg-white/[0.02]"
+                        >
+                          <div className="group-hover/item:border-neon-lime/30 group-hover/item:bg-neon-lime/5 group-hover/item:text-neon-lime flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-zinc-400 transition-all duration-300 group-hover/item:shadow-[0_0_15px_-3px_rgba(182,243,107,0.2)]">
                             {icon}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase leading-none mt-1">
+                            <p className="mt-1 font-mono text-[9px] leading-none font-bold tracking-widest text-zinc-500 uppercase">
                               {label}
                             </p>
                             {isLink ? (
@@ -447,7 +459,7 @@ export default function ContactClient({
                                 {value}
                               </a>
                             ) : (
-                              <p className="mt-1.5 text-sm leading-snug text-zinc-300 font-semibold">
+                              <p className="mt-1.5 text-sm leading-snug font-semibold text-zinc-300">
                                 {value}
                               </p>
                             )}
@@ -465,7 +477,7 @@ export default function ContactClient({
                   variants={fadeUp}
                   initial="hidden"
                   animate="visible"
-                  className="glass-panel rounded-2xl p-6 sm:p-8 hover:border-white/12 transition-all duration-300"
+                  className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:border-white/12 sm:p-8"
                 >
                   <div className="mb-6 flex items-center gap-3">
                     <span className="bg-neon-lime h-px w-7" />
@@ -486,21 +498,31 @@ export default function ContactClient({
                           whileTap={{ scale: 0.98 }}
                           className={cn(
                             'group/social flex items-center gap-2.5 rounded-xl border border-white/6 bg-white/[0.015] px-3 py-2.5 transition-all duration-300',
-                            brandName === 'facebook' && 'hover:border-blue-500/30 hover:bg-blue-500/5',
-                            brandName === 'linkedin' && 'hover:border-sky-600/30 hover:bg-sky-600/5',
-                            brandName === 'github' && 'hover:border-white/30 hover:bg-white/5',
-                            brandName === 'twitter' && 'hover:border-zinc-300/30 hover:bg-zinc-300/5',
-                            brandName === 'youtube' && 'hover:border-red-600/30 hover:bg-red-600/5'
+                            brandName === 'facebook' &&
+                              'hover:border-blue-500/30 hover:bg-blue-500/5',
+                            brandName === 'linkedin' &&
+                              'hover:border-sky-600/30 hover:bg-sky-600/5',
+                            brandName === 'github' &&
+                              'hover:border-white/30 hover:bg-white/5',
+                            brandName === 'twitter' &&
+                              'hover:border-zinc-300/30 hover:bg-zinc-300/5',
+                            brandName === 'youtube' &&
+                              'hover:border-red-600/30 hover:bg-red-600/5'
                           )}
                         >
                           <span
                             className={cn(
                               'shrink-0 text-zinc-400 transition-colors duration-300',
-                              brandName === 'facebook' && 'group-hover/social:text-blue-500',
-                              brandName === 'linkedin' && 'group-hover/social:text-sky-400',
-                              brandName === 'github' && 'group-hover/social:text-white',
-                              brandName === 'twitter' && 'group-hover/social:text-white',
-                              brandName === 'youtube' && 'group-hover/social:text-red-500'
+                              brandName === 'facebook' &&
+                                'group-hover/social:text-blue-500',
+                              brandName === 'linkedin' &&
+                                'group-hover/social:text-sky-400',
+                              brandName === 'github' &&
+                                'group-hover/social:text-white',
+                              brandName === 'twitter' &&
+                                'group-hover/social:text-white',
+                              brandName === 'youtube' &&
+                                'group-hover/social:text-red-500'
                             )}
                           >
                             <social.Icon className="h-4 w-4" />
@@ -508,11 +530,16 @@ export default function ContactClient({
                           <span
                             className={cn(
                               'truncate font-mono text-[9px] font-bold tracking-wider text-zinc-400 uppercase transition-colors duration-300',
-                              brandName === 'facebook' && 'group-hover/social:text-blue-500',
-                              brandName === 'linkedin' && 'group-hover/social:text-sky-400',
-                              brandName === 'github' && 'group-hover/social:text-white',
-                              brandName === 'twitter' && 'group-hover/social:text-white',
-                              brandName === 'youtube' && 'group-hover/social:text-red-500'
+                              brandName === 'facebook' &&
+                                'group-hover/social:text-blue-500',
+                              brandName === 'linkedin' &&
+                                'group-hover/social:text-sky-400',
+                              brandName === 'github' &&
+                                'group-hover/social:text-white',
+                              brandName === 'twitter' &&
+                                'group-hover/social:text-white',
+                              brandName === 'youtube' &&
+                                'group-hover/social:text-red-500'
                             )}
                           >
                             {social.name}
@@ -530,7 +557,7 @@ export default function ContactClient({
                   variants={fadeUp}
                   initial="hidden"
                   animate="visible"
-                  className="glass-panel rounded-2xl p-6 sm:p-8 hover:border-white/12 transition-all duration-300"
+                  className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:border-white/12 sm:p-8"
                 >
                   <div className="mb-6 flex items-center gap-3">
                     <span className="bg-neon-lime h-px w-7" />
@@ -560,17 +587,17 @@ export default function ContactClient({
                           key={contact.id}
                           variants={cardReveal}
                           whileHover={{ y: -2 }}
-                          className="group/contact hover:border-white/16 flex items-center gap-4 rounded-xl border border-white/6 bg-white/[0.015] p-4 transition-all duration-300 hover:bg-white/[0.03]"
+                          className="group/contact flex items-center gap-4 rounded-xl border border-white/6 bg-white/[0.015] p-4 transition-all duration-300 hover:border-white/16 hover:bg-white/[0.03]"
                         >
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] font-mono text-xs font-bold text-white shadow-inner transition-all duration-300 group-hover/contact:border-neon-lime/30 group-hover/contact:bg-neon-lime/5 group-hover/contact:text-neon-lime group-hover/contact:shadow-[0_0_15px_-4px_rgba(182,243,107,0.15)]">
+                          <div className="group-hover/contact:border-neon-lime/30 group-hover/contact:bg-neon-lime/5 group-hover/contact:text-neon-lime flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] font-mono text-xs font-bold text-white shadow-inner transition-all duration-300 group-hover/contact:shadow-[0_0_15px_-4px_rgba(182,243,107,0.15)]">
                             {initials}
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <span className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-block rounded-md border px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-wider uppercase leading-none">
+                            <span className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-block rounded-md border px-1.5 py-0.5 font-mono text-[8px] leading-none font-bold tracking-wider uppercase">
                               {contact.role}
                             </span>
-                            <p className="mt-1 text-sm font-bold text-white leading-tight transition-colors duration-200 group-hover/contact:text-neon-lime">
+                            <p className="group-hover/contact:text-neon-lime mt-1 text-sm leading-tight font-bold text-white transition-colors duration-200">
                               {contact.name}
                             </p>
                             <a
@@ -584,7 +611,7 @@ export default function ContactClient({
                             href={contact.linkedin}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:border-sky-500/40 hover:bg-sky-500/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-zinc-400 transition-all duration-300 hover:text-sky-400 hover:shadow-[0_0_15px_-4px_rgba(14,165,233,0.2)]"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-zinc-400 transition-all duration-300 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-400 hover:shadow-[0_0_15px_-4px_rgba(14,165,233,0.2)]"
                           >
                             <LinkedInIcon className="h-4 w-4" />
                           </a>
@@ -692,7 +719,7 @@ export default function ContactClient({
                   {/* Name + Email */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-550 uppercase">
+                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
                         Full Name <span className="text-neon-lime">*</span>
                       </label>
                       <input
@@ -713,7 +740,7 @@ export default function ContactClient({
                       )}
                     </div>
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-550 uppercase">
+                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
                         Email <span className="text-neon-lime">*</span>
                       </label>
                       <input
@@ -738,7 +765,7 @@ export default function ContactClient({
                   {/* Phone + Subject */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-550 uppercase">
+                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
                         Phone <span className="text-zinc-600">(optional)</span>
                       </label>
                       <input
@@ -751,7 +778,7 @@ export default function ContactClient({
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-550 uppercase">
+                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
                         Subject <span className="text-neon-lime">*</span>
                       </label>
                       <div className="relative">
@@ -761,7 +788,7 @@ export default function ContactClient({
                           onChange={handleChange}
                           className={cn(
                             inputBase,
-                            'appearance-none cursor-pointer pr-10',
+                            'cursor-pointer appearance-none pr-10',
                             errors.subject ? inputError : inputNormal,
                             !formData.subject && 'text-zinc-500'
                           )}
@@ -779,7 +806,7 @@ export default function ContactClient({
                             </option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-zinc-550">
+                        <div className="text-zinc-550 pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                           <svg
                             className="h-4 w-4"
                             fill="none"
@@ -805,7 +832,7 @@ export default function ContactClient({
 
                   {/* Message */}
                   <div>
-                    <label className="mb-1.5 block font-mono text-[9px] font-bold tracking-widest text-zinc-550 uppercase">
+                    <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
                       Message <span className="text-neon-lime">*</span>
                     </label>
                     <textarea
@@ -840,7 +867,7 @@ export default function ContactClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="group bg-neon-lime font-heading flex w-full items-center justify-center gap-2.5 rounded-full px-8 py-4 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.4)] transition-all duration-300 hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.6)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group bg-neon-lime font-heading flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-full px-8 py-4 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.4)] transition-all duration-300 hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? (
                       <>
