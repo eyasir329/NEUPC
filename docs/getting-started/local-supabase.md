@@ -333,5 +333,5 @@ Edit `config.toml` to customize ports or enable additional features.
 ## Next Steps
 
 - [Environment Variables Reference](./environment-variables.md)
-- [Database Schema Documentation](../database/index.md)
-- [Architecture Overview](../architecture/index.md)
+- [Database Schema Documentation](../reference/database-schema.md)
+- [Architecture Overview](../architecture/README.md)

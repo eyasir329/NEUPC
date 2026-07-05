@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProblems, useSolution } from '@/app/_hooks/useProblems';
+import posthog from 'posthog-js';
 import SolutionModal from './SolutionModal';
 import ProblemDetailModal from './ProblemDetailModal';
 import AnalyticsHeader from './AnalyticsHeader';
@@ -1098,6 +1099,12 @@ export default function ProblemList({
   }, [initialSearch, filters.search, updateFilters]);
 
   const handleViewDetail = (problem) => {
+    posthog.capture('problem_viewed', {
+      problem_id: problem.problem_id,
+      platform: problem.platform,
+      difficulty_tier: problem.difficulty_tier,
+      problem_name: problem.problem_name,
+    });
     setDetailProblem(problem);
   };
 

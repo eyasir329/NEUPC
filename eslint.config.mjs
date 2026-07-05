@@ -36,6 +36,40 @@ const eslintConfig = defineConfig([
       'react/jsx-no-comment-textnodes': 'warn',
     },
   },
+
+  // ── Architecture boundary: DAL is the only door to Supabase ──────────────
+  // System-design invariant (docs/architecture/system-design/09-adr/0003).
+  // ~133 files currently violate this (audited Phase 0), so the rule is a
+  // `warn`-level RATCHET: it stops NEW direct Supabase access without failing
+  // the build on the existing debt. As each area is migrated into the DAL
+  // (app/_lib/services/data/*), tighten toward 'error' per-directory.
+  //
+  // Exempt: the DAL itself, and the client definition module.
+  {
+    files: ['**/*.{js,jsx,mjs}'],
+    ignores: [
+      'app/_lib/services/data/**',
+      'app/_lib/integrations/supabase.js',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              group: [
+                '@/app/_lib/integrations/supabase',
+                '**/integrations/supabase',
+                '**/_lib/integrations/supabase',
+              ],
+              message:
+                'Do not access Supabase directly. Route DB access through the data-access layer (app/_lib/services/data/*). See docs/architecture/system-design/09-adr/0003-strict-layering.md',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

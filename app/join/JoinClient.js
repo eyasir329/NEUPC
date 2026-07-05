@@ -8,6 +8,7 @@
 import { signIn } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import posthog from 'posthog-js';
 import { useIsMember } from '@/app/_components/ui/UserRoleProvider';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import dynamic from 'next/dynamic';
@@ -97,8 +98,10 @@ export default function JoinClient({
     if (isLoggedIn) router.replace('/account');
   }, [isLoggedIn, router]);
 
-  const handleGoogleSignIn = () =>
+  const handleGoogleSignIn = () => {
+    posthog.capture('sign_in_clicked', { provider: 'google' });
     signIn('google', { callbackUrl: '/account' });
+  };
 
   const features = propFeatures.map((f, i) => ({
     Icon: Icons[f.icon] || Icons.Zap,

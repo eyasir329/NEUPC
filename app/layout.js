@@ -18,6 +18,7 @@ import AsyncFooter from './_components/sections/AsyncFooter';
 import TopProgressBar from './_components/ui/TopProgressBar';
 import ToasterProvider from './_components/ui/ToasterProvider';
 import { UserRoleProvider } from './_components/ui/UserRoleProvider';
+import PostHogIdentify from './_components/ui/PostHogIdentify';
 import NavbarSkeleton from './_components/ui/NavbarSkeleton';
 import AppShell from './_components/ui/AppShell';
 import PageTransition from './_components/motion/PageTransition';
@@ -169,6 +170,12 @@ export default async function RootLayout({ children }) {
             role={session?.user?.role || null}
             isLoggedIn={!!session}
           >
+            <PostHogIdentify
+              userId={session?.user?.id || null}
+              email={session?.user?.email || null}
+              name={session?.user?.name || null}
+              role={session?.user?.role || null}
+            />
             <main className="w-full grow">
               <PageTransition>{children}</PageTransition>
             </main>

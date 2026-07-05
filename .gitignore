@@ -99,7 +99,9 @@ next-env.d.ts
 scripts/*-progress.json
 scripts/codeforces-scrape-progress.json
 
+scripts/
 # Sensitive database files
+supabase/
 supabase/remote_data.sql
 supabase/seed.sql
 supabase/migrations/
@@ -130,3 +132,10 @@ next-server.log
 
 # CLAUDE.md (AI instructions, keep local only)
 CLAUDE.md
+
+# scratch / one-off debug scripts (keep local only)
+scratch/
+
+# planning docs (keep local only)
+plans/
+.env.local

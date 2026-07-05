@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import posthog from 'posthog-js';
 import {
   CalendarDays,
   FileEdit,
@@ -171,7 +172,12 @@ export default function EventManagementClient({ initialEvents, roles = [] }) {
       {createModal && (
         <CreateEventForm
           onClose={() => setCreateModal(false)}
-          onSuccess={() => {
+          onSuccess={(createdEvent) => {
+            posthog.capture('event_created', {
+              event_title: createdEvent?.title,
+              event_type: createdEvent?.type,
+              event_status: createdEvent?.status,
+            });
             setCreateModal(false);
             showToast('Event created!');
             window.location.reload();

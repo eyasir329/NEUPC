@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
+import posthog from 'posthog-js';
 import {
   GraduationCap,
   Search,
@@ -378,6 +379,10 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
       const fd = new FormData();
       fd.set('id', req.id);
       await approveApplicationAction(fd);
+      posthog.capture('application_approved', {
+        application_id: req.id,
+        application_type: 'join_request',
+      });
       onRefresh?.('approved');
     });
   }
@@ -389,6 +394,10 @@ function ApplicationRow({ req, selected, onToggleSelect, onOpen, onRefresh }) {
       fd.set('id', req.id);
       fd.set('rejection_reason', reason);
       await rejectApplicationAction(fd);
+      posthog.capture('application_rejected', {
+        application_id: req.id,
+        application_type: 'join_request',
+      });
       setShowRejectInput(false);
       onRefresh?.('rejected');
     });
@@ -696,6 +705,10 @@ function GuestRow({ user, onApprove, onReject, onFlash }) {
         const fd = new FormData();
         fd.set('userId', user.id);
         await approveMemberAction(fd);
+        posthog.capture('application_approved', {
+          user_id: user.id,
+          application_type: 'guest_access',
+        });
         onApprove(user.id);
         onFlash(`${user.name} approved as guest.`, 'success');
       } catch (err) {
@@ -711,6 +724,10 @@ function GuestRow({ user, onApprove, onReject, onFlash }) {
         fd.set('userId', user.id);
         fd.set('reason', reason || `Guest application rejected by ${role}`);
         await rejectGuestAction(fd);
+        posthog.capture('application_rejected', {
+          user_id: user.id,
+          application_type: 'guest_access',
+        });
         onReject(user.id);
         onFlash(`${user.name}'s application rejected.`, 'success');
       } catch (err) {

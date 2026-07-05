@@ -8,6 +8,69 @@ import {
   isSupabaseConfigured,
 } from '@/app/_lib/integrations/supabase';
 import { _log } from './_internal';
+import { key, mget, msetWithTtl, invalidate, TTL } from './_cache';
+
+/**
+ * Batch-resolve minimal display data for many user ids at once, cached.
+ *
+ * Because `users` is referenced everywhere, any list (blog authors, discussion
+ * participants, event organizers…) needs `{name, avatar, username}` per id.
+ * This resolves them in one round-trip and caches each by id, so repeated
+ * lookups across requests are near-free (see 04-caching.md, the resolve-user
+ * cache). Cache is optional — falls back to a single DB query when Redis is off.
+ *
+ * @param {string[]} ids  user ids (duplicates and falsy values are ignored)
+ * @returns {Promise<Record<string, {id:string, name:string, avatar:string, username:string|null}>>}
+ *   map keyed by user id (missing users are simply absent)
+ */
+export async function resolveUsers(ids) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  const cacheKeys = unique.map((id) => key('identity', 'user', id));
+  const cachedRows = await mget(cacheKeys);
+
+  const result = {};
+  const missing = [];
+  unique.forEach((id, i) => {
+    const row = cachedRows[i];
+    if (row) result[id] = row;
+    else missing.push(id);
+  });
+
+  if (missing.length > 0) {
+    // `username` lives on member_profiles, not users. users has TWO fk
+    // relationships to member_profiles (user_id and approved_by), so the
+    // embed must be disambiguated by constraint name. It's a one-to-one
+    // embed (object or null), not an array.
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select(
+        'id, full_name, avatar_url, member_profiles!member_profiles_user_id_fkey(username)'
+      )
+      .in('id', missing);
+
+    if (error) {
+      _log('resolveUsers', error);
+    } else {
+      const toCache = [];
+      for (const u of data || []) {
+        const shaped = {
+          id: u.id,
+          name: u.full_name,
+          avatar: u.avatar_url,
+          username: u.member_profiles?.username ?? null,
+        };
+        result[u.id] = shaped;
+        toCache.push([key('identity', 'user', u.id), shaped]);
+      }
+      // Long TTL — invalidated explicitly on profile update.
+      await msetWithTtl(toCache, TTL.long);
+    }
+  }
+
+  return result;
+}
 
 // Get user by email.
 export async function getUserByEmail(email) {
@@ -115,6 +178,8 @@ export async function updateUser(id, updates) {
     .select()
     .single();
   if (error) throw new Error(error.message);
+  // Keep the resolve-user cache correct after a profile change.
+  await invalidate(key('identity', 'user', id));
   return data;
 }
 
