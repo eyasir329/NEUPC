@@ -139,3 +139,18 @@ scratch/
 # planning docs (keep local only)
 plans/
 .env.local
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf

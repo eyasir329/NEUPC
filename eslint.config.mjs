@@ -50,6 +50,11 @@ const eslintConfig = defineConfig([
     ignores: [
       'app/_lib/services/data/**',
       'app/_lib/integrations/supabase.js',
+      // The multi-database router tier IS a door to Supabase (the choke point
+      // that owns provider selection, outbox, and failover) — a peer of the DAL,
+      // legitimately allowed to import the client directly. Docs:
+      // docs/architecture/proposals/multi-database/03-router-and-caching.md
+      'app/_lib/db/**',
     ],
     rules: {
       'no-restricted-imports': [

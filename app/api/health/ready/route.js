@@ -21,6 +21,8 @@ import {
 import { isCacheEnabled } from '@/app/_lib/services/data/_cache';
 import { queueStats } from '@/app/_lib/services/data/jobs';
 import { breakerStates } from '@/app/_lib/utils/circuit-breaker';
+import { checkInsforgeHealth } from '@/app/_lib/db/insforge';
+import { replicationLag } from '@/app/_lib/db/outbox';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -52,6 +54,19 @@ export async function GET() {
 
   // Non-critical: shared cache
   checks.cache = { ok: true, enabled: isCacheEnabled() };
+
+  // Non-critical: InsForge standby mirror (schema-only, not yet failed over to —
+  // see docs/architecture/proposals/multi-database/). Reported for observability.
+  const insforge = await checkInsforgeHealth();
+  checks.insforgeStandby = { ok: insforge.ok, ms: insforge.latencyMs, error: insforge.error };
+
+  // Non-critical: Supabase→InsForge replication lag (pending outbox backlog,
+  // dead-letters, age of oldest pending change). Informational.
+  try {
+    checks.replication = await replicationLag();
+  } catch (err) {
+    checks.replication = { error: err?.message };
+  }
 
   // Queue depth + breaker snapshot (informational)
   let queue = {};
