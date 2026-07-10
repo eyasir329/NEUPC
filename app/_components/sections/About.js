@@ -119,14 +119,6 @@ function About({ data = {}, settings = {} }) {
             <div className="relative mx-auto w-full max-w-[360px] sm:max-w-[420px] lg:max-w-full">
               {/* Card */}
               <div className="ph-violet soft-glow-violet relative aspect-[4/5] w-full overflow-hidden rounded-3xl">
-                {/* Corner meta */}
-                <div className="absolute top-5 left-5 z-10 font-mono text-[9px] font-bold tracking-[0.4em] uppercase opacity-75 sm:text-[10px]">
-                  {'/// IDENTITY'}
-                </div>
-                <div className="absolute top-5 right-5 z-10 font-mono text-[9px] font-bold tracking-[0.3em] uppercase opacity-55 sm:text-[10px]">
-                  v1.0
-                </div>
-
                 <Image
                   src={settings?.about_image_url || '/about.jpg'}
                   alt={
@@ -140,35 +132,34 @@ function About({ data = {}, settings = {} }) {
                   loading="lazy"
                 />
 
-                {/* Gradient overlay */}
-                <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#05060B]/85 via-[#05060B]/15 to-transparent" />
+                {/* Gradient overlays — top for the identity block, bottom for the badge row */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-2/5 bg-linear-to-b from-[#05060B]/90 via-[#05060B]/40 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-[#05060B]/90 via-[#05060B]/40 to-transparent" />
 
-                {/* Bottom row: badge + caption in one aligned flex row */}
-                <div className="absolute right-5 bottom-5 left-5 flex items-center justify-between gap-3">
-                  {/* Badge + label grouped */}
-                  <div className="flex items-center gap-3">
-                    {/* Est. badge — small, inline */}
-                    <div className="bg-neon-lime flex h-12 w-12 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-[#05060b] shadow-lg">
-                      <span className="font-heading text-[11px] leading-none font-black text-black italic">
-                        {settings?.about_badge_year || '2025'}
-                      </span>
-                      <span className="font-mono text-[6px] tracking-widest text-black/60 uppercase">
-                        Est.
-                      </span>
-                    </div>
-                    {/* Club name */}
-                    <div>
-                      <div className="font-heading text-xl leading-none font-black text-white sm:text-2xl">
-                        {settings?.site_name || 'NEUPC'}
-                      </div>
-                      <div className="mt-0.5 font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px]">
-                        {settings?.about_university_name ||
-                          'Netrokona University'}
-                      </div>
-                    </div>
+                {/* Top-left identity: club name + university */}
+                <div className="absolute top-6 left-6 z-10">
+                  <span className="bg-neon-violet mb-3 block h-1 w-10 rounded-full" />
+                  <div className="font-heading text-2xl leading-none font-black tracking-tight text-white sm:text-3xl">
+                    {settings?.site_name || 'NEUPC'}
                   </div>
-                  {/* Right label */}
-                  <div className="text-right font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px] whitespace-pre-line">
+                  <div className="mt-2 font-mono text-[9px] tracking-[0.3em] text-white/70 uppercase sm:text-[10px]">
+                    {settings?.about_university_name || 'Netrokona University'}
+                  </div>
+                </div>
+
+                {/* Bottom row: Est. badge + caption */}
+                <div className="absolute right-6 bottom-6 left-6 z-10 flex items-end justify-between gap-4">
+                  {/* Est. badge — enlarged */}
+                  <div className="bg-neon-lime flex h-20 w-20 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-[#05060b] shadow-xl sm:h-24 sm:w-24">
+                    <span className="font-mono text-[8px] font-bold tracking-[0.3em] text-black/60 uppercase sm:text-[9px]">
+                      Est.
+                    </span>
+                    <span className="font-heading text-xl leading-none font-black text-black italic sm:text-2xl">
+                      {settings?.about_badge_year || '2025'}
+                    </span>
+                  </div>
+                  {/* Caption */}
+                  <div className="font-heading text-right text-lg leading-tight font-black tracking-wide text-white/85 uppercase sm:text-xl whitespace-pre-line">
                     {settings?.about_overlay_caption || 'Programming\nClub'}
                   </div>
                 </div>
