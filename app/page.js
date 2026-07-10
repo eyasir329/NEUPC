@@ -48,7 +48,6 @@ export default async function HomePage() {
     stats,
     joinBenefits,
     settings,
-    roadmaps,
   } = await getHomePageData();
 
   return (
@@ -59,7 +58,7 @@ export default async function HomePage() {
       <WebsiteJsonLd />
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <Hero data={hero} settings={settings} stats={stats} roadmaps={roadmaps} />
+      <Hero data={hero} settings={settings} stats={stats} />
 
       {/* ── About ───────────────────────────────────────────────────── */}
       <About data={about} settings={settings} />

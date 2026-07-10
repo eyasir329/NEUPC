@@ -8,98 +8,97 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// `slug` matches an actual published roadmap's slug column in the `roadmaps`
-// table, so a click can deep-link to that roadmap's page. Every node here
-// corresponds 1:1 to one of the 13 published roadmaps.
+// Default nodes shown when the admin hasn't configured `hero_roadmap_nodes`
+// yet. Each node's `link` deep-links to a published roadmap page.
 export const DATA_NODES = [
   {
     id: 'GP',
     label: 'Graphics Programming',
-    slug: 'graphics-programming-roadmap-beginner-to-expert-mmpp5z3o',
+    link: '/roadmaps/graphics-programming-roadmap-beginner-to-expert-mmpp5z3o',
     description:
       'Master rendering pipelines, shaders, OpenGL/Vulkan, and real-time 3D graphics engines from beginner to expert.',
   },
   {
     id: 'CV',
     label: 'Computer Vision',
-    slug: 'computer-vision-roadmap-beginner-to-expert-mmow7pry',
+    link: '/roadmaps/computer-vision-roadmap-beginner-to-expert-mmow7pry',
     description:
       'Explore image processing, object detection, and visual models to enable machines to interpret visual data.',
   },
   {
     id: 'SYS',
     label: 'System Design',
-    slug: 'system-design-administration-roadmap-beginner-to-expert-mmp9kjef',
+    link: '/roadmaps/system-design-administration-roadmap-beginner-to-expert-mmp9kjef',
     description:
       'Architect robust distributed systems, manage cloud infrastructure, and master high-availability backend administration.',
   },
   {
     id: 'MOB',
     label: 'Mobile App Dev',
-    slug: 'full-stack-mobile-app-development-mmopm53v',
+    link: '/roadmaps/full-stack-mobile-app-development-mmopm53v',
     description:
       'Build cross-platform and native mobile applications focusing on performance, UI/UX, and state management.',
   },
   {
     id: 'NLP',
     label: 'Natural Language Processing',
-    slug: 'natural-language-processing-nlp-roadmap-beginner-to-expert-mmowix0e',
+    link: '/roadmaps/natural-language-processing-nlp-roadmap-beginner-to-expert-mmowix0e',
     description:
       'Dive into NLP, text generation, transformers, and the semantic understanding of human languages.',
   },
   {
     id: 'RAG',
     label: 'Agentic AI & RAG',
-    slug: 'agentic-ai-rag-roadmap-beginner-to-expert-mmoy9xw3',
+    link: '/roadmaps/agentic-ai-rag-roadmap-beginner-to-expert-mmoy9xw3',
     description:
       'Design autonomous AI agents and Retrieval-Augmented Generation flows using modern LLM orchestration.',
   },
   {
     id: 'RL',
     label: 'Reinforcement Learning',
-    slug: 'reinforcement-learning-roadmap-beginner-to-expert-mmowoq45',
+    link: '/roadmaps/reinforcement-learning-roadmap-beginner-to-expert-mmowoq45',
     description:
       'Train models through reward/penalty paradigms, diving into Q-learning, policy gradients, and agents.',
   },
   {
     id: 'PAR',
     label: 'Concurrency Parallelism',
-    slug: 'concurrency-parallelism-roadmap-beginner-to-expert-mmpp8ca3',
+    link: '/roadmaps/concurrency-parallelism-roadmap-beginner-to-expert-mmpp8ca3',
     description:
       'Master multi-threading, concurrency models, asynchronous programming, and CPU/GPU-accelerated processing.',
   },
   {
     id: 'WEB',
     label: 'Full-Stack Web',
-    slug: 'full-stack-web-development-roadmap-from-basics-to-mastery-mmopea6y',
+    link: '/roadmaps/full-stack-web-development-roadmap-from-basics-to-mastery-mmopea6y',
     description:
       'Engineer modern web experiences from responsive frontends to scalable microservice backends.',
   },
   {
     id: 'CP',
     label: 'Competitive Programming',
-    slug: 'competitive-programming-roadmap-beginner-to-expert-mmmpt26y',
+    link: '/roadmaps/competitive-programming-roadmap-beginner-to-expert-mmmpt26y',
     description:
       'Sharpen algorithmic intuition and master complex data structures under strict time and memory constraints.',
   },
   {
     id: 'AI',
     label: 'Machine Learning',
-    slug: 'artificial-intelligence-machine-learning-roadmap-beginner-to-mmoumwg4',
+    link: '/roadmaps/artificial-intelligence-machine-learning-roadmap-beginner-to-mmoumwg4',
     description:
       'Train predictive models, neural networks, and deep learning architectures to extract insights from datasets.',
   },
   {
     id: 'SEC',
     label: 'Cyber Security',
-    slug: 'cyber-security-specialist-roadmap-beginner-to-expert-mmr1hblk',
+    link: '/roadmaps/cyber-security-specialist-roadmap-beginner-to-expert-mmr1hblk',
     description:
       'Understand penetration testing, network defense, cryptography, and zero-trust security architectures.',
   },
   {
     id: 'W3',
     label: 'Web3 Blockchain',
-    slug: 'web3-blockchain-development-roadmap-beginner-to-expert-mmp96crv',
+    link: '/roadmaps/web3-blockchain-development-roadmap-beginner-to-expert-mmp96crv',
     description:
       'Develop decentralized applications, smart contracts, and cryptographic ledger systems on modern blockchains.',
   },
@@ -121,6 +120,10 @@ const NODE_ICONS = {
   W3: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>',
 };
 
+// Shown for any node id without a hand-drawn icon above (e.g. admin-added nodes).
+const DEFAULT_NODE_ICON =
+  '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>';
+
 const MULTILINE_CODE_SNIPPETS = [
   '#include <iostream>\nusing namespace std;\n\nint main() {\n  int n, m; adj[1e5];\n  vector<int> f(n);\n  return (1);\n}',
   'void dfs(int u, int p) {\n  if (visited) continue;\n  cint a = Alfevents;\n  return v > parents + 1;\n}',
@@ -130,24 +133,21 @@ const MULTILINE_CODE_SNIPPETS = [
   'function init() {\n  const ctx = null;\n  return rgba(255,10);\n}',
 ];
 
-// Overlays admin-editable label/description (matched by slug) onto the
-// code-owned node config, which keeps icon/positioning mechanics intact.
+// Builds the node list entirely from admin-configured overrides when present
+// (variable count, sphere position recalculated by array order); falls back
+// to the code-owned defaults when settings are empty.
 function resolveDataNodes(nodeOverrides) {
   if (!Array.isArray(nodeOverrides) || nodeOverrides.length === 0) {
     return DATA_NODES;
   }
-  const bySlug = new Map(
-    nodeOverrides.filter((n) => n?.slug).map((n) => [n.slug, n])
-  );
-  return DATA_NODES.map((node) => {
-    const override = bySlug.get(node.slug);
-    if (!override) return node;
-    return {
-      ...node,
-      label: override.label || node.label,
-      description: override.description || node.description,
-    };
-  });
+  return nodeOverrides
+    .filter((n) => n?.id && n?.label)
+    .map((n) => ({
+      id: n.id,
+      label: n.label,
+      description: n.description || '',
+      link: n.link || '',
+    }));
 }
 
 export default function Hero3DCanvas({ onNodeClick, nodeOverrides } = {}) {
@@ -346,7 +346,7 @@ export default function Hero3DCanvas({ onNodeClick, nodeOverrides } = {}) {
 
       const texture = new THREE.CanvasTexture(canvas);
 
-      const svgPath = NODE_ICONS[symbol];
+      const svgPath = NODE_ICONS[symbol] || DEFAULT_NODE_ICON;
       if (svgPath) {
         const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="${themeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>`;
         const img = new Image();

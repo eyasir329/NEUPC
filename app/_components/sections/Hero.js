@@ -45,7 +45,7 @@ const DEFAULT_STATS = [
   { value: '12', label: 'Awards' },
 ];
 
-function Hero({ data = {}, settings = {}, stats = [], roadmaps = [] }) {
+function Hero({ data = {}, settings = {}, stats = [] }) {
   const { department = DEFAULTS.department, university = DEFAULTS.university } =
     data;
   const heroStats = stats.length > 0 ? stats.slice(0, 3) : DEFAULT_STATS;
@@ -85,12 +85,7 @@ function Hero({ data = {}, settings = {}, stats = [], roadmaps = [] }) {
       );
       cardPos = { x, y };
     }
-    // Each globe node maps 1:1 to a real published roadmap by slug, so the
-    // card can deep-link straight to that roadmap's page.
-    const roadmap = node.slug
-      ? roadmaps.find((r) => r.slug === node.slug)
-      : null;
-    setSelectedNode({ ...node, cardPos, roadmap });
+    setSelectedNode({ ...node, cardPos });
   };
 
   const { scrollY } = useScroll();
@@ -273,9 +268,9 @@ function Hero({ data = {}, settings = {}, stats = [], roadmaps = [] }) {
           <p className="mt-2 font-sans text-xs leading-relaxed text-zinc-400">
             {selectedNode.description}
           </p>
-          {selectedNode.roadmap && (
+          {selectedNode.link && (
             <Link
-              href={`/roadmaps/${selectedNode.roadmap.slug}`}
+              href={selectedNode.link}
               className="text-neon-lime group mt-3 inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-colors hover:text-white"
             >
               View Roadmap

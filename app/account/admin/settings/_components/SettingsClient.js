@@ -328,7 +328,7 @@ const SECTIONS = [
         key: 'hero_roadmap_nodes',
         label: '3D Globe Roadmap Nodes',
         type: 'json',
-        desc: 'JSON array of {slug, label, description} — slug must match a published roadmap slug; icons/positions stay code-defined',
+        desc: 'JSON array of {id, label, description, link} — id is a short code shown on the node (e.g. "CP"), link is any URL (e.g. /roadmaps/your-slug)',
         category: 'page_content',
       },
 
@@ -392,10 +392,19 @@ const SECTIONS = [
         category: 'about',
       },
       {
-        key: 'member_count',
-        label: 'Member Count (shown next to "Active" chip)',
+        key: 'about_active_chip_label',
+        label: 'Member Count Chip Label',
         type: 'text',
-        placeholder: '150+',
+        placeholder: 'Members',
+        desc: 'Word shown before the member count in the homepage About chip (e.g. "Members", "Total")',
+        category: 'about',
+      },
+      {
+        key: 'member_count',
+        label: 'Member Count',
+        type: 'text',
+        placeholder: '100+',
+        desc: 'Shown next to the chip label above, and on the About page banner',
         category: 'about',
       },
       {
@@ -1720,6 +1729,7 @@ const JSON_TEMPLATES = {
   join_benefits: () => ({ icon: 'Check', title: '', description: '' }),
   join_features: () => ({ icon: 'Eye', title: '', description: '' }),
   about_stats: () => ({ value: '10+', label: 'New Stat', icon: 'Star' }),
+  hero_roadmap_nodes: () => ({ id: '', label: '', description: '', link: '' }),
   about_core_values: () => ({ label: '', icon: 'Check' }),
   about_skills: () => ({ label: '', icon: 'Check' }),
   about_org_structure: () => ({

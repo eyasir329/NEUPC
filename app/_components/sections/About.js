@@ -174,10 +174,10 @@ function About({ data = {}, settings = {} }) {
                 </div>
               </div>
 
-              {/* Active chip */}
+              {/* Member count chip */}
               <div className="bg-neon-violet/90 shadow-neon-violet/10 absolute top-8 -right-3 -rotate-6 rounded-xl px-3 py-1.5 shadow-lg backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
                 <span className="font-mono text-[9px] font-black tracking-[0.25em] text-black uppercase sm:text-[10px]">
-                  Active
+                  {settings?.about_active_chip_label || 'Members'}
                   {settings?.member_count ? ` · ${settings.member_count}` : ''}
                 </span>
               </div>
