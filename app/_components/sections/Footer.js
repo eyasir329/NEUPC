@@ -4,7 +4,7 @@
  */
 
 import Link from 'next/link';
-import { Mail, MapPin } from 'lucide-react';
+import { Mail, MapPin, Phone, Clock } from 'lucide-react';
 
 const defaultSocial = {
   facebook: 'https://facebook.com',
@@ -18,6 +18,7 @@ const defaultContact = {
   email: 'contact@neupc.edu',
   phone: '+880 123 456 7890',
   address: 'Netrokona University\nNetrokona, Bangladesh',
+  officeHours: '',
 };
 
 const defaultDescription =
@@ -88,13 +89,13 @@ const NAV_LINKS = [
   { href: '/events', label: 'Events' },
   { href: '/achievements', label: 'Achievements' },
   { href: '/committee', label: 'Committee' },
-  { href: '/gallery', label: 'Gallery' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 const RESOURCE_LINKS = [
   { href: '/blogs', label: 'Blog' },
   { href: '/roadmaps', label: 'Roadmaps' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/gallery', label: 'Gallery' },
 ];
 
 export default function Footer({
@@ -109,6 +110,9 @@ export default function Footer({
 
   const socialLinks = { ...defaultSocial, ...social };
   const contactInfo = { ...defaultContact, ...contact };
+  if (contact?.office_hours && !contact?.officeHours) {
+    contactInfo.officeHours = contact.office_hours;
+  }
   const footerDescription = footer.description || defaultDescription;
 
   const activeSocials = Object.entries(socialLinks).filter(([, url]) => url);
@@ -222,6 +226,25 @@ export default function Footer({
                   </a>
                 </li>
               )}
+              {contactInfo.phone && (
+                <li className="flex items-center gap-2.5">
+                  <Phone className="text-neon-lime h-3.5 w-3.5 shrink-0" />
+                  <a
+                    href={`tel:${contactInfo.phone.replace(/[^+\d]/g, '')}`}
+                    className="hover:text-neon-lime text-xs font-light text-zinc-500 italic transition-colors"
+                  >
+                    {contactInfo.phone}
+                  </a>
+                </li>
+              )}
+              {contactInfo.officeHours && (
+                <li className="flex items-start gap-2.5">
+                  <Clock className="text-neon-lime mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="text-xs leading-relaxed font-light text-zinc-500 italic">
+                    {contactInfo.officeHours}
+                  </span>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -229,7 +252,7 @@ export default function Footer({
         {/* Bottom bar */}
         <div className="flex flex-col items-center gap-4 border-t border-white/5 pt-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <p className="font-mono text-[9px] font-bold tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">
-            © {currentYear}{' '}
+            © 2025 - {currentYear}{' '}
             {settings?.site_name_full ||
               'Netrokona University Programming Club'}
             . All rights reserved.

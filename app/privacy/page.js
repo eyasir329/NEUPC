@@ -205,7 +205,7 @@ export default function PrivacyPage() {
     <div className="relative min-h-screen overflow-hidden bg-[#05060B]">
       {/* Background */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="grid-overlay absolute inset-0 opacity-20" />
+        <div className="grid-overlay absolute inset-0 opacity-25" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(124,92,255,0.05),transparent)]" />
         <div className="bg-neon-violet/8 absolute -top-40 -left-40 h-125 w-125 rounded-full blur-[140px]" />
         <div className="bg-neon-lime/5 absolute -right-40 bottom-0 h-100 w-100 rounded-full blur-[120px]" />
@@ -223,7 +223,7 @@ export default function PrivacyPage() {
           </div>
 
           {/* Headline */}
-          <h1 className="kinetic-headline font-heading text-5xl font-black text-white uppercase sm:text-6xl md:text-7xl">
+          <h1 className="kinetic-headline font-heading text-[clamp(2.8rem,8vw,4.5rem)] leading-none font-black text-white uppercase">
             PRIVACY
             <br />
             <span className="text-stroke-lime text-transparent">POLICY.</span>

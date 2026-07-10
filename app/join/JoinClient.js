@@ -111,7 +111,7 @@ export default function JoinClient({
   }));
 
   return (
-    <div className="overflow-x-clip">
+    <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
         <HeroAmbient />

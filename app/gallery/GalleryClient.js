@@ -13,6 +13,7 @@ import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
 import StatTile from '@/app/_components/ui/StatTile';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
@@ -541,16 +542,16 @@ export default function GalleryClient({
                 variants={fadeUp}
                 className="border-t border-white/8 pt-6 sm:pt-8"
               >
-                <div className="grid grid-cols-4 divide-x divide-white/8">
+                <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
                   {stats.map((s, i) => (
                     <div
                       key={s.id}
                       className={cn(
                         i === 0
-                          ? 'pr-3 sm:pr-6 lg:pr-8'
+                          ? 'sm:pr-6 lg:pr-8'
                           : i === stats.length - 1
-                            ? 'pl-3 sm:pl-6 lg:pl-8'
-                            : 'px-3 sm:px-6 lg:px-8'
+                            ? 'sm:pl-6 lg:pl-8'
+                            : 'sm:px-6 lg:px-8'
                       )}
                     >
                       <StatTile
@@ -843,36 +844,11 @@ export default function GalleryClient({
       {/* ── Gallery Grid ──────────────────────────────────────────────────── */}
       <section ref={gridRef} className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8" style={{ scrollMarginTop: '80px' }}>
         <div className="mx-auto max-w-7xl">
-          {/* Section header */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="mb-8 flex flex-col gap-1 sm:mb-10 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  Photo Archive
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                All Photos
-              </motion.h2>
-            </div>
-            <motion.p
-              variants={fadeUp}
-              className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-            >
-              {filteredItems.length} photo
-              {filteredItems.length !== 1 ? 's' : ''}
-            </motion.p>
-          </motion.div>
+          <SectionEyebrow
+            tag="Photo Archive"
+            title="All Photos"
+            right={`${filteredItems.length} photo${filteredItems.length !== 1 ? 's' : ''}`}
+          />
 
           {pagedItems.length > 0 ? (
             <>

@@ -72,7 +72,7 @@ import {
   ActionButton,
   Pill,
 } from '@/app/account/_components/ui';
-import { MOCK_PROFILE } from '@/app/user/[username]/_components/mockData';
+import { MOCK_PROFILE } from './mockData';
 
 const HANDLE_PLATFORMS = [
   { id: 'codeforces', name: 'Codeforces', color: '#ef4444' },

@@ -85,7 +85,7 @@ function About({ data = {}, settings = {} }) {
             </span>
             <span className="bg-neon-violet h-px w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black whitespace-nowrap text-white uppercase">
+          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black text-white uppercase sm:whitespace-nowrap">
             {settings?.homepage_about_title || title}
           </h2>
         </motion.div>

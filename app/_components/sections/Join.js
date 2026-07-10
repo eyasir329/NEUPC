@@ -70,7 +70,7 @@ function Join({ benefits, settings = {} }) {
   const items = Array.isArray(benefits) ? benefits : [];
 
   return (
-    <section className="relative overflow-hidden py-20 sm:py-24 lg:py-32">
+    <section className="relative overflow-hidden pt-20 pb-10 sm:pt-24 sm:pb-12 lg:pt-32 lg:pb-14">
       {/* Ambient */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="grid-overlay absolute inset-0 opacity-20" />

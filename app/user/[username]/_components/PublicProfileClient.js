@@ -31,11 +31,8 @@ import {
   MapPin,
   Mail,
   Phone,
-  FileText,
   PenTool,
 } from 'lucide-react';
-import { MOCK_PROFILE } from './mockData';
-
 // Custom UI Components
 function SectionTitle({ icon: Icon, label }) {
   return (
@@ -56,8 +53,7 @@ function GlassCard({ children, className = '' }) {
   );
 }
 
-export default function PublicProfileClient() {
-  const profile = MOCK_PROFILE;
+export default function PublicProfileClient({ profile }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Competitive handles / DSA progress
@@ -82,10 +78,10 @@ export default function PublicProfileClient() {
 
       let count = 0;
       if (platformType === 'problems') {
-        count = (profile.activity.leetcode[dateStr] || 0) +
-                (profile.activity.codeforces[dateStr] || 0) +
-                (profile.activity.codechef[dateStr] || 0) +
-                (profile.activity.atcoder[dateStr] || 0);
+        count = (profile.activity.leetcode?.[dateStr] || 0) +
+                (profile.activity.codeforces?.[dateStr] || 0) +
+                (profile.activity.codechef?.[dateStr] || 0) +
+                (profile.activity.atcoder?.[dateStr] || 0);
       } else if (platformType === 'daily') {
         if (dailyFilter === 'all') {
           count = (profile.activity.todolist?.[dateStr] || 0) +
@@ -96,7 +92,7 @@ export default function PublicProfileClient() {
           count = profile.activity.courseWatchTime?.[dateStr] || 0;
         }
       } else if (platformType === 'github') {
-        count = profile.activity.github[dateStr] || 0;
+        count = profile.activity.github?.[dateStr] || 0;
       }
 
       cells.push({ dateStr, count });
@@ -199,18 +195,37 @@ export default function PublicProfileClient() {
     );
   };
 
-  const dsaStats = profile.codingProfiles.find(p => p.platform.toLowerCase() === dsaPlatform) || profile.codingProfiles[0];
+  const dsaStats = profile.codingProfiles.find(p => p.platform.toLowerCase() === dsaPlatform) || profile.codingProfiles[0] || null;
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
-  const solvedPercentage = Math.min(100, Math.round((dsaStats.solved / 1000) * 100));
+  const solvedPercentage = dsaStats ? Math.min(100, Math.round((dsaStats.solved / 1000) * 100)) : 0;
   const strokeOffset = circumference - (solvedPercentage / 100) * circumference;
+
+  const hasActivity = Object.keys(profile.activity ?? {}).length > 0;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'projects', label: 'Projects & Experience', icon: Briefcase },
     { id: 'competitive', label: 'Competitive Programming', icon: Trophy },
     { id: 'awards', label: 'Awards & Credentials', icon: Award },
-  ];
+  ].filter((tab) => {
+    if (tab.id === 'projects')
+      return (
+        profile.projects.length > 0 ||
+        profile.workExperience.length > 0 ||
+        profile.research.length > 0 ||
+        profile.publications.length > 0
+      );
+    if (tab.id === 'competitive')
+      return (
+        profile.codingProfiles.length > 0 ||
+        profile.contests.length > 0 ||
+        profile.offlineParticipation.length > 0
+      );
+    if (tab.id === 'awards')
+      return profile.achievements.length > 0 || profile.certificates.length > 0;
+    return true;
+  });
 
   return (
     <div className="min-h-screen pb-16 bg-[#030408] text-white selection:bg-[#7C5CFF]/30">
@@ -225,11 +240,17 @@ export default function PublicProfileClient() {
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 w-full xl:w-auto">
               <div className="relative group shrink-0">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#B6F36B] to-[#7C5CFF] opacity-30 group-hover:opacity-60 blur-md transition duration-500" />
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.name}
-                  className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#0c0a12] shadow-2xl transition duration-300"
-                />
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={profile.name}
+                    className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#0c0a12] shadow-2xl transition duration-300"
+                  />
+                ) : (
+                  <div className="relative flex w-28 h-28 sm:w-32 sm:h-32 items-center justify-center rounded-full border-4 border-[#0c0a12] bg-[#0c0e16] text-4xl font-extrabold text-zinc-500 shadow-2xl">
+                    {profile.name?.charAt(0)?.toUpperCase() ?? '?'}
+                  </div>
+                )}
                 <span className="absolute bottom-1.5 right-1.5 flex h-4.5 w-4.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-4.5 w-4.5 bg-emerald-500 border-2 border-[#0c0a12]" />
@@ -243,33 +264,35 @@ export default function PublicProfileClient() {
                     NEUPC Member
                   </span>
                 </div>
-                <p className="text-sm font-mono text-zinc-400">@{profile.username} · {profile.email}</p>
+                <p className="text-sm font-mono text-zinc-400">@{profile.username}{profile.email ? ` · ${profile.email}` : ''}</p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1 text-xs text-zinc-500 font-medium">
-                  <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-650" /> {profile.location}</span>
-                  <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-650" /> {profile.university}</span>
+                  {profile.location && (
+                    <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-650" /> {profile.location}</span>
+                  )}
+                  {profile.university && (
+                    <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-650" /> {profile.university}</span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Top Level Social Handles */}
             <div className="flex flex-wrap justify-center xl:justify-end items-center gap-3 shrink-0">
-              <button
-                onClick={() => alert('Compiling latest Academic CV PDF document...')}
-                className="flex items-center justify-center gap-2 px-4 h-10 rounded-xl bg-[#7C5CFF]/15 border border-[#7C5CFF]/30 hover:bg-[#7C5CFF]/25 hover:border-[#7C5CFF]/50 text-white font-mono text-xs font-bold transition-all cursor-pointer shadow-md"
-              >
-                <FileText size={14} className="text-[#B6F36B]" />
-                <span>Download CV</span>
-              </button>
-              <div className="hidden sm:block h-6 w-[1px] bg-white/[0.08]" />
-              <a href={profile.socials.github} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#B6F36B]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
-                <Github size={18} />
-              </a>
-              <a href={profile.socials.linkedin} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#7C5CFF]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
-                <Linkedin size={18} />
-              </a>
-              <a href={`https://facebook.com/${profile.socials.facebook}`} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
-                <Facebook size={18} />
-              </a>
+              {profile.socials.github && (
+                <a href={profile.socials.github} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#B6F36B]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
+                  <Github size={18} />
+                </a>
+              )}
+              {profile.socials.linkedin && (
+                <a href={profile.socials.linkedin} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#7C5CFF]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
+                  <Linkedin size={18} />
+                </a>
+              )}
+              {profile.socials.facebook && (
+                <a href={`https://facebook.com/${profile.socials.facebook}`} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all">
+                  <Facebook size={18} />
+                </a>
+              )}
             </div>
           </div>
         </GlassCard>
@@ -305,7 +328,9 @@ export default function PublicProfileClient() {
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
             
             {/* Tech Stack & Core Focus Area (Merged) */}
+            {(profile.skills.length > 0 || profile.areasOfInterest.length > 0) && (
             <GlassCard className="p-5 space-y-4">
+              {profile.skills.length > 0 && (
               <div>
                 <SectionTitle icon={Code2} label="Skills & Focus Areas" />
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -316,7 +341,9 @@ export default function PublicProfileClient() {
                   ))}
                 </div>
               </div>
+              )}
 
+              {profile.areasOfInterest.length > 0 && (
               <div className="border-t border-white/[0.04] pt-4">
                 <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Primary Domains</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -327,9 +354,12 @@ export default function PublicProfileClient() {
                   ))}
                 </div>
               </div>
+              )}
             </GlassCard>
+            )}
 
             {/* Academic Education milestones */}
+            {profile.education.length > 0 && (
             <GlassCard className="p-5">
               <SectionTitle icon={GraduationCap} label="Academic Timeline" />
               <div className="space-y-4">
@@ -346,8 +376,10 @@ export default function PublicProfileClient() {
                 ))}
               </div>
             </GlassCard>
+            )}
 
             {/* Contacts & References (Merged & Collapsed) */}
+            {profile.references.length > 0 && (
             <GlassCard className="p-5 space-y-4">
               <SectionTitle icon={User} label="References" />
               <div className="space-y-3">
@@ -360,10 +392,13 @@ export default function PublicProfileClient() {
                 ))}
               </div>
             </GlassCard>
+            )}
 
             {/* Hobbies & Extracurriculars (Merged) */}
+            {(profile.extracurriculars.length > 0 || profile.hobbies.length > 0) && (
             <GlassCard className="p-5 space-y-4">
               <SectionTitle icon={Sparkles} label="Interests & Activities" />
+              {profile.extracurriculars.length > 0 && (
               <div>
                 <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Extracurricular Roles</span>
                 <ul className="space-y-1.5 text-[11px] text-zinc-400 list-disc pl-4 leading-relaxed">
@@ -372,6 +407,8 @@ export default function PublicProfileClient() {
                   ))}
                 </ul>
               </div>
+              )}
+              {profile.hobbies.length > 0 && (
               <div className="border-t border-white/[0.04] pt-4">
                 <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Hobbies</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -382,7 +419,9 @@ export default function PublicProfileClient() {
                   ))}
                 </div>
               </div>
+              )}
             </GlassCard>
+            )}
 
           </div>
 
@@ -427,12 +466,15 @@ export default function PublicProfileClient() {
                   {activeTab === 'overview' && (
                     <>
                       {/* About / Bio */}
+                      {profile.careerObjective && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={User} label="About & Objectives" />
                         <p className="text-sm text-zinc-300 leading-relaxed font-sans">{profile.careerObjective}</p>
                       </GlassCard>
+                      )}
 
                       {/* Three Activity Heatmaps */}
+                      {hasActivity && (
                       <GlassCard className="p-6 space-y-8">
                         <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
                           <SectionTitle icon={Activity} label="Activity & Contribution Analytics" />
@@ -482,8 +524,10 @@ export default function PublicProfileClient() {
                           <span>More</span>
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Donut Progress */}
+                      {dsaStats && (
                       <GlassCard className="p-5">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                           <div className="flex-1">
@@ -494,10 +538,9 @@ export default function PublicProfileClient() {
                                 onChange={(e) => setDsaPlatform(e.target.value)}
                                 className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-200 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
                               >
-                                <option value="leetcode">LeetCode</option>
-                                <option value="codeforces">Codeforces</option>
-                                <option value="codechef">CodeChef</option>
-                                <option value="atcoder">AtCoder</option>
+                                {profile.codingProfiles.map((p) => (
+                                  <option key={p.platform} value={p.platform.toLowerCase()}>{p.platform}</option>
+                                ))}
                               </select>
                             </div>
                             <p className="text-xs text-zinc-400 leading-relaxed font-sans max-w-md">
@@ -517,21 +560,8 @@ export default function PublicProfileClient() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 border-t border-white/[0.04] pt-4 mt-4 text-center font-mono text-[10.5px]">
-                          <div>
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Easy</span>
-                            <span className="text-emerald-400 font-bold">40% solved</span>
-                          </div>
-                          <div className="border-x border-white/[0.04]">
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Medium</span>
-                            <span className="text-amber-400 font-bold">50% solved</span>
-                          </div>
-                          <div>
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Hard</span>
-                            <span className="text-rose-500 font-bold">10% solved</span>
-                          </div>
-                        </div>
                       </GlassCard>
+                      )}
                     </>
                   )}
 
@@ -539,6 +569,7 @@ export default function PublicProfileClient() {
                   {activeTab === 'projects' && (
                     <>
                       {/* Computational Projects */}
+                      {profile.projects.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={Award} label="Computational Projects" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -566,8 +597,10 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Unified Experience Timeline */}
+                      {profile.workExperience.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={Briefcase} label="Professional & Research Timeline" />
                         <div className="space-y-6">
@@ -593,8 +626,10 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Research Projects / Experience */}
+                      {profile.research.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={GraduationCap} label="Research Fellowships" />
                         <div className="space-y-6">
@@ -614,8 +649,10 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Publications */}
+                      {profile.publications.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={PenTool} label="Research Publications" />
                         <div className="space-y-4">
@@ -630,6 +667,7 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
                     </>
                   )}
 
@@ -637,6 +675,7 @@ export default function PublicProfileClient() {
                   {activeTab === 'competitive' && (
                     <>
                       {/* Interactive Handles Card */}
+                      {profile.codingProfiles.length > 0 && (
                       <GlassCard className="p-5">
                         <SectionTitle icon={Globe} label="Platform Standings" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -668,8 +707,10 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Rated Contests */}
+                      {profile.contests.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={Trophy} label="Online Rated Contests" />
                         <div className="overflow-x-auto">
@@ -695,8 +736,10 @@ export default function PublicProfileClient() {
                           </table>
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Offline records */}
+                      {profile.offlineParticipation.length > 0 && (
                       <GlassCard className="p-6">
                         <SectionTitle icon={Award} label="Championships & Offline Contests" />
                         <div className="space-y-4">
@@ -717,6 +760,7 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
                     </>
                   )}
 
@@ -724,6 +768,7 @@ export default function PublicProfileClient() {
                   {activeTab === 'awards' && (
                     <div className="flex flex-col gap-6">
                       {/* Awards */}
+                      {profile.achievements.length > 0 && (
                       <GlassCard className="p-5">
                         <SectionTitle icon={Trophy} label="Honors & Achievements" />
                         <div className="space-y-4">
@@ -738,8 +783,10 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
 
                       {/* Certificates */}
+                      {profile.certificates.length > 0 && (
                       <GlassCard className="p-5">
                         <SectionTitle icon={Award} label="Professional Certifications" />
                         <div className="space-y-4">
@@ -754,6 +801,7 @@ export default function PublicProfileClient() {
                           ))}
                         </div>
                       </GlassCard>
+                      )}
                     </div>
                   )}
 

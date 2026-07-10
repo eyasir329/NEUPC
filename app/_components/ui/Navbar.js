@@ -32,6 +32,7 @@ const NAV_CONFIG = {
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
+        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {
@@ -40,7 +41,6 @@ const NAV_CONFIG = {
       items: [
         { href: '/about', label: 'About' },
         { href: '/committee', label: 'Committee' },
-        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {
@@ -370,7 +370,7 @@ export default function Navbar({ session }) {
 
         {/* Auth / CTA */}
         {isLoggedIn ? (
-          <li className="ml-1 hidden min-[900px]:flex sm:ml-2 items-center gap-2">
+          <li className="ml-1 hidden items-center gap-2 min-[900px]:flex sm:ml-2">
             <Link
               href="/account"
               title="Go to Account"

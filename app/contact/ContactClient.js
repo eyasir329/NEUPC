@@ -317,7 +317,7 @@ export default function ContactClient({
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative isolate flex min-h-[60vh] items-center overflow-hidden px-4 pt-32 pb-12 sm:min-h-[65vh] sm:px-6 sm:pt-36 sm:pb-16 lg:px-8">
+      <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
         <HeroAmbient />
 
         <motion.div
@@ -912,37 +912,12 @@ export default function ContactClient({
       {faqs.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="mb-10 flex flex-col gap-1 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
-            >
-              <div>
-                <motion.div
-                  variants={fadeUp}
-                  className="flex items-center gap-3"
-                >
-                  <span className="bg-neon-lime h-px w-7" />
-                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                    FAQ
-                  </span>
-                </motion.div>
-                <motion.h2
-                  variants={fadeUp}
-                  className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-                >
-                  Common <span className="neon-text">Questions</span>
-                </motion.h2>
-              </div>
-              <motion.p
-                variants={fadeUp}
-                className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-              >
-                {faqs.length} answers
-              </motion.p>
-            </motion.div>
+            <SectionEyebrow
+              tag="FAQ"
+              title="Common"
+              accent="Questions"
+              right={`${faqs.length} answers`}
+            />
 
             <motion.div
               className="grid gap-3 lg:grid-cols-2"

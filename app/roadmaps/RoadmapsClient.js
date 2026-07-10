@@ -12,6 +12,9 @@ import dynamic from 'next/dynamic';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
 import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
@@ -152,52 +155,6 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
         <span className="hidden sm:inline">{label}</span>
       </span>
     </div>
-  );
-}
-
-// ─── Section eyebrow (exact pattern from events page) ────────────────────────
-
-function SectionEyebrow({ tag, title, accent, right }) {
-  return (
-    <motion.div
-      variants={stagger}
-      initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
-      className={cn(
-        'mb-8 flex flex-col gap-1 sm:mb-10',
-        right && 'sm:flex-row sm:items-end sm:justify-between'
-      )}
-    >
-      <div>
-        <motion.div variants={fadeUp} className="flex items-center gap-3">
-          <span className="bg-neon-lime h-px w-7" />
-          <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-            {tag}
-          </span>
-        </motion.div>
-        <motion.h2
-          variants={fadeUp}
-          className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-        >
-          {title}
-          {accent && (
-            <>
-              {' '}
-              <span className="neon-text">{accent}</span>
-            </>
-          )}
-        </motion.h2>
-      </div>
-      {right && (
-        <motion.p
-          variants={fadeUp}
-          className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-        >
-          {right}
-        </motion.p>
-      )}
-    </motion.div>
   );
 }
 
@@ -502,13 +459,7 @@ export default function RoadmapsClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -597,35 +548,22 @@ export default function RoadmapsClient({
           </div>
         </motion.div>
 
-        {/* Scroll cue – desktop only */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Featured roadmap ──────────────────────────────────────────────── */}
       {featuredRoadmaps.length > 0 && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
-            <motion.div variants={stagger} initial="hidden" animate="visible">
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  {featuredRoadmaps.length > 1
-                    ? 'Featured Roadmaps'
-                    : 'Featured Roadmap'}
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                Don&apos;t Miss This
-              </motion.h2>
-            </motion.div>
+            <SectionEyebrow
+              tag={
+                featuredRoadmaps.length > 1
+                  ? 'Featured Roadmaps'
+                  : 'Featured Roadmap'
+              }
+              title="Don't Miss This"
+              onMount
+            />
             <FeaturedCarousel
               items={featuredRoadmaps}
               ariaLabel="Featured roadmaps"

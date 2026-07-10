@@ -97,16 +97,28 @@ function EventCard({ event, index = 0 }) {
             accent.glow
           )}
         >
-          {hasImage ? (
+          {/* Placeholder — shown while the image loads, or when there is none */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="grid-overlay absolute inset-0 opacity-40" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(255,255,255,0.04),transparent)]" />
+            <span
+              className="font-heading text-[clamp(5rem,10vw,7rem)] leading-none font-black text-transparent uppercase select-none"
+              style={{ WebkitTextStroke: '1.5px rgba(255,255,255,0.14)' }}
+            >
+              {(event.category || 'Event').charAt(0)}
+            </span>
+            <span className="absolute bottom-12 font-mono text-[9px] font-bold tracking-[0.4em] text-white/15 uppercase">
+              NEUPC
+            </span>
+          </div>
+          {hasImage && (
             <SafeImg
               src={driveImageUrl(event.cover_image || event.banner_image)}
               alt={event.title}
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             />
-          ) : (
-            <div className="h-full w-full" />
           )}
           <div className="absolute inset-0 bg-linear-to-t from-[#05060b]/90 via-[#05060b]/20 to-transparent" />
           <div

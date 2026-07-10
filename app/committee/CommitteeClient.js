@@ -14,6 +14,7 @@ import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils/utils';
 import CTASection from '@/app/_components/ui/CTASection';
 import StatTile from '@/app/_components/ui/StatTile';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import SectionLabel from '@/app/_components/ui/SectionLabel';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
@@ -105,37 +106,6 @@ function SocialBtn({ href, icon, label }) {
     >
       {icon}
     </a>
-  );
-}
-
-// ─── Section heading (matches events "Featured Event" heading style) ──────────
-
-function SectionLabel({ tag, title, accent, onMount = false }) {
-  return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      {...(onMount
-        ? { animate: 'visible' }
-        : { whileInView: 'visible', viewport })}
-      className="mb-10 sm:mb-14"
-    >
-      <div className="mb-3 flex items-center gap-3">
-        <span className="bg-neon-lime h-px w-7" />
-        <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-          {tag}
-        </span>
-      </div>
-      <h2 className="kinetic-headline font-heading text-3xl font-black text-white uppercase sm:text-4xl md:text-5xl">
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <span className="neon-text">{accent}</span>
-          </>
-        )}
-      </h2>
-    </motion.div>
   );
 }
 

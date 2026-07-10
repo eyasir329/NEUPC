@@ -133,7 +133,7 @@ const FONT_FAMILIES = [
 ];
 
 const BG_THEMES = [
-  { id: 'dark', bg: '#0A0A0B', label: 'Dark' },
+  { id: 'dark', bg: '#05060B', label: 'Dark' },
   { id: 'midnight', bg: '#02040d', label: 'Midnight' },
   { id: 'warm', bg: '#0f0c09', label: 'Warm' },
   { id: 'sepia', bg: '#1a1208', label: 'Sepia' },
@@ -596,7 +596,7 @@ export default function RoadmapDetailClient({
 
   if (!roadmap?.title) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0A0A0B] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#05060B] text-white">
         <div className="text-center">
           <div className="text-neon-lime mb-6 font-mono text-[10px] tracking-[0.4em] uppercase">
             ERROR_404
@@ -619,7 +619,7 @@ export default function RoadmapDetailClient({
   }
 
   const hasTOC = tableOfContents.length > 0;
-  const currentBg = BG_THEMES.find((t) => t.id === bgTheme)?.bg ?? '#0A0A0B';
+  const currentBg = BG_THEMES.find((t) => t.id === bgTheme)?.bg ?? '#05060B';
   const activeIdx = tableOfContents.findIndex((t) => t.id === activeSection);
   let h2Count = 0;
   const tocItems = tableOfContents.map((s, i) => {

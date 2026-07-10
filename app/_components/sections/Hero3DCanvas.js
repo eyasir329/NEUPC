@@ -479,7 +479,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
         const mesh = new THREE.Mesh(snippetGeo, snippetMat);
         const pos = new THREE.Vector3(
-          THREE.MathUtils.randFloatSpread(60),
+          THREE.MathUtils.randFloat(8, 30),
           THREE.MathUtils.randFloatSpread(50),
           THREE.MathUtils.randFloat(-34, -18)
         );
@@ -704,7 +704,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           }
         }
 
-        data.velocity.x += (0 - data.pos.x) * 0.0005 * fpsScale;
+        data.velocity.x += (19 - data.pos.x) * 0.0005 * fpsScale;
 
         data.velocity.x *= Math.pow(0.92, fpsScale);
         data.velocity.z *= Math.pow(0.92, fpsScale);
@@ -719,7 +719,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
         if (data.pos.y > 30) {
           data.pos.y = -30;
-          data.pos.x = THREE.MathUtils.randFloatSpread(60);
+          data.pos.x = THREE.MathUtils.randFloat(8, 30);
           data.velocity.set(0, 0, 0);
         }
         if (data.pos.y < -30) data.pos.y = 30;

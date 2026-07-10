@@ -12,6 +12,9 @@ import { motion } from 'framer-motion';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
@@ -415,7 +418,7 @@ function FeaturedBanner({ event }) {
         <div className="mt-6 flex flex-wrap items-center gap-4 sm:mt-7">
           <Link
             href={getHref(event)}
-            className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime relative inline-flex min-h-[44px] items-center gap-2.5 rounded-full px-7 py-3 text-[10px] font-bold tracking-[0.18em] text-black uppercase shadow-[0_0_24px_-4px_rgba(182,243,107,0.5)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.75)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] focus-visible:outline-none sm:text-[11px]"
+            className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime relative inline-flex min-h-[44px] items-center gap-2.5 rounded-full px-7 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none sm:text-[11px]"
           >
             Learn More
             <span className="transition-transform duration-300 group-hover/cta:translate-x-1">
@@ -612,13 +615,7 @@ export default function EventsClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -707,35 +704,20 @@ export default function EventsClient({
           </div>
         </motion.div>
 
-        {/* Scroll cue – desktop only */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Featured events ───────────────────────────────────────────────── */}
       {featuredEvents.length > 0 && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
-            <motion.div variants={stagger} initial="hidden" animate="visible">
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  {featuredEvents.length > 1
-                    ? 'Featured Events'
-                    : 'Featured Event'}
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                Don&apos;t Miss This
-              </motion.h2>
-            </motion.div>
+            <SectionEyebrow
+              tag={
+                featuredEvents.length > 1 ? 'Featured Events' : 'Featured Event'
+              }
+              title="Don't Miss This"
+              onMount
+            />
 
             <FeaturedCarousel
               items={featuredEvents}
@@ -754,35 +736,11 @@ export default function EventsClient({
         style={{ scrollMarginTop: '80px' }}
       >
         <div className="mx-auto max-w-7xl space-y-8 sm:space-y-10">
-          {/* Section header */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  Browse Events
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                All Events
-              </motion.h2>
-            </div>
-            <motion.p
-              variants={fadeUp}
-              className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-            >
-              {total} event{total !== 1 ? 's' : ''}
-            </motion.p>
-          </motion.div>
+          <SectionEyebrow
+            tag="Browse Events"
+            title="All Events"
+            right={`${total} event${total !== 1 ? 's' : ''}`}
+          />
 
           {/* Filters panel */}
           <motion.div
@@ -959,37 +917,11 @@ export default function EventsClient({
       {archiveEvents.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="mb-8 flex flex-col gap-1 sm:mb-10 sm:flex-row sm:items-end sm:justify-between"
-            >
-              <div>
-                <motion.div
-                  variants={fadeUp}
-                  className="flex items-center gap-3"
-                >
-                  <span className="bg-neon-lime h-px w-7" />
-                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                    Past Events
-                  </span>
-                </motion.div>
-                <motion.h2
-                  variants={fadeUp}
-                  className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-                >
-                  Event Archive
-                </motion.h2>
-              </div>
-              <motion.p
-                variants={fadeUp}
-                className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-              >
-                {archiveEvents.length} completed
-              </motion.p>
-            </motion.div>
+            <SectionEyebrow
+              tag="Past Events"
+              title="Event Archive"
+              right={`${archiveEvents.length} completed`}
+            />
 
             <motion.div
               variants={{

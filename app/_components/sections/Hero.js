@@ -108,7 +108,7 @@ function Hero({ data = {}, settings = {} }) {
           {/* Kinetic headline */}
           <motion.h1
             variants={heroItem}
-            className="kinetic-headline font-heading text-[12vw] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]"
+            className="kinetic-headline font-heading text-[clamp(2.6rem,12vw,4.5rem)] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]"
           >
             CODE.
             <br />
