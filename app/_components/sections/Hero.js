@@ -39,11 +39,59 @@ const DEFAULTS = {
   university: 'Netrokona University',
 };
 
-function Hero({ data = {}, settings = {} }) {
+const DEFAULT_STATS = [
+  { value: '150+', label: 'Members' },
+  { value: '40+', label: 'Contests' },
+  { value: '12', label: 'Awards' },
+];
+
+function Hero({ data = {}, settings = {}, stats = [], roadmaps = [] }) {
   const { department = DEFAULTS.department, university = DEFAULTS.university } =
     data;
+  const heroStats = stats.length > 0 ? stats.slice(0, 3) : DEFAULT_STATS;
   const [selectedNode, setSelectedNode] = useState(null);
+  const [showCanvas, setShowCanvas] = useState(false);
   const containerRef = useRef(null);
+
+  // Mount the 3D canvas only on md+ viewports without reduced-motion —
+  // the wrapper is display:none on mobile, but without this gate the
+  // Three.js chunk still downloads and the render loop runs unseen.
+  useEffect(() => {
+    const mq = window.matchMedia(
+      '(min-width: 768px) and (prefers-reduced-motion: no-preference)'
+    );
+    const update = () => setShowCanvas(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  // Place the detail card beside the clicked node, clamped to the section.
+  const handleNodeClick = (node, pos) => {
+    let cardPos = null;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (pos && rect) {
+      const CARD_W = 320;
+      const CARD_H = 200;
+      const GAP = 40;
+      const MARGIN = 16;
+      // Prefer the right side of the node; flip to the left if it overflows.
+      let x = pos.x + GAP;
+      if (x + CARD_W > rect.width - MARGIN) x = pos.x - GAP - CARD_W;
+      x = Math.max(MARGIN, Math.min(x, rect.width - CARD_W - MARGIN));
+      const y = Math.max(
+        MARGIN,
+        Math.min(pos.y - CARD_H / 2, rect.height - CARD_H - MARGIN)
+      );
+      cardPos = { x, y };
+    }
+    // Each globe node maps 1:1 to a real published roadmap by slug, so the
+    // card can deep-link straight to that roadmap's page.
+    const roadmap = node.slug
+      ? roadmaps.find((r) => r.slug === node.slug)
+      : null;
+    setSelectedNode({ ...node, cardPos, roadmap });
+  };
 
   const { scrollY } = useScroll();
   const yBg = useTransform(scrollY, [0, 1000], [0, 400]);
@@ -70,7 +118,12 @@ function Hero({ data = {}, settings = {} }) {
     >
       {/* ── Full-bleed 3D canvas (hidden on mobile) ─────────── */}
       <div className="absolute inset-0 z-0 hidden md:block">
-        <Hero3DCanvas onNodeClick={setSelectedNode} />
+        {showCanvas && (
+          <Hero3DCanvas
+            onNodeClick={handleNodeClick}
+            nodeOverrides={settings?.hero_roadmap_nodes}
+          />
+        )}
         {/* Left veil keeps text readable */}
         <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#05060B]/90 via-[#05060B]/50 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-[#05060B] to-transparent" />
@@ -99,7 +152,7 @@ function Hero({ data = {}, settings = {} }) {
         >
           {/* Eyebrow */}
           <motion.div variants={heroItem} className="flex items-center gap-4">
-            <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
+            <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 shrink-0 rounded-full" />
             <span className="font-mono text-[9px] font-medium tracking-[0.24em] text-zinc-400 uppercase sm:text-[10px] sm:tracking-[0.3em] md:text-[11px] md:tracking-[0.35em]">
               {settings?.hero_welcome_text || `${department} · ${university}`}
             </span>
@@ -110,11 +163,15 @@ function Hero({ data = {}, settings = {} }) {
             variants={heroItem}
             className="kinetic-headline font-heading text-[clamp(2.6rem,12vw,4.5rem)] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]"
           >
-            CODE.
+            {settings?.hero_headline_line1 || 'CODE.'}
             <br />
-            <span className="text-stroke-lime text-transparent">COMPETE.</span>
+            <span className="text-stroke-lime text-transparent">
+              {settings?.hero_headline_line2 || 'COMPETE.'}
+            </span>
             <br />
-            <span className="neon-text">CREATE.</span>
+            <span className="neon-text">
+              {settings?.hero_headline_line3 || 'CREATE.'}
+            </span>
           </motion.h1>
 
           {/* Subheadline */}
@@ -160,11 +217,7 @@ function Hero({ data = {}, settings = {} }) {
             variants={heroItem}
             className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8"
           >
-            {[
-              ['150+', 'Members'],
-              ['40+', 'Contests'],
-              ['12', 'Awards'],
-            ].map(([value, label], i) => (
+            {heroStats.map(({ value, label }, i) => (
               <motion.div
                 key={label}
                 variants={heroStat}
@@ -185,7 +238,19 @@ function Hero({ data = {}, settings = {} }) {
 
       {/* Node detail panel — bottom-right (only visible when canvas is shown) */}
       {selectedNode && (
-        <div className="absolute right-4 bottom-16 z-20 hidden w-64 rounded-2xl border border-white/10 bg-zinc-950/80 p-4 backdrop-blur-md md:right-6 md:block md:w-72 lg:right-10 lg:w-80">
+        <div
+          className={`absolute z-20 hidden w-64 rounded-2xl border border-white/10 bg-zinc-950/80 p-4 backdrop-blur-md md:block md:w-72 lg:w-80 ${
+            selectedNode.cardPos ? '' : 'right-4 bottom-16 md:right-6 lg:right-10'
+          }`}
+          style={
+            selectedNode.cardPos
+              ? {
+                  left: selectedNode.cardPos.x,
+                  top: selectedNode.cardPos.y,
+                }
+              : undefined
+          }
+        >
           <div className="mb-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="bg-neon-lime h-1.5 w-1.5 rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
@@ -208,13 +273,27 @@ function Hero({ data = {}, settings = {} }) {
           <p className="mt-2 font-sans text-xs leading-relaxed text-zinc-400">
             {selectedNode.description}
           </p>
+          {selectedNode.roadmap && (
+            <Link
+              href={`/roadmaps/${selectedNode.roadmap.slug}`}
+              className="text-neon-lime group mt-3 inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-colors hover:text-white"
+            >
+              View Roadmap
+              <span
+                aria-hidden
+                className="transition-transform group-hover:translate-x-1"
+              >
+                →
+              </span>
+            </Link>
+          )}
         </div>
       )}
 
       {/* Scroll indicator */}
       <div className="pointer-events-none absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
         <span className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
-          Scroll
+          {settings?.hero_scroll_label || 'Scroll'}
         </span>
         <div className="h-8 w-[1px] bg-linear-to-b from-zinc-600 to-transparent" />
       </div>

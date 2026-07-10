@@ -21,6 +21,12 @@ async function withTimeout(
   const TIMEOUT = Symbol('timeout');
   let timeoutId;
 
+  // Promise.race doesn't cancel the loser — if the timeout wins, `promise`
+  // keeps running in the background with nothing left awaiting it. Attach a
+  // no-op catch so its eventual rejection (e.g. the query's own abort timer
+  // firing later) doesn't surface as an unhandled rejection.
+  promise.catch(() => {});
+
   try {
     const timeoutPromise = new Promise((resolve) => {
       timeoutId = setTimeout(() => resolve(TIMEOUT), timeoutMs);

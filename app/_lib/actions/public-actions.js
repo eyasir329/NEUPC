@@ -590,7 +590,8 @@ export const getPublicAchievements = unstable_cache(
       return [];
     }
   },
-  ['public-achievements'],
+  // v3: payload embeds member_achievements (linked members + usernames)
+  ['public-achievements-v3'],
   { revalidate: 300, tags: ['achievements'] }
 );
 
@@ -800,6 +801,7 @@ export const getHomePageData = unstable_cache(
         recentBlogs,
         joinData,
         settings,
+        roadmaps,
       ] = await Promise.all([
         getHeroData(),
         getAboutData(),
@@ -812,6 +814,7 @@ export const getHomePageData = unstable_cache(
         getPublicRecentBlogs(6),
         getJoinPageData(),
         getAllPublicSettings(),
+        getPublicRoadmaps(),
       ]);
       return {
         hero,
@@ -826,6 +829,7 @@ export const getHomePageData = unstable_cache(
         stats: about.stats || [],
         joinBenefits: joinData.benefits,
         settings,
+        roadmaps,
       };
     } catch {
       return {

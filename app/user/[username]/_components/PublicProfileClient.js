@@ -195,13 +195,36 @@ export default function PublicProfileClient({ profile }) {
     );
   };
 
-  const dsaStats = profile.codingProfiles.find(p => p.platform.toLowerCase() === dsaPlatform) || profile.codingProfiles[0] || null;
+  // Only show platforms that actually have synced data — an added-but-never-
+  // synced handle (no rating, 0 solved) is noise, not a real standing.
+  const codingProfiles = useMemo(
+    () =>
+      profile.codingProfiles.filter(
+        (p) => p.solved > 0 || (p.rating && p.rating !== '—')
+      ),
+    [profile.codingProfiles]
+  );
+
+  const dsaStats = codingProfiles.find(p => p.platform.toLowerCase() === dsaPlatform) || codingProfiles[0] || null;
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const solvedPercentage = dsaStats ? Math.min(100, Math.round((dsaStats.solved / 1000) * 100)) : 0;
   const strokeOffset = circumference - (solvedPercentage / 100) * circumference;
 
   const hasActivity = Object.keys(profile.activity ?? {}).length > 0;
+  const hasQuickStats =
+    profile.quickStats.totalSolved > 0 ||
+    profile.quickStats.currentStreak > 0 ||
+    profile.quickStats.longestStreak > 0 ||
+    profile.quickStats.totalContests > 0;
+
+  const hasLeftColumn =
+    profile.skills.length > 0 ||
+    profile.areasOfInterest.length > 0 ||
+    profile.education.length > 0 ||
+    profile.references.length > 0 ||
+    profile.extracurriculars.length > 0 ||
+    profile.hobbies.length > 0;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
@@ -209,6 +232,8 @@ export default function PublicProfileClient({ profile }) {
     { id: 'competitive', label: 'Competitive Programming', icon: Trophy },
     { id: 'awards', label: 'Awards & Credentials', icon: Award },
   ].filter((tab) => {
+    if (tab.id === 'overview')
+      return Boolean(profile.careerObjective) || hasActivity || dsaStats;
     if (tab.id === 'projects')
       return (
         profile.projects.length > 0 ||
@@ -218,7 +243,7 @@ export default function PublicProfileClient({ profile }) {
       );
     if (tab.id === 'competitive')
       return (
-        profile.codingProfiles.length > 0 ||
+        codingProfiles.length > 0 ||
         profile.contests.length > 0 ||
         profile.offlineParticipation.length > 0
       );
@@ -226,6 +251,12 @@ export default function PublicProfileClient({ profile }) {
       return profile.achievements.length > 0 || profile.certificates.length > 0;
     return true;
   });
+
+  // Fall back to the first visible tab if the selected one was filtered out
+  // (e.g. "overview" hidden because the member has no bio/activity/stats yet).
+  const effectiveActiveTab = tabs.some((t) => t.id === activeTab)
+    ? activeTab
+    : (tabs[0]?.id ?? null);
 
   return (
     <div className="min-h-screen pb-16 bg-[#030408] text-white selection:bg-[#7C5CFF]/30">
@@ -297,31 +328,53 @@ export default function PublicProfileClient({ profile }) {
           </div>
         </GlassCard>
 
-        {/* ── 2. QUICK STATS SUMMARY STRIP ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Code2 size={18} className="text-[#B6F36B] mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalSolved}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Solved Problems</span>
+        {/* ── 2. QUICK STATS SUMMARY STRIP (zero-value tiles hidden) ── */}
+        {hasQuickStats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {profile.quickStats.totalSolved > 0 && (
+              <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
+                <Code2 size={18} className="text-[#B6F36B] mb-1" />
+                <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalSolved}</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Solved Problems</span>
+              </div>
+            )}
+            {profile.quickStats.currentStreak > 0 && (
+              <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
+                <Flame size={18} className="text-orange-500 mb-1" />
+                <span className="text-xl font-bold font-mono text-white">{profile.quickStats.currentStreak} Days</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Current Streak</span>
+              </div>
+            )}
+            {profile.quickStats.longestStreak > 0 && (
+              <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
+                <Trophy size={18} className="text-yellow-500 mb-1" />
+                <span className="text-xl font-bold font-mono text-white">{profile.quickStats.longestStreak} Days</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Longest Streak</span>
+              </div>
+            )}
+            {profile.quickStats.totalContests > 0 && (
+              <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
+                <Target size={18} className="text-[#7C5CFF] mb-1" />
+                <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalContests}</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Contests Rated</span>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Flame size={18} className="text-orange-500 mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.currentStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Current Streak</span>
-          </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Trophy size={18} className="text-yellow-500 mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.longestStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Longest Streak</span>
-          </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Target size={18} className="text-[#7C5CFF] mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalContests}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Contests Rated</span>
-          </div>
-        </div>
+        )}
 
         {/* ── 3. MAIN SECTION GRID ── */}
+        {!hasLeftColumn && tabs.length === 0 ? (
+          <GlassCard className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+            <Sparkles size={28} className="text-[#7C5CFF]" />
+            <p className="text-sm font-semibold text-zinc-200">
+              This profile is still getting started
+            </p>
+            <p className="max-w-xs text-xs text-zinc-500">
+              {profile.name} hasn't added a bio, coding platforms, or
+              achievements yet. Check back soon!
+            </p>
+          </GlassCard>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
           {/* Left Column (Outline / Biography Cards) */}
@@ -428,11 +481,24 @@ export default function PublicProfileClient({ profile }) {
           {/* Right Column (Tabs Main Panel) */}
           <div className="lg:col-span-8 space-y-6">
 
+            {tabs.length === 0 ? (
+              <GlassCard className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+                <Sparkles size={28} className="text-[#7C5CFF]" />
+                <p className="text-sm font-semibold text-zinc-200">
+                  This profile is still getting started
+                </p>
+                <p className="max-w-xs text-xs text-zinc-500">
+                  {profile.name} hasn't added a bio, coding platforms, or
+                  achievements yet. Check back soon!
+                </p>
+              </GlassCard>
+            ) : (
+              <>
             {/* Modern Tab Bar */}
             <div className="flex border-b border-white/[0.06] overflow-x-auto pb-px gap-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
+                const isActive = effectiveActiveTab === tab.id;
                 return (
                   <button
                     key={tab.id}
@@ -454,7 +520,7 @@ export default function PublicProfileClient({ profile }) {
             <div className="min-h-[500px]">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={activeTab}
+                  key={effectiveActiveTab}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
@@ -463,7 +529,7 @@ export default function PublicProfileClient({ profile }) {
                 >
                   
                   {/* TAB 1: OVERVIEW */}
-                  {activeTab === 'overview' && (
+                  {effectiveActiveTab === 'overview' && (
                     <>
                       {/* About / Bio */}
                       {profile.careerObjective && (
@@ -538,7 +604,7 @@ export default function PublicProfileClient({ profile }) {
                                 onChange={(e) => setDsaPlatform(e.target.value)}
                                 className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-200 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
                               >
-                                {profile.codingProfiles.map((p) => (
+                                {codingProfiles.map((p) => (
                                   <option key={p.platform} value={p.platform.toLowerCase()}>{p.platform}</option>
                                 ))}
                               </select>
@@ -566,7 +632,7 @@ export default function PublicProfileClient({ profile }) {
                   )}
 
                   {/* TAB 2: PROJECTS & EXPERIENCE */}
-                  {activeTab === 'projects' && (
+                  {effectiveActiveTab === 'projects' && (
                     <>
                       {/* Computational Projects */}
                       {profile.projects.length > 0 && (
@@ -672,14 +738,14 @@ export default function PublicProfileClient({ profile }) {
                   )}
 
                   {/* TAB 3: COMPETITIVE PROGRAMMING */}
-                  {activeTab === 'competitive' && (
+                  {effectiveActiveTab === 'competitive' && (
                     <>
                       {/* Interactive Handles Card */}
-                      {profile.codingProfiles.length > 0 && (
+                      {codingProfiles.length > 0 && (
                       <GlassCard className="p-5">
                         <SectionTitle icon={Globe} label="Platform Standings" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {profile.codingProfiles.map((h, i) => (
+                          {codingProfiles.map((h, i) => (
                             <a
                               key={i}
                               href={h.url}
@@ -765,7 +831,7 @@ export default function PublicProfileClient({ profile }) {
                   )}
 
                   {/* TAB 4: AWARDS & CREDENTIALS */}
-                  {activeTab === 'awards' && (
+                  {effectiveActiveTab === 'awards' && (
                     <div className="flex flex-col gap-6">
                       {/* Awards */}
                       {profile.achievements.length > 0 && (
@@ -808,10 +874,13 @@ export default function PublicProfileClient({ profile }) {
                 </motion.div>
               </AnimatePresence>
             </div>
+              </>
+            )}
 
           </div>
 
         </div>
+        )}
 
       </div>
     </div>

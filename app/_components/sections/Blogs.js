@@ -41,9 +41,13 @@ function getExcerpt(blog) {
   );
 }
 
-function getAuthorName(blog) {
+function getAuthorName(blog, defaultAuthorName) {
   return (
-    blog.users?.full_name || blog.author_name || blog.author || 'NEUPC Team'
+    blog.users?.full_name ||
+    blog.author_name ||
+    blog.author ||
+    defaultAuthorName ||
+    'NEUPC Team'
   );
 }
 
@@ -68,7 +72,7 @@ const cardVariant = {
   },
 };
 
-function InsightCard({ blog, index = 0 }) {
+function InsightCard({ blog, index = 0, settings = {} }) {
   const accent = CARD_ACCENTS[index % CARD_ACCENTS.length];
   const catCfg = getCategoryConfig(blog.category);
   const blogLink = `/blogs/${blog.slug || blog.id}`;
@@ -113,10 +117,10 @@ function InsightCard({ blog, index = 0 }) {
         <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-5 sm:mt-8 sm:pt-6">
           <div className="flex flex-col gap-0.5">
             <span className="font-mono text-[9px] font-bold tracking-widest text-zinc-600 uppercase">
-              Author
+              {settings?.blogs_author_label || 'Author'}
             </span>
             <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
-              {getAuthorName(blog)}
+              {getAuthorName(blog, settings?.blogs_default_author_name)}
             </span>
           </div>
           <motion.span
@@ -207,7 +211,7 @@ function Blogs({
           >
             {displayBlogs.map((blog, index) => (
               <motion.div key={blog.id ?? index} variants={cardVariant}>
-                <InsightCard blog={blog} index={index} />
+                <InsightCard blog={blog} index={index} settings={settings} />
               </motion.div>
             ))}
           </motion.div>

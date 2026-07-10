@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { cn } from '@/app/_lib/utils/utils';
@@ -326,6 +327,10 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const memberNames = (achievement.member_achievements ?? [])
+    .map((m) => m.users?.full_name)
+    .filter(Boolean);
+  const displayNames = memberNames.length > 0 ? memberNames : participants;
   const image = achievement.featured_photo?.url;
 
   return (
@@ -455,17 +460,17 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
                   →
                 </span>
               </button>
-              {(achievement.team_name || participants.length > 0) && (
+              {(achievement.team_name || displayNames.length > 0) && (
                 <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-400 sm:text-[11px]">
                   <span aria-hidden>{achievement.is_team ? '👥' : '👤'}</span>
                   <span className="max-w-[18rem] truncate">
                     {achievement.team_name ||
-                      participants
+                      displayNames
                         .slice(0, 3)
                         .map((p) => p.name || p)
                         .filter(Boolean)
                         .join(', ')}
-                    {participants.length > 3 && ` +${participants.length - 3}`}
+                    {displayNames.length > 3 && ` +${displayNames.length - 3}`}
                   </span>
                 </p>
               )}
@@ -505,6 +510,13 @@ function AchievementDetailModal({ achievement, onClose }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const members = (achievement.member_achievements ?? []).map((m) => ({
+    id: m.id,
+    name: m.users?.full_name ?? 'Unknown member',
+    username: m.users?.member_profiles?.username ?? null,
+    avatarUrl: m.users?.avatar_url ?? null,
+    position: m.position ?? null,
+  }));
   const galleryImages = achievement.gallery_images ?? [];
   const [activePhoto, setActivePhoto] = useState(null);
 
@@ -548,9 +560,22 @@ function AchievementDetailModal({ achievement, onClose }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl"
+        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] [scrollbar-width:none] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl [&::-webkit-scrollbar]:hidden"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close button — sticky so it stays visible while the sheet scrolls */}
+        <div className="sticky top-0 z-20 h-0">
+          <button
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
         {/* ── Cover image — full & uncropped ── */}
         <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-t-3xl bg-black">
           {/* Blurred backdrop fill so the full image can show uncropped */}
@@ -570,17 +595,6 @@ function AchievementDetailModal({ achievement, onClose }) {
             className="object-contain"
             unoptimized
           />
-
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
 
           {/* Featured badge — top-left over image */}
           {achievement.is_featured && (
@@ -671,8 +685,10 @@ function AchievementDetailModal({ achievement, onClose }) {
             </p>
           )}
 
-          {/* Participants / Team */}
-          {(participants.length > 0 || achievement.team_name) && (
+          {/* Members / Team */}
+          {(members.length > 0 ||
+            participants.length > 0 ||
+            achievement.team_name) && (
             <div className="mb-5">
               <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
                 {achievement.is_team ? '👥 Team' : '👤 Participants'}
@@ -682,27 +698,86 @@ function AchievementDetailModal({ achievement, onClose }) {
                   {achievement.team_name}
                 </p>
               )}
-              {participants.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {participants.map((p, i) => (
-                    <span
-                      key={i}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300"
-                    >
-                      {p}
-                    </span>
-                  ))}
+              {members.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {members.map((m) => {
+                    const inner = (
+                      <>
+                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                          {m.avatarUrl ? (
+                            <Image
+                              src={m.avatarUrl}
+                              alt={m.name}
+                              width={36}
+                              height={36}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-xs font-bold text-gray-500">
+                              {m.name[0]?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-gray-200 group-hover/member:text-neon-lime">
+                            {m.name}
+                          </p>
+                          <p className="truncate font-mono text-[10px] text-gray-500">
+                            {m.username ? `@${m.username}` : ''}
+                            {m.username && m.position ? ' · ' : ''}
+                            {m.position ?? ''}
+                          </p>
+                        </div>
+                        {m.username && (
+                          <span className="shrink-0 text-[10px] text-gray-600 transition-colors group-hover/member:text-neon-lime">
+                            ↗
+                          </span>
+                        )}
+                      </>
+                    );
+                    return m.username ? (
+                      <Link
+                        key={m.id}
+                        href={`/user/${m.username}`}
+                        className="group/member flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 transition-colors hover:border-neon-lime/40 hover:bg-white/[0.06]"
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"
+                      >
+                        {inner}
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
+                participants.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {participants.map((p, i) => (
+                      <span
+                        key={i}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           )}
 
           {/* Platform / Profile */}
           {(achievement.platform || achievement.profile_url) && (
-            <div className="mb-5 flex flex-wrap items-center gap-4">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
               {achievement.platform && (
-                <span className="text-xs font-medium text-gray-400">
-                  🖥 {achievement.platform}
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] font-bold tracking-wider text-gray-300 uppercase">
+                  <span className="bg-neon-lime h-1.5 w-1.5 rounded-full" />
+                  {achievement.platform}
                 </span>
               )}
               {achievement.profile_url && (
@@ -710,9 +785,9 @@ function AchievementDetailModal({ achievement, onClose }) {
                   href={achievement.profile_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-medium text-blue-400 underline underline-offset-2 transition-colors hover:text-blue-300"
+                  className="hover:border-neon-lime/40 hover:text-neon-lime inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] font-bold tracking-wider text-gray-300 uppercase transition-colors"
                 >
-                  View Profile ↗
+                  Submission ↗
                 </a>
               )}
             </div>
@@ -1254,6 +1329,11 @@ function AchievementCard({ achievement, onClick }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const cardMembers = (achievement.member_achievements ?? []).map((m) => ({
+    id: m.id,
+    name: m.users?.full_name ?? 'Member',
+    avatarUrl: m.users?.avatar_url ?? null,
+  }));
 
   return (
     <div
@@ -1275,7 +1355,11 @@ function AchievementCard({ achievement, onClick }) {
       {/* Cover image */}
       <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
-          src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
+          src={
+            achievement.featured_photo?.variants?.featured?.url ||
+            achievement.featured_photo?.url ||
+            '/placeholder-event.png'
+          }
           alt={achievement.featured_photo?.name ?? achievement.title}
           fill
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
@@ -1306,8 +1390,8 @@ function AchievementCard({ achievement, onClick }) {
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-5">
-        {/* Category tags */}
-        {categories.length > 0 && (
+        {/* Category + platform tags */}
+        {(categories.length > 0 || achievement.platform) && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {categories.slice(0, 2).map((cat) => (
               <span
@@ -1317,6 +1401,11 @@ function AchievementCard({ achievement, onClick }) {
                 {cat}
               </span>
             ))}
+            {achievement.platform && (
+              <span className="border-neon-lime/20 bg-neon-lime/5 text-neon-lime/80 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
+                {achievement.platform}
+              </span>
+            )}
           </div>
         )}
 
@@ -1340,8 +1429,47 @@ function AchievementCard({ achievement, onClick }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 border-t border-white/6 pt-3.5">
-          <div className="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-zinc-500">
-            {achievement.is_team ? (
+          <div className="flex min-w-0 items-center gap-2 font-mono text-[10px] text-zinc-500">
+            {cardMembers.length > 0 ? (
+              <>
+                <span className="flex -space-x-2">
+                  {cardMembers.slice(0, 3).map((m) => (
+                    <span
+                      key={m.id}
+                      title={m.name}
+                      className="h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 border-[#08090f] bg-white/10"
+                    >
+                      {m.avatarUrl ? (
+                        <Image
+                          src={m.avatarUrl}
+                          alt={m.name}
+                          width={24}
+                          height={24}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-[9px] font-bold text-zinc-400">
+                          {m.name[0]?.toUpperCase()}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                  {cardMembers.length > 3 && (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#08090f] bg-white/10 text-[8px] font-bold text-zinc-300">
+                      +{cardMembers.length - 3}
+                    </span>
+                  )}
+                </span>
+                <span className="max-w-[110px] truncate">
+                  {achievement.is_team && achievement.team_name
+                    ? achievement.team_name
+                    : cardMembers.length === 1
+                      ? cardMembers[0].name
+                      : `${cardMembers.length} members`}
+                </span>
+              </>
+            ) : achievement.is_team ? (
               <>
                 <span>👥</span>
                 <span className="max-w-[130px] truncate">
@@ -1550,6 +1678,26 @@ export default function AchievementsClient({
   // ── Modal state ──────────────────────────────────────────────────────────
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [selectedParticipation, setSelectedParticipation] = useState(null);
+
+  // ── Deep link: ?achievement=<id> auto-opens that achievement's detail modal ──
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const achievementId = searchParams.get('achievement');
+    if (!achievementId) return;
+    const match = achievements.find((a) => a.id === achievementId);
+    if (match) {
+      setSelectedAchievement(match);
+    }
+    // Always strip the query param — whether or not a match was found —
+    // so a stale/mismatched id (e.g. the homepage's 5-minute cache pointing
+    // at an achievement that was just edited/unfeatured) never leaves a
+    // dead link sitting in the URL with no visible effect.
+    router.replace(pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Scroll refs & callbacks ──────────────────────────────────────────────
   const gridRef = useRef(null);

@@ -41,7 +41,7 @@ function isMedalist(result) {
   );
 }
 
-function deriveStats(achievements, participations) {
+function deriveStats(achievements, participations, statLabels = {}) {
   const achYears = [
     ...new Set(achievements.map((a) => a.year).filter(Boolean)),
   ];
@@ -50,13 +50,22 @@ function deriveStats(achievements, participations) {
   ];
   const yearsActive = Math.max(achYears.length - 1, partYears.length - 1);
   return [
-    { value: String(achievements.length), label: 'Achievements' },
+    {
+      value: String(achievements.length),
+      label: statLabels.achievements || 'Achievements',
+    },
     {
       value: String(achievements.filter((a) => isMedalist(a.result)).length),
-      label: 'Medalists',
+      label: statLabels.medalists || 'Medalists',
     },
-    { value: String(participations.length), label: 'Participations' },
-    { value: yearsActive > 0 ? `${yearsActive}+` : '—', label: 'Years Active' },
+    {
+      value: String(participations.length),
+      label: statLabels.participations || 'Participations',
+    },
+    {
+      value: yearsActive > 0 ? `${yearsActive}+` : '—',
+      label: statLabels.yearsActive || 'Years Active',
+    },
   ];
 }
 
@@ -101,12 +110,18 @@ function Achievements({
     return () => clearTimeout(timer);
   }, [hasMultiple, currentIndex, handleNext]);
 
+  const statLabels = {
+    achievements: settings?.homepage_achievements_stat_label_1,
+    medalists: settings?.homepage_achievements_stat_label_2,
+    participations: settings?.homepage_achievements_stat_label_3,
+    yearsActive: settings?.homepage_achievements_stat_label_4,
+  };
   const displayStats =
     achievements.length > 0 || participations.length > 0
-      ? deriveStats(achievements, participations)
+      ? deriveStats(achievements, participations, statLabels)
       : stats.length > 0
         ? stats
-        : deriveStats([], []);
+        : deriveStats([], [], statLabels);
 
   return (
     <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
@@ -136,14 +151,15 @@ function Achievements({
           </div>
           <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl lg:text-7xl">
             {(() => {
-              const fullTitle = settings?.homepage_achievements_title || 'Hall of Victories';
+              const fullTitle =
+                settings?.homepage_achievements_title || 'Hall of Victories';
               const parts = fullTitle.split(' ');
-              if (parts.length <= 1) return <span className="neon-text">{fullTitle}</span>;
+              if (parts.length <= 1)
+                return <span className="neon-text">{fullTitle}</span>;
               const last = parts.pop();
               return (
                 <>
-                  {parts.join(' ')}{' '}
-                  <span className="neon-text">{last}</span>
+                  {parts.join(' ')} <span className="neon-text">{last}</span>
                 </>
               );
             })()}
@@ -178,7 +194,10 @@ function Achievements({
                       {current.featured_photo?.url ? (
                         <div className="relative h-full w-full overflow-hidden rounded-xl">
                           <Image
-                            src={current.featured_photo.url}
+                            src={
+                              current.featured_photo.variants?.square?.url ||
+                              current.featured_photo.url
+                            }
                             alt={current.title}
                             fill
                             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 40vw, 30vw"
@@ -190,7 +209,7 @@ function Achievements({
                       ) : (
                         <div className="ph-lime flex h-full w-full items-center justify-center rounded-xl">
                           <svg
-                            className="h-20 w-20 text-[--accent] sm:h-28 sm:w-28"
+                            className="h-20 w-20 text-(--accent) sm:h-28 sm:w-28"
                             fill="currentColor"
                             viewBox="0 0 24 24"
                           >
@@ -230,39 +249,26 @@ function Achievements({
                     {current.title}
                   </h3>
 
-                  {current.description && (
-                    <p className="text-sm leading-loose font-light text-zinc-400 sm:text-base lg:text-lg">
-                      {current.description}
-                    </p>
-                  )}
-
-                  {/* Icon pills */}
-                  <div className="flex justify-center gap-3 sm:gap-4 lg:justify-start">
-                    <div className="border-neon-lime/20 bg-neon-lime/10 flex h-11 w-11 items-center justify-center rounded-full border sm:h-14 sm:w-14">
-                      <svg
-                        className="text-neon-lime h-5 w-5 sm:h-6 sm:w-6"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-                      </svg>
-                    </div>
-                    <div className="border-neon-violet/20 flex h-11 w-11 items-center justify-center rounded-full border bg-[#0c0e16] sm:h-14 sm:w-14">
-                      <svg
-                        className="text-neon-violet h-5 w-5 sm:h-6 sm:w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                  </div>
+                  <Link
+                    href={`/achievements?achievement=${current.id}`}
+                    className="font-heading focus-visible:ring-neon-lime hover:border-neon-lime hover:text-neon-lime inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-7 sm:text-[11px]"
+                  >
+                    {settings?.homepage_achievements_view_details_label ||
+                      'View Details'}
+                    <svg
+                      className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -284,7 +290,7 @@ function Achievements({
                       key={i}
                       onClick={() => goTo(i)}
                       className={cn(
-                        'h-2 rounded-full transition-all duration-300 focus-visible:outline-none',
+                        "relative h-2 rounded-full transition-all duration-300 after:absolute after:-inset-2.5 after:content-[''] focus-visible:outline-none",
                         i === currentIndex
                           ? 'bg-neon-lime w-6'
                           : 'w-2 bg-white/20 hover:bg-white/30'

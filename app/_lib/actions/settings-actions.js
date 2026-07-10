@@ -220,6 +220,20 @@ const DEFAULT_SETTINGS = [
     ],
   },
   {
+    key: 'homepage_mission',
+    category: 'page_content',
+    description: 'Single-paragraph mission text shown in the homepage About teaser',
+    value:
+      'To nurture competitive programming and problem-solving skills, and to mentor students into confident, industry-ready developers.',
+  },
+  {
+    key: 'homepage_vision',
+    category: 'page_content',
+    description: 'Single-paragraph vision text shown in the homepage About teaser',
+    value:
+      'To become the leading programming community at Netrokona University, producing world-class problem solvers who represent the university on national and international stages.',
+  },
+  {
     key: 'about_what_we_do',
     category: 'about',
     description: 'What we do items',

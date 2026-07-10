@@ -5,56 +5,31 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { MotionConfig } from 'framer-motion';
 
-// Counts how many async slots (header + footer) have resolved
-let resolvedCount = 0;
-let listeners = [];
-const TOTAL = 2; // header + footer
-
-export function notifyReady() {
-  resolvedCount = Math.min(resolvedCount + 1, TOTAL);
-  listeners.forEach((fn) => fn(resolvedCount));
-}
-
-function useReadyCount() {
-  const [count, setCount] = useState(resolvedCount);
-  useEffect(() => {
-    const fn = (n) => setCount(n);
-    listeners.push(fn);
-    return () => {
-      listeners = listeners.filter((l) => l !== fn);
-    };
-  }, []);
-  return count;
-}
-
-// Sentinel rendered inside each Suspense boundary after it resolves
+// Kept as a no-op export so the <ReadySignal /> sentinels rendered inside the
+// header/footer Suspense boundaries stay valid. The reveal no longer depends on
+// them — see AppShell below — because a missed or out-of-order signal used to
+// leave the whole page stuck invisible.
 export function ReadySignal() {
-  const notify = useCallback(() => {
-    notifyReady();
-  }, []);
-  useEffect(() => {
-    notify();
-  }, [notify]);
   return null;
 }
 
-// Wraps the whole page — hides content until all slots are ready, then fades in
+// Wraps the whole page — shows a brief loading veil, then fades the content in
+// once this shell has mounted on the client (one animation frame after paint).
+// The reveal is self-contained: it never waits on other components' signals, so
+// it cannot deadlock and hide already-rendered content.
 export default function AppShell({ children }) {
-  const count = useReadyCount();
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
-    if (count >= TOTAL && !shown) {
-      // One extra rAF so the revealed content has painted before we show it
-      const id = requestAnimationFrame(() => setShown(true));
-      return () => cancelAnimationFrame(id);
-    }
-  }, [count, shown]);
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       {/* Loading overlay */}
       <div
         aria-hidden="true"
@@ -81,6 +56,6 @@ export default function AppShell({ children }) {
       >
         {children}
       </div>
-    </>
+    </MotionConfig>
   );
 }

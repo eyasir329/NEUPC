@@ -3,6 +3,7 @@
  * @module AchievementsPage
  */
 
+import { Suspense } from 'react';
 import {
   getPublicAchievements,
   getPublicParticipations,
@@ -46,11 +47,13 @@ export default async function Page() {
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Achievements' }]}
       />
-      <AchievementsClient
-        achievements={achievements}
-        participations={participations}
-        settings={settings}
-      />
+      <Suspense>
+        <AchievementsClient
+          achievements={achievements}
+          participations={participations}
+          settings={settings}
+        />
+      </Suspense>
     </>
   );
 }

@@ -16,6 +16,10 @@ const DEFAULTS = {
     "NEUPC is the nexus of algorithmic thought and software craftsmanship at Netrokona University. We are a collective of developers, researchers, and visionaries pushing the boundaries of what's possible in the digital realm.",
   description2:
     'The club serves as a platform where students can explore competitive programming, software development, research discussions, and emerging technologies beyond the academic syllabus.',
+  mission:
+    'To nurture competitive programming and problem-solving skills, and to mentor students into confident, industry-ready developers.',
+  vision:
+    'To become the leading programming community at Netrokona University, producing world-class problem solvers who represent the university on national and international stages.',
 };
 
 // Animation variants
@@ -56,6 +60,14 @@ function About({ data = {}, settings = {} }) {
     description1 = DEFAULTS.description1,
     description2 = DEFAULTS.description2,
   } = data;
+  const mission = settings?.homepage_mission || '';
+  const vision = settings?.homepage_vision || '';
+  const missionText = Array.isArray(mission)
+    ? mission.filter(Boolean).join(' ') || DEFAULTS.mission
+    : mission || DEFAULTS.mission;
+  const visionText = Array.isArray(vision)
+    ? vision.filter(Boolean).join(' ') || DEFAULTS.vision
+    : vision || DEFAULTS.vision;
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
@@ -85,7 +97,7 @@ function About({ data = {}, settings = {} }) {
             </span>
             <span className="bg-neon-violet h-px w-10" />
           </div>
-          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black text-white uppercase sm:whitespace-nowrap">
+          <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black text-balance break-words text-white uppercase">
             {settings?.homepage_about_title || title}
           </h2>
         </motion.div>
@@ -103,70 +115,72 @@ function About({ data = {}, settings = {} }) {
             variants={imageVariant}
             className="relative lg:col-span-5"
           >
-            {/* Card */}
-            <div className="ph-violet soft-glow-violet relative mx-auto aspect-[4/5] w-full max-w-[360px] overflow-hidden rounded-3xl sm:max-w-[420px] lg:max-w-full">
-              {/* Corner meta */}
-              <div className="absolute top-5 left-5 z-10 font-mono text-[9px] font-bold tracking-[0.4em] uppercase opacity-75 sm:text-[10px]">
-                {'/// IDENTITY'}
-              </div>
-              <div className="absolute top-5 right-5 z-10 font-mono text-[9px] font-bold tracking-[0.3em] uppercase opacity-55 sm:text-[10px]">
-                v1.0
-              </div>
+            {/* Card + chip share this wrapper so the chip stays anchored to the card at every width */}
+            <div className="relative mx-auto w-full max-w-[360px] sm:max-w-[420px] lg:max-w-full">
+              {/* Card */}
+              <div className="ph-violet soft-glow-violet relative aspect-[4/5] w-full overflow-hidden rounded-3xl">
+                {/* Corner meta */}
+                <div className="absolute top-5 left-5 z-10 font-mono text-[9px] font-bold tracking-[0.4em] uppercase opacity-75 sm:text-[10px]">
+                  {'/// IDENTITY'}
+                </div>
+                <div className="absolute top-5 right-5 z-10 font-mono text-[9px] font-bold tracking-[0.3em] uppercase opacity-55 sm:text-[10px]">
+                  v1.0
+                </div>
 
-              <Image
-                src="/about.jpg"
-                alt={
-                  settings?.site_name
-                    ? `${settings.site_name} About Section`
-                    : 'NEUPC About Section'
-                }
-                fill
-                sizes="(max-width: 640px) 360px, (max-width: 1024px) 420px, 38vw"
-                className="object-cover object-center"
-                loading="lazy"
-              />
+                <Image
+                  src={settings?.about_image_url || '/about.jpg'}
+                  alt={
+                    settings?.site_name
+                      ? `${settings.site_name} About Section`
+                      : 'NEUPC About Section'
+                  }
+                  fill
+                  sizes="(max-width: 640px) 360px, (max-width: 1024px) 420px, 38vw"
+                  className="object-cover object-center"
+                  loading="lazy"
+                />
 
-              {/* Gradient overlay */}
-              <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#05060B]/85 via-[#05060B]/15 to-transparent" />
+                {/* Gradient overlay */}
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#05060B]/85 via-[#05060B]/15 to-transparent" />
 
-              {/* Bottom row: badge + caption in one aligned flex row */}
-              <div className="absolute right-5 bottom-5 left-5 flex items-center justify-between gap-3">
-                {/* Badge + label grouped */}
-                <div className="flex items-center gap-3">
-                  {/* Est. badge — small, inline */}
-                  <div className="bg-neon-lime flex h-12 w-12 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-[#05060b] shadow-lg">
-                    <span className="font-heading text-[11px] leading-none font-black text-black italic">
-                      2025
-                    </span>
-                    <span className="font-mono text-[6px] tracking-widest text-black/60 uppercase">
-                      Est.
-                    </span>
+                {/* Bottom row: badge + caption in one aligned flex row */}
+                <div className="absolute right-5 bottom-5 left-5 flex items-center justify-between gap-3">
+                  {/* Badge + label grouped */}
+                  <div className="flex items-center gap-3">
+                    {/* Est. badge — small, inline */}
+                    <div className="bg-neon-lime flex h-12 w-12 shrink-0 rotate-6 flex-col items-center justify-center rounded-full border-2 border-[#05060b] shadow-lg">
+                      <span className="font-heading text-[11px] leading-none font-black text-black italic">
+                        {settings?.about_badge_year || '2025'}
+                      </span>
+                      <span className="font-mono text-[6px] tracking-widest text-black/60 uppercase">
+                        Est.
+                      </span>
+                    </div>
+                    {/* Club name */}
+                    <div>
+                      <div className="font-heading text-xl leading-none font-black text-white sm:text-2xl">
+                        {settings?.site_name || 'NEUPC'}
+                      </div>
+                      <div className="mt-0.5 font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px]">
+                        {settings?.about_university_name ||
+                          'Netrokona University'}
+                      </div>
+                    </div>
                   </div>
-                  {/* Club name */}
-                  <div>
-                    <div className="font-heading text-xl leading-none font-black text-white sm:text-2xl">
-                      NEUPC
-                    </div>
-                    <div className="mt-0.5 font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px]">
-                      Netrokona University
-                    </div>
+                  {/* Right label */}
+                  <div className="text-right font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px] whitespace-pre-line">
+                    {settings?.about_overlay_caption || 'Programming\nClub'}
                   </div>
                 </div>
-                {/* Right label */}
-                <div className="text-right font-mono text-[8px] tracking-[0.25em] text-white/60 uppercase sm:text-[9px]">
-                  Programming
-                  <br />
-                  Club
-                </div>
               </div>
-            </div>
 
-            {/* Active chip */}
-            <div className="bg-neon-violet/90 absolute top-8 -right-3 -rotate-6 rounded-xl px-3 py-1.5 shadow-lg shadow-neon-violet/10 backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
-              <span className="text-black font-mono text-[9px] font-black tracking-[0.25em] uppercase sm:text-[10px]">
-                Active
-                {settings?.member_count ? ` · ${settings.member_count}` : ''}
-              </span>
+              {/* Active chip */}
+              <div className="bg-neon-violet/90 shadow-neon-violet/10 absolute top-8 -right-3 -rotate-6 rounded-xl px-3 py-1.5 shadow-lg backdrop-blur-xl sm:-right-5 sm:px-4 sm:py-2">
+                <span className="font-mono text-[9px] font-black tracking-[0.25em] text-black uppercase sm:text-[10px]">
+                  Active
+                  {settings?.member_count ? ` · ${settings.member_count}` : ''}
+                </span>
+              </div>
             </div>
           </motion.div>
 
@@ -232,11 +246,10 @@ function About({ data = {}, settings = {} }) {
                   </svg>
                 </div>
                 <h4 className="font-heading text-neon-lime mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                  Mission
+                  {settings?.about_mission_label || 'Mission'}
                 </h4>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  {settings?.mission ||
-                    'Empowering students through technical leadership and hands-on system architecture.'}
+                  {missionText}
                 </p>
               </div>
 
@@ -262,11 +275,10 @@ function About({ data = {}, settings = {} }) {
                   </svg>
                 </div>
                 <h4 className="font-heading text-neon-violet mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                  Vision
+                  {settings?.about_vision_label || 'Vision'}
                 </h4>
                 <p className="text-sm leading-relaxed text-zinc-400">
-                  {settings?.vision ||
-                    'To be the primary incubator for future tech architects in the region.'}
+                  {visionText}
                 </p>
               </div>
             </div>
@@ -277,7 +289,7 @@ function About({ data = {}, settings = {} }) {
                 href="/about"
                 className="group font-heading hover:border-neon-violet hover:text-neon-violet focus-visible:ring-neon-violet inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-white/15 px-7 py-3 text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-all focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
               >
-                Learn More
+                {settings?.about_cta_label || 'Learn More'}
                 <span
                   aria-hidden
                   className="transition-transform group-hover:translate-x-1"

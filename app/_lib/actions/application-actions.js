@@ -12,6 +12,7 @@ import {
   isV2SchemaAvailable,
   upsertUserHandleV2,
 } from '@/app/_lib/services/problem-solving-v2-helpers';
+import { generateUniqueUsername } from '@/app/_lib/services/data/members';
 
 const logActivity = createLogger('join_request');
 
@@ -70,6 +71,16 @@ export async function approveApplicationAction(formData) {
         .filter(Boolean)
     : null;
 
+  const { data: existingProfile } = await supabaseAdmin
+    .from('member_profiles')
+    .select('username')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const username =
+    existingProfile?.username ||
+    (await generateUniqueUsername(joinRequest.full_name, userId));
+
   const { error: profileError } = await supabaseAdmin
     .from('member_profiles')
     .upsert(
@@ -81,6 +92,7 @@ export async function approveApplicationAction(formData) {
         github: joinRequest.github || null,
         interests,
         join_reason: joinRequest.reason || null,
+        username,
         approved: true,
         approved_by: admin.id,
         approved_at: new Date().toISOString(),

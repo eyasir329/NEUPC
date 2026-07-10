@@ -15,7 +15,7 @@ import { ReadySignal } from '@/app/_components/ui/AppShell';
 
 export default async function AsyncFooter() {
   const [session, social, contact, footer, settings] = await Promise.all([
-    auth(),
+    auth().catch(() => null),
     getSocialLinks(),
     getContactInfo(),
     getFooterData(),

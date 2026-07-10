@@ -45,26 +45,50 @@ export default function AchievementFormModal({ achievement, onClose }) {
           .filter(Boolean)
       : []
   );
-  const [featuredPhotoFile, setFeaturedPhotoFile] = useState(null);
-  const [featuredPhotoPreviewUrl, setFeaturedPhotoPreviewUrl] = useState(
-    achievement?.featured_photo?.url ?? null
+  const existingVariants = achievement?.featured_photo?.variants ?? {};
+  // The single uncropped source every slot crops from — never overwritten by
+  // a crop result, so repositioning one slot can never "cut" another.
+  const [sourceImageUrl, setSourceImageUrl] = useState(
+    existingVariants.original?.url ?? achievement?.featured_photo?.url ?? null
   );
+  // slot -> File pending upload on submit
+  const [pendingSlotFiles, setPendingSlotFiles] = useState({});
+  // slot -> object URL for the cropped preview (falls back to the source)
+  const [slotPreviewUrls, setSlotPreviewUrls] = useState({
+    original: existingVariants.original?.url ?? achievement?.featured_photo?.url ?? null,
+    square: existingVariants.square?.url ?? null,
+    featured: existingVariants.featured?.url ?? null,
+  });
+  const hasFeaturedPhoto = Boolean(sourceImageUrl);
   const [clearFeaturedPhoto, setClearFeaturedPhoto] = useState(false);
   const featuredPhotoInputRef = useRef(null);
   const [cropSrc, setCropSrc] = useState(null);
+  // slot the crop modal is currently editing ('original' | 'square' | 'featured')
+  const [cropSlot, setCropSlot] = useState('original');
 
   function handleFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError('');
     const reader = new FileReader();
-    reader.onload = (ev) => setCropSrc(ev.target.result);
+    reader.onload = (ev) => {
+      setSourceImageUrl(ev.target.result);
+      // A brand new upload resets any previously-cropped variants — they no
+      // longer correspond to this image.
+      setPendingSlotFiles({});
+      setSlotPreviewUrls({ original: null, square: null, featured: null });
+      setCropSlot('original');
+      setCropSrc(ev.target.result);
+    };
     reader.readAsDataURL(file);
   }
 
-  function handleCropApply(croppedFile) {
-    setFeaturedPhotoFile(croppedFile);
-    setFeaturedPhotoPreviewUrl(URL.createObjectURL(croppedFile));
+  function handleCropApply(croppedFile, slot) {
+    setPendingSlotFiles((prev) => ({ ...prev, [slot]: croppedFile }));
+    setSlotPreviewUrls((prev) => ({
+      ...prev,
+      [slot]: URL.createObjectURL(croppedFile),
+    }));
     setClearFeaturedPhoto(false);
     setCropSrc(null);
   }
@@ -76,9 +100,12 @@ export default function AchievementFormModal({ achievement, onClose }) {
     }
   }
 
-  function handleReposition() {
-    if (featuredPhotoPreviewUrl) {
-      setCropSrc(featuredPhotoPreviewUrl);
+  function handleReposition(slot = 'original') {
+    // Always crop from the original source image, never from another
+    // slot's already-cropped output — otherwise repeated crops compound.
+    if (sourceImageUrl) {
+      setCropSlot(slot);
+      setCropSrc(sourceImageUrl);
     }
   }
 
@@ -106,8 +133,9 @@ export default function AchievementFormModal({ achievement, onClose }) {
 
     // Handle featured photo changes
     const targetId = isEdit ? achievement.id : res.id;
+    const pendingSlots = Object.entries(pendingSlotFiles);
     if (targetId) {
-      if (clearFeaturedPhoto && !featuredPhotoFile) {
+      if (clearFeaturedPhoto && pendingSlots.length === 0) {
         const dfd = new FormData();
         dfd.set('achievement_id', targetId);
         const photoRes = await deleteAchievementFeaturedPhotoAction(dfd);
@@ -116,15 +144,18 @@ export default function AchievementFormModal({ achievement, onClose }) {
           setLoading(false);
           return;
         }
-      } else if (featuredPhotoFile) {
-        const ufd = new FormData();
-        ufd.set('achievement_id', targetId);
-        ufd.set('file', featuredPhotoFile);
-        const photoRes = await uploadAchievementFeaturedPhotoAction(ufd);
-        if (photoRes?.error) {
-          setError(photoRes.error);
-          setLoading(false);
-          return;
+      } else {
+        for (const [slot, file] of pendingSlots) {
+          const ufd = new FormData();
+          ufd.set('achievement_id', targetId);
+          ufd.set('file', file);
+          ufd.set('slot', slot);
+          const photoRes = await uploadAchievementFeaturedPhotoAction(ufd);
+          if (photoRes?.error) {
+            setError(photoRes.error);
+            setLoading(false);
+            return;
+          }
         }
       }
     }
@@ -139,6 +170,7 @@ export default function AchievementFormModal({ achievement, onClose }) {
       {cropSrc && (
         <FeaturedPhotoCropModal
           src={cropSrc}
+          slot={cropSlot}
           onApply={handleCropApply}
           onCancel={handleCropCancel}
           defaultFeatured={isFeatured}
@@ -346,11 +378,11 @@ export default function AchievementFormModal({ achievement, onClose }) {
                 (shown on public page)
               </span>
             </label>
-            {featuredPhotoPreviewUrl ? (
+            {hasFeaturedPhoto ? (
               <div className="relative inline-block">
                 <div className={`relative overflow-hidden rounded-xl border border-slate-700/60 transition-all duration-300 ${isFeatured ? 'h-24 w-56' : 'h-32 w-48'}`}>
                   <Image
-                    src={featuredPhotoPreviewUrl}
+                    src={slotPreviewUrls.original || sourceImageUrl}
                     alt="Featured photo preview"
                     fill
                     className="object-cover"
@@ -361,8 +393,13 @@ export default function AchievementFormModal({ achievement, onClose }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setFeaturedPhotoFile(null);
-                    setFeaturedPhotoPreviewUrl(null);
+                    setPendingSlotFiles({});
+                    setSourceImageUrl(null);
+                    setSlotPreviewUrls({
+                      original: null,
+                      square: null,
+                      featured: null,
+                    });
                     setClearFeaturedPhoto(true);
                     if (featuredPhotoInputRef.current)
                       featuredPhotoInputRef.current.value = '';
@@ -388,11 +425,81 @@ export default function AchievementFormModal({ achievement, onClose }) {
                   </button>
                   <button
                     type="button"
-                    onClick={handleReposition}
+                    onClick={() => handleReposition('original')}
                     className="text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
                   >
                     Reposition photo
                   </button>
+                </div>
+
+                {/* Homepage (square) crop — independent from the main photo above */}
+                <div className="mt-4 border-t border-slate-700/50 pt-4">
+                  <p className="mb-2 text-xs font-medium text-slate-400">
+                    Homepage card crop{' '}
+                    <span className="font-normal text-slate-500">
+                      (Hall of Victories, 1:1)
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-700/60">
+                      <Image
+                        src={
+                          slotPreviewUrls.square ||
+                          slotPreviewUrls.original ||
+                          sourceImageUrl
+                        }
+                        alt="Homepage crop preview"
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                        unoptimized
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleReposition('square')}
+                      className="text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                    >
+                      {slotPreviewUrls.square
+                        ? 'Reposition homepage crop'
+                        : 'Set homepage crop'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Achievements-page card crop — independent from the others */}
+                <div className="mt-4 border-t border-slate-700/50 pt-4">
+                  <p className="mb-2 text-xs font-medium text-slate-400">
+                    Achievements page card crop{' '}
+                    <span className="font-normal text-slate-500">
+                      (/achievements grid, 21:9)
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-10 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-700/60">
+                      <Image
+                        src={
+                          slotPreviewUrls.featured ||
+                          slotPreviewUrls.original ||
+                          sourceImageUrl
+                        }
+                        alt="Achievements page crop preview"
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                        unoptimized
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleReposition('featured')}
+                      className="text-xs text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                    >
+                      {slotPreviewUrls.featured
+                        ? 'Reposition achievements-page crop'
+                        : 'Set achievements-page crop'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -477,26 +584,6 @@ export default function AchievementFormModal({ achievement, onClose }) {
             )}
           </div>
 
-          {/* Participants (plain text) */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">
-              Participants{' '}
-              <span className="text-xs text-slate-500">
-                (comma-separated names)
-              </span>
-            </label>
-            <input
-              name="participants"
-              defaultValue={achievement?.participants?.join(', ') ?? ''}
-              placeholder="Alice, Bob, Charlie"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              These are informal labels. Link registered members via the
-              "Members" button on the card.
-            </p>
-          </div>
-
           {/* Error */}
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-900/30 px-4 py-2.5 text-sm text-red-400">
@@ -531,17 +618,31 @@ export default function AchievementFormModal({ achievement, onClose }) {
   );
 }
 
-function FeaturedPhotoCropModal({ src, onApply, onCancel, defaultFeatured = false }) {
+function FeaturedPhotoCropModal({
+  src,
+  slot = 'original',
+  onApply,
+  onCancel,
+  defaultFeatured = false,
+}) {
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [aspect, setAspect] = useState(defaultFeatured ? '21:9' : '3:2');
+  const [aspect, setAspect] = useState(
+    slot === 'square'
+      ? '1:1'
+      : slot === 'featured'
+        ? '21:9'
+        : defaultFeatured
+          ? '21:9'
+          : '3:2'
+  );
 
-  const aspectWidth = aspect === '21:9' ? 483 : 480;
-  const aspectHeight = aspect === '21:9' ? 207 : 320;
+  const aspectWidth = aspect === '21:9' ? 483 : aspect === '1:1' ? 400 : 480;
+  const aspectHeight = aspect === '21:9' ? 207 : aspect === '1:1' ? 400 : 320;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -629,7 +730,10 @@ function FeaturedPhotoCropModal({ src, onApply, onCancel, defaultFeatured = fals
     ctx.drawImage(img, cx / scale, cy / scale, img.naturalWidth, img.naturalHeight);
 
     offscreen.toBlob((blob) => {
-      onApply(new File([blob], 'featured_photo.png', { type: 'image/png' }));
+      onApply(
+        new File([blob], `featured_photo_${slot}.png`, { type: 'image/png' }),
+        slot
+      );
     }, 'image/png');
   }
 
@@ -640,7 +744,11 @@ function FeaturedPhotoCropModal({ src, onApply, onCancel, defaultFeatured = fals
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
             <p className="text-sm font-semibold text-white/90">
-              Crop &amp; Position Featured Photo
+              {slot === 'square'
+                ? 'Crop & Position Homepage Photo'
+                : slot === 'featured'
+                  ? 'Crop & Position Achievements Page Photo'
+                  : 'Crop & Position Featured Photo'}
             </p>
             <p className="mt-0.5 text-xs text-slate-400">
               Drag to reposition · slide or scroll to zoom
@@ -666,39 +774,49 @@ function FeaturedPhotoCropModal({ src, onApply, onCancel, defaultFeatured = fals
         />
 
         {/* Crop Aspect Ratio Toggle */}
-        <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-950/40 p-2.5">
-          <span className="text-xs font-medium text-slate-400">Crop Mode:</span>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                setAspect('3:2');
-                reset();
-              }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                aspect === '3:2'
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              Standard (3:2)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAspect('21:9');
-                reset();
-              }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                aspect === '21:9'
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              Featured (21:9)
-            </button>
+        {slot === 'square' || slot === 'featured' ? (
+          <div className="mx-5 mb-4 rounded-xl border border-slate-700/50 bg-slate-950/40 p-2.5 text-center">
+            <span className="text-xs font-medium text-slate-400">
+              {slot === 'square'
+                ? 'Homepage crop · locked to 1:1 (Hall of Victories card)'
+                : 'Achievements page crop · locked to 21:9 (grid card)'}
+            </span>
           </div>
-        </div>
+        ) : (
+          <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-950/40 p-2.5">
+            <span className="text-xs font-medium text-slate-400">Crop Mode:</span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAspect('3:2');
+                  reset();
+                }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  aspect === '3:2'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Standard (3:2)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAspect('21:9');
+                  reset();
+                }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  aspect === '21:9'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Featured (21:9)
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* canvas container */}
         <div className="relative mx-5 mb-4 flex justify-center overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2">

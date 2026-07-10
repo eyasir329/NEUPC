@@ -5,6 +5,37 @@
 import { supabase, supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { _log } from './_internal';
 
+// Generate a default username from a full name, guaranteed unique against
+// member_profiles.username. Slugifies to the same charset the manual
+// username field validates against (^[a-z0-9_-]{3,30}$), then appends a
+// numeric suffix on collision.
+export async function generateUniqueUsername(fullName, userId) {
+  const base =
+    (fullName ?? 'member')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 26) || 'member';
+
+  let candidate = base;
+  let suffix = 1;
+  for (;;) {
+    const { data: existing } = await supabaseAdmin
+      .from('member_profiles')
+      .select('user_id')
+      .eq('username', candidate)
+      .maybeSingle();
+
+    if (!existing || existing.user_id === userId) return candidate;
+
+    suffix += 1;
+    const suffixStr = String(suffix);
+    candidate = `${base.slice(0, 30 - suffixStr.length - 1)}-${suffixStr}`;
+  }
+}
+
 // Approve a member application.
 export async function approveMember(userId, adminId) {
   const { error: profileError } = await supabaseAdmin

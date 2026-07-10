@@ -8,82 +8,98 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
+// `slug` matches an actual published roadmap's slug column in the `roadmaps`
+// table, so a click can deep-link to that roadmap's page. Every node here
+// corresponds 1:1 to one of the 13 published roadmaps.
 export const DATA_NODES = [
   {
     id: 'GP',
     label: 'Graphics Programming',
+    slug: 'graphics-programming-roadmap-beginner-to-expert-mmpp5z3o',
     description:
       'Master rendering pipelines, shaders, OpenGL/Vulkan, and real-time 3D graphics engines from beginner to expert.',
   },
   {
     id: 'CV',
     label: 'Computer Vision',
+    slug: 'computer-vision-roadmap-beginner-to-expert-mmow7pry',
     description:
       'Explore image processing, object detection, and visual models to enable machines to interpret visual data.',
   },
   {
     id: 'SYS',
     label: 'System Design',
+    slug: 'system-design-administration-roadmap-beginner-to-expert-mmp9kjef',
     description:
       'Architect robust distributed systems, manage cloud infrastructure, and master high-availability backend administration.',
   },
   {
     id: 'MOB',
     label: 'Mobile App Dev',
+    slug: 'full-stack-mobile-app-development-mmopm53v',
     description:
       'Build cross-platform and native mobile applications focusing on performance, UI/UX, and state management.',
   },
   {
     id: 'NLP',
     label: 'Natural Language Processing',
+    slug: 'natural-language-processing-nlp-roadmap-beginner-to-expert-mmowix0e',
     description:
       'Dive into NLP, text generation, transformers, and the semantic understanding of human languages.',
   },
   {
     id: 'RAG',
     label: 'Agentic AI & RAG',
+    slug: 'agentic-ai-rag-roadmap-beginner-to-expert-mmoy9xw3',
     description:
       'Design autonomous AI agents and Retrieval-Augmented Generation flows using modern LLM orchestration.',
   },
   {
     id: 'RL',
     label: 'Reinforcement Learning',
+    slug: 'reinforcement-learning-roadmap-beginner-to-expert-mmowoq45',
     description:
       'Train models through reward/penalty paradigms, diving into Q-learning, policy gradients, and agents.',
   },
   {
     id: 'PAR',
     label: 'Concurrency Parallelism',
+    slug: 'concurrency-parallelism-roadmap-beginner-to-expert-mmpp8ca3',
     description:
       'Master multi-threading, concurrency models, asynchronous programming, and CPU/GPU-accelerated processing.',
   },
   {
     id: 'WEB',
     label: 'Full-Stack Web',
+    slug: 'full-stack-web-development-roadmap-from-basics-to-mastery-mmopea6y',
     description:
       'Engineer modern web experiences from responsive frontends to scalable microservice backends.',
   },
   {
     id: 'CP',
     label: 'Competitive Programming',
+    slug: 'competitive-programming-roadmap-beginner-to-expert-mmmpt26y',
     description:
       'Sharpen algorithmic intuition and master complex data structures under strict time and memory constraints.',
   },
   {
     id: 'AI',
     label: 'Machine Learning',
+    slug: 'artificial-intelligence-machine-learning-roadmap-beginner-to-mmoumwg4',
     description:
       'Train predictive models, neural networks, and deep learning architectures to extract insights from datasets.',
   },
   {
     id: 'SEC',
     label: 'Cyber Security',
+    slug: 'cyber-security-specialist-roadmap-beginner-to-expert-mmr1hblk',
     description:
       'Understand penetration testing, network defense, cryptography, and zero-trust security architectures.',
   },
   {
     id: 'W3',
     label: 'Web3 Blockchain',
+    slug: 'web3-blockchain-development-roadmap-beginner-to-expert-mmp96crv',
     description:
       'Develop decentralized applications, smart contracts, and cryptographic ledger systems on modern blockchains.',
   },
@@ -114,9 +130,30 @@ const MULTILINE_CODE_SNIPPETS = [
   'function init() {\n  const ctx = null;\n  return rgba(255,10);\n}',
 ];
 
-export default function Hero3DCanvas({ onNodeClick } = {}) {
+// Overlays admin-editable label/description (matched by slug) onto the
+// code-owned node config, which keeps icon/positioning mechanics intact.
+function resolveDataNodes(nodeOverrides) {
+  if (!Array.isArray(nodeOverrides) || nodeOverrides.length === 0) {
+    return DATA_NODES;
+  }
+  const bySlug = new Map(
+    nodeOverrides.filter((n) => n?.slug).map((n) => [n.slug, n])
+  );
+  return DATA_NODES.map((node) => {
+    const override = bySlug.get(node.slug);
+    if (!override) return node;
+    return {
+      ...node,
+      label: override.label || node.label,
+      description: override.description || node.description,
+    };
+  });
+}
+
+export default function Hero3DCanvas({ onNodeClick, nodeOverrides } = {}) {
   const mountRef = useRef(null);
   const onNodeClickRef = useRef(onNodeClick);
+  const dataNodes = resolveDataNodes(nodeOverrides);
 
   const interactionState = useRef({
     isDragging: false,
@@ -352,8 +389,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     };
 
     const nodeSprites = [];
-    DATA_NODES.forEach((node, i) => {
-      const phi = Math.acos(1 - (2 * (i + 0.5)) / DATA_NODES.length);
+    dataNodes.forEach((node, i) => {
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / dataNodes.length);
       const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
 
       const px = coreRadius * Math.sin(phi) * Math.cos(theta);
@@ -510,6 +547,16 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     const mouse = new THREE.Vector2(-9999, -9999);
     let hoveredNode = null;
 
+    // Only nodes on the camera-facing half of the globe are interactive —
+    // sprites always face the camera, so without this filter the raycaster
+    // hits (and clicks open) nodes hidden behind the wireframe.
+    const _worldPos = new THREE.Vector3();
+    const intersectFrontNodes = (rc) =>
+      rc.intersectObjects(nodeSprites).filter((hit) => {
+        hit.object.getWorldPosition(_worldPos);
+        return _worldPos.z > worldGroup.position.z;
+      });
+
     hitTestRef.current = (clientX, clientY) => {
       const rect = mountEl.getBoundingClientRect();
       const m = new THREE.Vector2(
@@ -518,7 +565,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       );
       raycaster.setFromCamera(m, camera);
       return (
-        raycaster.intersectObjects(nodeSprites).length > 0 ||
+        intersectFrontNodes(raycaster).length > 0 ||
         raycaster.intersectObject(sphereLines).length > 0
       );
     };
@@ -549,12 +596,19 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
         raycaster.setFromCamera(clickMouse, camera);
-        const clickIntersects = raycaster.intersectObjects(nodeSprites);
+        const clickIntersects = intersectFrontNodes(raycaster);
         clickedNode = clickIntersects[0]?.object || null;
       }
 
       if (clickedNode && onNodeClickRef.current) {
-        onNodeClickRef.current(clickedNode.userData.nodeData);
+        // Project the node's world position to pixel coords inside the mount
+        // so the caller can place the detail card next to the clicked node.
+        const rect = mountEl.getBoundingClientRect();
+        clickedNode.getWorldPosition(_worldPos).project(camera);
+        onNodeClickRef.current(clickedNode.userData.nodeData, {
+          x: ((_worldPos.x + 1) / 2) * rect.width,
+          y: ((1 - _worldPos.y) / 2) * rect.height,
+        });
       }
     };
 
@@ -631,7 +685,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       ptColors.needsUpdate = true;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(nodeSprites);
+      const intersects = intersectFrontNodes(raycaster);
       const sphereHit = raycaster.intersectObject(sphereLines);
       const overGlobeNow = intersects.length > 0 || sphereHit.length > 0;
       // For mouse (non-touch), pause auto-spin when hovering the globe

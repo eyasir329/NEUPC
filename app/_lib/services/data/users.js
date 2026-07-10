@@ -198,14 +198,29 @@ export async function updateUser(id, updates) {
   return data;
 }
 
-// Get minimal user list for selectors.
+// Get approved club members for selectors (achievements/participation
+// member pickers) — sourced from member_profiles so unapproved applicants
+// and non-member accounts never show up as linkable "members".
 export async function getUsersForSelector() {
   const { data, error } = await supabaseAdmin
-    .from('users')
-    .select('id, full_name, avatar_url')
-    .order('full_name');
+    .from('member_profiles')
+    .select(
+      'user_id, student_id, academic_session, department, users!member_profiles_user_id_fkey(id, full_name, avatar_url)'
+    )
+    .eq('approved', true);
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  return (data ?? [])
+    .filter((m) => m.users)
+    .map((m) => ({
+      id: m.users.id,
+      full_name: m.users.full_name,
+      avatar_url: m.users.avatar_url,
+      student_id: m.student_id,
+      department: m.department,
+      academic_session: m.academic_session,
+    }))
+    .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''));
 }
 
 // Get all users with role/status info.
