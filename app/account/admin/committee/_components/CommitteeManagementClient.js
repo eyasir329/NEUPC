@@ -25,10 +25,10 @@ import {
   updateCommitteeMemberAction,
   deleteCommitteeMemberAction,
 } from '@/app/_lib/actions/committee-actions';
-import PositionsTable from './PositionsTable';
-import MembersTable from './MembersTable';
-import PositionModal from './PositionModal';
-import MemberModal from './MemberModal';
+import PositionsTable from '@/app/account/_components/committee/PositionsTable';
+import MembersTable from '@/app/account/_components/committee/MembersTable';
+import PositionModal from '@/app/account/_components/committee/PositionModal';
+import MemberModal from '@/app/account/_components/committee/MemberModal';
 import toast from 'react-hot-toast';
 import {
   PageShell,
@@ -519,6 +519,7 @@ export default function CommitteeManagementClient({
             </div>
           ) : (
             <PositionsTable
+              accent="indigo"
               positions={currentItems}
               onEdit={(position) =>
                 setPositionModal({ type: 'edit', position, isOpen: true })
@@ -565,6 +566,7 @@ export default function CommitteeManagementClient({
             </div>
           ) : (
             <MembersTable
+              accent="indigo"
               members={currentItems}
               positions={positions}
               onEdit={(member) =>
@@ -614,6 +616,7 @@ export default function CommitteeManagementClient({
           </div>
         ) : (
           <MembersTable
+            accent="indigo"
             members={currentItems}
             positions={positions}
             onEdit={(member) =>
@@ -653,6 +656,7 @@ export default function CommitteeManagementClient({
       {/* Modals */}
       {positionModal?.isOpen && (
         <PositionModal
+          accent="indigo"
           type={positionModal.type}
           position={positionModal.position}
           onClose={() => setPositionModal(null)}
@@ -664,6 +668,7 @@ export default function CommitteeManagementClient({
 
       {memberModal?.isOpen && (
         <MemberModal
+          accent="indigo"
           type={memberModal.type}
           member={memberModal.member}
           positions={positions}

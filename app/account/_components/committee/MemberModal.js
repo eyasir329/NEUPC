@@ -23,7 +23,8 @@ import {
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { uploadCommitteeMemberAvatarAction } from '@/app/_lib/actions/committee-actions';
-import { Avatar } from '@/app/account/_components/ui/dashboard';
+import { Avatar } from '@/app/account/_components/ui';
+import { committeeAccent } from './accent';
 
 function formatDateForInput(iso) {
   if (!iso) return '';
@@ -41,7 +42,9 @@ export default function MemberModal({
   onUpdate,
   isLoading,
   defaultIsCurrent = true,
+  accent,
 }) {
+  const a = committeeAccent(accent);
   const isCreate = type === 'create';
 
   const profile = useMemo(() => {
@@ -246,6 +249,7 @@ export default function MemberModal({
       {cropSrc && (
         <CommitteeAvatarCropModal
           src={cropSrc}
+          accent={accent}
           onApply={handleCropApply}
           onCancel={handleCropCancel}
           defaultAspect={
@@ -267,7 +271,7 @@ export default function MemberModal({
             <h2 className="text-base font-bold text-white">
               {isCreate ? 'Assign Committee Member' : 'Edit Member Assignment'}
             </h2>
-            <p className="mt-1 font-mono text-[11px] text-violet-400">
+            <p className={`mt-1 font-mono text-[11px] ${a.monoText}`}>
               {isCreate
                 ? '// Appoint a user to a position'
                 : `// Editing member: ${member?.users?.full_name}`}
@@ -307,7 +311,7 @@ export default function MemberModal({
                   }}
                   onFocus={() => setShowUserDropdown(true)}
                   required={!formData.user_id}
-                  className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-3.5 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                  className={`w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-3.5 pl-10 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
                 />
               </div>
 
@@ -360,14 +364,14 @@ export default function MemberModal({
                 {/* Hover Camera Overlay */}
                 {!isUploading && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    <Camera className="h-4 w-4 text-violet-400" />
+                    <Camera className={`h-4 w-4 ${a.monoText}`} />
                   </div>
                 )}
 
                 {/* Upload spinner */}
                 {isUploading && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/75 text-white">
-                    <Loader className="h-4 w-4 animate-spin text-violet-400" />
+                    <Loader className={`h-4 w-4 animate-spin ${a.monoText}`} />
                   </div>
                 )}
 
@@ -395,7 +399,7 @@ export default function MemberModal({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-[10px] text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                    className={`text-[10px] ${a.monoText} ${a.hoverText300} underline underline-offset-2`}
                   >
                     Replace photo
                   </button>
@@ -403,7 +407,7 @@ export default function MemberModal({
                     <button
                       type="button"
                       onClick={handleReposition}
-                      className="text-[10px] text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                      className={`text-[10px] ${a.monoText} ${a.hoverText300} underline underline-offset-2`}
                     >
                       Reposition photo
                     </button>
@@ -423,7 +427,7 @@ export default function MemberModal({
               value={formData.position_id}
               onChange={handleChange}
               required
-              className="w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50"
+              className={`w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none ${a.selectFocus}`}
               style={{ colorScheme: 'dark' }}
             >
               <option value="" disabled>
@@ -450,7 +454,7 @@ export default function MemberModal({
                 value={formData.term_start}
                 onChange={handleChange}
                 required
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none ${a.inputFocus}`}
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -465,7 +469,7 @@ export default function MemberModal({
                 name="term_end"
                 value={formData.term_end}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none ${a.inputFocus}`}
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -480,7 +484,7 @@ export default function MemberModal({
               name="is_current"
               value={formData.is_current}
               onChange={handleChange}
-              className="w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50"
+              className={`w-full cursor-pointer rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none ${a.selectFocus}`}
               style={{ colorScheme: 'dark' }}
             >
               <option value="true">Current Term (Active)</option>
@@ -501,7 +505,7 @@ export default function MemberModal({
                 value={formData.academic_session}
                 onChange={handleChange}
                 placeholder="e.g. 2021-22"
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
               />
             </div>
 
@@ -516,7 +520,7 @@ export default function MemberModal({
                 value={formData.department}
                 onChange={handleChange}
                 placeholder="e.g. Department of CSE"
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
               />
             </div>
           </div>
@@ -534,7 +538,7 @@ export default function MemberModal({
                 value={formData.github}
                 onChange={handleChange}
                 placeholder="github.com/username"
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
               />
             </div>
 
@@ -549,7 +553,7 @@ export default function MemberModal({
                 value={formData.linkedin}
                 onChange={handleChange}
                 placeholder="linkedin.com/in/username"
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
               />
             </div>
           </div>
@@ -566,7 +570,7 @@ export default function MemberModal({
               onChange={handleChange}
               rows={3}
               placeholder="Provide a short biography or description for this committee member..."
-              className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+              className={`w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
             />
           </div>
 
@@ -582,7 +586,7 @@ export default function MemberModal({
             <button
               type="submit"
               disabled={isLoading || (isCreate && !formData.user_id)}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl ${a.submitButton} py-2.5 text-xs font-semibold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50`}
             >
               {isLoading && <Loader className="h-3.5 w-3.5 animate-spin" />}
               {isCreate ? 'Assign Member' : 'Save Changes'}
@@ -595,7 +599,14 @@ export default function MemberModal({
   );
 }
 
-function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1' }) {
+function CommitteeAvatarCropModal({
+  src,
+  accent,
+  onApply,
+  onCancel,
+  defaultAspect = '1:1',
+}) {
+  const a = committeeAccent(accent);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const dragging = useRef(false);
@@ -625,7 +636,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
     ctx.drawImage(img, cx, cy, w, h);
     ctx.restore();
 
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)'; // violet border overlay
+    ctx.strokeStyle = a.canvasStroke; // violet border overlay
     ctx.lineWidth = 2;
     if (aspect === '1:1') {
       ctx.beginPath();
@@ -634,7 +645,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
     } else {
       ctx.strokeRect(1, 1, aspectWidth - 2, aspectHeight - 2);
     }
-  }, [offset, zoom, aspectWidth, aspectHeight, aspect]);
+  }, [offset, zoom, aspectWidth, aspectHeight, aspect, a.canvasStroke]);
 
   useEffect(() => {
     draw();
@@ -741,7 +752,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
               }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                 aspect === '1:1'
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-900/20'
+                  ? '${a.selectedButton}'
                   : 'bg-slate-800 text-gray-400 hover:text-white'
               }`}
             >
@@ -755,7 +766,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
               }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                 aspect === '3:4'
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-900/20'
+                  ? '${a.selectedButton}'
                   : 'bg-slate-800 text-gray-400 hover:text-white'
               }`}
             >
@@ -794,7 +805,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
           </button>
           <div className="relative h-1.5 flex-1 rounded-full bg-slate-800">
             <div
-              className="absolute top-0 left-0 h-1.5 rounded-full bg-violet-500/70 transition-all"
+              className={`absolute top-0 left-0 h-1.5 rounded-full ${a.progressBar} transition-all`}
               style={{ width: `${((zoom - 1) / 2) * 100}%` }}
             />
             <input
@@ -831,7 +842,7 @@ function CommitteeAvatarCropModal({ src, onApply, onCancel, defaultAspect = '1:1
           <button
             type="button"
             onClick={apply}
-            className="flex-1 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-violet-500 active:bg-violet-700"
+            className={`flex-1 rounded-xl ${a.solidButton} px-4 py-2.5 text-xs font-semibold text-white transition`}
           >
             Apply Crop
           </button>

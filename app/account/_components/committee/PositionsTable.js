@@ -4,6 +4,7 @@
  */
 
 import { Edit3, Trash2 } from 'lucide-react';
+import { committeeAccent } from './accent';
 
 function CategoryBadge({ category }) {
   const styles = {
@@ -32,7 +33,9 @@ function CategoryBadge({ category }) {
   );
 }
 
-export default function PositionsTable({ positions, onEdit, onDelete }) {
+export default function PositionsTable({ positions, onEdit, onDelete, accent }) {
+  const a = committeeAccent(accent);
+
   if (positions.length === 0) {
     return null;
   }
@@ -75,7 +78,7 @@ export default function PositionsTable({ positions, onEdit, onDelete }) {
                 </td>
                 <td className="px-5 py-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white transition-colors group-hover:text-violet-400">
+                    <p className={`text-sm font-semibold text-white transition-colors ${a.hoverText}`}>
                       {position.title}
                     </p>
                     {position.responsibilities && (
@@ -98,7 +101,7 @@ export default function PositionsTable({ positions, onEdit, onDelete }) {
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       onClick={() => onEdit(position)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-violet-500/20 hover:bg-violet-500/10 hover:text-violet-400 active:scale-95"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all ${a.iconButton} active:scale-95`}
                       title="Edit Position"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
@@ -148,7 +151,7 @@ export default function PositionsTable({ positions, onEdit, onDelete }) {
               <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   onClick={() => onEdit(position)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-violet-500/20 hover:bg-violet-500/10 hover:text-violet-400 active:scale-95"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all ${a.iconButton} active:scale-95`}
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                 </button>

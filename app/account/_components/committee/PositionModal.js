@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { X, Loader } from 'lucide-react';
+import { committeeAccent } from './accent';
 
 export default function PositionModal({
   type,
@@ -13,7 +14,10 @@ export default function PositionModal({
   onCreate,
   onUpdate,
   isLoading,
+  accent,
 }) {
+  const a = committeeAccent(accent);
+
   const [formData, setFormData] = useState({
     title: position?.title || '',
     category: position?.category || 'executive',
@@ -56,7 +60,7 @@ export default function PositionModal({
                 ? 'Create Committee Position'
                 : 'Edit Position'}
             </h2>
-            <p className="mt-1 font-mono text-[11px] text-violet-400">
+            <p className={`mt-1 font-mono text-[11px] ${a.monoText}`}>
               {type === 'create'
                 ? '// Add a new role definition'
                 : `// Editing role: ${position?.title}`}
@@ -83,7 +87,7 @@ export default function PositionModal({
               onChange={handleChange}
               required
               placeholder="e.g., President, Tech Lead, Public Relations"
-              className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+              className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
             />
           </div>
 
@@ -97,7 +101,7 @@ export default function PositionModal({
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none focus:border-violet-500/50"
+                  className={`w-full cursor-pointer appearance-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 font-sans text-sm text-white transition-all outline-none ${a.selectFocus}`}
                   style={{ colorScheme: 'dark' }}
                 >
                   <option value="executive">Executive</option>
@@ -117,7 +121,7 @@ export default function PositionModal({
                 value={formData.rank}
                 onChange={handleChange}
                 placeholder="Optional rank index"
-                className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
               />
             </div>
           </div>
@@ -132,7 +136,7 @@ export default function PositionModal({
               value={formData.display_order}
               onChange={handleChange}
               placeholder="e.g. 0, 1, 2 for sorting"
-              className="w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+              className={`w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
             />
           </div>
 
@@ -146,7 +150,7 @@ export default function PositionModal({
               onChange={handleChange}
               rows={3}
               placeholder="Specify the key responsibilities of this role..."
-              className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+              className={`w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none ${a.inputFocus}`}
             />
           </div>
 
@@ -162,7 +166,7 @@ export default function PositionModal({
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl ${a.submitButton} py-2.5 text-xs font-semibold text-white transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50`}
             >
               {isLoading && <Loader className="h-3.5 w-3.5 animate-spin" />}
               {type === 'create' ? 'Create Position' : 'Save Changes'}

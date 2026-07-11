@@ -5,6 +5,7 @@
 
 import { Edit3, Trash2 } from 'lucide-react';
 import { Avatar } from '@/app/account/_components/ui';
+import { committeeAccent } from './accent';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -33,7 +34,15 @@ function StatusBadge({ isCurrent }) {
   );
 }
 
-export default function MembersTable({ members, positions, onEdit, onDelete }) {
+export default function MembersTable({
+  members,
+  positions,
+  onEdit,
+  onDelete,
+  accent,
+}) {
+  const a = committeeAccent(accent);
+
   if (members.length === 0) {
     return null;
   }
@@ -87,7 +96,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                         src={member.custom_avatar_url || member.users?.avatar_url}
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white transition-colors group-hover:text-indigo-400">
+                        <p className={`truncate text-sm font-semibold text-white transition-colors ${a.hoverText}`}>
                           {fullName}
                         </p>
                         <p className="mt-0.5 truncate text-xs text-gray-500">
@@ -147,7 +156,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => onEdit(member)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 active:scale-95"
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all ${a.iconButton} active:scale-95`}
                         title="Edit Member Assignment"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
@@ -221,7 +230,7 @@ export default function MembersTable({ members, positions, onEdit, onDelete }) {
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     onClick={() => onEdit(member)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all hover:border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 active:scale-95"
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border border-white/6 bg-white/2 text-gray-400 transition-all ${a.iconButton} active:scale-95`}
                   >
                     <Edit3 className="h-3.5 w-3.5" />
                   </button>
