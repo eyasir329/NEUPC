@@ -17,6 +17,7 @@ import { uploadToDrive, deleteFromDrive } from '@/app/_lib/integrations/gdrive';
 import { generateImage } from '@/app/_lib/integrations/image-gen';
 import { generateText } from '@/app/_lib/integrations/text-gen';
 import { incrementRoadmapViews } from '@/app/_lib/services/data-service';
+import { cleanLessonContent } from '@/app/_lib/services/bootcamp-sanitize';
 const logActivity = createLogger('roadmap');
 
 const ALLOWED_ROADMAP_IMAGE_TYPES = [
@@ -51,8 +52,19 @@ export async function createRoadmapAction(formData) {
     .map((p) => p.trim())
     .filter(Boolean);
 
-  // Store content as HTML string
-  const content = formData.get('content')?.trim() || null;
+  // Same pipeline as bootcamp lesson saves (block JSON or legacy string).
+  const rawContent = formData.get('content')?.trim() || null;
+  let content = rawContent ? cleanLessonContent(rawContent) : null;
+  // content column is jsonb — store block arrays as real arrays, not
+  // double-encoded JSON strings. Legacy plain strings stay strings.
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) content = parsed;
+    } catch {
+      /* legacy string content — keep as-is */
+    }
+  }
 
   const payload = {
     slug: generateSlug(title),
@@ -107,8 +119,19 @@ export async function updateRoadmapAction(formData) {
     .map((p) => p.trim())
     .filter(Boolean);
 
-  // Store content as HTML string
-  const content = formData.get('content')?.trim() || null;
+  // Same pipeline as bootcamp lesson saves (block JSON or legacy string).
+  const rawContent = formData.get('content')?.trim() || null;
+  let content = rawContent ? cleanLessonContent(rawContent) : null;
+  // content column is jsonb — store block arrays as real arrays, not
+  // double-encoded JSON strings. Legacy plain strings stay strings.
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) content = parsed;
+    } catch {
+      /* legacy string content — keep as-is */
+    }
+  }
 
   const updates = {
     title,

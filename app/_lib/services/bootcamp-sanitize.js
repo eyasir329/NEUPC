@@ -13,6 +13,7 @@
  */
 
 import { sanitizeRichText, sanitizeText } from '@/app/_lib/utils/validation';
+import { migrateHtmlBlockObject } from '@/app/_lib/services/block-migrations';
 
 /**
  * Sanitize a single string value as rich text.
@@ -31,6 +32,31 @@ export function cleanPlainText(value, maxLength = 5000) {
   if (value == null) return value;
   if (typeof value !== 'string') return value;
   return sanitizeText(value, maxLength);
+}
+
+/**
+ * Sanitize markdown source code-safely. Fenced code blocks and inline code
+ * spans are masked before running the HTML sanitizer (the renderer escapes
+ * code at display time, so `<vector>` in a fence is safe and must survive),
+ * then restored. Raw inline HTML in the prose IS sanitized because marked
+ * passes it through to dangerouslySetInnerHTML unchanged.
+ *
+ * @param {string} md
+ * @param {number} [maxLength]
+ * @returns {string}
+ */
+export function cleanMarkdown(md, maxLength = 50000) {
+  if (md == null || typeof md !== 'string') return md;
+  const masked = [];
+  const withPlaceholders = md
+    .slice(0, maxLength)
+    .replace(
+      /```[\s\S]*?(?:```|$)/g,
+      (m) => `@@MD-CODE-${masked.push(m) - 1}@@`
+    )
+    .replace(/`[^`\n]+`/g, (m) => `@@MD-CODE-${masked.push(m) - 1}@@`);
+  const cleaned = sanitizeRichText(withPlaceholders, maxLength);
+  return cleaned.replace(/@@MD-CODE-(\d+)@@/g, (_, i) => masked[+i] ?? '');
 }
 
 /**
@@ -53,7 +79,10 @@ export function cleanLessonContent(content) {
   if (typeof content === 'string') {
     try {
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) || (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks))) {
+      if (
+        Array.isArray(parsed) ||
+        (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks))
+      ) {
         parsedContent = parsed;
         isJson = true;
       }
@@ -64,8 +93,15 @@ export function cleanLessonContent(content) {
 
   const sanitizeBlock = (block) => {
     if (!block || typeof block !== 'object') return block;
-    const next = { ...block };
+    let next = { ...block };
     if (next.type === 'html') {
+      // Convert legacy admin-pasted inline-style code blocks to markdown
+      // (the unified renderer no longer supports inline-styled html for code).
+      // If migration succeeds, the block becomes a 'markdown' block and
+      // skips the html-bypass path. If migration is not applicable (the
+      // html block has legitimate non-code content), keep as html.
+      const { migrated, block: migratedBlock } = migrateHtmlBlockObject(next);
+      if (migrated) return migratedBlock;
       // Bypass rich-text sanitization for HTML block types to preserve custom admin-authored styling
     } else if (next.type === 'lessonPlan' && typeof next.content === 'string') {
       try {
@@ -75,6 +111,10 @@ export function cleanLessonContent(content) {
       } catch (e) {
         // Keep as-is if parsing fails
       }
+    } else if (next.type === 'markdown' && typeof next.content === 'string') {
+      // Markdown carries literal `<...>` inside code fences/spans that the
+      // HTML sanitizer would destroy — sanitize code-safely instead.
+      next.content = cleanMarkdown(next.content);
     } else if (typeof next.content === 'string') {
       next.content = sanitizeRichText(next.content);
     }
@@ -94,10 +134,18 @@ export function cleanLessonContent(content) {
   let cleaned;
   if (Array.isArray(parsedContent)) {
     cleaned = parsedContent.map(sanitizeBlock);
-  } else if (typeof parsedContent === 'object' && Array.isArray(parsedContent.blocks)) {
-    cleaned = { ...parsedContent, blocks: parsedContent.blocks.map(sanitizeBlock) };
+  } else if (
+    typeof parsedContent === 'object' &&
+    Array.isArray(parsedContent.blocks)
+  ) {
+    cleaned = {
+      ...parsedContent,
+      blocks: parsedContent.blocks.map(sanitizeBlock),
+    };
   } else if (typeof parsedContent === 'string') {
-    cleaned = sanitizeRichText(parsedContent);
+    // Legacy whole-document strings (pre-block-editor posts) run to ~130k
+    // chars — the 50k default would silently truncate them on re-save.
+    cleaned = sanitizeRichText(parsedContent, 500000);
   } else {
     cleaned = parsedContent;
   }

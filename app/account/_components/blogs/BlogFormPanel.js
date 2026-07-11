@@ -62,78 +62,7 @@ import {
 import { driveImageUrl } from '@/app/_lib/utils/utils';
 import MultiBlockEditor from '@/app/account/admin/bootcamps/_components/MultiBlockEditor';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
-import { createLowlight, common } from 'lowlight';
-import { toHtml } from 'hast-util-to-html';
-
-const lowlightInstance = createLowlight(common);
-
-/** Wrap highlighted HTML into per-line spans for CSS line numbers */
-function wrapCodeLines(html) {
-  const lines = html.split('\n');
-  if (lines.length > 0 && !lines[lines.length - 1]) lines.pop();
-  let openSpans = [];
-  return lines
-    .map((raw) => {
-      const reopened = openSpans.join('');
-      const tagRe = /<(\/?)(span)([^>]*)>/g;
-      let m;
-      while ((m = tagRe.exec(raw)) !== null) {
-        if (m[1] === '/') openSpans.pop();
-        else openSpans.push(`<span${m[3]}>`);
-      }
-      const closers = [...openSpans]
-        .reverse()
-        .map(() => '</span>')
-        .join('');
-      return `<span class="code-line">${reopened}${raw || ' '}${closers}</span>`;
-    })
-    .join('');
-}
-
-const COPY_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-const CHECK_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-
-/** Process HTML string: highlight code blocks + wrap lines (no DOM needed) */
-function highlightCodeBlocksAdmin(htmlString) {
-  if (!htmlString) return htmlString;
-  const knownLangs = lowlightInstance.listLanguages();
-  return htmlString.replace(
-    /(<pre[^>]*>\s*<code)([^>]*)(>)([\s\S]*?)(<\/code>\s*<\/pre>)/gi,
-    (_match, openTag, attrs, gt, codeContent, closeTag) => {
-      const decoded = codeContent
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      const langMatch = attrs.match(/class="[^"]*language-(\w+)/);
-      let lang = langMatch ? langMatch[1] : null;
-      let highlighted;
-      try {
-        if (lang && knownLangs.includes(lang)) {
-          highlighted = toHtml(lowlightInstance.highlight(lang, decoded));
-        } else {
-          const auto = lowlightInstance.highlightAuto(decoded);
-          highlighted = toHtml(auto);
-          if (!lang && auto.data?.language) {
-            lang = auto.data.language;
-            if (attrs.includes('class="')) {
-              attrs = attrs.replace(/class="/, `class="language-${lang} `);
-            } else {
-              attrs = ` class="language-${lang}"` + attrs;
-            }
-          }
-        }
-      } catch {
-        highlighted = codeContent;
-      }
-      return `${openTag}${attrs}${gt}${wrapCodeLines(highlighted)}${closeTag}`;
-    }
-  );
-}
+import MarkdownRenderer from '@/app/_components/markdown/MarkdownRenderer';
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* Style constants                                                           */
@@ -267,7 +196,6 @@ function LivePreview({
   isFeatured,
   readTime,
 }) {
-  const previewRef = useRef(null);
   const cc = getCategoryConfig(category);
 
   const isJsonContent = useMemo(() => {
@@ -275,39 +203,14 @@ function LivePreview({
     return typeof content === 'string' && content.trim().startsWith('[');
   }, [content]);
 
-  // Pre-process content: syntax highlighting + line wrapping (synchronous)
-  const enhancedContent = useMemo(
-    () => (isJsonContent ? '' : highlightCodeBlocksAdmin(content)),
-    [content, isJsonContent]
-  );
-
-  // Copy-to-clipboard buttons (needs DOM)
-  useEffect(() => {
-    if (!previewRef.current || isJsonContent) return;
-    const codeBlocks = previewRef.current.querySelectorAll('pre code');
-    codeBlocks.forEach((block) => {
-      const pre = block.parentElement;
-      if (pre.querySelector('.code-copy-btn')) return;
-      const rawText = block.textContent || '';
-      if (!rawText.trim()) return;
-
-      const btn = document.createElement('button');
-      btn.className = 'code-copy-btn';
-      btn.setAttribute('aria-label', 'Copy code');
-      btn.innerHTML = COPY_SVG;
-      btn.addEventListener('click', () => {
-        navigator.clipboard.writeText(rawText).then(() => {
-          btn.classList.add('copied');
-          btn.innerHTML = CHECK_SVG;
-          setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.innerHTML = COPY_SVG;
-          }, 2000);
-        });
-      });
-      pre.appendChild(btn);
-    });
-  }, [enhancedContent]);
+  // Heuristic: detect whether the non-JSON payload looks like markdown
+  // (vs. raw HTML produced by TipTap). Used only for the legacy non-JSON
+  // preview path — modern edits always serialize JSON blocks.
+  const looksLikeMarkdown = useMemo(() => {
+    if (isJsonContent || !content) return false;
+    const s = String(content);
+    return /(^|\n)#{1,6}\s/m.test(s) || /```/.test(s) || /(^|\n)\s*[-*]\s/m.test(s);
+  }, [content, isJsonContent]);
 
   const tagList = tags
     ? tags
@@ -408,11 +311,15 @@ function LivePreview({
               <div className="blog-content text-xs leading-relaxed text-gray-300">
                 <LessonContentRenderer content={content} viewerMode={true} />
               </div>
+            ) : looksLikeMarkdown ? (
+              <MarkdownRenderer
+                source={content}
+                scope="md-viewer blog-content admin-preview text-xs leading-relaxed text-gray-300"
+              />
             ) : (
               <div
-                ref={previewRef}
                 className="blog-content text-xs leading-relaxed text-gray-300"
-                dangerouslySetInnerHTML={{ __html: enhancedContent }}
+                dangerouslySetInnerHTML={{ __html: content }}
               />
             )}
           </div>

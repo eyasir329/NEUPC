@@ -20,139 +20,7 @@ import {
   getCategoryConfig,
   getCategoryLabel,
 } from '@/app/_lib/config/blog-config';
-import { createLowlight, common } from 'lowlight';
-import { toHtml } from 'hast-util-to-html';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
-
-const lowlight = createLowlight(common);
-
-// ─── Code block enhancement helpers ─────────────────────────────────────────
-
-function wrapCodeLines(html) {
-  const lines = html.split('\n');
-  if (lines.length > 0 && !lines[lines.length - 1]) lines.pop();
-  let openSpans = [];
-  return lines
-    .map((raw) => {
-      const reopened = openSpans.join('');
-      const tagRe = /<(\/?)span([^>]*)>/g;
-      let m;
-      while ((m = tagRe.exec(raw)) !== null) {
-        if (m[1] === '/') openSpans.pop();
-        else openSpans.push(`<span${m[2]}>`);
-      }
-      const closers = [...openSpans]
-        .reverse()
-        .map(() => '</span>')
-        .join('');
-      return `<span class="code-line">${reopened}${raw || ' '}${closers}</span>`;
-    })
-    .join('');
-}
-
-const COPY_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-const CHECK_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const PLAY_SVG =
-  '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.98-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>';
-
-const EXECUTABLE_LANGUAGES = new Set([
-  'c',
-  'cpp',
-  'csharp',
-  'go',
-  'java',
-  'javascript',
-  'php',
-  'python',
-  'ruby',
-  'rust',
-  'typescript',
-]);
-
-const LANGUAGE_LABELS = {
-  c: 'C',
-  cpp: 'C++',
-  csharp: 'C#',
-  go: 'Go',
-  java: 'Java',
-  javascript: 'JavaScript',
-  php: 'PHP',
-  python: 'Python',
-  ruby: 'Ruby',
-  rust: 'Rust',
-  typescript: 'TypeScript',
-};
-
-// Inject slug IDs into h2/h3 that lack them so the TOC can find them.
-function injectHeadingIds(htmlString) {
-  if (!htmlString) return htmlString;
-  const seen = {};
-  return htmlString.replace(
-    /(<h([23])([^>]*)>)([\s\S]*?)(<\/h\2>)/gi,
-    (match, openTag, level, attrs, inner, closeTag) => {
-      if (/\bid=["']/.test(attrs)) return match;
-      const text = inner.replace(/<[^>]+>/g, '').trim();
-      let slug =
-        text
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') || `heading-${level}`;
-      if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
-      else seen[slug] = 1;
-      return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
-    }
-  );
-}
-
-function highlightCodeBlocks(htmlString) {
-  if (!htmlString) return htmlString;
-  const knownLangs = lowlight.listLanguages();
-  let blockIndex = 0;
-  return htmlString.replace(
-    /(<pre[^>]*>\s*<code)([^>]*)(>)([\s\S]*?)(<\/code>\s*<\/pre>)/gi,
-    (_match, openTag, attrs, gt, codeContent, _closeTag) => {
-      blockIndex++;
-      const decoded = codeContent
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      const langMatch = attrs.match(/class="[^"]*language-(\w+)/);
-      let lang = langMatch ? langMatch[1] : null;
-      let highlighted;
-      try {
-        if (lang && knownLangs.includes(lang)) {
-          highlighted = toHtml(lowlight.highlight(lang, decoded));
-        } else {
-          const auto = lowlight.highlightAuto(decoded);
-          highlighted = toHtml(auto);
-          if (!lang && auto.data?.language) {
-            lang = auto.data.language;
-            if (attrs.includes('class="')) {
-              attrs = attrs.replace(/class="/, `class="language-${lang} `);
-            } else {
-              attrs = ` class="language-${lang}"` + attrs;
-            }
-          }
-        }
-      } catch {
-        highlighted = codeContent;
-      }
-      const wrapped = wrapCodeLines(highlighted);
-      let toolbarHtml = `<div class="code-block-toolbar" data-block-index="${blockIndex}">`;
-      toolbarHtml += '<span class="code-toolbar-actions">';
-      toolbarHtml += `<button type="button" class="code-toolbar-btn code-copy-btn" aria-label="Copy code">${COPY_SVG}<span>Copy</span></button>`;
-      toolbarHtml += '</span></div>';
-      return `${openTag}${attrs}${gt}${wrapped}</code>${toolbarHtml}</pre>`;
-    }
-  );
-}
 
 import BlogComments from '@/app/_components/ui/BlogComments';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
@@ -165,25 +33,6 @@ import { useScrollLock } from '@/app/_lib/utils/hooks';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FONT_SIZES = [
-  { id: 'sm', label: 'S', value: '0.875rem' },
-  { id: 'md', label: 'M', value: '1rem' },
-  { id: 'lg', label: 'L', value: '1.125rem' },
-  { id: 'xl', label: 'XL', value: '1.25rem' },
-  { id: 'xxl', label: '2X', value: '1.375rem' },
-];
-
-const FONT_FAMILIES = [
-  { id: 'sans', label: 'Sans', style: '"Inter", system-ui, sans-serif' },
-  { id: 'serif', label: 'Serif', style: 'Georgia, "Times New Roman", serif' },
-  {
-    id: 'novel',
-    label: 'Novel',
-    style: '"Palatino Linotype", Palatino, Georgia, serif',
-  },
-  { id: 'mono', label: 'Mono', style: '"JetBrains Mono", Consolas, monospace' },
-];
-
 const BG_THEMES = [
   { id: 'dark', bg: '#05060B', label: 'Dark' },
   { id: 'midnight', bg: '#02040d', label: 'Midnight' },
@@ -192,10 +41,6 @@ const BG_THEMES = [
   { id: 'forest', bg: '#07100c', label: 'Forest' },
   { id: 'slate', bg: '#0a0d14', label: 'Slate' },
 ];
-
-const LINE_HEIGHTS = { compact: '1.6', relaxed: '1.85', spacious: '2.15' };
-const LETTER_SPACINGS = { tight: '-0.01em', normal: '0em', wide: '0.04em' };
-const PARA_SPACINGS = { tight: '0.5rem', normal: '1rem', loose: '1.75rem' };
 
 const CONTENT_WIDTHS = {
   narrow: 'max-w-2xl',
@@ -277,7 +122,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         'group relative flex w-full touch-manipulation items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-4',
         isActive
-          ? 'text-emerald-400 font-semibold'
+          ? 'font-semibold text-emerald-400'
           : 'text-zinc-400 hover:text-zinc-200'
       )}
     >
@@ -289,9 +134,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
           <span
             className={cn(
               'shrink-0 font-mono text-[10px] font-bold tabular-nums',
-              isActive
-                ? 'text-emerald-400/80'
-                : 'text-zinc-600'
+              isActive ? 'text-emerald-400/80' : 'text-zinc-600'
             )}
           >
             {String(sectionNum).padStart(2, '0')}
@@ -301,13 +144,11 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
           <span
             className={cn(
               'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-              isActive
-                ? 'bg-emerald-500'
-                : 'bg-zinc-700'
+              isActive ? 'bg-emerald-500' : 'bg-zinc-700'
             )}
           />
         )}
-        <span className="font-sans line-clamp-2 text-[12px] leading-snug">
+        <span className="line-clamp-2 font-sans text-[12px] leading-snug">
           {section.title}
         </span>
       </span>
@@ -315,7 +156,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         className={cn(
           'h-3 w-3 shrink-0 transition-transform',
           isActive
-            ? 'text-emerald-400 translate-x-0.5'
+            ? 'translate-x-0.5 text-emerald-400'
             : 'hidden text-zinc-600 group-hover:block group-hover:text-zinc-400'
         )}
         fill="none"
@@ -376,13 +217,7 @@ export default function BlogDetailClient({
   const [liked, setLiked] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [liking, startLikeTransition] = useTransition();
-  const [fontSize, setFontSize] = useState('md');
-  const [fontFamily, setFontFamily] = useState('sans');
   const [bgTheme, setBgTheme] = useState('dark');
-  const [lineHeight, setLineHeight] = useState('relaxed');
-  const [letterSpacing, setLetterSpacing] = useState('normal');
-  const [paraSpacing, setParaSpacing] = useState('normal');
-  const [textAlign, setTextAlign] = useState('left');
   const [contentWidth, setContentWidth] = useState('wide');
   const [focusMode, setFocusMode] = useState(false);
   const [tocCollapsed, setTocCollapsed] = useState(false);
@@ -459,42 +294,6 @@ export default function BlogDetailClient({
     incrementViewAction(fd).catch(() => {});
   }, [blog.id, meta.likes, meta.views]);
 
-  const isJsonContent = useMemo(() => {
-    const c = meta.content;
-    if (!c) return false;
-    return typeof c === 'string' && c.trim().startsWith('[');
-  }, [meta.content]);
-
-  const enhancedContent = useMemo(
-    () =>
-      isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content)),
-    [meta.content, isJsonContent]
-  );
-
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
-    const handleClick = (e) => {
-      const copyBtn = e.target.closest('.code-copy-btn');
-      if (copyBtn) {
-        const pre = copyBtn.closest('pre');
-        if (!pre) return;
-        const code = pre.querySelector('code');
-        if (!code) return;
-        navigator.clipboard.writeText(code.textContent || '').then(() => {
-          copyBtn.classList.add('copied');
-          copyBtn.innerHTML = `${CHECK_SVG}<span>Copied</span>`;
-          setTimeout(() => {
-            copyBtn.classList.remove('copied');
-            copyBtn.innerHTML = `${COPY_SVG}<span>Copy</span>`;
-          }, 2000);
-        });
-      }
-    };
-    container.addEventListener('click', handleClick);
-    return () => container.removeEventListener('click', handleClick);
-  }, []);
-
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -530,7 +329,7 @@ export default function BlogDetailClient({
       setTableOfContents([]);
       setActiveSection('');
     }
-  }, [enhancedContent, isJsonContent, meta.content]);
+  }, [meta.content]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -573,13 +372,7 @@ export default function BlogDetailClient({
       const raw = localStorage.getItem('neupc-reading-prefs');
       if (!raw) return;
       const p = JSON.parse(raw);
-      if (p.fontSize) setFontSize(p.fontSize);
-      if (p.fontFamily) setFontFamily(p.fontFamily);
       if (p.bgTheme) setBgTheme(p.bgTheme);
-      if (p.lineHeight) setLineHeight(p.lineHeight);
-      if (p.letterSpacing) setLetterSpacing(p.letterSpacing);
-      if (p.paraSpacing) setParaSpacing(p.paraSpacing);
-      if (p.textAlign) setTextAlign(p.textAlign);
       if (p.contentWidth) setContentWidth(p.contentWidth);
       if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
     } catch {
@@ -592,13 +385,7 @@ export default function BlogDetailClient({
       localStorage.setItem(
         'neupc-reading-prefs',
         JSON.stringify({
-          fontSize,
-          fontFamily,
           bgTheme,
-          lineHeight,
-          letterSpacing,
-          paraSpacing,
-          textAlign,
           contentWidth,
           tocCollapsed,
         })
@@ -606,17 +393,7 @@ export default function BlogDetailClient({
     } catch {
       /* ignore */
     }
-  }, [
-    fontSize,
-    fontFamily,
-    bgTheme,
-    lineHeight,
-    letterSpacing,
-    paraSpacing,
-    textAlign,
-    contentWidth,
-    tocCollapsed,
-  ]);
+  }, [bgTheme, contentWidth, tocCollapsed]);
 
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
@@ -870,8 +647,8 @@ export default function BlogDetailClient({
           {/* Ambient */}
           <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <div className="grid-overlay absolute inset-0 opacity-15" />
-            <div className="bg-emerald-500/5 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
-            <div className="bg-violet-500/5 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
+            <div className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full bg-emerald-500/5 blur-[140px]" />
+            <div className="absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full bg-violet-500/5 blur-[140px]" />
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -879,7 +656,7 @@ export default function BlogDetailClient({
             <nav className="mb-6 sm:mb-8">
               <Link
                 href="/blogs"
-                className="group font-heading hover:border-emerald-500/30 hover:text-emerald-400 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
+                className="group font-heading inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-emerald-500/30 hover:text-emerald-400 sm:text-[11px]"
               >
                 <svg
                   className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
@@ -933,7 +710,7 @@ export default function BlogDetailClient({
             {/* Author + meta chips */}
             <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
               <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-                <div className="border-white/10 h-8 w-8 shrink-0 rounded-full border p-0.5">
+                <div className="h-8 w-8 shrink-0 rounded-full border border-white/10 p-0.5">
                   {meta.authorAvatar ? (
                     <SafeImg
                       src={driveImageUrl(meta.authorAvatar)}
@@ -942,7 +719,7 @@ export default function BlogDetailClient({
                       fallback=""
                     />
                   ) : (
-                    <div className="bg-white/10 font-heading text-zinc-300 flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
+                    <div className="font-heading flex h-full w-full items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-zinc-300">
                       {meta.authorInitials}
                     </div>
                   )}
@@ -979,7 +756,7 @@ export default function BlogDetailClient({
                   <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                     Views
                   </span>
-                  <span className="font-heading text-white mt-0.5 block text-[13px] font-bold sm:text-sm">
+                  <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
                     {meta.views.toLocaleString()}
                   </span>
                 </div>
@@ -999,7 +776,7 @@ export default function BlogDetailClient({
                 {meta.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="border-white/10 bg-white/5 text-zinc-400 inline-block rounded-full border px-3 py-1 font-mono text-[10px] font-semibold tracking-wider"
+                    className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] font-semibold tracking-wider text-zinc-400"
                   >
                     #{tag}
                   </span>
@@ -1028,7 +805,7 @@ export default function BlogDetailClient({
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 backdrop-blur-sm">
                   <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg
-                      className="text-emerald-400 h-4 w-4"
+                      className="h-4 w-4 text-emerald-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1041,40 +818,8 @@ export default function BlogDetailClient({
                       />
                     </svg>
                     <span className="hidden sm:inline">Appearance</span>
-                    <span className="hidden items-center gap-1 rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500 tabular-nums sm:flex">
-                      <span
-                        style={{
-                          fontFamily: FONT_FAMILIES.find(
-                            (f) => f.id === fontFamily
-                          )?.style,
-                        }}
-                      >
-                        {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
-                      </span>
-                      <span className="text-zinc-600">·</span>
-                      <span>
-                        {FONT_SIZES.find((f) => f.id === fontSize)?.label}
-                      </span>
-                    </span>
                   </span>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {FONT_SIZES.map((fs) => (
-                        <button
-                          key={fs.id}
-                          onClick={() => setFontSize(fs.id)}
-                          className={cn(
-                            'rounded px-2 py-0.5 text-xs font-semibold transition-all',
-                            fontSize === fs.id
-                              ? 'bg-emerald-500/10 text-emerald-400'
-                              : 'text-zinc-500 hover:text-zinc-300'
-                          )}
-                        >
-                          {fs.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="h-4 w-px bg-white/10" />
                     <button
                       onClick={() => setShowReadingSettings((p) => !p)}
                       className={cn(
@@ -1111,137 +856,7 @@ export default function BlogDetailClient({
                 {/* Reading settings panel */}
                 {showReadingSettings && (
                   <div className="rounded-xl border border-white/5 bg-zinc-900/95 p-5 shadow-2xl backdrop-blur-sm">
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                      <div className="space-y-2.5">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                          Typeface
-                        </p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {FONT_FAMILIES.map((f) => (
-                            <button
-                              key={f.id}
-                              onClick={() => setFontFamily(f.id)}
-                              className={cn(
-                                'rounded-lg border px-2 py-2 text-xs transition-all',
-                                fontFamily === f.id
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                                  : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
-                              )}
-                              style={{ fontFamily: f.style }}
-                            >
-                              {f.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                          Size & Align
-                        </p>
-                        <div className="flex gap-1">
-                          {FONT_SIZES.map((fs) => (
-                            <button
-                              key={fs.id}
-                              onClick={() => setFontSize(fs.id)}
-                              className={cn(
-                                'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all',
-                                fontSize === fs.id
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                                  : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
-                              )}
-                            >
-                              {fs.label}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-1.5">
-                          {[
-                            {
-                              id: 'left',
-                              label: 'Left',
-                              d: 'M3 6h18M3 12h12M3 18h15',
-                            },
-                            {
-                              id: 'justify',
-                              label: 'Justify',
-                              d: 'M3 6h18M3 12h18M3 18h18',
-                            },
-                          ].map((a) => (
-                            <button
-                              key={a.id}
-                              onClick={() => setTextAlign(a.id)}
-                              className={cn(
-                                'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all',
-                                textAlign === a.id
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                                  : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
-                              )}
-                            >
-                              <svg
-                                className="h-3.5 w-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d={a.d}
-                                />
-                              </svg>
-                              {a.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                          Spacing
-                        </p>
-                        {[
-                          {
-                            label: 'Line height',
-                            state: lineHeight,
-                            set: setLineHeight,
-                            keys: Object.keys(LINE_HEIGHTS),
-                          },
-                          {
-                            label: 'Letter spacing',
-                            state: letterSpacing,
-                            set: setLetterSpacing,
-                            keys: Object.keys(LETTER_SPACINGS),
-                          },
-                          {
-                            label: 'Paragraph gap',
-                            state: paraSpacing,
-                            set: setParaSpacing,
-                            keys: Object.keys(PARA_SPACINGS),
-                          },
-                        ].map(({ label, state, set, keys }) => (
-                          <div key={label}>
-                            <p className="mb-1.5 text-[10px] text-zinc-600">
-                              {label}
-                            </p>
-                            <div className="flex gap-1">
-                              {keys.map((k) => (
-                                <button
-                                  key={k}
-                                  onClick={() => set(k)}
-                                  className={cn(
-                                    'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all',
-                                    state === k
-                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                                      : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300'
-                                  )}
-                                >
-                                  {k.slice(0, 3)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <div className="space-y-3">
                         <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                           Theme & Layout
@@ -1255,7 +870,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'h-8 w-8 rounded-lg transition-all',
                                 bgTheme === t.id
-                                  ? 'ring-emerald-500 scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
+                                  ? 'scale-110 ring-2 ring-emerald-500 ring-offset-1 ring-offset-[#131315]'
                                   : 'ring-1 ring-white/15 hover:ring-white/30'
                               )}
                               style={{ background: t.bg }}
@@ -1305,7 +920,7 @@ export default function BlogDetailClient({
                               className={cn(
                                 'absolute h-3 w-3 rounded-full transition-all duration-200',
                                 focusMode
-                                  ? 'bg-emerald-500 left-3.5'
+                                  ? 'left-3.5 bg-emerald-500'
                                   : 'left-0.5 bg-gray-600'
                               )}
                             />
@@ -1319,13 +934,7 @@ export default function BlogDetailClient({
                       </p>
                       <button
                         onClick={() => {
-                          setFontSize('md');
-                          setFontFamily('sans');
                           setBgTheme('dark');
-                          setLineHeight('relaxed');
-                          setLetterSpacing('normal');
-                          setParaSpacing('normal');
-                          setTextAlign('left');
                           setContentWidth('wide');
                           setFocusMode(false);
                           setTocCollapsed(false);
@@ -1340,33 +949,37 @@ export default function BlogDetailClient({
               </div>
 
               {/* Article body */}
+              {/* Rendered with the exact same wrapper-free strategy as the
+                  bootcamp lesson page: LessonContentRenderer supplies its own
+                  scopes (.tiptap-viewer-content / .lesson-viewer). */}
               <div
                 ref={contentRef}
                 className={cn(
-                  'blog-content mx-auto p-4 sm:p-6 md:p-8 lg:p-10 transition-all duration-300',
+                  'mx-auto p-4 transition-all duration-300 sm:p-6 md:p-8 lg:p-10',
                   CONTENT_WIDTHS[contentWidth],
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
-                style={{
-                  '--blog-fs':
-                    FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
-                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)
-                    ?.style,
-                  '--blog-ls': LETTER_SPACINGS[letterSpacing],
-                  '--blog-ps': PARA_SPACINGS[paraSpacing],
-                  '--blog-bg': currentBg,
-                  lineHeight: LINE_HEIGHTS[lineHeight],
-                  textAlign,
-                }}
               >
-                {isJsonContent ? (
-                  <LessonContentRenderer
-                    content={meta.content}
-                    viewerMode={true}
-                  />
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
-                )}
+                {(() => {
+                  // Use the same renderer as bootcamp lessons. For legacy HTML
+                  // posts, wrap the raw HTML string into a single richText block
+                  // so the render strategy is identical.
+                  const raw = meta.content;
+                  const isJson =
+                    typeof raw === 'string' && raw.trim().startsWith('[');
+                  const blocks = isJson
+                    ? raw
+                    : JSON.stringify([
+                        {
+                          id: 'legacy-richtext',
+                          type: 'richText',
+                          content: raw || '',
+                        },
+                      ]);
+                  return (
+                    <LessonContentRenderer content={blocks} viewerMode={true} />
+                  );
+                })()}
               </div>
 
               {/* Article footer: reactions + tags + share */}
@@ -1481,7 +1094,7 @@ export default function BlogDetailClient({
                       'flex h-9 items-center gap-1.5 rounded-full border px-3.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                       copied
                         ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                        : 'border-white/10 bg-white/5 text-zinc-400 hover:border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/5'
+                        : 'border-white/10 bg-white/5 text-zinc-400 hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400'
                     )}
                   >
                     {copied ? (
@@ -1526,7 +1139,7 @@ export default function BlogDetailClient({
               {/* ── Discussion Section ────────────────────────────────────── */}
               <div className="mt-12 border-t border-white/5 pt-10">
                 <div className="mb-8 flex items-center justify-between">
-                  <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wider">
+                  <h3 className="font-heading text-lg font-bold tracking-wider text-white uppercase">
                     Discussion
                   </h3>
                 </div>
@@ -1838,7 +1451,7 @@ export default function BlogDetailClient({
           <button
             onClick={() => setShowMobileTOC(true)}
             aria-label="Open table of contents"
-            className="fixed bottom-20 right-6 z-40 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-emerald-500/30 bg-[#05060B]/80 text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.25)] backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] xl:hidden"
+            className="fixed right-6 bottom-20 z-40 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-emerald-500/30 bg-[#05060B]/80 text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.25)] backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] xl:hidden"
           >
             <svg
               className="h-4 w-4"

@@ -14,123 +14,8 @@ import { useScrollLock } from '@/app/_lib/utils/hooks';
 import JoinButton from '@/app/_components/ui/JoinButton';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
-import { createLowlight, common } from 'lowlight';
-import { toHtml } from 'hast-util-to-html';
-
-const lowlight = createLowlight(common);
-
-// ─── Code block helpers ───────────────────────────────────────────────────────
-
-function wrapCodeLines(html) {
-  const lines = html.split('\n');
-  if (lines.length > 0 && !lines[lines.length - 1]) lines.pop();
-  let openSpans = [];
-  return lines
-    .map((raw) => {
-      const reopened = openSpans.join('');
-      const tagRe = /<(\/?)(span)([^>]*)>/g;
-      let m;
-      while ((m = tagRe.exec(raw)) !== null) {
-        if (m[1] === '/') openSpans.pop();
-        else openSpans.push(`<span${m[3]}>`);
-      }
-      const closers = [...openSpans]
-        .reverse()
-        .map(() => '</span>')
-        .join('');
-      return `<span class="code-line">${reopened}${raw || ' '}${closers}</span>`;
-    })
-    .join('');
-}
-
-const COPY_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-const CHECK_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-
-function injectHeadingIds(htmlString) {
-  if (!htmlString) return htmlString;
-  const seen = {};
-  return htmlString.replace(
-    /(<h([23])([^>]*)>)([\s\S]*?)(<\/h\2>)/gi,
-    (match, openTag, level, attrs, inner, closeTag) => {
-      if (/\bid=["']/.test(attrs)) return match;
-      const text = inner.replace(/<[^>]+>/g, '').trim();
-      let slug =
-        text
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') || `heading-${level}`;
-      if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
-      else seen[slug] = 1;
-      return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
-    }
-  );
-}
-
-function highlightCodeBlocks(htmlString) {
-  if (!htmlString) return htmlString;
-  const knownLangs = lowlight.listLanguages();
-  let blockIndex = 0;
-  return htmlString.replace(
-    /(<pre[^>]*>\s*<code)([^>]*)(>)([\s\S]*?)(<\/code>\s*<\/pre>)/gi,
-    (_match, openTag, attrs, gt, codeContent, _closeTag) => {
-      blockIndex++;
-      const decoded = codeContent
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      const langMatch = attrs.match(/class="[^"]*language-(\w+)/);
-      let lang = langMatch ? langMatch[1] : null;
-      let highlighted;
-      try {
-        if (lang && knownLangs.includes(lang)) {
-          highlighted = toHtml(lowlight.highlight(lang, decoded));
-        } else {
-          const auto = lowlight.highlightAuto(decoded);
-          highlighted = toHtml(auto);
-          if (!lang && auto.data?.language) {
-            lang = auto.data.language;
-            attrs = attrs.includes('class="')
-              ? attrs.replace(/class="/, `class="language-${lang} `)
-              : ` class="language-${lang}"` + attrs;
-          }
-        }
-      } catch {
-        highlighted = codeContent;
-      }
-      const wrapped = wrapCodeLines(highlighted);
-      const toolbarHtml = `<div class="code-block-toolbar" data-block-index="${blockIndex}"><span class="code-toolbar-actions"><button type="button" class="code-toolbar-btn code-copy-btn" aria-label="Copy code">${COPY_SVG}<span>Copy</span></button></span></div>`;
-      return `${openTag}${attrs}${gt}${wrapped}</code>${toolbarHtml}</pre>`;
-    }
-  );
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const FONT_SIZES = [
-  { id: 'sm', label: 'S', value: '0.875rem' },
-  { id: 'md', label: 'M', value: '1rem' },
-  { id: 'lg', label: 'L', value: '1.125rem' },
-  { id: 'xl', label: 'XL', value: '1.25rem' },
-  { id: 'xxl', label: '2X', value: '1.375rem' },
-];
-
-const FONT_FAMILIES = [
-  { id: 'sans', label: 'Sans', style: '"Inter", system-ui, sans-serif' },
-  { id: 'serif', label: 'Serif', style: 'Georgia, "Times New Roman", serif' },
-  {
-    id: 'novel',
-    label: 'Novel',
-    style: '"Palatino Linotype", Palatino, Georgia, serif',
-  },
-  { id: 'mono', label: 'Mono', style: '"JetBrains Mono", Consolas, monospace' },
-];
 
 const BG_THEMES = [
   { id: 'dark', bg: '#05060B', label: 'Dark' },
@@ -140,10 +25,6 @@ const BG_THEMES = [
   { id: 'forest', bg: '#07100c', label: 'Forest' },
   { id: 'slate', bg: '#0a0d14', label: 'Slate' },
 ];
-
-const LINE_HEIGHTS = { compact: '1.6', relaxed: '1.85', spacious: '2.15' };
-const LETTER_SPACINGS = { tight: '-0.01em', normal: '0em', wide: '0.04em' };
-const PARA_SPACINGS = { tight: '0.5rem', normal: '1rem', loose: '1.75rem' };
 
 const CONTENT_WIDTHS = {
   narrow: 'max-w-2xl',
@@ -225,7 +106,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       )}
     >
       {isActive && (
-        <span className="bg-emerald-400 absolute inset-y-1 left-0 w-0.5 rounded-full" />
+        <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-emerald-400" />
       )}
       <span className="flex min-w-0 items-center gap-2">
         {level === 2 && sectionNum != null && (
@@ -246,13 +127,17 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
           <span
             className={cn(
               'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-              isActive ? 'bg-emerald-400' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
+              isActive
+                ? 'bg-emerald-400'
+                : isPast
+                  ? 'bg-zinc-600'
+                  : 'bg-zinc-700'
             )}
           />
         )}
         <span
           className={cn(
-            'font-sans line-clamp-2 text-xs leading-snug font-medium transition-colors',
+            'line-clamp-2 font-sans text-xs leading-snug font-medium transition-colors',
             isActive && 'font-semibold'
           )}
         >
@@ -263,7 +148,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         className={cn(
           'h-3.5 w-3.5 shrink-0 transition-transform',
           isActive
-            ? 'text-emerald-400 translate-x-0.5'
+            ? 'translate-x-0.5 text-emerald-400'
             : 'hidden text-zinc-700 group-hover:block group-hover:text-zinc-500'
         )}
         fill="none"
@@ -290,12 +175,12 @@ function RelatedRoadmapCard({ roadmap }) {
   return (
     <Link
       href={`/roadmaps/${roadmap.slug || roadmap.id}`}
-      className="border border-white/5 bg-white/[0.02] hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all group block rounded-2xl p-6 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+      className="group block rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all hover:border-emerald-500/30 hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
     >
-      <div className="text-emerald-400 mb-4 font-mono text-[9px] font-bold tracking-widest uppercase">
+      <div className="mb-4 font-mono text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
         {roadmap.category || 'Roadmap'}
       </div>
-      <h4 className="font-heading group-hover:text-emerald-400 line-clamp-2 text-lg font-bold tracking-tight text-white transition-colors">
+      <h4 className="font-heading line-clamp-2 text-lg font-bold tracking-tight text-white transition-colors group-hover:text-emerald-400">
         {roadmap.title}
       </h4>
       <div className="mt-6 flex items-center gap-4 font-mono text-[9px] tracking-widest uppercase">
@@ -332,13 +217,7 @@ export default function RoadmapDetailClient({
   useScrollLock(showMobileTOC);
   const [copied, setCopied] = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
-  const [fontSize, setFontSize] = useState('md');
-  const [fontFamily, setFontFamily] = useState('sans');
   const [bgTheme, setBgTheme] = useState('dark');
-  const [lineHeight, setLineHeight] = useState('relaxed');
-  const [letterSpacing, setLetterSpacing] = useState('normal');
-  const [paraSpacing, setParaSpacing] = useState('normal');
-  const [textAlign, setTextAlign] = useState('left');
   const [contentWidth, setContentWidth] = useState('full');
   const [focusMode, setFocusMode] = useState(false);
   const [showReadingSettings, setShowReadingSettings] = useState(false);
@@ -351,7 +230,9 @@ export default function RoadmapDetailClient({
     const contentSource =
       typeof roadmap.content === 'string'
         ? roadmap.content
-        : (roadmap.content?.html ?? roadmap.content?.text ?? '');
+        : Array.isArray(roadmap.content)
+          ? JSON.stringify(roadmap.content)
+          : (roadmap.content?.html ?? roadmap.content?.text ?? '');
     const prerequisites = Array.isArray(roadmap.prerequisites)
       ? roadmap.prerequisites
       : [];
@@ -402,41 +283,6 @@ export default function RoadmapDetailClient({
     run();
   }, [roadmap.id, meta.views]);
 
-  // ── Syntax highlighting ───────────────────────────────────────────────────
-  const isJsonContent = useMemo(() => {
-    if (!meta.content) return false;
-    const trimmed = meta.content.trim();
-    return trimmed.startsWith('[') && trimmed.endsWith(']');
-  }, [meta.content]);
-
-  const enhancedContent = useMemo(
-    () =>
-      isJsonContent ? '' : highlightCodeBlocks(injectHeadingIds(meta.content)),
-    [meta.content, isJsonContent]
-  );
-
-  // ── Copy button delegation ────────────────────────────────────────────────
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
-    const handleClick = (e) => {
-      const btn = e.target.closest('.code-copy-btn');
-      if (!btn) return;
-      const code = btn.closest('pre')?.querySelector('code');
-      if (!code) return;
-      navigator.clipboard.writeText(code.textContent || '').then(() => {
-        btn.classList.add('copied');
-        btn.innerHTML = `${CHECK_SVG}<span>Copied</span>`;
-        setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.innerHTML = `${COPY_SVG}<span>Copy</span>`;
-        }, 2000);
-      });
-    };
-    container.addEventListener('click', handleClick);
-    return () => container.removeEventListener('click', handleClick);
-  }, [enhancedContent]);
-
   // ── TOC extraction and Heading ID injection ────────────────────────────────
   useEffect(() => {
     const container = contentRef.current;
@@ -475,7 +321,7 @@ export default function RoadmapDetailClient({
       setTableOfContents([]);
       setActiveSection('');
     }
-  }, [enhancedContent, isJsonContent, meta.content]);
+  }, [meta.content]);
 
   // ── Scroll tracking ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -513,13 +359,7 @@ export default function RoadmapDetailClient({
       const raw = localStorage.getItem('neupc-reading-prefs');
       if (!raw) return;
       const p = JSON.parse(raw);
-      if (p.fontSize) setFontSize(p.fontSize);
-      if (p.fontFamily) setFontFamily(p.fontFamily);
       if (p.bgTheme) setBgTheme(p.bgTheme);
-      if (p.lineHeight) setLineHeight(p.lineHeight);
-      if (p.letterSpacing) setLetterSpacing(p.letterSpacing);
-      if (p.paraSpacing) setParaSpacing(p.paraSpacing);
-      if (p.textAlign) setTextAlign(p.textAlign);
       if (p.contentWidth) setContentWidth(p.contentWidth);
       if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
     } catch {
@@ -532,13 +372,7 @@ export default function RoadmapDetailClient({
       localStorage.setItem(
         'neupc-reading-prefs',
         JSON.stringify({
-          fontSize,
-          fontFamily,
           bgTheme,
-          lineHeight,
-          letterSpacing,
-          paraSpacing,
-          textAlign,
           contentWidth,
           tocCollapsed,
         })
@@ -546,17 +380,7 @@ export default function RoadmapDetailClient({
     } catch {
       /* ignore */
     }
-  }, [
-    fontSize,
-    fontFamily,
-    bgTheme,
-    lineHeight,
-    letterSpacing,
-    paraSpacing,
-    textAlign,
-    contentWidth,
-    tocCollapsed,
-  ]);
+  }, [bgTheme, contentWidth, tocCollapsed]);
 
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
@@ -642,8 +466,7 @@ export default function RoadmapDetailClient({
           className="h-full transition-all duration-150"
           style={{
             width: `${scrollProgress}%`,
-            background:
-              'linear-gradient(to right, #34d399, #10b981)',
+            background: 'linear-gradient(to right, #34d399, #10b981)',
           }}
         />
       </div>
@@ -659,7 +482,7 @@ export default function RoadmapDetailClient({
             <div className="flex items-center gap-3">
               <Link
                 href="/roadmaps"
-                className="group font-heading hover:border-emerald-500/30 hover:text-emerald-400 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all"
+                className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
               >
                 <svg
                   className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
@@ -678,7 +501,7 @@ export default function RoadmapDetailClient({
               </Link>
               <span className="hidden text-zinc-700 sm:block">/</span>
               {meta.category && (
-                <span className="border-white/10 bg-white/5 text-zinc-300 hidden rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:block">
+                <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-zinc-300 uppercase sm:block">
                   {meta.category}
                 </span>
               )}
@@ -693,7 +516,7 @@ export default function RoadmapDetailClient({
                   onClick={() => setShowMobileTOC(!showMobileTOC)}
                   aria-label="Open learning path"
                   aria-expanded={showMobileTOC}
-                  className="hover:border-emerald-500/30 hover:text-emerald-400 flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all active:bg-white/10 xl:hidden"
+                  className="flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400 active:bg-white/10 xl:hidden"
                 >
                   <svg
                     className="h-4 w-4"
@@ -722,9 +545,9 @@ export default function RoadmapDetailClient({
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowMobileTOC(false)}
           />
-          <div className="absolute top-24 right-4 left-4 flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#141416]/95 backdrop-blur-md shadow-2xl">
+          <div className="absolute top-24 right-4 left-4 flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#141416]/95 shadow-2xl backdrop-blur-md">
             <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-              <h3 className="font-heading text-sm font-black text-white uppercase tracking-wider">
+              <h3 className="font-heading text-sm font-black tracking-wider text-white uppercase">
                 Learning Path
               </h3>
               <button
@@ -786,8 +609,8 @@ export default function RoadmapDetailClient({
         {/* Ambient glows — same as event/blog pages */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-15" />
-          <div className="bg-emerald-500/5 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
-          <div className="bg-[#8b5cf6]/5 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
+          <div className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full bg-emerald-500/5 blur-[140px]" />
+          <div className="absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full bg-[#8b5cf6]/5 blur-[140px]" />
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -795,7 +618,7 @@ export default function RoadmapDetailClient({
           <nav className="mb-6 sm:mb-8">
             <Link
               href="/roadmaps"
-              className="group font-heading hover:border-emerald-500/30 hover:text-emerald-400 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all sm:text-[11px]"
+              className="group font-heading inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-emerald-500/30 hover:text-emerald-400 sm:text-[11px]"
             >
               <svg
                 className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
@@ -858,7 +681,7 @@ export default function RoadmapDetailClient({
           {/* Author + meta chips — identical pattern to blog/event pages */}
           <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
             <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-              <div className="border-white/10 h-8 w-8 shrink-0 rounded-full border p-0.5">
+              <div className="h-8 w-8 shrink-0 rounded-full border border-white/10 p-0.5">
                 {meta.authorAvatar ? (
                   <SafeImg
                     src={driveImageUrl(meta.authorAvatar)}
@@ -867,7 +690,7 @@ export default function RoadmapDetailClient({
                     fallback=""
                   />
                 ) : (
-                  <div className="bg-white/10 font-heading text-zinc-300 flex h-full w-full items-center justify-center rounded-full text-[10px] font-black">
+                  <div className="font-heading flex h-full w-full items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-zinc-300">
                     {meta.authorInitials}
                   </div>
                 )}
@@ -902,11 +725,11 @@ export default function RoadmapDetailClient({
               </div>
             )}
             {viewCount > 0 && (
-              <div className="border-white/8 bg-white/3 rounded-xl border px-3 py-2.5 backdrop-blur-sm sm:px-4">
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
                 <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
                   Views
                 </span>
-                <span className="font-heading text-white mt-0.5 block text-[13px] font-bold sm:text-sm">
+                <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
                   {viewCount.toLocaleString()}
                 </span>
               </div>
@@ -949,11 +772,11 @@ export default function RoadmapDetailClient({
                 )}
               >
                 {tocCollapsed ? (
-                  <div className="border border-white/5 flex flex-col items-center gap-3 rounded-2xl px-1 py-4 bg-white/[0.02]">
+                  <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.02] px-1 py-4">
                     <button
                       onClick={() => setTocCollapsed(false)}
                       title="Expand contents"
-                      className="hover:bg-emerald-500/10 hover:text-emerald-400 flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-emerald-500/10 hover:text-emerald-400"
                     >
                       <svg
                         className="h-4 w-4"
@@ -971,7 +794,7 @@ export default function RoadmapDetailClient({
                     </button>
                     <div className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8">
                       <div
-                        className="bg-emerald-400 absolute top-0 left-0 w-full rounded-full transition-all duration-300"
+                        className="absolute top-0 left-0 w-full rounded-full bg-emerald-400 transition-all duration-300"
                         style={{ height: `${scrollProgress}%` }}
                       />
                     </div>
@@ -981,7 +804,7 @@ export default function RoadmapDetailClient({
                   </div>
                 ) : (
                   <div
-                    className="border border-white/5 overflow-hidden rounded-[2rem]"
+                    className="overflow-hidden rounded-[2rem] border border-white/5"
                     style={{
                       background: 'rgba(20, 20, 22, 0.45)',
                       backdropFilter: 'blur(24px)',
@@ -991,7 +814,7 @@ export default function RoadmapDetailClient({
                     <div className="flex items-center justify-between border-b border-[#27272A]/50 px-6 py-4">
                       <div className="flex items-center gap-2">
                         <svg
-                          className="text-emerald-400 h-3.5 w-3.5"
+                          className="h-3.5 w-3.5 text-emerald-400"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -1013,7 +836,7 @@ export default function RoadmapDetailClient({
                       <button
                         onClick={() => setTocCollapsed(true)}
                         title="Collapse"
-                        className="hover:text-emerald-400 flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-emerald-400"
                       >
                         <svg
                           className="h-3.5 w-3.5"
@@ -1056,13 +879,13 @@ export default function RoadmapDetailClient({
                           {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                           {tableOfContents.length} sections
                         </span>
-                        <span className="text-emerald-400 font-bold tabular-nums">
+                        <span className="font-bold text-emerald-400 tabular-nums">
                           {Math.round(scrollProgress)}%
                         </span>
                       </div>
                       <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                         <div
-                          className="bg-emerald-400 h-full rounded-full transition-all duration-300"
+                          className="h-full rounded-full bg-emerald-400 transition-all duration-300"
                           style={{ width: `${scrollProgress}%` }}
                         />
                       </div>
@@ -1110,10 +933,10 @@ export default function RoadmapDetailClient({
                               title={tip}
                               aria-label={tip}
                               onClick={action}
-                              className="group hover:border-emerald-500/30 hover:bg-emerald-500/10 flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all active:bg-white/8"
+                              className="group flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 active:bg-white/8"
                             >
                               <svg
-                                className="group-hover:text-emerald-400 h-4 w-4 text-zinc-400 transition-colors"
+                                className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-emerald-400"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1140,10 +963,10 @@ export default function RoadmapDetailClient({
           <article className="w-full min-w-0 flex-1 transition-all duration-300">
             {/* Reading controls */}
             <div className="mb-6 space-y-3">
-              <div className="border border-white/5 bg-white/[0.02] backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 backdrop-blur-sm">
                 <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                   <svg
-                    className="text-emerald-400 h-4 w-4"
+                    className="h-4 w-4 text-emerald-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1156,40 +979,8 @@ export default function RoadmapDetailClient({
                     />
                   </svg>
                   <span className="hidden sm:inline">Reading Config</span>
-                  <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-500 tabular-nums sm:flex">
-                    <span
-                      style={{
-                        fontFamily: FONT_FAMILIES.find(
-                          (f) => f.id === fontFamily
-                        )?.style,
-                      }}
-                    >
-                      {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
-                    </span>
-                    <span className="text-zinc-600">·</span>
-                    <span>
-                      {FONT_SIZES.find((f) => f.id === fontSize)?.label}
-                    </span>
-                  </span>
                 </span>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-0.5">
-                    {FONT_SIZES.map((fs) => (
-                      <button
-                        key={fs.id}
-                        onClick={() => setFontSize(fs.id)}
-                        className={cn(
-                          'touch-manipulation rounded px-2 py-0.5 text-xs font-semibold transition-all',
-                          fontSize === fs.id
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
-                        )}
-                      >
-                        {fs.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="h-4 w-px bg-white/10" />
                   <button
                     onClick={() => setShowReadingSettings((p) => !p)}
                     aria-expanded={showReadingSettings}
@@ -1225,138 +1016,8 @@ export default function RoadmapDetailClient({
               </div>
 
               {showReadingSettings && (
-                <div className="border border-white/5 bg-[#141416]/90 backdrop-blur-md rounded-xl p-5 shadow-2xl">
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                        Typeface
-                      </p>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {FONT_FAMILIES.map((f) => (
-                          <button
-                            key={f.id}
-                            onClick={() => setFontFamily(f.id)}
-                            className={cn(
-                              'touch-manipulation rounded-lg border px-2 py-2 text-xs transition-all',
-                              fontFamily === f.id
-                                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
-                            )}
-                            style={{ fontFamily: f.style }}
-                          >
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                        Size & Align
-                      </p>
-                      <div className="flex gap-1">
-                        {FONT_SIZES.map((fs) => (
-                          <button
-                            key={fs.id}
-                            onClick={() => setFontSize(fs.id)}
-                            className={cn(
-                              'flex-1 touch-manipulation rounded-lg border py-1.5 text-[11px] font-semibold transition-all',
-                              fontSize === fs.id
-                                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
-                            )}
-                          >
-                            {fs.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-1.5">
-                        {[
-                          {
-                            id: 'left',
-                            label: 'Left',
-                            d: 'M3 6h18M3 12h12M3 18h15',
-                          },
-                          {
-                            id: 'justify',
-                            label: 'Justify',
-                            d: 'M3 6h18M3 12h18M3 18h18',
-                          },
-                        ].map((a) => (
-                          <button
-                            key={a.id}
-                            onClick={() => setTextAlign(a.id)}
-                            className={cn(
-                              'flex flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all',
-                              textAlign === a.id
-                                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
-                            )}
-                          >
-                            <svg
-                              className="h-3.5 w-3.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d={a.d}
-                              />
-                            </svg>
-                            {a.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
-                        Spacing
-                      </p>
-                      {[
-                        {
-                          label: 'Line height',
-                          state: lineHeight,
-                          set: setLineHeight,
-                          keys: Object.keys(LINE_HEIGHTS),
-                        },
-                        {
-                          label: 'Letter spacing',
-                          state: letterSpacing,
-                          set: setLetterSpacing,
-                          keys: Object.keys(LETTER_SPACINGS),
-                        },
-                        {
-                          label: 'Paragraph gap',
-                          state: paraSpacing,
-                          set: setParaSpacing,
-                          keys: Object.keys(PARA_SPACINGS),
-                        },
-                      ].map(({ label, state, set, keys }) => (
-                        <div key={label}>
-                          <p className="mb-1.5 text-[10px] text-zinc-600">
-                            {label}
-                          </p>
-                          <div className="flex gap-1">
-                            {keys.map((k) => (
-                              <button
-                                key={k}
-                                onClick={() => set(k)}
-                                className={cn(
-                                  'flex-1 touch-manipulation rounded-lg border py-1.5 text-[11px] capitalize transition-all',
-                                  state === k
-                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                    : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
-                                )}
-                              >
-                                {k.slice(0, 3)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                <div className="rounded-xl border border-white/5 bg-[#141416]/90 p-5 shadow-2xl backdrop-blur-md">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div className="space-y-3">
                       <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                         Theme & Layout
@@ -1371,7 +1032,7 @@ export default function RoadmapDetailClient({
                             className={cn(
                               'h-8 w-8 touch-manipulation rounded-lg transition-all',
                               bgTheme === t.id
-                                ? 'ring-emerald-500 scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
+                                ? 'scale-110 ring-2 ring-emerald-500 ring-offset-1 ring-offset-[#131315]'
                                 : 'ring-1 ring-white/15 hover:ring-white/30'
                             )}
                             style={{ background: t.bg }}
@@ -1422,7 +1083,7 @@ export default function RoadmapDetailClient({
                             className={cn(
                               'absolute h-3 w-3 rounded-full transition-all duration-200',
                               focusMode
-                                ? 'bg-emerald-400 left-3.5'
+                                ? 'left-3.5 bg-emerald-400'
                                 : 'left-0.5 bg-gray-600'
                             )}
                           />
@@ -1436,13 +1097,7 @@ export default function RoadmapDetailClient({
                     </p>
                     <button
                       onClick={() => {
-                        setFontSize('md');
-                        setFontFamily('sans');
                         setBgTheme('dark');
-                        setLineHeight('relaxed');
-                        setLetterSpacing('normal');
-                        setParaSpacing('normal');
-                        setTextAlign('left');
                         setContentWidth('full');
                         setFocusMode(false);
                         setTocCollapsed(false);
@@ -1458,7 +1113,7 @@ export default function RoadmapDetailClient({
 
             {/* Prerequisites */}
             {meta.prerequisites.length > 0 && (
-              <div className="border border-white/5 bg-white/[0.02] mb-6 rounded-2xl p-5 sm:p-6 md:p-8">
+              <div className="mb-6 rounded-2xl border border-white/5 bg-white/[0.02] p-5 sm:p-6 md:p-8">
                 <h2 className="font-heading mb-4 flex items-center gap-2.5 text-lg font-bold text-white">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-400/10 text-sm">
                     📋
@@ -1482,37 +1137,25 @@ export default function RoadmapDetailClient({
             )}
 
             {/* Content */}
-            {isJsonContent || enhancedContent ? (
+            {meta.content ? (
+              // Rendered with the exact same wrapper-free strategy as the
+              // bootcamp lesson page: LessonContentRenderer supplies its own
+              // scopes (.tiptap-viewer-content / .lesson-viewer).
               <div
                 ref={contentRef}
                 className={cn(
-                  'border border-white/5 bg-white/[0.02] blog-content mx-auto rounded-2xl p-4 transition-all duration-300 sm:p-6 md:p-8 lg:p-10',
+                  'mx-auto rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all duration-300 sm:p-6 md:p-8 lg:p-10',
                   CONTENT_WIDTHS[contentWidth],
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
-                style={{
-                  '--blog-fs':
-                    FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
-                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)
-                    ?.style,
-                  '--blog-ls': LETTER_SPACINGS[letterSpacing],
-                  '--blog-ps': PARA_SPACINGS[paraSpacing],
-                  '--blog-bg': currentBg,
-                  lineHeight: LINE_HEIGHTS[lineHeight],
-                  textAlign,
-                }}
               >
-                {isJsonContent ? (
-                  <LessonContentRenderer
-                    content={meta.content}
-                    viewerMode={true}
-                  />
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: enhancedContent }} />
-                )}
+                <LessonContentRenderer
+                  content={meta.content}
+                  viewerMode={true}
+                />
               </div>
             ) : (
-              <div className="border border-white/5 bg-white/[0.02] flex flex-col items-center justify-center rounded-2xl p-16 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-white/[0.02] p-16 text-center">
                 <div className="mb-4 text-5xl">📭</div>
                 <p className="font-mono text-sm tracking-wider text-zinc-500">
                   No learning content available yet. Check back soon!
@@ -1521,7 +1164,7 @@ export default function RoadmapDetailClient({
             )}
 
             {/* Article footer: share */}
-            <div className="border border-white/5 bg-white/[0.02] mt-8 rounded-2xl p-4 sm:p-6">
+            <div className="mt-8 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-6">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/6 pb-5">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5 font-mono text-sm text-zinc-500">
@@ -1581,7 +1224,7 @@ export default function RoadmapDetailClient({
                     key={p.key}
                     onClick={() => handleShare(p.key)}
                     title={`Share on ${p.label}`}
-                    className="hover:border-emerald-550/30 hover:text-emerald-400 flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all"
+                    className="hover:border-emerald-550/30 flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:text-emerald-400"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1598,7 +1241,7 @@ export default function RoadmapDetailClient({
                     'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-all',
                     copied
                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                      : 'hover:border-emerald-500/20 hover:text-emerald-400 border-[#3F3F46] bg-white/5 text-zinc-400'
+                      : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-emerald-500/20 hover:text-emerald-400'
                   )}
                 >
                   {copied ? (
@@ -1648,14 +1291,14 @@ export default function RoadmapDetailClient({
         <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
           <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
-            <div className="bg-emerald-500/[0.02] absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
+            <div className="absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-emerald-500/[0.02] blur-[150px]" />
           </div>
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-7 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="flex items-center gap-3">
-                  <span className="bg-emerald-400 h-px w-6 shrink-0" />
-                  <span className="text-emerald-400 font-heading text-[10px] font-bold tracking-wider uppercase sm:text-[11px]">
+                  <span className="h-px w-6 shrink-0 bg-emerald-400" />
+                  <span className="font-heading text-[10px] font-bold tracking-wider text-emerald-400 uppercase sm:text-[11px]">
                     Continue Learning
                   </span>
                 </div>
@@ -1665,7 +1308,7 @@ export default function RoadmapDetailClient({
               </div>
               <Link
                 href="/roadmaps"
-                className="font-heading hover:border-emerald-500/30 hover:text-emerald-400 w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 text-[10px] font-bold tracking-wider text-zinc-400 uppercase transition-colors sm:px-7 sm:py-3 sm:text-[11px]"
+                className="font-heading w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 text-[10px] font-bold tracking-wider text-zinc-400 uppercase transition-colors hover:border-emerald-500/30 hover:text-emerald-400 sm:px-7 sm:py-3 sm:text-[11px]"
               >
                 All Roadmaps →
               </Link>
@@ -1683,15 +1326,15 @@ export default function RoadmapDetailClient({
       <section className="relative overflow-hidden py-12 sm:py-16 lg:py-24">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-15" />
-          <div className="bg-emerald-500/[0.02] absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
+          <div className="absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.02] blur-[130px]" />
         </div>
         <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="border border-white/5 from-white/[0.02] to-white/[0.01] rounded-2xl bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+          <div className="rounded-2xl border border-white/5 bg-linear-to-br from-white/[0.02] via-transparent to-white/[0.01] p-6 sm:rounded-3xl sm:p-10 lg:p-14">
             <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
               <div className="md:col-span-2">
-                <p className="text-emerald-400 mb-2 font-heading text-[10px] font-bold tracking-wider uppercase sm:text-[11px]">
+                <p className="font-heading mb-2 text-[10px] font-bold tracking-wider text-emerald-400 uppercase sm:text-[11px]">
                   Start Your Journey
                 </p>
                 <h2 className="font-heading text-2xl leading-tight font-bold text-white sm:text-3xl lg:text-4xl">
@@ -1706,7 +1349,7 @@ export default function RoadmapDetailClient({
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:flex-col md:items-end">
                 <JoinButton
                   href="/join"
-                  className="group bg-emerald-500 hover:bg-emerald-400 font-heading inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-6 py-3 text-xs font-semibold text-black transition-all sm:min-h-0 sm:px-8 sm:py-3.5"
+                  className="group font-heading inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-xs font-semibold text-black transition-all hover:bg-emerald-400 sm:min-h-0 sm:px-8 sm:py-3.5"
                 >
                   Join the Club
                   <span

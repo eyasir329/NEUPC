@@ -21,8 +21,7 @@ import {
 import { uploadToDrive, deleteFromDrive } from '@/app/_lib/integrations/gdrive';
 import { generateImage } from '@/app/_lib/integrations/image-gen';
 import { generateText } from '@/app/_lib/integrations/text-gen';
-import sanitizeHtml from 'sanitize-html';
-import { sanitizeText } from '@/app/_lib/utils/validation';
+import { cleanLessonContent } from '@/app/_lib/services/bootcamp-sanitize';
 
 const logActivity = createLogger('blog');
 
@@ -58,139 +57,6 @@ function extractImageUrls(html) {
       return m?.[1] || null;
     })
     .filter(Boolean);
-}
-
-function sanitizeBlogHtmlContent(html) {
-  return sanitizeHtml(html || '', {
-    allowedTags: [
-      'p',
-      'br',
-      'strong',
-      'em',
-      'u',
-      's',
-      'blockquote',
-      'pre',
-      'code',
-      'ul',
-      'ol',
-      'li',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'a',
-      'img',
-      'hr',
-      'mark',
-      'span',
-    ],
-    allowedAttributes: {
-      a: ['href', 'target', 'rel'],
-      img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'class'],
-      h2: ['id'],
-      h3: ['id'],
-      code: ['class'],
-      pre: ['class'],
-      span: ['style', 'class'],
-      p: ['style'],
-      mark: ['data-color'],
-    },
-    allowedStyles: {
-      '*': {
-        'text-align': [/^(left|center|right|justify)$/],
-        color: [/^#[0-9a-fA-F]{3,8}$/, /^rgb\(/, /^rgba\(/],
-      },
-    },
-    allowedSchemes: ['http', 'https', 'mailto'],
-    allowedSchemesByTag: {
-      img: ['http', 'https'],
-    },
-    disallowedTagsMode: 'discard',
-    transformTags: {
-      a: (tagName, attribs) => {
-        const href = (attribs.href || '').trim();
-        return {
-          tagName,
-          attribs: {
-            ...attribs,
-            href,
-            target: '_blank',
-            rel: 'noopener noreferrer nofollow',
-          },
-        };
-      },
-    },
-  });
-}
-
-function sanitizeBlogHtml(content) {
-  if (content == null) return content;
-
-  let parsedContent = content;
-  let isJson = false;
-
-  if (typeof content === 'string') {
-    const trimmed = content.trim();
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(content);
-        if (Array.isArray(parsed) || (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks))) {
-          parsedContent = parsed;
-          isJson = true;
-        }
-      } catch (e) {
-        // Not a JSON block content string, treat as legacy rich-text string
-      }
-    }
-  }
-
-  const sanitizeBlock = (block) => {
-    if (!block || typeof block !== 'object') return block;
-    const next = { ...block };
-    if (next.type === 'html') {
-      // Bypass rich-text sanitization for HTML block types to preserve custom admin-authored styling
-    } else if (next.type === 'lessonPlan' && typeof next.content === 'string') {
-      try {
-        const parsed = JSON.parse(next.content);
-        const cleaned = sanitizeBlogHtml(parsed);
-        next.content = typeof cleaned === 'string' ? cleaned : JSON.stringify(cleaned);
-      } catch (e) {
-        // Keep as-is if parsing fails
-      }
-    } else if (typeof next.content === 'string') {
-      next.content = sanitizeBlogHtmlContent(next.content);
-    }
-    // Block `data` may carry nested text. Sanitize known fields conservatively.
-    if (next.data && typeof next.data === 'object') {
-      const data = { ...next.data };
-      if (typeof data.caption === 'string')
-        data.caption = sanitizeBlogHtmlContent(data.caption);
-      if (typeof data.alt === 'string')
-        data.alt = sanitizeText(data.alt, 500);
-      if (typeof data.title === 'string')
-        data.title = sanitizeText(data.title, 500);
-      next.data = data;
-    }
-    return next;
-  };
-
-  let cleaned;
-  if (Array.isArray(parsedContent)) {
-    cleaned = parsedContent.map(sanitizeBlock);
-  } else if (typeof parsedContent === 'object' && Array.isArray(parsedContent.blocks)) {
-    cleaned = { ...parsedContent, blocks: parsedContent.blocks.map(sanitizeBlock) };
-  } else if (typeof parsedContent === 'string') {
-    cleaned = sanitizeBlogHtmlContent(parsedContent);
-  } else {
-    cleaned = parsedContent;
-  }
-
-  if (isJson) {
-    return JSON.stringify(cleaned);
-  }
-  return cleaned;
 }
 
 // =============================================================================
@@ -401,7 +267,10 @@ export async function createBlogAction(formData) {
 
   const title = formData.get('title')?.trim() || '';
   const rawContent = formData.get('content')?.trim() || '';
-  const content = sanitizeBlogHtml(rawContent);
+  if (!rawContent) return { error: 'Content is required.' };
+  const content = cleanLessonContent(rawContent);
+  if (typeof content !== 'string' || !content.trim())
+    return { error: 'Content is required.' };
 
   const rawTags = formData.get('tags') || '';
   const tags = rawTags
@@ -412,11 +281,13 @@ export async function createBlogAction(formData) {
   const status = formData.get('status') || 'draft';
   const read_timeValue = formData.get('read_time');
 
-  // Prepare data for validation
+  // Prepare data for validation. Content is validated for presence above,
+  // not by the schema — JSON block content routinely exceeds a prose-sized
+  // length cap, and the update path imposes none (parity with bootcamp
+  // lesson saves, which only run cleanLessonContent).
   const inputData = {
     title,
     excerpt: formData.get('excerpt')?.trim() || null,
-    content,
     thumbnail: formData.get('thumbnail')?.trim() || null,
     category: formData.get('category') || null,
     tags: tags.length ? tags : null,
@@ -426,7 +297,7 @@ export async function createBlogAction(formData) {
   };
 
   // Validate with Zod
-  const result = blogSchema.safeParse(inputData);
+  const result = blogSchema.omit({ content: true }).safeParse(inputData);
   if (!result.success) {
     const errorMsg = result.error.errors.map((e) => e.message).join(', ');
     return { error: `Validation failed: ${errorMsg}` };
@@ -436,9 +307,11 @@ export async function createBlogAction(formData) {
   const published_at =
     validData.status === 'published' ? new Date().toISOString() : null;
 
+  const rawSlug = formData.get('slug')?.trim();
   const payload = {
-    slug: generateSlug(validData.title),
+    slug: rawSlug ? generateSlug(rawSlug) : generateSlug(validData.title),
     ...validData,
+    content,
     published_at,
     author_id: admin.id,
   };
@@ -473,8 +346,9 @@ export async function updateBlogAction(formData) {
 
   const rawContent = formData.get('content')?.trim();
   if (!rawContent) return { error: 'Content is required.' };
-  const content = sanitizeBlogHtml(rawContent);
-  if (!content.trim()) return { error: 'Content is required.' };
+  const content = cleanLessonContent(rawContent);
+  if (typeof content !== 'string' || !content.trim())
+    return { error: 'Content is required.' };
 
   const rawTags = formData.get('tags') || '';
   const tags = rawTags
