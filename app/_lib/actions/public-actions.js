@@ -590,7 +590,8 @@ export const getPublicAchievements = unstable_cache(
       return [];
     }
   },
-  ['public-achievements'],
+  // v3: payload embeds member_achievements (linked members + usernames)
+  ['public-achievements-v3'],
   { revalidate: 300, tags: ['achievements'] }
 );
 

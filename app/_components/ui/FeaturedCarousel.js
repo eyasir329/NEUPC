@@ -201,6 +201,7 @@ export default function FeaturedCarousel({
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${count}`}
             aria-hidden={i !== active}
+            inert={i !== active ? true : undefined}
           >
             {renderItem(item, i)}
           </div>
@@ -266,14 +267,17 @@ export default function FeaturedCarousel({
                 onClick={() => goTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
                 aria-current={i === active}
-                className={cn(
-                  'h-1.5 rounded-full transition-all duration-300',
-                  'focus-visible:ring-neon-lime focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none',
-                  i === active
-                    ? 'bg-neon-lime w-6'
-                    : 'w-1.5 bg-white/20 hover:bg-white/40'
-                )}
-              />
+                className="focus-visible:ring-neon-lime flex items-center justify-center rounded-full p-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none"
+              >
+                <span
+                  className={cn(
+                    'block h-1.5 rounded-full transition-all duration-300',
+                    i === active
+                      ? 'bg-neon-lime w-6'
+                      : 'w-1.5 bg-white/20 hover:bg-white/40'
+                  )}
+                />
+              </button>
             ))}
           </div>
         </>

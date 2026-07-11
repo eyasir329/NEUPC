@@ -47,7 +47,7 @@ import {
   generatePracticeProblemsAction,
 } from '@/app/_lib/actions/bootcamp-actions';
 import { extractDriveFileId, driveImageUrl } from '@/app/_lib/utils/utils';
-import { marked } from 'marked';
+import MarkdownPreview from '@/app/_components/markdown/MarkdownPreview';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -142,15 +142,15 @@ Your task is to transform raw lesson data into polished Rich Text (HTML) that wi
 - Between heading and first paragraph: margin 0 (heading margin-bottom handles it)
 
 ## Code Block Styling
-- For code blocks, use this exact structure:
-  <div data-has-copy="true" style="position:relative; margin:24px 0;">
-    <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; border:1px solid #273647; border-bottom:none; border-radius:8px 8px 0 0; padding:8px 12px;">
-      <span style="font-size:12px; color:#908fa0; font-weight:600;">LANGUAGE_NAME</span>
-      <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[data-has-copy=&quot;true&quot;]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:#8083ff15; border:1px solid #8083ff30; border-radius:6px; padding:4px 12px; cursor:pointer;">Copy</button>
-    </div>
-    <pre style="margin:0; background:#010f1f; border:1px solid #273647; border-top:none; border-radius:0 0 8px 8px; padding:16px 20px; overflow-x:auto; font-size:13px; line-height:1.6;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa;">YOUR CODE HERE</code></pre>
-  </div>
-- For inline code: <code style="background:#122131; padding:2px 8px; border-radius:4px; font-size:13px; color:#c0c1ff; font-family:'JetBrains Mono','Fira Code',monospace;">code</code>
+- DO NOT paste inline-styled HTML for code blocks — they will not render correctly.
+- Instead, output code as a SEPARATE **markdown block** with triple-backtick fences:
+  \`\`\`js
+  // your code here
+  \`\`\`
+  The platform's unified markdown renderer applies consistent code-block chrome
+  (header with language label + Copy button, hljs syntax highlighting, dark
+  background, scroll on overflow).
+- For inline code in the rich text, simply wrap with single backticks: \`code\`.
 
 ## Other Formatting Rules
 1. **Headings**: Use <h2> for main sections, <h3> for sub-topics, <h4> for details. Keep headings short (under 60 chars).
@@ -203,19 +203,19 @@ Your task is to transform raw lesson data into beautifully styled, self-containe
 - <td>: padding 10px 16px
 - <blockquote>: margin 24px 0, padding 16px 20px
 
-## Code Blocks (IMPORTANT — use this exact HTML pattern)
-For EVERY code block, use this structure with a copy button:
+## Code Blocks (IMPORTANT — DO NOT emit inline-style HTML)
+The platform's unified markdown renderer renders all code blocks identically
+(One Dark Pro hljs palette, header with language label + Copy button, dark
+background, horizontal scroll). For code, output it as a SEPARATE **markdown
+block** with triple-backtick fences:
 
-<div data-has-copy="true" style="position:relative; margin:24px 0; border-radius:10px; overflow:hidden; border:1px solid #273647;">
-  <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; padding:10px 16px; border-bottom:1px solid #273647;">
-    <span style="font-size:12px; color:#908fa0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">LANGUAGE_NAME</span>
-    <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[data-has-copy=&quot;true&quot;]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:rgba(128,131,255,0.08); border:1px solid rgba(128,131,255,0.2); border-radius:6px; padding:4px 14px; cursor:pointer; font-weight:600; transition:all 0.2s;">Copy</button>
-  </div>
-  <pre style="margin:0; background:#010f1f; padding:20px; overflow-x:auto; font-size:13px; line-height:1.7;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa; white-space:pre;">YOUR CODE HERE</code></pre>
-</div>
+\`\`\`js
+// your code here
+\`\`\`
 
-For inline code:
-<code style="background:#122131; padding:2px 8px; border-radius:5px; font-size:13px; color:#c0c1ff; font-family:'JetBrains Mono','Fira Code',monospace; border:1px solid #27364750;">code</code>
+The \`html\` block type is reserved for legitimate raw HTML (e.g. embedded
+iframes, custom components) — not for code blocks. If you need to embed
+inline code in rich text, use single backticks: \`code\`.
 
 ## Callout Boxes (use this pattern)
 <div style="border-left:4px solid ACCENT_COLOR; background:#010f1f; padding:16px 20px; border-radius:0 12px 12px 0; margin:24px 0; display:flex; gap:12px; align-items:flex-start;">
@@ -1341,20 +1341,7 @@ export default function MultiBlockEditor({
                         Preview
                       </div>
                       <div className="max-w-full overflow-x-auto text-[11px] leading-relaxed text-[#908fa0]">
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: (() => {
-                              try {
-                                return marked.parse(p.editorial, {
-                                  gfm: true,
-                                  breaks: true,
-                                });
-                              } catch {
-                                return p.editorial;
-                              }
-                            })(),
-                          }}
-                        />
+                        <MarkdownPreview text={p.editorial} />
                       </div>
                     </div>
                   )}
@@ -1547,20 +1534,7 @@ export default function MultiBlockEditor({
                           <Sparkles className="h-3 w-3" /> Live Markdown Preview
                         </div>
                         <div className="max-w-full overflow-x-auto text-[11px] leading-relaxed text-[#908fa0]">
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html: (() => {
-                                try {
-                                  return marked.parse(q.question, {
-                                    gfm: true,
-                                    breaks: true,
-                                  });
-                                } catch {
-                                  return q.question;
-                                }
-                              })(),
-                            }}
-                          />
+                          <MarkdownPreview text={q.question} />
                         </div>
                       </div>
                     )}

@@ -436,7 +436,7 @@ function PlatformSelectionContent({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search platforms (e.g. Codeforces, LeetCode...)"
             autoFocus
-            className="w-full rounded-2xl border border-white/[0.08] bg-zinc-900/40 py-3.5 pr-12 pl-11 text-sm text-white placeholder-zinc-550 transition-all outline-none focus:border-indigo-500/80 focus:bg-zinc-900/60 focus:ring-4 focus:ring-indigo-500/10"
+            className="w-full rounded-2xl border border-white/[0.08] bg-zinc-900/40 py-3.5 pr-12 pl-11 text-sm text-white placeholder-zinc-500 transition-all outline-none focus:border-indigo-500/80 focus:bg-zinc-900/60 focus:ring-4 focus:ring-indigo-500/10"
           />
           {searchQuery && (
             <button

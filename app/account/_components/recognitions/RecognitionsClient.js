@@ -807,7 +807,10 @@ export default function RecognitionsClient({
           a.result?.toLowerCase().includes(q) ||
           a.team_name?.toLowerCase().includes(q) ||
           a.description?.toLowerCase().includes(q) ||
-          a.participants?.some((p) => p.toLowerCase().includes(q))
+          a.participants?.some((p) => p.toLowerCase().includes(q)) ||
+          a.member_achievements?.some((m) =>
+            m.users?.full_name?.toLowerCase().includes(q)
+          )
       );
     }
 

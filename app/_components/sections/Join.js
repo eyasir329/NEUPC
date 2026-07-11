@@ -70,7 +70,7 @@ function Join({ benefits, settings = {} }) {
   const items = Array.isArray(benefits) ? benefits : [];
 
   return (
-    <section className="relative overflow-hidden py-20 sm:py-24 lg:py-32">
+    <section className="relative overflow-hidden pt-20 pb-10 sm:pt-24 sm:pb-12 lg:pt-32 lg:pb-14">
       {/* Ambient */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="grid-overlay absolute inset-0 opacity-20" />
@@ -131,7 +131,8 @@ function Join({ benefits, settings = {} }) {
             {/* Text */}
             <div className="md:col-span-2">
               <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
-                /// Next cohort
+                {settings?.homepage_join_next_cohort_label ||
+                  '/// Next cohort'}
               </p>
               <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
                 {settings?.homepage_join_cta_title ||
@@ -167,7 +168,8 @@ function Join({ benefits, settings = {} }) {
                   href="/contact"
                   className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none sm:text-[11px]"
                 >
-                  Or talk to us →
+                  {settings?.homepage_join_talk_to_us_label ||
+                    'Or talk to us →'}
                 </Link>
               </motion.div>
             </div>

@@ -13,6 +13,7 @@ import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
 import StatTile from '@/app/_components/ui/StatTile';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import {
   pageFadeUp as fadeUp,
@@ -216,9 +217,9 @@ function LightboxNavBtn({ direction, onClick }) {
   );
 }
 
-// ─── Category dropdown (synced with events page) ──────────────────────────────
+// ─── Filter dropdown (styled; shared by category + year) ──────────────────────
 
-function CategorySelect({ categories, value, onChange }) {
+function FilterSelect({ options, value, onChange, ariaLabel, minWidth }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -230,17 +231,20 @@ function CategorySelect({ categories, value, onChange }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const isFiltered = value !== 'all';
+  const isFiltered = value !== options[0]?.value;
   const current =
-    value === 'all' ? 'All Categories' : CATEGORY_META[value]?.label || value;
+    options.find((o) => o.value === value)?.label ?? options[0]?.label ?? '';
 
   return (
     <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label={ariaLabel}
+        aria-expanded={open}
         className={cn(
-          'flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all sm:min-w-44',
+          'flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition-all',
+          minWidth,
           isFiltered
             ? 'border-neon-lime/30 bg-neon-lime/8 text-neon-lime'
             : 'border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:text-white'
@@ -268,17 +272,15 @@ function CategorySelect({ categories, value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50">
-          {categories.map((c) => {
-            const active = value === c;
-            const label =
-              c === 'all' ? 'All Categories' : CATEGORY_META[c]?.label || c;
+        <div className="absolute top-full right-0 z-50 mt-1.5 max-h-64 min-w-full overflow-y-auto rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50">
+          {options.map((o) => {
+            const active = value === o.value;
             return (
               <button
-                key={c}
+                key={o.value}
                 type="button"
                 onClick={() => {
-                  onChange(c);
+                  onChange(o.value);
                   setOpen(false);
                 }}
                 className={cn(
@@ -288,7 +290,7 @@ function CategorySelect({ categories, value, onChange }) {
                     : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                 )}
               >
-                {label}
+                {o.label}
                 {active && (
                   <svg
                     className="h-3 w-3 shrink-0"
@@ -329,6 +331,7 @@ export default function GalleryClient({
   const [lightbox, setLightbox] = useState(null);
   const sortRef = useRef(null);
   const gridRef = useRef(null);
+  const touchStartX = useRef(null);
 
   const scrollToGrid = useCallback(() => {
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -541,16 +544,16 @@ export default function GalleryClient({
                 variants={fadeUp}
                 className="border-t border-white/8 pt-6 sm:pt-8"
               >
-                <div className="grid grid-cols-4 divide-x divide-white/8">
+                <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
                   {stats.map((s, i) => (
                     <div
                       key={s.id}
                       className={cn(
                         i === 0
-                          ? 'pr-3 sm:pr-6 lg:pr-8'
+                          ? 'sm:pr-6 lg:pr-8'
                           : i === stats.length - 1
-                            ? 'pl-3 sm:pl-6 lg:pl-8'
-                            : 'px-3 sm:px-6 lg:px-8'
+                            ? 'sm:pl-6 lg:pl-8'
+                            : 'sm:px-6 lg:px-8'
                       )}
                     >
                       <StatTile
@@ -609,7 +612,7 @@ export default function GalleryClient({
                   <button
                     onClick={() => setSearch('')}
                     aria-label="Clear search"
-                    className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-0.5 text-zinc-500 transition-colors hover:text-white"
+                    className="absolute top-1/2 right-1 flex h-9 w-9 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-white"
                   >
                     <svg
                       className="h-3.5 w-3.5"
@@ -630,40 +633,38 @@ export default function GalleryClient({
 
               {/* Category */}
               {categories.length > 2 && (
-                <CategorySelect
-                  categories={categories}
+                <FilterSelect
+                  ariaLabel="Filter by category"
+                  minWidth="sm:min-w-44"
                   value={activeFilter}
                   onChange={(v) => {
                     setFilter(v);
                     setPage(1);
                   }}
+                  options={categories.map((c) => ({
+                    value: c,
+                    label:
+                      c === 'all'
+                        ? 'All Categories'
+                        : CATEGORY_META[c]?.label || c,
+                  }))}
                 />
               )}
 
               {/* Year */}
               {years.length > 1 && (
-                <select
+                <FilterSelect
+                  ariaLabel="Filter by year"
                   value={activeYear}
-                  onChange={(e) => {
-                    setYear(e.target.value);
+                  onChange={(v) => {
+                    setYear(v);
                     setPage(1);
                   }}
-                  className={cn(
-                    'shrink-0 cursor-pointer rounded-xl border px-3 py-2.5 font-mono text-[10px] tracking-wider uppercase transition-all outline-none',
-                    activeYear !== 'all'
-                      ? 'border-neon-lime/30 bg-neon-lime/8 text-neon-lime'
-                      : 'border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:text-white'
-                  )}
-                >
-                  <option value="all" className="bg-[#0e1018]">
-                    All Years
-                  </option>
-                  {years.map((y) => (
-                    <option key={y} value={y} className="bg-[#0e1018]">
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: 'all', label: 'All Years' },
+                    ...years.map((y) => ({ value: y, label: y })),
+                  ]}
+                />
               )}
 
               {/* Sort */}
@@ -671,6 +672,8 @@ export default function GalleryClient({
                 <button
                   type="button"
                   onClick={() => setShowSort((v) => !v)}
+                  aria-label={`Sort: ${SORT_OPTIONS.find((s) => s.id === sortBy)?.label}`}
+                  aria-expanded={showSort}
                   className={cn(
                     'flex items-center gap-2 rounded-xl border px-3 py-2.5 font-mono text-[10px] tracking-wider uppercase transition-all',
                     sortBy !== 'newest'
@@ -723,12 +726,13 @@ export default function GalleryClient({
                           setPage(1);
                         }}
                         className={cn(
-                          'flex w-full items-center gap-2 px-4 py-2.5 font-mono text-[10px] tracking-wider uppercase transition-colors',
+                          'flex w-full items-center justify-between gap-8 px-4 py-2.5 font-mono text-[10px] tracking-wider uppercase transition-colors',
                           sortBy === opt.id
                             ? 'bg-neon-lime/10 text-neon-lime'
                             : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                         )}
                       >
+                        {opt.label}
                         {sortBy === opt.id && (
                           <svg
                             className="h-3 w-3 shrink-0"
@@ -744,9 +748,6 @@ export default function GalleryClient({
                             />
                           </svg>
                         )}
-                        <span className={sortBy !== opt.id ? 'pl-4' : ''}>
-                          {opt.label}
-                        </span>
                       </button>
                     ))}
                   </div>
@@ -843,36 +844,11 @@ export default function GalleryClient({
       {/* ── Gallery Grid ──────────────────────────────────────────────────── */}
       <section ref={gridRef} className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8" style={{ scrollMarginTop: '80px' }}>
         <div className="mx-auto max-w-7xl">
-          {/* Section header */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="mb-8 flex flex-col gap-1 sm:mb-10 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  Photo Archive
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                All Photos
-              </motion.h2>
-            </div>
-            <motion.p
-              variants={fadeUp}
-              className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-            >
-              {filteredItems.length} photo
-              {filteredItems.length !== 1 ? 's' : ''}
-            </motion.p>
-          </motion.div>
+          <SectionEyebrow
+            tag="Photo Archive"
+            title="All Photos"
+            right={`${filteredItems.length} photo${filteredItems.length !== 1 ? 's' : ''}`}
+          />
 
           {pagedItems.length > 0 ? (
             <>
@@ -977,14 +953,25 @@ export default function GalleryClient({
               transition={{ duration: 0.25 }}
               className="relative max-h-[90vh] w-full max-w-5xl"
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+              }}
+              onTouchEnd={(e) => {
+                if (touchStartX.current === null) return;
+                const delta =
+                  e.changedTouches[0].clientX - touchStartX.current;
+                touchStartX.current = null;
+                if (delta > 40) navigate('prev');
+                else if (delta < -40) navigate('next');
+              }}
             >
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e16] shadow-2xl">
+              <div className="max-h-[85vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0c0e16] shadow-2xl">
                 {/* Image */}
                 <div className="relative aspect-video bg-[#05060B]">
                   <SafeImg
                     src={driveImageUrl(lightbox.image)}
                     alt={lightbox.title || 'Gallery photo'}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </div>
 
@@ -1017,8 +1004,8 @@ export default function GalleryClient({
                 </div>
               </div>
 
-              {/* Keyboard hint */}
-              <div className="mt-4 flex justify-center">
+              {/* Keyboard hint — pointless on touch devices */}
+              <div className="mt-4 hidden justify-center sm:flex">
                 <div className="inline-flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 backdrop-blur-sm">
                   <span className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase">
                     <kbd className="rounded border border-white/15 bg-white/8 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">

@@ -15,6 +15,7 @@ import StatTile from '@/app/_components/ui/StatTile';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
+import SortSelect from '@/app/_components/ui/SortSelect';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import { getCategoryLabel, CATEGORY_KEYS } from '@/app/_lib/config/blog-config';
 import {
@@ -146,9 +147,17 @@ function BlogCard({ blog }) {
           )}
           <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-white/5 pt-3 font-mono text-[9px] tracking-wider text-zinc-600 uppercase sm:text-[10px]">
             <span className="flex items-center gap-1.5">
-              <div className="font-heading flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white">
-                {blog.author.charAt(0)}
-              </div>
+              {blog.authorAvatar ? (
+                <SafeImg
+                  src={blog.authorAvatar}
+                  alt=""
+                  className="h-5 w-5 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="font-heading flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white">
+                  {blog.author.charAt(0)}
+                </div>
+              )}
               <span className="max-w-[100px] truncate">{blog.author}</span>
             </span>
             {blog.date && (
@@ -293,7 +302,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black wrap-anywhere text-white uppercase select-none"
             >
               {heroTitle.includes('&') ? (
                 <>
@@ -332,29 +341,30 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
+                <div className="sm:pr-6 lg:pr-8">
                   <StatTile
                     value={blogs.length}
                     label="Total Articles"
                     mobileLabel="Total"
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={featuredBlogs.length}
                     label="Featured"
+                    mobileLabel="Top"
                     accent
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={counts['Tutorial'] ?? 0}
                     label="Tutorials"
                     mobileLabel="Tuts"
                   />
                 </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
+                <div className="sm:pl-6 lg:pl-8">
                   <StatTile
                     value={counts['CP'] ?? 0}
                     label="CP Articles"
@@ -388,7 +398,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
+            className="glass-panel relative z-20 space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search + sort row */}
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -412,7 +422,8 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                   value={search}
                   onChange={handleSearch}
                   placeholder="Search articles, authors, tags…"
-                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-sm text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8"
+                  aria-label="Search articles"
+                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-base text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8 sm:text-sm"
                 />
                 {search && (
                   <button
@@ -441,77 +452,78 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
               </div>
 
               {/* Sort */}
-              <select
+              <SortSelect
+                options={SORT_OPTIONS}
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
+                onChange={(v) => {
+                  setSortBy(v);
                   setPage(1);
                 }}
-                className="focus:border-neon-lime/30 shrink-0 cursor-pointer rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-[10px] tracking-wider text-zinc-300 uppercase transition outline-none sm:min-w-40"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Sort articles"
+              />
             </div>
 
             {/* Category tabs + clear */}
             <div className="flex items-center gap-2">
-              <div className="scrollbar-none -mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5">
-                {/* All tab */}
-                <button
-                  onClick={() => {
-                    setCategory('');
-                    setPage(1);
-                  }}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                    !category
-                      ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                      : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                  )}
-                >
-                  All
-                  <span
-                    className={cn(
-                      'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                      !category ? 'bg-black/20' : 'bg-white/10'
-                    )}
-                  >
-                    {counts.all}
-                  </span>
-                </button>
-
-                {categories.map((cat) => (
+              <div className="relative flex-1 overflow-hidden">
+                <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
+                  {/* All tab */}
                   <button
-                    key={cat.key}
-                    onClick={() => handleCategory(cat.key)}
+                    onClick={() => {
+                      setCategory('');
+                      setPage(1);
+                    }}
+                    aria-pressed={!category}
                     className={cn(
-                      'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                      category === cat.key
+                      'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                      !category
                         ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
                         : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                     )}
                   >
-                    {cat.label}
+                    All
                     <span
                       className={cn(
                         'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                        category === cat.key ? 'bg-black/20' : 'bg-white/10'
+                        !category ? 'bg-black/20' : 'bg-white/10'
                       )}
                     >
-                      {counts[cat.key] ?? 0}
+                      {counts.all}
                     </span>
                   </button>
-                ))}
+
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => handleCategory(cat.key)}
+                      aria-pressed={category === cat.key}
+                      className={cn(
+                        'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                        category === cat.key
+                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
+                      )}
+                    >
+                      {cat.label}
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-px text-[9px] tabular-nums',
+                          category === cat.key ? 'bg-black/20' : 'bg-white/10'
+                        )}
+                      >
+                        {counts[cat.key] ?? 0}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-l from-[rgba(12,14,22,0.9)] to-transparent" />
               </div>
 
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAll}
-                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                  aria-label={`Clear ${activeFilterCount} filter${activeFilterCount !== 1 ? 's' : ''}`}
+                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 >
                   <svg
                     className="h-3 w-3"
@@ -540,7 +552,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
                   hidden: {},
                   visible: { transition: { staggerChildren: 0.08 } },
                 }}
-                key={`${category}-${sortBy}-${currentPage}-${search}`}
+                key={`${category}-${sortBy}-${currentPage}`}
                 initial="hidden"
                 animate="visible"
                 className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"

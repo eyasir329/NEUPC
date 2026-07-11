@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Image from 'next/image';
 import {
   addAchievementMemberAction,
@@ -20,6 +20,8 @@ export default function MembersModal({ achievement, users = [], onClose }) {
   const [members, setMembers] = useState(achievement.member_achievements ?? []);
   useScrollLock();
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [showUserDrop, setShowUserDrop] = useState(false);
   const [position, setPosition] = useState('');
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
@@ -29,6 +31,25 @@ export default function MembersModal({ achievement, users = [], onClose }) {
   // Users not yet linked
   const linkedIds = new Set(members.map((m) => m.user_id));
   const availableUsers = users.filter((u) => !linkedIds.has(u.id));
+
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase().trim();
+    if (!q) return availableUsers.slice(0, 30);
+    return availableUsers
+      .filter(
+        (u) =>
+          u.full_name?.toLowerCase().includes(q) ||
+          u.student_id?.toLowerCase().includes(q) ||
+          u.department?.toLowerCase().includes(q)
+      )
+      .slice(0, 30);
+  }, [availableUsers, userSearch]);
+
+  function selectUser(u) {
+    setSelectedUserId(u.id);
+    setUserSearch(u.full_name ?? '');
+    setShowUserDrop(false);
+  }
 
   // ── Add member ────────────────────────────────────────────────────────────
   async function handleAdd(e) {
@@ -67,6 +88,7 @@ export default function MembersModal({ achievement, users = [], onClose }) {
         },
       ]);
       setSelectedUserId('');
+      setUserSearch('');
       setPosition('');
     }
   }
@@ -115,18 +137,64 @@ export default function MembersModal({ achievement, users = [], onClose }) {
             <form onSubmit={handleAdd} className="space-y-3">
               <p className="text-sm font-medium text-slate-300">Add a member</p>
               <div className="flex gap-2">
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                >
-                  <option value="">Select member…</option>
-                  {availableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name || u.email || u.id}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setSelectedUserId('');
+                      setShowUserDrop(true);
+                    }}
+                    onFocus={() => setShowUserDrop(true)}
+                    onBlur={() => setTimeout(() => setShowUserDrop(false), 150)}
+                    placeholder="Search member by name, ID, department…"
+                    autoComplete="off"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                  {showUserDrop && filteredUsers.length > 0 && (
+                    <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-slate-700/50 bg-slate-800 shadow-2xl">
+                      {filteredUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onMouseDown={() => selectUser(u)}
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/60"
+                        >
+                          <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-700">
+                            {u.avatar_url ? (
+                              <Image
+                                src={u.avatar_url}
+                                alt={u.full_name ?? ''}
+                                width={24}
+                                height={24}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-xs font-bold text-slate-400">
+                                {(u.full_name ?? '?')[0]?.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <span className="min-w-0 flex-1 truncate">
+                            {u.full_name || u.email || u.id}
+                            {u.student_id && (
+                              <span className="ml-1.5 text-xs text-slate-500">
+                                {u.student_id}
+                                {u.department ? ` · ${u.department}` : ''}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showUserDrop && userSearch && filteredUsers.length === 0 && (
+                    <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-700/50 bg-slate-800 px-3 py-2 text-xs text-slate-500 shadow-2xl">
+                      No matching members found.
+                    </div>
+                  )}
+                </div>
                 <input
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
@@ -140,6 +208,11 @@ export default function MembersModal({ achievement, users = [], onClose }) {
                   ))}
                 </datalist>
               </div>
+              {selectedUserId && (
+                <p className="text-xs text-emerald-400">
+                  ✓ Selected: {userSearch}
+                </p>
+              )}
               {addError && <p className="text-xs text-red-400">{addError}</p>}
               <button
                 type="submit"

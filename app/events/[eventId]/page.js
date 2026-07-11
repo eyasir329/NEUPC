@@ -16,6 +16,7 @@ import JoinButton from '@/app/_components/ui/JoinButton';
 import { buildEventMetadata } from '@/app/_lib/config/seo';
 import { driveImageUrl } from '@/app/_lib/utils/utils';
 import { auth } from '@/app/_lib/auth/auth';
+import SafeImg from '@/app/_components/ui/SafeImg';
 import EventGalleryViewer from './EventGalleryViewer';
 import EventRegistrationCard from './EventRegistrationCard';
 import EventContentRenderer from '@/app/account/_components/events/EventContentRenderer';
@@ -23,9 +24,12 @@ import EventInteractiveActions from './EventInteractiveActions';
 
 /* ──────────────── Helpers ──────────────────────────────────────────────── */
 
+const EVENT_TIMEZONE = 'Asia/Dhaka';
+
 function formatTime(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleTimeString('en-US', {
+    timeZone: EVENT_TIMEZONE,
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -35,6 +39,7 @@ function formatDateShort(dateString) {
   if (!dateString) return '';
   return new Date(dateString)
     .toLocaleDateString('en-US', {
+      timeZone: EVENT_TIMEZONE,
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -58,6 +63,7 @@ function formatTimelineDateTime(dtStr) {
     const d = new Date(dtStr);
     if (!isNaN(d.getTime())) {
       return d.toLocaleString('en-US', {
+        timeZone: EVENT_TIMEZONE,
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -368,8 +374,8 @@ async function EventDetailPage({ params }) {
 
       {/* Backdrop Cover Blur */}
       {heroImage && (
-        <div className="absolute inset-0 z-0 overflow-hidden opacity-30 select-none pointer-events-none">
-          <img
+        <div className="absolute inset-x-0 top-0 z-0 h-[90vh] overflow-hidden opacity-30 select-none pointer-events-none">
+          <SafeImg
             src={heroImage}
             alt=""
             aria-hidden
@@ -448,7 +454,7 @@ async function EventDetailPage({ params }) {
                 }`}
               >
                 {heroImage ? (
-                  <img
+                  <SafeImg
                     src={heroImage}
                     alt={event.title}
                     className="h-full w-full object-cover rounded-lg transition-all duration-700 group-hover:scale-[1.02]"
@@ -490,23 +496,12 @@ async function EventDetailPage({ params }) {
             </div>
 
             {/* Overview & Rich Content */}
-            {(event.description || event.content) && (
+            {event.content && (
               <div className="holographic-card rounded-2xl border border-white/5 bg-white/2 p-6 sm:p-8 backdrop-blur-md">
                 <div className="mb-6">
                   <SectionLabel accent="lime">Overview</SectionLabel>
                 </div>
-                {event.description && (
-                  <p className="text-sm sm:text-base leading-relaxed text-zinc-300">
-                    {event.description}
-                  </p>
-                )}
-                {event.content && (
-                  <div
-                    className={`${event.description ? 'mt-6 border-t border-white/5 pt-6' : ''}`}
-                  >
-                    <EventContentRenderer content={event.content} />
-                  </div>
-                )}
+                <EventContentRenderer content={event.content} />
               </div>
             )}
 
@@ -637,9 +632,10 @@ async function EventDetailPage({ params }) {
                             key={gItem.id}
                             className="relative h-16 flex-1 overflow-hidden rounded-lg bg-white/3 sm:h-20"
                           >
-                            <img
+                            <SafeImg
                               src={driveImageUrl(gItem.url)}
                               alt={gItem.caption || `Photo ${gi + 1}`}
+                              loading="lazy"
                               className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
                             />
                             {gi === 2 && galleryItems.length > 3 && (
@@ -986,7 +982,7 @@ async function EventDetailPage({ params }) {
 
             <EventGalleryViewer items={galleryItems} eventTitle={event.title} />
 
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-white/5 bg-white/2 px-4 py-3 backdrop-blur-sm">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/2 px-4 py-3 backdrop-blur-sm">
               <div className="flex items-center gap-2 font-mono text-[9px] tracking-widest text-zinc-500 uppercase sm:text-[10px]">
                 <IconCheck className="text-neon-lime h-3.5 w-3.5" />
                 Archive loaded successfully

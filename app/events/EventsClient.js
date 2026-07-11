@@ -12,6 +12,9 @@ import { motion } from 'framer-motion';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
+import HeroAmbient from '@/app/_components/ui/HeroAmbient';
+import ScrollCue from '@/app/_components/ui/ScrollCue';
+import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
@@ -49,6 +52,13 @@ const STATUS_STYLES = {
   },
 };
 
+const DEFAULT_STATUS_STYLE = {
+  dot: 'bg-zinc-500',
+  text: 'text-zinc-400',
+  badge: 'border-white/10 bg-white/5 text-zinc-400',
+  label: 'Event',
+};
+
 const STATUS_TABS = [
   { key: 'active', label: 'Active' },
   { key: 'upcoming', label: 'Upcoming' },
@@ -69,11 +79,13 @@ function getCover(event) {
   );
 }
 
+const EVENT_TIMEZONE = 'Asia/Dhaka';
+
 function fmtDate(value, opts = {}) {
   if (!value) return '';
   try {
     return new Date(value).toLocaleDateString('en-US', {
-      timeZone: 'UTC',
+      timeZone: EVENT_TIMEZONE,
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -88,7 +100,7 @@ function fmtTime(value) {
   if (!value) return '';
   try {
     return new Date(value).toLocaleTimeString('en-US', {
-      timeZone: 'UTC',
+      timeZone: EVENT_TIMEZONE,
       hour: 'numeric',
       minute: '2-digit',
     });
@@ -110,7 +122,7 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
       >
         {value}
       </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
+      <span className="font-mono text-[9px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
         <span className="sm:hidden">{mobileLabel || label}</span>
         <span className="hidden sm:inline">{label}</span>
       </span>
@@ -128,8 +140,15 @@ function CategorySelect({ categories, value, onChange }) {
     function onClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const current = value === 'all' ? 'All Categories' : value;
@@ -140,6 +159,8 @@ function CategorySelect({ categories, value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all sm:min-w-44',
           isFiltered
@@ -169,7 +190,10 @@ function CategorySelect({ categories, value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50 sm:right-0 sm:left-auto">
+        <div
+          role="listbox"
+          className="absolute top-full left-0 z-50 mt-1.5 max-h-64 min-w-full overflow-y-auto rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50 sm:right-0 sm:left-auto"
+        >
           {categories.map((c) => {
             const label = c === 'all' ? 'All Categories' : c;
             const active = value === c;
@@ -177,12 +201,14 @@ function CategorySelect({ categories, value, onChange }) {
               <button
                 key={c}
                 type="button"
+                role="option"
+                aria-selected={active}
                 onClick={() => {
                   onChange(c);
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center justify-between gap-8 px-4 py-2.5 text-left font-mono text-[10px] tracking-wider uppercase transition-colors',
+                  'flex min-h-[38px] w-full items-center justify-between gap-8 px-4 py-2.5 text-left font-mono text-[10px] tracking-wider uppercase transition-colors',
                   active
                     ? 'bg-neon-lime/10 text-neon-lime'
                     : 'text-zinc-400 hover:bg-white/5 hover:text-white'
@@ -215,8 +241,8 @@ function CategorySelect({ categories, value, onChange }) {
 
 // ─── Event card ───────────────────────────────────────────────────────────────
 
-function EventCard({ event, index = 0 }) {
-  const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
+function EventCard({ event }) {
+  const st = STATUS_STYLES[event.status] ?? DEFAULT_STATUS_STYLE;
   const image = getCover(event);
 
   return (
@@ -309,7 +335,7 @@ function EventCard({ event, index = 0 }) {
 
 function FeaturedBanner({ event }) {
   const image = getCover(event);
-  const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
+  const st = STATUS_STYLES[event.status] ?? DEFAULT_STATUS_STYLE;
 
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]">
@@ -415,7 +441,7 @@ function FeaturedBanner({ event }) {
         <div className="mt-6 flex flex-wrap items-center gap-4 sm:mt-7">
           <Link
             href={getHref(event)}
-            className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime relative inline-flex min-h-[44px] items-center gap-2.5 rounded-full px-7 py-3 text-[10px] font-bold tracking-[0.18em] text-black uppercase shadow-[0_0_24px_-4px_rgba(182,243,107,0.5)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.75)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] focus-visible:outline-none sm:text-[11px]"
+            className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime relative inline-flex min-h-[44px] items-center gap-2.5 rounded-full px-7 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none sm:text-[11px]"
           >
             Learn More
             <span className="transition-transform duration-300 group-hover/cta:translate-x-1">
@@ -612,13 +638,7 @@ export default function EventsClient({
     <div className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
-        {/* Ambient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="grid-overlay absolute inset-0 opacity-25" />
-          <div className="bg-neon-violet/12 absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full blur-[120px] sm:h-[500px] sm:w-[500px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full blur-[120px] sm:h-[400px] sm:w-[400px]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
-        </div>
+        <HeroAmbient />
 
         <motion.div
           variants={stagger}
@@ -677,25 +697,25 @@ export default function EventsClient({
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
+                <div className="sm:pr-6 lg:pr-8">
                   <StatTile
                     value={counts.all}
                     label="Total Events"
                     mobileLabel="Total"
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile value={counts.upcoming} label="Upcoming" accent />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={counts.ongoing}
                     label="Live Now"
                     mobileLabel="Live"
                   />
                 </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
+                <div className="sm:pl-6 lg:pl-8">
                   <StatTile
                     value={counts.completed}
                     label="Completed"
@@ -707,35 +727,20 @@ export default function EventsClient({
           </div>
         </motion.div>
 
-        {/* Scroll cue – desktop only */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-7 w-px bg-linear-to-b from-zinc-600 to-transparent" />
-        </div>
+        <ScrollCue />
       </section>
 
       {/* ── Featured events ───────────────────────────────────────────────── */}
       {featuredEvents.length > 0 && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
-            <motion.div variants={stagger} initial="hidden" animate="visible">
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  {featuredEvents.length > 1
-                    ? 'Featured Events'
-                    : 'Featured Event'}
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                Don&apos;t Miss This
-              </motion.h2>
-            </motion.div>
+            <SectionEyebrow
+              tag={
+                featuredEvents.length > 1 ? 'Featured Events' : 'Featured Event'
+              }
+              title="Don't Miss This"
+              onMount
+            />
 
             <FeaturedCarousel
               items={featuredEvents}
@@ -754,35 +759,11 @@ export default function EventsClient({
         style={{ scrollMarginTop: '80px' }}
       >
         <div className="mx-auto max-w-7xl space-y-8 sm:space-y-10">
-          {/* Section header */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-3">
-                <span className="bg-neon-lime h-px w-7" />
-                <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                  Browse Events
-                </span>
-              </motion.div>
-              <motion.h2
-                variants={fadeUp}
-                className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-              >
-                All Events
-              </motion.h2>
-            </div>
-            <motion.p
-              variants={fadeUp}
-              className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-            >
-              {total} event{total !== 1 ? 's' : ''}
-            </motion.p>
-          </motion.div>
+          <SectionEyebrow
+            tag="Browse Events"
+            title="All Events"
+            right={`${total} event${total !== 1 ? 's' : ''}`}
+          />
 
           {/* Filters panel */}
           <motion.div
@@ -790,7 +771,7 @@ export default function EventsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
+            className="glass-panel relative z-20 space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search + category */}
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -809,11 +790,12 @@ export default function EventsClient({
                   />
                 </svg>
                 <input
-                  type="text"
+                  type="search"
                   value={search}
                   onChange={(e) => updateSearch(e.target.value)}
                   placeholder="Search events…"
-                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-sm text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8"
+                  aria-label="Search events"
+                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-base text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8 sm:text-sm"
                 />
                 {search && (
                   <button
@@ -848,38 +830,42 @@ export default function EventsClient({
 
             {/* Status tabs + clear-all row */}
             <div className="flex items-center gap-2">
-              <div className="scrollbar-none -mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5">
-                {STATUS_TABS.map((tab) => {
-                  const active = statusFilter === tab.key;
-                  const count = counts[tab.key] ?? counts.all;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => updateStatus(tab.key)}
-                      className={cn(
-                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                        active
-                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                      )}
-                    >
-                      {tab.label}
-                      <span
+              <div className="relative flex-1 overflow-hidden">
+                <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
+                  {STATUS_TABS.map((tab) => {
+                    const active = statusFilter === tab.key;
+                    const count = counts[tab.key] ?? counts.all;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => updateStatus(tab.key)}
                         className={cn(
-                          'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                          active ? 'bg-black/20' : 'bg-white/10'
+                          'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          active
+                            ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                            : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                         )}
                       >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                        {tab.label}
+                        <span
+                          className={cn(
+                            'rounded-full px-1.5 py-px text-[9px] tabular-nums',
+                            active ? 'bg-black/20' : 'bg-white/10'
+                          )}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-l from-[rgba(12,14,22,0.9)] to-transparent" />
               </div>
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAll}
-                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                  aria-label={`Clear ${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''}`}
+                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 >
                   <svg
                     className="h-3 w-3"
@@ -914,8 +900,8 @@ export default function EventsClient({
                   animate="visible"
                   className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
-                  {items.map((event, i) => (
-                    <EventCard key={event.id} event={event} index={i} />
+                  {items.map((event) => (
+                    <EventCard key={event.id} event={event} />
                   ))}
                 </motion.div>
                 <InlinePagination
@@ -959,37 +945,11 @@ export default function EventsClient({
       {archiveEvents.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="mb-8 flex flex-col gap-1 sm:mb-10 sm:flex-row sm:items-end sm:justify-between"
-            >
-              <div>
-                <motion.div
-                  variants={fadeUp}
-                  className="flex items-center gap-3"
-                >
-                  <span className="bg-neon-lime h-px w-7" />
-                  <span className="text-neon-lime font-mono text-[10px] tracking-[0.35em] uppercase sm:text-[11px]">
-                    Past Events
-                  </span>
-                </motion.div>
-                <motion.h2
-                  variants={fadeUp}
-                  className="kinetic-headline font-heading mt-2 text-3xl font-black text-white uppercase sm:text-4xl"
-                >
-                  Event Archive
-                </motion.h2>
-              </div>
-              <motion.p
-                variants={fadeUp}
-                className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:text-[11px]"
-              >
-                {archiveEvents.length} completed
-              </motion.p>
-            </motion.div>
+            <SectionEyebrow
+              tag="Past Events"
+              title="Event Archive"
+              right={`${archiveEvents.length} completed`}
+            />
 
             <motion.div
               variants={{

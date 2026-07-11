@@ -6,7 +6,7 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=1536 --expose-gc' TURBOPACK_MEMORY_LIMIT=1024 next dev --turbopack",
+    "dev": "NODE_OPTIONS='--max-old-space-size=1024 --max-semi-space-size=32 --expose-gc' TURBOPACK_MEMORY_LIMIT=768 next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -40,6 +40,7 @@
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@prettier/plugin-php": "^0.24.0",
+    "@sentry/nextjs": "^10.65.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@tiptap/extension-character-count": "^3.20.0",

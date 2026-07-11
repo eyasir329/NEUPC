@@ -2,7 +2,7 @@
 
 export default function PublicProfileLoading() {
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 pt-6 pb-10 sm:px-6 lg:px-8 xl:px-10 animate-pulse">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 pt-24 pb-10 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32 xl:px-10 animate-pulse">
       {/* Identity header skeleton */}
       <div className="rounded-2xl border border-white/[0.08] bg-gray-900 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-violet-500/30 via-purple-500/30 to-sky-500/30" />

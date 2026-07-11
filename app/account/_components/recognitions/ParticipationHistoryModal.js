@@ -324,7 +324,15 @@ function RecordForm({ record, users, achievements, onSave, onCancel }) {
                       </span>
                     )}
                   </div>
-                  {u.full_name}
+                  <span className="min-w-0 flex-1 truncate">
+                    {u.full_name}
+                    {u.student_id && (
+                      <span className="ml-1.5 text-xs text-slate-500">
+                        {u.student_id}
+                        {u.department ? ` · ${u.department}` : ''}
+                      </span>
+                    )}
+                  </span>
                 </button>
               ))}
             </div>
@@ -516,7 +524,14 @@ function RecordForm({ record, users, achievements, onSave, onCancel }) {
                                   </span>
                                 )}
                               </div>
-                              {u.full_name}
+                              <span className="min-w-0 flex-1 truncate">
+                                {u.full_name}
+                                {u.student_id && (
+                                  <span className="ml-1.5 text-xs text-slate-500">
+                                    {u.student_id}
+                                  </span>
+                                )}
+                              </span>
                             </button>
                           ))}
                         </div>

@@ -4,20 +4,21 @@
  */
 
 import Link from 'next/link';
-import { Mail, MapPin } from 'lucide-react';
+import { Mail, MapPin, Phone, Clock } from 'lucide-react';
 
 const defaultSocial = {
-  facebook: 'https://facebook.com',
-  github: 'https://github.com',
-  linkedin: 'https://linkedin.com',
-  youtube: 'https://youtube.com',
-  twitter: 'https://twitter.com',
+  facebook: '',
+  github: '',
+  linkedin: '',
+  youtube: '',
+  twitter: '',
 };
 
 const defaultContact = {
-  email: 'contact@neupc.edu',
-  phone: '+880 123 456 7890',
-  address: 'Netrokona University\nNetrokona, Bangladesh',
+  email: '',
+  phone: '',
+  address: '',
+  officeHours: '',
 };
 
 const defaultDescription =
@@ -83,17 +84,17 @@ const SOCIAL_HOVER = {
   twitter: 'hover:text-zinc-200',
 };
 
-const NAV_LINKS = [
+const DEFAULT_NAV_LINKS = [
   { href: '/about', label: 'About Us' },
   { href: '/events', label: 'Events' },
   { href: '/achievements', label: 'Achievements' },
   { href: '/committee', label: 'Committee' },
-  { href: '/gallery', label: 'Gallery' },
 ];
 
-const RESOURCE_LINKS = [
+const DEFAULT_RESOURCE_LINKS = [
   { href: '/blogs', label: 'Blog' },
   { href: '/roadmaps', label: 'Roadmaps' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -109,12 +110,17 @@ export default function Footer({
 
   const socialLinks = { ...defaultSocial, ...social };
   const contactInfo = { ...defaultContact, ...contact };
+  if (contact?.office_hours && !contact?.officeHours) {
+    contactInfo.officeHours = contact.office_hours;
+  }
   const footerDescription = footer.description || defaultDescription;
 
   const activeSocials = Object.entries(socialLinks).filter(([, url]) => url);
 
+  const navLinks =
+    settings?.site_navigation?.footerExplore || DEFAULT_NAV_LINKS;
   const resourceLinks = [
-    ...RESOURCE_LINKS,
+    ...(settings?.site_navigation?.footerResources || DEFAULT_RESOURCE_LINKS),
     ...(!isLoggedIn ? [{ href: '/join', label: 'Join Us' }] : []),
   ];
 
@@ -127,7 +133,7 @@ export default function Footer({
         {/* Main grid — stacks on mobile, 2-col on md, 4-col on lg */}
         <div className="mb-12 grid grid-cols-2 gap-x-8 gap-y-10 sm:mb-16 sm:gap-x-10 md:grid-cols-4 lg:mb-20 lg:gap-x-16">
           {/* Brand — full width on mobile, spans 2 cols on md+ */}
-          <div className="col-span-2 space-y-5 md:col-span-2 lg:col-span-1">
+          <div className="col-span-2 space-y-5 md:col-span-4 lg:col-span-1">
             <div className="font-heading text-2xl font-black tracking-tighter text-white italic sm:text-3xl">
               {settings?.site_name || 'NEUPC'}
             </div>
@@ -162,10 +168,10 @@ export default function Footer({
           {/* Quick Links */}
           <div className="col-span-1 space-y-4 sm:space-y-5">
             <p className="font-heading text-[10px] font-bold tracking-widest text-white uppercase sm:text-[11px]">
-              Explore
+              {settings?.footer_explore_heading || 'Explore'}
             </p>
             <ul className="space-y-3">
-              {NAV_LINKS.map((link) => (
+              {navLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -181,7 +187,7 @@ export default function Footer({
           {/* Resources */}
           <div className="col-span-1 space-y-4 sm:space-y-5">
             <p className="font-heading text-[10px] font-bold tracking-widest text-white uppercase sm:text-[11px]">
-              Resources
+              {settings?.footer_resources_heading || 'Resources'}
             </p>
             <ul className="space-y-3">
               {resourceLinks.map((link) => (
@@ -198,7 +204,7 @@ export default function Footer({
           </div>
 
           {/* Contact — full width on mobile so address/email aren't squeezed */}
-          <div className="col-span-2 space-y-4 sm:space-y-5 md:col-span-1">
+          <div className="col-span-2 space-y-4 sm:space-y-5 md:col-span-2 lg:col-span-1">
             <p className="font-heading text-[10px] font-bold tracking-widest text-white uppercase sm:text-[11px]">
               Contact
             </p>
@@ -222,6 +228,25 @@ export default function Footer({
                   </a>
                 </li>
               )}
+              {contactInfo.phone && (
+                <li className="flex items-center gap-2.5">
+                  <Phone className="text-neon-lime h-3.5 w-3.5 shrink-0" />
+                  <a
+                    href={`tel:${contactInfo.phone.replace(/[^+\d]/g, '')}`}
+                    className="hover:text-neon-lime text-xs font-light text-zinc-500 italic transition-colors"
+                  >
+                    {contactInfo.phone}
+                  </a>
+                </li>
+              )}
+              {contactInfo.officeHours && (
+                <li className="flex items-start gap-2.5">
+                  <Clock className="text-neon-lime mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="text-xs leading-relaxed font-light text-zinc-500 italic">
+                    {contactInfo.officeHours}
+                  </span>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -229,7 +254,7 @@ export default function Footer({
         {/* Bottom bar */}
         <div className="flex flex-col items-center gap-4 border-t border-white/5 pt-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <p className="font-mono text-[9px] font-bold tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">
-            © {currentYear}{' '}
+            © 2025 - {currentYear}{' '}
             {settings?.site_name_full ||
               'Netrokona University Programming Club'}
             . All rights reserved.

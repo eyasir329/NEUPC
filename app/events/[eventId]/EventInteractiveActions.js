@@ -163,15 +163,22 @@ export default function EventInteractiveActions({ event }) {
     return () => clearInterval(interval);
   }, [start_date, isCompleted]);
 
-  // ── Click Outside to Close Calendar Dropdown ──
+  // ── Click Outside / Escape to Close Calendar Dropdown ──
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setCalendarOpen(false);
       }
     }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setCalendarOpen(false);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // ── Share URLs ──
@@ -193,10 +200,22 @@ export default function EventInteractiveActions({ event }) {
   const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(originUrl)}`;
 
   // ── Add to Calendar URLs ──
-  const utcStart = formatCalendarDate(start_date);
-  const utcEnd = formatCalendarDate(end_date || new Date(new Date(start_date).getTime() + 7200000).toISOString()); // Default 2 hours
+  const utcStart = start_date ? formatCalendarDate(start_date) : '';
+  const utcEnd = start_date
+    ? formatCalendarDate(
+        end_date || new Date(new Date(start_date).getTime() + 7200000).toISOString() // Default 2 hours
+      )
+    : '';
 
   const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${utcStart}/${utcEnd}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+
+  const outlookStart = start_date ? new Date(start_date).toISOString() : '';
+  const outlookEnd = start_date
+    ? new Date(
+        end_date || new Date(new Date(start_date).getTime() + 7200000)
+      ).toISOString()
+    : '';
+  const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(outlookStart)}&enddt=${encodeURIComponent(outlookEnd)}&body=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
 
   // Generate iCal ICS content
   const handleDownloadICS = () => {
@@ -290,6 +309,8 @@ export default function EventInteractiveActions({ event }) {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setCalendarOpen(!calendarOpen)}
+              aria-haspopup="menu"
+              aria-expanded={calendarOpen}
               className="group hover:border-white/20 hover:bg-white/8 hover:text-white flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/3 py-3 px-3 font-mono text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-all"
             >
               <IconCalendar className="text-neon-lime group-hover:scale-105 h-4 w-4 transition-transform" />
@@ -319,7 +340,7 @@ export default function EventInteractiveActions({ event }) {
                   Apple iCal (.ics)
                 </button>
                 <a
-                  href={googleCalUrl} // Falls back to templated redirect
+                  href={outlookUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setCalendarOpen(false)}
@@ -367,8 +388,9 @@ export default function EventInteractiveActions({ event }) {
             href={twitterUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-white transition-all"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-white transition-all"
             title="Share on X"
+            aria-label="Share on X"
           >
             <IconXTwitter className="h-3.5 w-3.5" />
           </a>
@@ -377,8 +399,9 @@ export default function EventInteractiveActions({ event }) {
             href={linkedInUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-[#0077b5] transition-all"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-[#0077b5] transition-all"
             title="Share on LinkedIn"
+            aria-label="Share on LinkedIn"
           >
             <IconLinkedIn className="h-3.5 w-3.5" />
           </a>
@@ -387,8 +410,9 @@ export default function EventInteractiveActions({ event }) {
             href={facebookUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-[#1877f2] transition-all"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-zinc-400 hover:border-white/15 hover:bg-white/5 hover:text-[#1877f2] transition-all"
             title="Share on Facebook"
+            aria-label="Share on Facebook"
           >
             <IconFacebook className="h-3.5 w-3.5" />
           </a>

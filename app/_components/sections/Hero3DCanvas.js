@@ -8,82 +8,97 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
+// Default nodes shown when the admin hasn't configured `hero_roadmap_nodes`
+// yet. Each node's `link` deep-links to a published roadmap page.
 export const DATA_NODES = [
   {
     id: 'GP',
     label: 'Graphics Programming',
+    link: '/roadmaps/graphics-programming-roadmap-beginner-to-expert-mmpp5z3o',
     description:
       'Master rendering pipelines, shaders, OpenGL/Vulkan, and real-time 3D graphics engines from beginner to expert.',
   },
   {
     id: 'CV',
     label: 'Computer Vision',
+    link: '/roadmaps/computer-vision-roadmap-beginner-to-expert-mmow7pry',
     description:
       'Explore image processing, object detection, and visual models to enable machines to interpret visual data.',
   },
   {
     id: 'SYS',
     label: 'System Design',
+    link: '/roadmaps/system-design-administration-roadmap-beginner-to-expert-mmp9kjef',
     description:
       'Architect robust distributed systems, manage cloud infrastructure, and master high-availability backend administration.',
   },
   {
     id: 'MOB',
     label: 'Mobile App Dev',
+    link: '/roadmaps/full-stack-mobile-app-development-mmopm53v',
     description:
       'Build cross-platform and native mobile applications focusing on performance, UI/UX, and state management.',
   },
   {
     id: 'NLP',
     label: 'Natural Language Processing',
+    link: '/roadmaps/natural-language-processing-nlp-roadmap-beginner-to-expert-mmowix0e',
     description:
       'Dive into NLP, text generation, transformers, and the semantic understanding of human languages.',
   },
   {
     id: 'RAG',
     label: 'Agentic AI & RAG',
+    link: '/roadmaps/agentic-ai-rag-roadmap-beginner-to-expert-mmoy9xw3',
     description:
       'Design autonomous AI agents and Retrieval-Augmented Generation flows using modern LLM orchestration.',
   },
   {
     id: 'RL',
     label: 'Reinforcement Learning',
+    link: '/roadmaps/reinforcement-learning-roadmap-beginner-to-expert-mmowoq45',
     description:
       'Train models through reward/penalty paradigms, diving into Q-learning, policy gradients, and agents.',
   },
   {
     id: 'PAR',
     label: 'Concurrency Parallelism',
+    link: '/roadmaps/concurrency-parallelism-roadmap-beginner-to-expert-mmpp8ca3',
     description:
       'Master multi-threading, concurrency models, asynchronous programming, and CPU/GPU-accelerated processing.',
   },
   {
     id: 'WEB',
     label: 'Full-Stack Web',
+    link: '/roadmaps/full-stack-web-development-roadmap-from-basics-to-mastery-mmopea6y',
     description:
       'Engineer modern web experiences from responsive frontends to scalable microservice backends.',
   },
   {
     id: 'CP',
     label: 'Competitive Programming',
+    link: '/roadmaps/competitive-programming-roadmap-beginner-to-expert-mmmpt26y',
     description:
       'Sharpen algorithmic intuition and master complex data structures under strict time and memory constraints.',
   },
   {
     id: 'AI',
     label: 'Machine Learning',
+    link: '/roadmaps/artificial-intelligence-machine-learning-roadmap-beginner-to-mmoumwg4',
     description:
       'Train predictive models, neural networks, and deep learning architectures to extract insights from datasets.',
   },
   {
     id: 'SEC',
     label: 'Cyber Security',
+    link: '/roadmaps/cyber-security-specialist-roadmap-beginner-to-expert-mmr1hblk',
     description:
       'Understand penetration testing, network defense, cryptography, and zero-trust security architectures.',
   },
   {
     id: 'W3',
     label: 'Web3 Blockchain',
+    link: '/roadmaps/web3-blockchain-development-roadmap-beginner-to-expert-mmp96crv',
     description:
       'Develop decentralized applications, smart contracts, and cryptographic ledger systems on modern blockchains.',
   },
@@ -105,6 +120,10 @@ const NODE_ICONS = {
   W3: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>',
 };
 
+// Shown for any node id without a hand-drawn icon above (e.g. admin-added nodes).
+const DEFAULT_NODE_ICON =
+  '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>';
+
 const MULTILINE_CODE_SNIPPETS = [
   '#include <iostream>\nusing namespace std;\n\nint main() {\n  int n, m; adj[1e5];\n  vector<int> f(n);\n  return (1);\n}',
   'void dfs(int u, int p) {\n  if (visited) continue;\n  cint a = Alfevents;\n  return v > parents + 1;\n}',
@@ -114,9 +133,27 @@ const MULTILINE_CODE_SNIPPETS = [
   'function init() {\n  const ctx = null;\n  return rgba(255,10);\n}',
 ];
 
-export default function Hero3DCanvas({ onNodeClick } = {}) {
+// Builds the node list entirely from admin-configured overrides when present
+// (variable count, sphere position recalculated by array order); falls back
+// to the code-owned defaults when settings are empty.
+function resolveDataNodes(nodeOverrides) {
+  if (!Array.isArray(nodeOverrides) || nodeOverrides.length === 0) {
+    return DATA_NODES;
+  }
+  return nodeOverrides
+    .filter((n) => n?.id && n?.label)
+    .map((n) => ({
+      id: n.id,
+      label: n.label,
+      description: n.description || '',
+      link: n.link || '',
+    }));
+}
+
+export default function Hero3DCanvas({ onNodeClick, nodeOverrides } = {}) {
   const mountRef = useRef(null);
   const onNodeClickRef = useRef(onNodeClick);
+  const dataNodes = resolveDataNodes(nodeOverrides);
 
   const interactionState = useRef({
     isDragging: false,
@@ -309,7 +346,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       const texture = new THREE.CanvasTexture(canvas);
 
-      const svgPath = NODE_ICONS[symbol];
+      const svgPath = NODE_ICONS[symbol] || DEFAULT_NODE_ICON;
       if (svgPath) {
         const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="${themeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>`;
         const img = new Image();
@@ -352,8 +389,8 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     };
 
     const nodeSprites = [];
-    DATA_NODES.forEach((node, i) => {
-      const phi = Math.acos(1 - (2 * (i + 0.5)) / DATA_NODES.length);
+    dataNodes.forEach((node, i) => {
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / dataNodes.length);
       const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
 
       const px = coreRadius * Math.sin(phi) * Math.cos(theta);
@@ -479,7 +516,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
         const mesh = new THREE.Mesh(snippetGeo, snippetMat);
         const pos = new THREE.Vector3(
-          THREE.MathUtils.randFloatSpread(60),
+          THREE.MathUtils.randFloat(8, 30),
           THREE.MathUtils.randFloatSpread(50),
           THREE.MathUtils.randFloat(-34, -18)
         );
@@ -510,6 +547,16 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     const mouse = new THREE.Vector2(-9999, -9999);
     let hoveredNode = null;
 
+    // Only nodes on the camera-facing half of the globe are interactive —
+    // sprites always face the camera, so without this filter the raycaster
+    // hits (and clicks open) nodes hidden behind the wireframe.
+    const _worldPos = new THREE.Vector3();
+    const intersectFrontNodes = (rc) =>
+      rc.intersectObjects(nodeSprites).filter((hit) => {
+        hit.object.getWorldPosition(_worldPos);
+        return _worldPos.z > worldGroup.position.z;
+      });
+
     hitTestRef.current = (clientX, clientY) => {
       const rect = mountEl.getBoundingClientRect();
       const m = new THREE.Vector2(
@@ -518,7 +565,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       );
       raycaster.setFromCamera(m, camera);
       return (
-        raycaster.intersectObjects(nodeSprites).length > 0 ||
+        intersectFrontNodes(raycaster).length > 0 ||
         raycaster.intersectObject(sphereLines).length > 0
       );
     };
@@ -549,12 +596,19 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
         raycaster.setFromCamera(clickMouse, camera);
-        const clickIntersects = raycaster.intersectObjects(nodeSprites);
+        const clickIntersects = intersectFrontNodes(raycaster);
         clickedNode = clickIntersects[0]?.object || null;
       }
 
       if (clickedNode && onNodeClickRef.current) {
-        onNodeClickRef.current(clickedNode.userData.nodeData);
+        // Project the node's world position to pixel coords inside the mount
+        // so the caller can place the detail card next to the clicked node.
+        const rect = mountEl.getBoundingClientRect();
+        clickedNode.getWorldPosition(_worldPos).project(camera);
+        onNodeClickRef.current(clickedNode.userData.nodeData, {
+          x: ((_worldPos.x + 1) / 2) * rect.width,
+          y: ((1 - _worldPos.y) / 2) * rect.height,
+        });
       }
     };
 
@@ -631,7 +685,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       ptColors.needsUpdate = true;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(nodeSprites);
+      const intersects = intersectFrontNodes(raycaster);
       const sphereHit = raycaster.intersectObject(sphereLines);
       const overGlobeNow = intersects.length > 0 || sphereHit.length > 0;
       // For mouse (non-touch), pause auto-spin when hovering the globe
@@ -704,7 +758,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
           }
         }
 
-        data.velocity.x += (0 - data.pos.x) * 0.0005 * fpsScale;
+        data.velocity.x += (19 - data.pos.x) * 0.0005 * fpsScale;
 
         data.velocity.x *= Math.pow(0.92, fpsScale);
         data.velocity.z *= Math.pow(0.92, fpsScale);
@@ -719,7 +773,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
         if (data.pos.y > 30) {
           data.pos.y = -30;
-          data.pos.x = THREE.MathUtils.randFloatSpread(60);
+          data.pos.x = THREE.MathUtils.randFloat(8, 30);
           data.velocity.set(0, 0, 0);
         }
         if (data.pos.y < -30) data.pos.y = 30;

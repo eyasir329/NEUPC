@@ -8,7 +8,8 @@ import {
   isSupabaseConfigured,
 } from '@/app/_lib/integrations/supabase';
 import { _log } from './_internal';
-import { key, mget, msetWithTtl, invalidate, TTL } from './_cache';
+import { key, mget, msetWithTtl, TTL } from './_cache';
+import { dbWrite } from '@/app/_lib/db/router';
 
 /**
  * Batch-resolve minimal display data for many user ids at once, cached.
@@ -147,50 +148,79 @@ export async function getUserById(id) {
 
 // Insert a new user.
 export async function createUser(userData) {
-  const { data, error } = await supabaseAdmin
-    .from('users')
-    .insert([
-      {
-        ...userData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'users',
+    op: 'insert',
+    mutate: (client) =>
+      client
+        .from('users')
+        .insert([
+          {
+            ...userData,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
 
 // Hard-delete a user.
 export async function deleteUser(id) {
-  const { error } = await supabaseAdmin.from('users').delete().eq('id', id);
+  const { error } = await dbWrite({
+    table: 'users',
+    op: 'delete',
+    mutate: (client) => client.from('users').delete().eq('id', id),
+    pk: { id },
+  });
   if (error) throw new Error(error.message);
   return { success: true };
 }
 
 // Update user fields.
 export async function updateUser(id, updates) {
-  const { data, error } = await supabaseAdmin
-    .from('users')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'users',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('users')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single(),
+    cacheKeys: [key('identity', 'user', id)],
+  });
   if (error) throw new Error(error.message);
-  // Keep the resolve-user cache correct after a profile change.
-  await invalidate(key('identity', 'user', id));
   return data;
 }
 
-// Get minimal user list for selectors.
+// Get approved club members for selectors (achievements/participation
+// member pickers) — sourced from member_profiles so unapproved applicants
+// and non-member accounts never show up as linkable "members".
 export async function getUsersForSelector() {
   const { data, error } = await supabaseAdmin
-    .from('users')
-    .select('id, full_name, avatar_url')
-    .order('full_name');
+    .from('member_profiles')
+    .select(
+      'user_id, student_id, academic_session, department, users!member_profiles_user_id_fkey(id, full_name, avatar_url)'
+    )
+    .eq('approved', true);
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  return (data ?? [])
+    .filter((m) => m.users)
+    .map((m) => ({
+      id: m.users.id,
+      full_name: m.users.full_name,
+      avatar_url: m.users.avatar_url,
+      student_id: m.student_id,
+      department: m.department,
+      academic_session: m.academic_session,
+    }))
+    .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''));
 }
 
 // Get all users with role/status info.
@@ -414,36 +444,48 @@ export async function getUserStats() {
 
 // Update account status with reason.
 export async function updateUserAccountStatus(id, status, reason, changedBy) {
-  const { data, error } = await supabaseAdmin
-    .from('users')
-    .update({
-      account_status: status,
-      status_reason: reason,
-      status_changed_by: changedBy,
-      status_changed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'users',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('users')
+        .update({
+          account_status: status,
+          status_reason: reason,
+          status_changed_by: changedBy,
+          status_changed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
 
 // Suspend a user account.
 export async function suspendUser(userId, adminId, reason, expiresAt = null) {
-  const { error } = await supabaseAdmin
-    .from('users')
-    .update({
-      account_status: 'suspended',
-      status_reason: reason,
-      status_changed_by: adminId,
-      status_changed_at: new Date().toISOString(),
-      suspension_expires_at: expiresAt,
-      is_online: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
+  const { error } = await dbWrite({
+    table: 'users',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('users')
+        .update({
+          account_status: 'suspended',
+          status_reason: reason,
+          status_changed_by: adminId,
+          status_changed_at: new Date().toISOString(),
+          suspension_expires_at: expiresAt,
+          is_online: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   await _log(adminId, 'suspend_user', 'user', userId, { reason, expiresAt });
   return { success: true };
@@ -455,18 +497,25 @@ export async function activateUser(
   adminId,
   reason = 'Account activated'
 ) {
-  const { error } = await supabaseAdmin
-    .from('users')
-    .update({
-      account_status: 'active',
-      status_reason: reason,
-      status_changed_by: adminId,
-      status_changed_at: new Date().toISOString(),
-      suspension_expires_at: null,
-      is_online: true,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
+  const { error } = await dbWrite({
+    table: 'users',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('users')
+        .update({
+          account_status: 'active',
+          status_reason: reason,
+          status_changed_by: adminId,
+          status_changed_at: new Date().toISOString(),
+          suspension_expires_at: null,
+          is_online: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   await _log(adminId, 'activate_user', 'user', userId, { reason });
   return { success: true };
@@ -474,17 +523,24 @@ export async function activateUser(
 
 // Permanently ban a user.
 export async function banUser(userId, adminId, reason) {
-  const { error } = await supabaseAdmin
-    .from('users')
-    .update({
-      account_status: 'banned',
-      status_reason: reason,
-      status_changed_by: adminId,
-      status_changed_at: new Date().toISOString(),
-      is_online: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
+  const { error } = await dbWrite({
+    table: 'users',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('users')
+        .update({
+          account_status: 'banned',
+          status_reason: reason,
+          status_changed_by: adminId,
+          status_changed_at: new Date().toISOString(),
+          is_online: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   await _log(adminId, 'ban_user', 'user', userId, { reason });
   return { success: true };
@@ -534,18 +590,23 @@ export async function createAdminUser(
     }
   }
 
-  const { data: newUser, error: userError } = await supabaseAdmin
-    .from('users')
-    .insert({
-      full_name: fullName,
-      email,
-      account_status: 'inActive',
-      status_reason: 'need to verify their email',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+  const { data: newUser, error: userError } = await dbWrite({
+    table: 'users',
+    op: 'insert',
+    mutate: (client) =>
+      client
+        .from('users')
+        .insert({
+          full_name: fullName,
+          email,
+          account_status: 'inActive',
+          status_reason: 'need to verify their email',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single(),
+  });
 
   if (userError) throw new Error(`Failed to create user: ${userError.message}`);
 
@@ -557,10 +618,15 @@ export async function createAdminUser(
 
   if (roleError || !roleData) throw new Error(`Invalid role: ${role}`);
 
-  const { error: assignError } = await supabaseAdmin.from('user_roles').insert({
-    user_id: newUser.id,
-    role_id: roleData.id,
-    assigned_by: adminId,
+  const { error: assignError } = await dbWrite({
+    table: 'user_roles',
+    op: 'insert',
+    mutate: (client) =>
+      client
+        .from('user_roles')
+        .insert({ user_id: newUser.id, role_id: roleData.id, assigned_by: adminId })
+        .select()
+        .single(),
   });
 
   if (assignError)
@@ -570,38 +636,77 @@ export async function createAdminUser(
   const userId = newUser.id;
   try {
     if (role === 'member') {
-      await supabaseAdmin.from('member_profiles').insert({
-        user_id: userId,
-        student_id: profileData.student_id || '',
-        academic_session: profileData.academic_session || '',
-        department: profileData.department || '',
-        approved: false,
+      await dbWrite({
+        table: 'member_profiles',
+        op: 'insert',
+        mutate: (client) =>
+          client
+            .from('member_profiles')
+            .insert({
+              user_id: userId,
+              student_id: profileData.student_id || '',
+              academic_session: profileData.academic_session || '',
+              department: profileData.department || '',
+              approved: false,
+            })
+            .select()
+            .single(),
       });
     } else if (role === 'advisor') {
-      await supabaseAdmin.from('advisor_profiles').insert({
-        user_id: userId,
-        position: profileData.position || '',
-        profile_link: profileData.profile_link || '',
-        department: profileData.department || '',
+      await dbWrite({
+        table: 'advisor_profiles',
+        op: 'insert',
+        mutate: (client) =>
+          client
+            .from('advisor_profiles')
+            .insert({
+              user_id: userId,
+              position: profileData.position || '',
+              profile_link: profileData.profile_link || '',
+              department: profileData.department || '',
+            })
+            .select()
+            .single(),
       });
     } else if (role === 'admin') {
-      await supabaseAdmin.from('admin_profiles').insert({
-        user_id: userId,
-        bio: profileData.bio || '',
+      await dbWrite({
+        table: 'admin_profiles',
+        op: 'insert',
+        mutate: (client) =>
+          client
+            .from('admin_profiles')
+            .insert({ user_id: userId, bio: profileData.bio || '' })
+            .select()
+            .single(),
       });
     } else if (role === 'mentor') {
-      await supabaseAdmin.from('mentor_profiles').insert({
-        user_id: userId,
-        bio: profileData.bio || '',
+      await dbWrite({
+        table: 'mentor_profiles',
+        op: 'insert',
+        mutate: (client) =>
+          client
+            .from('mentor_profiles')
+            .insert({ user_id: userId, bio: profileData.bio || '' })
+            .select()
+            .single(),
       });
     } else if (role === 'executive') {
-      await supabaseAdmin.from('committee_members').insert({
-        user_id: userId,
-        position_id: profileData.position_id || null,
-        term_start: profileData.term_start || null,
-        term_end: profileData.term_end || null,
-        is_current: profileData.is_current ?? true,
-        bio: profileData.bio || '',
+      await dbWrite({
+        table: 'committee_members',
+        op: 'insert',
+        mutate: (client) =>
+          client
+            .from('committee_members')
+            .insert({
+              user_id: userId,
+              position_id: profileData.position_id || null,
+              term_start: profileData.term_start || null,
+              term_end: profileData.term_end || null,
+              is_current: profileData.is_current ?? true,
+              bio: profileData.bio || '',
+            })
+            .select()
+            .single(),
       });
     }
   } catch (profileErr) {
@@ -617,10 +722,17 @@ export async function updateAdminUser(userId, updates, adminId) {
   const { fullName, role } = updates;
 
   if (fullName) {
-    const { error } = await supabaseAdmin
-      .from('users')
-      .update({ full_name: fullName, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    const { error } = await dbWrite({
+      table: 'users',
+      op: 'update',
+      mutate: (client) =>
+        client
+          .from('users')
+          .update({ full_name: fullName, updated_at: new Date().toISOString() })
+          .eq('id', userId)
+          .select()
+          .single(),
+    });
     if (error) throw new Error(`Failed to update name: ${error.message}`);
   }
 
@@ -633,11 +745,23 @@ export async function updateAdminUser(userId, updates, adminId) {
 
     if (roleError || !roleData) throw new Error(`Invalid role: ${role}`);
 
-    await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+    await dbWrite({
+      table: 'user_roles',
+      op: 'delete',
+      mutate: (client) => client.from('user_roles').delete().eq('user_id', userId),
+      pk: { user_id: userId },
+    });
 
-    const { error: assignError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({ user_id: userId, role_id: roleData.id, assigned_by: adminId });
+    const { error: assignError } = await dbWrite({
+      table: 'user_roles',
+      op: 'insert',
+      mutate: (client) =>
+        client
+          .from('user_roles')
+          .insert({ user_id: userId, role_id: roleData.id, assigned_by: adminId })
+          .select()
+          .single(),
+    });
 
     if (assignError)
       throw new Error(`Failed to update role: ${assignError.message}`);
@@ -849,44 +973,62 @@ export async function getRolePermissions(roleId) {
 
 // Assign a permission to a role.
 export async function assignPermissionToRole(roleId, permissionId) {
-  const { data, error } = await supabase
-    .from('role_permissions')
-    .insert([{ role_id: roleId, permission_id: permissionId }])
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'role_permissions',
+    op: 'insert',
+    mutate: (client) =>
+      client
+        .from('role_permissions')
+        .insert([{ role_id: roleId, permission_id: permissionId }])
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
 
 // Remove a permission from a role.
 export async function removePermissionFromRole(roleId, permissionId) {
-  const { error } = await supabase
-    .from('role_permissions')
-    .delete()
-    .eq('role_id', roleId)
-    .eq('permission_id', permissionId);
+  const { error } = await dbWrite({
+    table: 'role_permissions',
+    op: 'delete',
+    mutate: (client) =>
+      client
+        .from('role_permissions')
+        .delete()
+        .eq('role_id', roleId)
+        .eq('permission_id', permissionId),
+    pk: { role_id: roleId, permission_id: permissionId },
+  });
   if (error) throw new Error(error.message);
   return { success: true };
 }
 
 // Assign a role to a user.
 export async function assignRoleToUser(userId, roleId, assignedBy) {
-  const { data, error } = await supabase
-    .from('user_roles')
-    .insert([{ user_id: userId, role_id: roleId, assigned_by: assignedBy }])
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'user_roles',
+    op: 'insert',
+    mutate: (client) =>
+      client
+        .from('user_roles')
+        .insert([{ user_id: userId, role_id: roleId, assigned_by: assignedBy }])
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
 
 // Remove a role from a user.
 export async function removeRoleFromUser(userId, roleId) {
-  const { error } = await supabase
-    .from('user_roles')
-    .delete()
-    .eq('user_id', userId)
-    .eq('role_id', roleId);
+  const { error } = await dbWrite({
+    table: 'user_roles',
+    op: 'delete',
+    mutate: (client) =>
+      client.from('user_roles').delete().eq('user_id', userId).eq('role_id', roleId),
+    pk: { user_id: userId, role_id: roleId },
+  });
   if (error) throw new Error(error.message);
   return { success: true };
 }
@@ -898,12 +1040,17 @@ export async function updateUserRole(
   assignedBy,
   expiresAt = null
 ) {
-  const { data, error } = await supabase
-    .from('user_roles')
-    .update({ role_id: roleId, assigned_by: assignedBy, expires_at: expiresAt })
-    .eq('user_id', userId)
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'user_roles',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('user_roles')
+        .update({ role_id: roleId, assigned_by: assignedBy, expires_at: expiresAt })
+        .eq('user_id', userId)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }

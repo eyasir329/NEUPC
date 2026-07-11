@@ -30,8 +30,8 @@ import {
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
 import VideoPlayer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/VideoPlayer';
 import MultiBlockEditor from './MultiBlockEditor';
-import { marked } from 'marked';
 import { generatePracticeProblemsAction } from '@/app/_lib/actions/bootcamp-actions';
+import MarkdownPreview from '@/app/_components/markdown/MarkdownPreview';
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '0:00';
@@ -1010,20 +1010,9 @@ function PracticeProblemsPreviewCockpit({ problems }) {
                 <div className="flex-1 overflow-y-auto bg-zinc-950/20 p-5 text-left">
                   {modalTab === 'editorial' && p.editorial && (
                     <div className="rounded-xl border border-white/5 bg-zinc-950/30 p-4 leading-relaxed">
-                      <div
-                        className="md-desc prose prose-invert max-w-none text-xs text-gray-300"
-                        dangerouslySetInnerHTML={{
-                          __html: (() => {
-                            try {
-                              return marked.parse(p.editorial, {
-                                gfm: true,
-                                breaks: true,
-                              });
-                            } catch {
-                              return `<p>${p.editorial}</p>`;
-                            }
-                          })(),
-                        }}
+                      <MarkdownPreview
+                        text={p.editorial}
+                        className="prose prose-invert max-w-none text-xs text-gray-300"
                       />
                     </div>
                   )}
@@ -1066,35 +1055,6 @@ function PracticeProblemsPreviewCockpit({ problems }) {
   );
 }
 
-const MD_PREVIEW_STYLES = `
-.md-preview{display:grid;grid-template-columns:1fr;gap:.5rem;line-height:1.6;color:#908fa0;font-size:.75rem;}
-.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4{font-weight:700;color:#d4e4fa;margin-top:.5rem;margin-bottom:-.25rem;}
-.md-preview p{line-height:1.65;word-break:break-word;}
-.md-preview strong{color:#d4e4fa;font-weight:600;}
-.md-preview em{font-style:italic;}
-.md-preview a{color:#8083ff;text-decoration:none;}.md-preview a:hover{text-decoration:underline;}
-.md-preview ul,.md-preview ol{padding-left:1.25rem;display:flex;flex-direction:column;gap:.15rem;}
-.md-preview ul li{list-style-type:disc;}.md-preview ol li{list-style-type:decimal;}
-.md-preview li{padding-left:.2rem;}
-.md-preview code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .35em;border-radius:.3rem;font-size:.8em;font-family:monospace;}
-.md-preview blockquote{border-left:3px solid rgba(255,255,255,.12);padding:.4rem .75rem;background:rgba(255,255,255,.02);border-radius:0 .4rem .4rem 0;}
-`;
-
-function MarkdownPreview({ text, className = '' }) {
-  if (!text) return null;
-  let html = '';
-  try {
-    html = marked.parse(text, { gfm: true, breaks: true });
-  } catch {
-    html = `<p>${text}</p>`;
-  }
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: MD_PREVIEW_STYLES }} />
-      <div
-        className={`md-preview ${className}`}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </>
-  );
-}
+// MarkdownPreview is now imported from @/app/_components/markdown/MarkdownPreview
+// (canonical implementation shared with CurriculumBuilder). The .md-preview
+// CSS class has been migrated to global.css under the .admin-preview scope.

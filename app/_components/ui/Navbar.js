@@ -19,7 +19,7 @@ import Image from 'next/image';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import { signOutAction } from '@/app/_lib/actions/actions';
 
-const NAV_CONFIG = {
+const DEFAULT_NAV_CONFIG = {
   links: [
     { href: '/', label: 'Home' },
     { href: '/events', label: 'Events' },
@@ -32,6 +32,7 @@ const NAV_CONFIG = {
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
+        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {
@@ -40,7 +41,6 @@ const NAV_CONFIG = {
       items: [
         { href: '/about', label: 'About' },
         { href: '/committee', label: 'Committee' },
-        { href: '/gallery', label: 'Gallery' },
       ],
     },
     {
@@ -54,6 +54,33 @@ const NAV_CONFIG = {
   ],
   cta: { href: '/login', label: 'Get Started' },
 };
+
+// Maps the admin-editable `site_navigation.main` shape (flat list with
+// optional `children`) onto the `links` / `dropdowns` shape this component
+// renders. Falls back to the code-owned default nav when unset/invalid.
+function resolveNavConfig(siteNavigation) {
+  if (!siteNavigation?.main || !Array.isArray(siteNavigation.main)) {
+    return DEFAULT_NAV_CONFIG;
+  }
+  const links = [];
+  const dropdowns = [];
+  siteNavigation.main.forEach((item, i) => {
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      dropdowns.push({
+        id: item.id || `dropdown-${i}`,
+        label: item.label,
+        items: item.children,
+      });
+    } else if (item.href) {
+      links.push({ href: item.href, label: item.label });
+    }
+  });
+  return {
+    links: links.length > 0 ? links : DEFAULT_NAV_CONFIG.links,
+    dropdowns: dropdowns.length > 0 ? dropdowns : DEFAULT_NAV_CONFIG.dropdowns,
+    cta: siteNavigation.cta || DEFAULT_NAV_CONFIG.cta,
+  };
+}
 
 function isNavActive(pathname, href) {
   if (href === '/') return pathname === '/';
@@ -268,11 +295,12 @@ function MobileDropdown({
 }
 
 // ── Navbar ───────────────────────────────────────────────────
-export default function Navbar({ session }) {
+export default function Navbar({ session, settings }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const pathname = usePathname();
   const navRef = useRef(null);
+  const navConfig = resolveNavConfig(settings?.site_navigation);
 
   const toggleDropdown = useCallback(
     (id) => setOpenDropdown((prev) => (prev === id ? null : id)),
@@ -326,7 +354,7 @@ export default function Navbar({ session }) {
   }, [openDropdown]);
 
   const isLoggedIn = Boolean(session?.user);
-  const allDrawerLinks = [...NAV_CONFIG.links, ...NAV_CONFIG.dropdowns];
+  const allDrawerLinks = [...navConfig.links, ...navConfig.dropdowns];
 
   return (
     <nav
@@ -336,7 +364,7 @@ export default function Navbar({ session }) {
       {/* ── Desktop / Tablet nav ─────────────────────────────── */}
       <ul className="flex items-center gap-1 sm:gap-2 xl:gap-3">
         {/* Primary links — visible from 900px */}
-        {NAV_CONFIG.links.map((link) => {
+        {navConfig.links.map((link) => {
           const active = isNavActive(pathname, link.href);
           return (
             <li key={link.href} className="relative hidden min-[900px]:block">
@@ -358,7 +386,7 @@ export default function Navbar({ session }) {
         })}
 
         {/* Dropdowns — visible from 1100px */}
-        {NAV_CONFIG.dropdowns.map((dropdown) => (
+        {navConfig.dropdowns.map((dropdown) => (
           <DesktopDropdown
             key={dropdown.id}
             dropdown={dropdown}
@@ -370,7 +398,7 @@ export default function Navbar({ session }) {
 
         {/* Auth / CTA */}
         {isLoggedIn ? (
-          <li className="ml-1 hidden min-[900px]:flex sm:ml-2 items-center gap-2">
+          <li className="ml-1 hidden items-center gap-2 min-[900px]:flex sm:ml-2">
             <Link
               href="/account"
               title="Go to Account"
@@ -391,10 +419,10 @@ export default function Navbar({ session }) {
         ) : (
           <li className="hidden min-[900px]:pl-1 min-[1100px]:pl-3 sm:block">
             <Link
-              href={NAV_CONFIG.cta.href}
+              href={navConfig.cta.href}
               className="font-heading bg-neon-lime inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_24px_-6px_rgba(182,243,107,0.6)] transition-all duration-200 ease-out hover:scale-105 hover:shadow-[0_0_32px_-4px_rgba(182,243,107,0.8)] active:scale-95 sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
-              {NAV_CONFIG.cta.label}
+              {navConfig.cta.label}
             </Link>
           </li>
         )}
@@ -405,7 +433,7 @@ export default function Navbar({ session }) {
         <button
           onClick={() => setMobileMenuOpen((prev) => !prev)}
           className={cn(
-            'relative flex h-8 w-8 touch-manipulation items-center justify-center rounded-full border backdrop-blur-md transition-all duration-200 ease-out active:scale-90 sm:h-9 sm:w-9',
+            'relative flex h-8 w-8 touch-manipulation items-center justify-center rounded-full border backdrop-blur-md transition-all duration-200 ease-out after:absolute after:-inset-2 after:content-[""] active:scale-90 sm:h-9 sm:w-9',
             mobileMenuOpen
               ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
               : 'border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
@@ -466,7 +494,7 @@ export default function Navbar({ session }) {
       >
         <ul className="pb-safe mx-auto flex h-full max-w-lg flex-col gap-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid md:max-w-3xl md:grid-cols-2 md:content-start md:gap-2 md:p-8">
           {/* Primary links */}
-          {NAV_CONFIG.links.map((link, i) => (
+          {navConfig.links.map((link, i) => (
             <li
               key={link.href}
               className={cn(
@@ -495,7 +523,7 @@ export default function Navbar({ session }) {
           ))}
 
           {/* Dropdowns */}
-          {NAV_CONFIG.dropdowns.map((dropdown, i) => (
+          {navConfig.dropdowns.map((dropdown, i) => (
             <MobileDropdown
               key={dropdown.id}
               dropdown={dropdown}
@@ -504,7 +532,7 @@ export default function Navbar({ session }) {
               onNavigate={closeMobileMenu}
               pathname={pathname}
               staggerDelay={
-                mobileMenuOpen ? (NAV_CONFIG.links.length + i) * 55 : 0
+                mobileMenuOpen ? (navConfig.links.length + i) * 55 : 0
               }
               visible={mobileMenuOpen}
             />
@@ -514,6 +542,8 @@ export default function Navbar({ session }) {
           <li
             className={cn(
               'border-neon-lime/10 my-3 border-t transition-opacity duration-300 ease-out md:col-span-2',
+              // Hide when the auth/CTA rows below it are hidden, so it never trails as an orphan line
+              isLoggedIn ? 'min-[900px]:hidden' : 'sm:hidden',
               mobileMenuOpen ? 'opacity-100' : 'opacity-0'
             )}
             style={{
@@ -589,11 +619,11 @@ export default function Navbar({ session }) {
               }}
             >
               <Link
-                href={NAV_CONFIG.cta.href}
+                href={navConfig.cta.href}
                 onClick={closeMobileMenu}
                 className="bg-neon-lime block touch-manipulation rounded-xl px-5 py-3.5 text-center text-[15px] font-bold text-black shadow-[0_0_32px_-8px_rgba(182,243,107,0.5)] transition-all duration-150 ease-out hover:scale-[1.02] hover:shadow-[0_0_40px_-6px_rgba(182,243,107,0.7)] active:scale-[0.98]"
               >
-                {NAV_CONFIG.cta.label}
+                {navConfig.cta.label}
               </Link>
             </li>
           )}

@@ -3,8 +3,10 @@
  *   form fields organized by functionality. No duplicate keys.
  *
  *   Sections:
- *     1. Website Content — Hero, About, Social, Contact, Footer, FAQs, Join, Developers
- *     1b. Page Content — Headings, badges, and CTAs for all public pages
+ *     1. Content — All public-facing content, organized per page (Home,
+ *        About, Contact, Events, Achievements, Blogs, Gallery, Committee,
+ *        Developers, Join, Roadmaps) plus site-wide groups (Social, Contact
+ *        Info, Footer)
  *     2. Feature Toggles — Enable/disable major platform features
  *     3. Users & Access — Registration, profiles, default role
  *     4. Applications — Membership application workflow
@@ -86,17 +88,155 @@ import {
 // ─── Section / field definitions ─────────────────────────────────────────────
 
 const SECTIONS = [
-  // ── 1. Website Content ──────────────────────────────────────
   {
-    id: 'website',
-    label: 'Website Content',
+    id: 'content',
+    label: 'Content',
     icon: Layout,
-    group: 'content',
-    description: 'Manage all public-facing website content',
-    categories: ['hero', 'about', 'social', 'contact', 'footer', 'content'],
+    description: 'Manage all public-facing website and page content — organized by page',
     fields: [
-      // Hero
-      { type: 'divider', label: 'Hero Section' },
+      { type: 'divider', label: 'Social Media Links' },
+      {
+        key: 'social_facebook',
+        label: 'Facebook',
+        type: 'url',
+        placeholder: 'https://facebook.com/…',
+        category: 'social',
+        icon: Facebook,
+      },
+      {
+        key: 'social_github',
+        label: 'GitHub',
+        type: 'url',
+        placeholder: 'https://github.com/…',
+        category: 'social',
+        icon: Github,
+      },
+      {
+        key: 'social_linkedin',
+        label: 'LinkedIn',
+        type: 'url',
+        placeholder: 'https://linkedin.com/…',
+        category: 'social',
+        icon: Linkedin,
+      },
+      {
+        key: 'social_youtube',
+        label: 'YouTube',
+        type: 'url',
+        placeholder: 'https://youtube.com/…',
+        category: 'social',
+        icon: Youtube,
+      },
+      {
+        key: 'social_twitter',
+        label: 'Twitter / X',
+        type: 'url',
+        placeholder: 'https://twitter.com/…',
+        category: 'social',
+        icon: Twitter,
+      },
+      {
+        key: 'social_instagram',
+        label: 'Instagram',
+        type: 'url',
+        placeholder: 'https://instagram.com/…',
+        category: 'social',
+        icon: Instagram,
+      },
+
+
+      { type: 'divider', label: 'Contact Information' },
+      {
+        key: 'contact_email',
+        label: 'Contact Email',
+        type: 'email',
+        placeholder: 'contact@university.edu',
+        category: 'contact',
+      },
+      {
+        key: 'contact_phone',
+        label: 'Contact Phone',
+        type: 'text',
+        placeholder: '+880 1XXX-XXXXXX',
+        category: 'contact',
+      },
+      {
+        key: 'contact_address',
+        label: 'Address',
+        type: 'text',
+        placeholder: 'Department of CSE, University…',
+        category: 'contact',
+      },
+      {
+        key: 'contact_office_hours',
+        label: 'Office Hours',
+        type: 'text',
+        placeholder: 'Sunday - Thursday, 10:00 AM - 4:00 PM',
+        category: 'contact',
+      },
+      {
+        key: 'contact_subjects',
+        label: 'Contact Form Subjects',
+        type: 'json',
+        desc: 'JSON array of subject option strings',
+        category: 'contact',
+      },
+      {
+        key: 'faqs',
+        label: 'FAQ Items',
+        type: 'json',
+        desc: 'JSON array of {question, answer} objects',
+        category: 'contact',
+      },
+
+
+      { type: 'divider', label: 'Footer' },
+      {
+        key: 'footer_description',
+        label: 'Footer Description',
+        type: 'textarea',
+        placeholder: 'Short description shown in footer…',
+        category: 'footer',
+      },
+      {
+        key: 'footer_explore_heading',
+        label: 'Footer "Explore" Column Heading',
+        type: 'text',
+        placeholder: 'Explore',
+        category: 'footer',
+      },
+      {
+        key: 'footer_resources_heading',
+        label: 'Footer "Resources" Column Heading',
+        type: 'text',
+        placeholder: 'Resources',
+        category: 'footer',
+      },
+      {
+        key: 'site_navigation',
+        label: 'Site Navigation',
+        type: 'json',
+        desc: 'JSON object: { main: [{label, href, children?: [{label, href}]}], cta: {label, href}, footerExplore: [{label, href}], footerResources: [{label, href}] }',
+        category: 'footer',
+      },
+
+      {
+        key: 'site_name_full',
+        label: 'Full Site Name',
+        type: 'text',
+        placeholder: 'Netrokona University Programming Club',
+        category: 'page_content',
+      },
+      {
+        key: 'footer_developer_credit',
+        label: 'Developer Credit',
+        type: 'text',
+        placeholder: 'Made with ❤️ by NEUPC Developers',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — Hero Section' },
       {
         key: 'hero_title',
         label: 'Club Name',
@@ -126,8 +266,74 @@ const SECTIONS = [
         category: 'hero',
       },
 
-      // About
-      { type: 'divider', label: 'About Section' },
+      {
+        key: 'hero_welcome_text',
+        label: 'Welcome Text',
+        type: 'text',
+        placeholder: 'Welcome to',
+        category: 'page_content',
+        desc: 'Text shown before the site name in the hero',
+      },
+      {
+        key: 'hero_join_label',
+        label: 'Join Button Label',
+        type: 'text',
+        placeholder: 'Join Now',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_learn_more_label',
+        label: 'Learn More Button Label',
+        type: 'text',
+        placeholder: 'Learn More',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_description',
+        label: 'Hero Subheadline',
+        type: 'textarea',
+        placeholder:
+          "Join Netrokona University's premier programming community — compete, build, and grow alongside passionate engineers.",
+        category: 'page_content',
+      },
+      {
+        key: 'hero_headline_line1',
+        label: 'Kinetic Headline — Line 1',
+        type: 'text',
+        placeholder: 'CODE.',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_headline_line2',
+        label: 'Kinetic Headline — Line 2',
+        type: 'text',
+        placeholder: 'COMPETE.',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_headline_line3',
+        label: 'Kinetic Headline — Line 3',
+        type: 'text',
+        placeholder: 'CREATE.',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_scroll_label',
+        label: 'Scroll Indicator Label',
+        type: 'text',
+        placeholder: 'Scroll',
+        category: 'page_content',
+      },
+      {
+        key: 'hero_roadmap_nodes',
+        label: '3D Globe Roadmap Nodes',
+        type: 'json',
+        desc: 'JSON array of {id, label, description, link} — id is a short code shown on the node (e.g. "CP"), link is any URL (e.g. /roadmaps/your-slug)',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — About Section' },
       {
         key: 'about_title',
         label: 'About Heading',
@@ -149,6 +355,402 @@ const SECTIONS = [
         placeholder: 'Second paragraph about the club…',
         category: 'about',
       },
+      {
+        key: 'about_image_url',
+        label: 'About Section Image URL',
+        type: 'url',
+        placeholder: '/about.jpg',
+        category: 'about',
+      },
+      {
+        key: 'about_badge_year',
+        label: 'Est. Badge Year',
+        type: 'text',
+        placeholder: '2025',
+        category: 'about',
+      },
+      {
+        key: 'about_university_name',
+        label: 'University Name (image overlay)',
+        type: 'text',
+        placeholder: 'Netrokona University',
+        category: 'about',
+      },
+      {
+        key: 'about_overlay_caption',
+        label: 'Image Overlay Caption',
+        type: 'text',
+        placeholder: 'Programming\nClub',
+        desc: 'Use a newline to split into two lines',
+        category: 'about',
+      },
+      {
+        key: 'about_cta_label',
+        label: 'About Section CTA Label',
+        type: 'text',
+        placeholder: 'Learn More',
+        category: 'about',
+      },
+      {
+        key: 'about_active_chip_label',
+        label: 'Member Count Chip Label',
+        type: 'text',
+        placeholder: 'Members',
+        desc: 'Word shown before the member count in the homepage About chip (e.g. "Members", "Total")',
+        category: 'about',
+      },
+      {
+        key: 'member_count',
+        label: 'Member Count',
+        type: 'text',
+        placeholder: '100+',
+        desc: 'Shown next to the chip label above, and on the About page banner',
+        category: 'about',
+      },
+      {
+        key: 'homepage_about_badge',
+        label: 'Badge Text',
+        type: 'text',
+        placeholder: 'About Us',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_about_title',
+        label: 'Title',
+        type: 'text',
+        placeholder: 'Get to Know NEUPC',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_about_subtitle',
+        label: 'Subtitle',
+        type: 'textarea',
+        placeholder:
+          'Learn about our mission, vision, and the amazing community…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_about_cta',
+        label: 'CTA Button Text',
+        type: 'text',
+        placeholder: 'Learn More About Us',
+        category: 'page_content',
+      },
+
+      {
+        key: 'about_mission_label',
+        label: 'Mission Card Heading',
+        type: 'text',
+        placeholder: 'Mission',
+        category: 'about',
+      },
+      {
+        key: 'homepage_mission',
+        label: 'Mission Text',
+        type: 'textarea',
+        placeholder:
+          'Empowering students through technical leadership and hands-on system architecture.',
+        category: 'page_content',
+      },
+      {
+        key: 'about_vision_label',
+        label: 'Vision Card Heading',
+        type: 'text',
+        placeholder: 'Vision',
+        category: 'about',
+      },
+      {
+        key: 'homepage_vision',
+        label: 'Vision Text',
+        type: 'textarea',
+        placeholder:
+          'To be the primary incubator for future tech architects in the region.',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — Events Section' },
+      {
+        key: 'homepage_events_badge',
+        label: 'Badge Text',
+        type: 'text',
+        placeholder: 'Upcoming Events',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_events_title',
+        label: 'Title',
+        type: 'text',
+        placeholder: 'Recent Events',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_events_subtitle',
+        label: 'Subtitle',
+        type: 'textarea',
+        placeholder: 'Join our upcoming workshops, contests, and tech talks…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_events_cta',
+        label: 'CTA Button Text',
+        type: 'text',
+        placeholder: 'View All Events',
+        category: 'page_content',
+      },
+      {
+        key: 'events_empty_message',
+        label: 'Empty State Message',
+        type: 'text',
+        placeholder: 'No upcoming events at the moment. Check back soon!',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — Achievements Section' },
+      {
+        key: 'homepage_achievements_badge',
+        label: 'Badge Text',
+        type: 'text',
+        placeholder: 'Our Achievements',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_title',
+        label: 'Title',
+        type: 'text',
+        placeholder: 'Excellence in Action',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_subtitle',
+        label: 'Subtitle',
+        type: 'textarea',
+        placeholder:
+          'Celebrating our journey of competitive programming success…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_cta',
+        label: 'CTA Button Text',
+        type: 'text',
+        placeholder: 'View All Achievements',
+        category: 'page_content',
+      },
+      {
+        key: 'achievements_empty_message',
+        label: 'Empty State Message',
+        type: 'text',
+        placeholder: 'No achievements to display yet.',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_view_details_label',
+        label: 'Featured Achievement "View Details" Label',
+        type: 'text',
+        placeholder: 'View Details',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_stat_label_1',
+        label: 'Stat Label 1',
+        type: 'text',
+        placeholder: 'Achievements',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_stat_label_2',
+        label: 'Stat Label 2',
+        type: 'text',
+        placeholder: 'Medalists',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_stat_label_3',
+        label: 'Stat Label 3',
+        type: 'text',
+        placeholder: 'Participations',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_achievements_stat_label_4',
+        label: 'Stat Label 4',
+        type: 'text',
+        placeholder: 'Years Active',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — Blog Section' },
+      {
+        key: 'homepage_blogs_badge',
+        label: 'Badge Text',
+        type: 'text',
+        placeholder: 'Latest Articles & Resources',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_blogs_title',
+        label: 'Title',
+        type: 'text',
+        placeholder: 'Knowledge Base',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_blogs_subtitle',
+        label: 'Subtitle',
+        type: 'textarea',
+        placeholder: 'Explore tutorials, contest insights, career guidance…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_blogs_cta',
+        label: 'CTA Button Text',
+        type: 'text',
+        placeholder: 'Explore All Articles',
+        category: 'page_content',
+      },
+      {
+        key: 'blogs_empty_message',
+        label: 'Empty State Message',
+        type: 'text',
+        placeholder: 'No blog posts available yet. Check back soon!',
+        category: 'page_content',
+      },
+      {
+        key: 'blogs_author_label',
+        label: 'Blog Card "Author" Label',
+        type: 'text',
+        placeholder: 'Author',
+        category: 'page_content',
+      },
+      {
+        key: 'blogs_default_author_name',
+        label: 'Default Author Name',
+        type: 'text',
+        placeholder: 'NEUPC Team',
+        category: 'page_content',
+      },
+
+
+      { type: 'divider', label: 'Home — Join Section' },
+      {
+        key: 'homepage_join_badge',
+        label: 'Badge Text',
+        type: 'text',
+        placeholder: 'Join Our Community',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_title',
+        label: 'Title',
+        type: 'text',
+        placeholder: 'Become a Member',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_subtitle',
+        label: 'Subtitle',
+        type: 'textarea',
+        placeholder: 'Join NEUPC and unlock your potential…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_cta_title',
+        label: 'CTA Title',
+        type: 'text',
+        placeholder: 'Ready to Start Your Journey?',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_cta_description',
+        label: 'CTA Description',
+        type: 'textarea',
+        placeholder: 'Join hundreds of students who are already part of NEUPC…',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_cta_button',
+        label: 'CTA Button Text',
+        type: 'text',
+        placeholder: 'Join NEUPC Now',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_next_cohort_label',
+        label: 'CTA Eyebrow Label',
+        type: 'text',
+        placeholder: '/// Next cohort',
+        category: 'page_content',
+      },
+      {
+        key: 'homepage_join_talk_to_us_label',
+        label: 'Secondary Link Label',
+        type: 'text',
+        placeholder: 'Or talk to us →',
+        category: 'page_content',
+      },
+
+      {
+        key: 'join_benefits',
+        label: 'Membership Benefits',
+        type: 'json',
+        desc: 'JSON array of {icon, title, description} objects',
+        category: 'content',
+      },
+      {
+        key: 'join_features',
+        label: 'Public Account Features',
+        type: 'json',
+        desc: 'JSON array of {icon, title, description} objects',
+        category: 'content',
+      },
+
+
+      { type: 'divider', label: 'About Page' },
+      {
+        key: 'about_page_badge',
+        label: 'Hero Badge',
+        type: 'text',
+        placeholder: '🎓 Student Organization',
+        category: 'page_content',
+      },
+      {
+        key: 'about_page_title',
+        label: 'Hero Title',
+        type: 'text',
+        placeholder: 'About NEUPC',
+        category: 'page_content',
+      },
+      {
+        key: 'about_page_subtitle',
+        label: 'Hero Subtitle',
+        type: 'text',
+        placeholder: 'Netrokona University Programming Club',
+        category: 'page_content',
+      },
+      {
+        key: 'about_page_department',
+        label: 'Department Name',
+        type: 'text',
+        placeholder: 'Department of Computer Science and Engineering',
+        category: 'page_content',
+      },
+      {
+        key: 'about_page_cta_title',
+        label: 'CTA Title',
+        type: 'text',
+        placeholder: 'Ready to Join Us?',
+        category: 'page_content',
+      },
+      {
+        key: 'about_page_cta_description',
+        label: 'CTA Description',
+        type: 'textarea',
+        placeholder: 'Become part of a community dedicated to excellence…',
+        category: 'page_content',
+      },
+
       {
         key: 'about_mission',
         label: 'Mission Points',
@@ -248,458 +850,7 @@ const SECTIONS = [
         category: 'about',
       },
 
-      // Social Media
-      { type: 'divider', label: 'Social Media Links' },
-      {
-        key: 'social_facebook',
-        label: 'Facebook',
-        type: 'url',
-        placeholder: 'https://facebook.com/…',
-        category: 'social',
-        icon: Facebook,
-      },
-      {
-        key: 'social_github',
-        label: 'GitHub',
-        type: 'url',
-        placeholder: 'https://github.com/…',
-        category: 'social',
-        icon: Github,
-      },
-      {
-        key: 'social_linkedin',
-        label: 'LinkedIn',
-        type: 'url',
-        placeholder: 'https://linkedin.com/…',
-        category: 'social',
-        icon: Linkedin,
-      },
-      {
-        key: 'social_youtube',
-        label: 'YouTube',
-        type: 'url',
-        placeholder: 'https://youtube.com/…',
-        category: 'social',
-        icon: Youtube,
-      },
-      {
-        key: 'social_twitter',
-        label: 'Twitter / X',
-        type: 'url',
-        placeholder: 'https://twitter.com/…',
-        category: 'social',
-        icon: Twitter,
-      },
-      {
-        key: 'social_instagram',
-        label: 'Instagram',
-        type: 'url',
-        placeholder: 'https://instagram.com/…',
-        category: 'social',
-        icon: Instagram,
-      },
 
-      // Contact
-      { type: 'divider', label: 'Contact Information' },
-      {
-        key: 'contact_email',
-        label: 'Contact Email',
-        type: 'email',
-        placeholder: 'contact@university.edu',
-        category: 'contact',
-      },
-      {
-        key: 'contact_phone',
-        label: 'Contact Phone',
-        type: 'text',
-        placeholder: '+880 1XXX-XXXXXX',
-        category: 'contact',
-      },
-      {
-        key: 'contact_address',
-        label: 'Address',
-        type: 'text',
-        placeholder: 'Department of CSE, University…',
-        category: 'contact',
-      },
-      {
-        key: 'contact_office_hours',
-        label: 'Office Hours',
-        type: 'text',
-        placeholder: 'Sunday - Thursday, 10:00 AM - 4:00 PM',
-        category: 'contact',
-      },
-      {
-        key: 'contact_subjects',
-        label: 'Contact Form Subjects',
-        type: 'json',
-        desc: 'JSON array of subject option strings',
-        category: 'contact',
-      },
-      {
-        key: 'faqs',
-        label: 'FAQ Items',
-        type: 'json',
-        desc: 'JSON array of {question, answer} objects',
-        category: 'contact',
-      },
-
-      // Footer
-      { type: 'divider', label: 'Footer' },
-      {
-        key: 'footer_description',
-        label: 'Footer Description',
-        type: 'textarea',
-        placeholder: 'Short description shown in footer…',
-        category: 'footer',
-      },
-
-      // Join Page
-      { type: 'divider', label: 'Join Page' },
-      {
-        key: 'join_benefits',
-        label: 'Membership Benefits',
-        type: 'json',
-        desc: 'JSON array of {icon, title, description} objects',
-        category: 'content',
-      },
-      {
-        key: 'join_features',
-        label: 'Public Account Features',
-        type: 'json',
-        desc: 'JSON array of {icon, title, description} objects',
-        category: 'content',
-      },
-
-      // Developers Page
-      { type: 'divider', label: 'Developers Page' },
-      {
-        key: 'developers_core',
-        label: 'Core Developers',
-        type: 'json',
-        desc: 'JSON array of {name, role, bio, stack, github, linkedin, portfolio, photo}',
-        category: 'content',
-      },
-      {
-        key: 'developers_contributors',
-        label: 'Contributors',
-        type: 'json',
-        desc: 'JSON array of {name, role, contribution, github}',
-        category: 'content',
-      },
-      {
-        key: 'tech_stack',
-        label: 'Technology Stack',
-        type: 'json',
-        desc: 'JSON array of {category, items: [{name, description, icon}]}',
-        category: 'content',
-      },
-      {
-        key: 'developers_timeline',
-        label: 'Development Timeline',
-        type: 'json',
-        desc: 'JSON array of {year, title, description, status}',
-        category: 'content',
-      },
-      {
-        key: 'github_stats',
-        label: 'GitHub Statistics',
-        type: 'json',
-        desc: 'JSON object: {commits, contributors, stars, forks}',
-        category: 'content',
-      },
-    ],
-  },
-
-  // ── 1b. Page Content ───────────────────────────────────────
-  {
-    id: 'pages',
-    label: 'Page Content',
-    icon: Type,
-    description:
-      'Customize headings, badges, and call-to-action text across all public pages',
-    categories: ['page_content'],
-    fields: [
-      // Hero
-      { type: 'divider', label: 'Hero Section' },
-      {
-        key: 'hero_welcome_text',
-        label: 'Welcome Text',
-        type: 'text',
-        placeholder: 'Welcome to',
-        category: 'page_content',
-        desc: 'Text shown before the site name in the hero',
-      },
-      {
-        key: 'hero_join_label',
-        label: 'Join Button Label',
-        type: 'text',
-        placeholder: 'Join Now',
-        category: 'page_content',
-      },
-      {
-        key: 'hero_learn_more_label',
-        label: 'Learn More Button Label',
-        type: 'text',
-        placeholder: 'Learn More',
-        category: 'page_content',
-      },
-
-      // Homepage — About
-      { type: 'divider', label: 'Homepage — About Section' },
-      {
-        key: 'homepage_about_badge',
-        label: 'Badge Text',
-        type: 'text',
-        placeholder: 'About Us',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_about_title',
-        label: 'Title',
-        type: 'text',
-        placeholder: 'Get to Know NEUPC',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_about_subtitle',
-        label: 'Subtitle',
-        type: 'textarea',
-        placeholder:
-          'Learn about our mission, vision, and the amazing community…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_about_cta',
-        label: 'CTA Button Text',
-        type: 'text',
-        placeholder: 'Learn More About Us',
-        category: 'page_content',
-      },
-
-      // Homepage — Events
-      { type: 'divider', label: 'Homepage — Events Section' },
-      {
-        key: 'homepage_events_badge',
-        label: 'Badge Text',
-        type: 'text',
-        placeholder: 'Upcoming Events',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_events_title',
-        label: 'Title',
-        type: 'text',
-        placeholder: 'Recent Events',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_events_subtitle',
-        label: 'Subtitle',
-        type: 'textarea',
-        placeholder: 'Join our upcoming workshops, contests, and tech talks…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_events_cta',
-        label: 'CTA Button Text',
-        type: 'text',
-        placeholder: 'View All Events',
-        category: 'page_content',
-      },
-      {
-        key: 'events_empty_message',
-        label: 'Empty State Message',
-        type: 'text',
-        placeholder: 'No upcoming events at the moment. Check back soon!',
-        category: 'page_content',
-      },
-
-      // Homepage — Achievements
-      { type: 'divider', label: 'Homepage — Achievements Section' },
-      {
-        key: 'homepage_achievements_badge',
-        label: 'Badge Text',
-        type: 'text',
-        placeholder: 'Our Achievements',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_achievements_title',
-        label: 'Title',
-        type: 'text',
-        placeholder: 'Excellence in Action',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_achievements_subtitle',
-        label: 'Subtitle',
-        type: 'textarea',
-        placeholder:
-          'Celebrating our journey of competitive programming success…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_achievements_cta',
-        label: 'CTA Button Text',
-        type: 'text',
-        placeholder: 'View All Achievements',
-        category: 'page_content',
-      },
-      {
-        key: 'achievements_empty_message',
-        label: 'Empty State Message',
-        type: 'text',
-        placeholder: 'No achievements to display yet.',
-        category: 'page_content',
-      },
-
-      // Homepage — Blog
-      { type: 'divider', label: 'Homepage — Blog Section' },
-      {
-        key: 'homepage_blogs_badge',
-        label: 'Badge Text',
-        type: 'text',
-        placeholder: 'Latest Articles & Resources',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_blogs_title',
-        label: 'Title',
-        type: 'text',
-        placeholder: 'Knowledge Base',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_blogs_subtitle',
-        label: 'Subtitle',
-        type: 'textarea',
-        placeholder: 'Explore tutorials, contest insights, career guidance…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_blogs_cta',
-        label: 'CTA Button Text',
-        type: 'text',
-        placeholder: 'Explore All Articles',
-        category: 'page_content',
-      },
-      {
-        key: 'blogs_empty_message',
-        label: 'Empty State Message',
-        type: 'text',
-        placeholder: 'No blog posts available yet. Check back soon!',
-        category: 'page_content',
-      },
-
-      // Homepage — Join
-      { type: 'divider', label: 'Homepage — Join Section' },
-      {
-        key: 'homepage_join_badge',
-        label: 'Badge Text',
-        type: 'text',
-        placeholder: 'Join Our Community',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_join_title',
-        label: 'Title',
-        type: 'text',
-        placeholder: 'Become a Member',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_join_subtitle',
-        label: 'Subtitle',
-        type: 'textarea',
-        placeholder: 'Join NEUPC and unlock your potential…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_join_cta_title',
-        label: 'CTA Title',
-        type: 'text',
-        placeholder: 'Ready to Start Your Journey?',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_join_cta_description',
-        label: 'CTA Description',
-        type: 'textarea',
-        placeholder: 'Join hundreds of students who are already part of NEUPC…',
-        category: 'page_content',
-      },
-      {
-        key: 'homepage_join_cta_button',
-        label: 'CTA Button Text',
-        type: 'text',
-        placeholder: 'Join NEUPC Now',
-        category: 'page_content',
-      },
-
-      // Footer
-      { type: 'divider', label: 'Footer' },
-      {
-        key: 'site_name_full',
-        label: 'Full Site Name',
-        type: 'text',
-        placeholder: 'Netrokona University Programming Club',
-        category: 'page_content',
-      },
-      {
-        key: 'footer_developer_credit',
-        label: 'Developer Credit',
-        type: 'text',
-        placeholder: 'Made with ❤️ by NEUPC Developers',
-        category: 'page_content',
-      },
-
-      // About Page
-      { type: 'divider', label: 'About Page' },
-      {
-        key: 'about_page_badge',
-        label: 'Hero Badge',
-        type: 'text',
-        placeholder: '🎓 Student Organization',
-        category: 'page_content',
-      },
-      {
-        key: 'about_page_title',
-        label: 'Hero Title',
-        type: 'text',
-        placeholder: 'About NEUPC',
-        category: 'page_content',
-      },
-      {
-        key: 'about_page_subtitle',
-        label: 'Hero Subtitle',
-        type: 'text',
-        placeholder: 'Netrokona University Programming Club',
-        category: 'page_content',
-      },
-      {
-        key: 'about_page_department',
-        label: 'Department Name',
-        type: 'text',
-        placeholder: 'Department of Computer Science and Engineering',
-        category: 'page_content',
-      },
-      {
-        key: 'about_page_cta_title',
-        label: 'CTA Title',
-        type: 'text',
-        placeholder: 'Ready to Join Us?',
-        category: 'page_content',
-      },
-      {
-        key: 'about_page_cta_description',
-        label: 'CTA Description',
-        type: 'textarea',
-        placeholder: 'Become part of a community dedicated to excellence…',
-        category: 'page_content',
-      },
-
-      // Contact Page
       { type: 'divider', label: 'Contact Page' },
       {
         key: 'contact_page_badge',
@@ -737,7 +888,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Events Page
+
       { type: 'divider', label: 'Events Page' },
       {
         key: 'events_page_badge',
@@ -782,7 +933,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Achievements Page
+
       { type: 'divider', label: 'Achievements Page' },
       {
         key: 'achievements_page_badge',
@@ -822,7 +973,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Blogs Page
+
       { type: 'divider', label: 'Blogs Page' },
       {
         key: 'blogs_page_badge',
@@ -846,7 +997,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Gallery Page
+
       { type: 'divider', label: 'Gallery Page' },
       {
         key: 'gallery_page_badge',
@@ -885,7 +1036,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Committee Page
+
       { type: 'divider', label: 'Committee Page' },
       {
         key: 'committee_page_badge',
@@ -923,7 +1074,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Developers Page
+
       { type: 'divider', label: 'Developers Page' },
       {
         key: 'developers_page_badge',
@@ -962,7 +1113,43 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Join Page
+      {
+        key: 'developers_core',
+        label: 'Core Developers',
+        type: 'json',
+        desc: 'JSON array of {name, role, bio, stack, github, linkedin, portfolio, photo}',
+        category: 'content',
+      },
+      {
+        key: 'developers_contributors',
+        label: 'Contributors',
+        type: 'json',
+        desc: 'JSON array of {name, role, contribution, github}',
+        category: 'content',
+      },
+      {
+        key: 'tech_stack',
+        label: 'Technology Stack',
+        type: 'json',
+        desc: 'JSON array of {category, items: [{name, description, icon}]}',
+        category: 'content',
+      },
+      {
+        key: 'developers_timeline',
+        label: 'Development Timeline',
+        type: 'json',
+        desc: 'JSON array of {year, title, description, status}',
+        category: 'content',
+      },
+      {
+        key: 'github_stats',
+        label: 'GitHub Statistics',
+        type: 'json',
+        desc: 'JSON object: {commits, contributors, stars, forks}',
+        category: 'content',
+      },
+
+
       { type: 'divider', label: 'Join Page' },
       {
         key: 'join_page_badge',
@@ -986,7 +1173,7 @@ const SECTIONS = [
         category: 'page_content',
       },
 
-      // Roadmaps Page
+
       { type: 'divider', label: 'Roadmaps Page' },
       {
         key: 'roadmaps_page_badge',
@@ -1023,6 +1210,7 @@ const SECTIONS = [
         placeholder: 'Join NEUPC today and accelerate your learning…',
         category: 'page_content',
       },
+
     ],
   },
 
@@ -1424,7 +1612,7 @@ const SECTIONS = [
 // ─── Sidebar groups ───────────────────────────────────────────────────────────
 
 const SIDEBAR_GROUPS = [
-  { label: 'Content', ids: ['website', 'pages'] },
+  { label: 'Content', ids: ['content'] },
   {
     label: 'Platform',
     ids: ['features', 'users', 'applications', 'events', 'blogs'],
@@ -1541,6 +1729,7 @@ const JSON_TEMPLATES = {
   join_benefits: () => ({ icon: 'Check', title: '', description: '' }),
   join_features: () => ({ icon: 'Eye', title: '', description: '' }),
   about_stats: () => ({ value: '10+', label: 'New Stat', icon: 'Star' }),
+  hero_roadmap_nodes: () => ({ id: '', label: '', description: '', link: '' }),
   about_core_values: () => ({ label: '', icon: 'Check' }),
   about_skills: () => ({ label: '', icon: 'Check' }),
   about_org_structure: () => ({
@@ -3066,7 +3255,7 @@ function SectionPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SettingsClient({ initialSettings }) {
-  const [activeSection, setActiveSection] = useState('website');
+  const [activeSection, setActiveSection] = useState('content');
   const [seeding, startSeed] = useTransition();
   const [isPending, startSave] = useTransition();
   const [seedMsg, setSeedMsg] = useState(null);
@@ -3077,15 +3266,10 @@ export default function SettingsClient({ initialSettings }) {
 
   // Accent mapping for category sidebar elements
   const categoryAccents = {
-    website: {
+    content: {
       color: 'blue',
       border: 'border-blue-500/20 bg-blue-500/5 text-blue-400',
       glow: 'shadow-[0_0_8px_rgba(59,130,246,0.15)]',
-    },
-    pages: {
-      color: 'violet',
-      border: 'border-violet-500/20 bg-violet-500/5 text-violet-400',
-      glow: 'shadow-[0_0_8px_rgba(139,92,246,0.15)]',
     },
     features: {
       color: 'emerald',

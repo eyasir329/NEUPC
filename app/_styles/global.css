@@ -418,6 +418,8 @@
   color: #e4e4e7;
   overflow-wrap: break-word;
   word-break: break-word;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: normal;
 }
 
 /* Viewer-only variant: no padding/min-height, inherits all element styles */
@@ -547,6 +549,10 @@
   overflow-x: auto;
   font-size: 0.875rem;
   line-height: 1.6;
+  font-family:
+    'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  letter-spacing: normal;
+  text-align: left;
 }
 
 .tiptap-editor-content pre code,
@@ -556,6 +562,8 @@
   padding: 0;
   border-radius: 0;
   font-size: inherit;
+  letter-spacing: normal;
+  text-align: left;
 }
 
 /* Horizontal rule */
@@ -1037,12 +1045,16 @@
   line-height: 1.85;
   color: #adbac7;
   word-break: break-word;
-  overflow-x: hidden;
 }
+
+/* Code blocks render with their own horizontal scroll context (via
+   `.md-code-scroll` for markdown, `overflow-x:auto` on `pre` for richText).
+   The clip must NOT be set on `.blog-content` because nested `overflow:
+   hidden/auto` ancestors can swallow wheel events from the inner scroller. */
 
 /* ─── Headings — markdown-preview style with hash prefixes ─ */
 
-.blog-content h2 {
+.blog-content h2:not(.md-h) {
   font-size: 1.8em;
   font-weight: 700;
   margin-top: 3.5rem;
@@ -1054,7 +1066,7 @@
   line-height: 1.3;
 }
 
-.blog-content h3 {
+.blog-content h3:not(.md-h) {
   font-size: 1.45em;
   font-weight: 600;
   margin-top: 2.75rem;
@@ -1066,7 +1078,7 @@
   line-height: 1.3;
 }
 
-.blog-content h4 {
+.blog-content h4:not(.md-h) {
   font-size: 1.2em;
   font-weight: 600;
   margin-top: 2.25rem;
@@ -1079,19 +1091,19 @@
 
 /* ─── Paragraphs ──────────────────────────────────────────── */
 
-.blog-content p {
+.blog-content p:not(.md-p) {
   margin-bottom: var(--blog-ps, 1.25rem);
   color: #adbac7;
 }
 
-.blog-content h2 + p,
-.blog-content h3 + p {
+.blog-content h2 + p:not(.md-p),
+.blog-content h3 + p:not(.md-p) {
   color: #cdd9e5;
 }
 
 /* ─── Links ───────────────────────────────────────────────── */
 
-.blog-content a {
+.blog-content a:not(.md-a) {
   color: #a78bfa;
   text-decoration: none;
   border-bottom: 1px solid rgba(167, 139, 250, 0.35);
@@ -1101,28 +1113,28 @@
     border-color 0.15s;
 }
 
-.blog-content a:hover {
+.blog-content a:not(.md-a):hover {
   color: #c4b5fd;
   border-bottom-color: rgba(196, 181, 253, 0.65);
 }
 
 /* ─── Lists ────────────────────────────────────────────────── */
 
-.blog-content ul {
+.blog-content ul:not([class*='md-']) {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 1.5rem;
   margin-top: 0.5rem;
 }
 
-.blog-content ol {
+.blog-content ol:not([class*='md-']) {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-bottom: 1.5rem;
   margin-top: 0.5rem;
 }
 
-.blog-content li {
+.blog-content li:not([class*='md-']) {
   margin-bottom: 0.5rem;
   line-height: 1.8;
   color: #adbac7;
@@ -1140,7 +1152,7 @@
 
 /* ─── Blockquote ──────────────────────────────────────────── */
 
-.blog-content blockquote {
+.blog-content blockquote:not(.md-bq) {
   border-left: 4px solid #10B981;
   margin: 2.5rem 0;
   padding: 0.8rem 1.5rem;
@@ -1148,7 +1160,7 @@
   border-radius: 0 0.5rem 0.5rem 0;
 }
 
-.blog-content blockquote p {
+.blog-content blockquote p:not(.md-p) {
   color: #8b949e;
   font-style: italic;
   font-family: var(--font-lora), 'Lora', 'Playfair Display', Georgia, serif;
@@ -1156,13 +1168,13 @@
   line-height: 1.75;
 }
 
-.blog-content blockquote p:last-child {
+.blog-content blockquote p:last-child:not(.md-p) {
   margin-bottom: 0;
 }
 
 /* ─── Tables ─────────────────────────────────────────────── */
 
-.blog-content table {
+.blog-content table:not(.md-table) {
   width: 100%;
   border-collapse: collapse;
   margin: 2rem 0;
@@ -1173,7 +1185,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-.blog-content thead {
+.blog-content thead:not([class*='md-']) {
   background: linear-gradient(
     180deg,
     rgba(139, 92, 246, 0.14) 0%,
@@ -1181,7 +1193,7 @@
   );
 }
 
-.blog-content th {
+.blog-content th:not([class*='md-']) {
   padding: 0.7rem 1rem;
   text-align: left;
   font-size: 0.7em;
@@ -1193,7 +1205,7 @@
   border-bottom: 1px solid rgba(139, 92, 246, 0.2);
 }
 
-.blog-content td {
+.blog-content td:not([class*='md-']) {
   padding: 0.65rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: #adbac7;
@@ -1202,16 +1214,16 @@
   line-height: 1.65;
 }
 
-.blog-content tbody tr:nth-child(even) {
+.blog-content tbody tr:nth-child(even):not([class*='md-']) {
   background: rgba(255, 255, 255, 0.02);
 }
 
-.blog-content tbody tr:hover {
+.blog-content tbody tr:hover:not([class*='md-']) {
   background: rgba(139, 92, 246, 0.06);
   transition: background 0.15s;
 }
 
-.blog-content tbody tr:last-child td {
+.blog-content tbody tr:last-child td:not([class*='md-']) {
   border-bottom: none;
 }
 
@@ -1235,7 +1247,7 @@
 
 /* ─── Inline code ─────────────────────────────────────────── */
 
-.blog-content code {
+.blog-content code:not(.md-inline-code):not(.hljs) {
   background: rgba(110, 118, 129, 0.12);
   color: #e6edf3;
   border: 1px solid rgba(110, 118, 129, 0.2);
@@ -1248,15 +1260,17 @@
 }
 
 @media (max-width: 480px) {
-  .blog-content code {
+  .blog-content code:not(.md-inline-code):not(.hljs) {
     white-space: normal;
     word-break: break-word;
   }
 }
 
 /* ─── Code blocks (pre) — Professional Code Editor ──────── */
+/* Scoped to legacy HTML code blocks. The renderer's `.md-pre`
+   inside `.md-code-block` is fully self-styled via MD_STYLES. */
 
-.blog-content pre {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) {
   position: relative;
   background: #0d1117;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1269,8 +1283,8 @@
     0 1px 0 rgba(255, 255, 255, 0.03) inset;
 }
 
-/* ── Tab bar ─────────────────────────────────────────────── */
-.blog-content pre::before {
+/* ── Tab bar (legacy HTML pre only) ───────────────────── */
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre)::before {
   content: '';
   display: block;
   height: 2.75rem;
@@ -1279,8 +1293,8 @@
   position: relative;
 }
 
-/* ── Traffic light dots ──────────────────────────────────── */
-.blog-content pre > code::before {
+/* ── Traffic light dots (legacy HTML pre only) ───────── */
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::before {
   content: '';
   position: absolute;
   top: 1rem;
@@ -1296,8 +1310,8 @@
   z-index: 1;
 }
 
-/* ── Scrollable code area ────────────────────────────────── */
-.blog-content pre > code {
+/* ── Scrollable code area (legacy HTML pre only) ────────── */
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code {
   display: block;
   background: none;
   color: #adbac7;
@@ -1318,159 +1332,22 @@
   overflow-wrap: normal;
 }
 
-/* ── Line numbers + hover ────────────────────────────────── */
-.blog-content .code-line {
-  display: block;
-  position: relative;
-  padding-left: 4.5em;
-  padding-right: 1em;
-  counter-increment: line-num;
-  border-left: 2px solid transparent;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.blog-content .code-line::before {
-  content: counter(line-num);
-  position: absolute;
-  left: 0;
-  width: 3em;
-  padding-right: 1em;
-  text-align: right;
-  color: rgba(173, 186, 199, 0.18);
-  font-size: 0.8em;
-  -webkit-user-select: none;
-  user-select: none;
-  pointer-events: none;
-}
-
-.blog-content .code-line:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-left-color: rgba(139, 92, 246, 0.45);
-}
-
-.blog-content .code-line:hover::before {
-  color: rgba(173, 186, 199, 0.45);
-}
-
-/* ── Code block toolbar (sits in the tab-bar) ────────────── */
-.blog-content .code-block-toolbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 0.5rem 0 3.5rem;
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* Action buttons group — right side */
-.blog-content .code-toolbar-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.125rem;
-  pointer-events: auto;
-}
-
-.blog-content .code-toolbar-btn {
-  height: 1.75rem;
-  padding: 0 0.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 0.375rem;
-  color: rgba(173, 186, 199, 0.35);
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    background 0.2s,
-    border-color 0.2s;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  font-family: inherit;
-}
-
-.blog-content .code-toolbar-btn svg {
-  flex-shrink: 0;
-}
-
-/* Copy button */
-.blog-content .code-copy-btn:hover {
-  color: rgba(173, 186, 199, 0.9);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.blog-content .code-copy-btn.copied {
-  color: #3fb950;
-  background: rgba(63, 185, 80, 0.08);
-  border-color: rgba(63, 185, 80, 0.15);
-}
-
-/* Run button */
-.blog-content .code-run-btn {
-  color: rgba(91, 180, 255, 0.55);
-}
-
-.blog-content .code-run-btn:hover {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(59, 130, 246, 0.2);
-}
-
-/* ── Scrollbar styling ───────────────────────────────────── */
-.blog-content pre > code::-webkit-scrollbar {
+/* ── Scrollbar styling (legacy HTML pre only) ──────────── */
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::-webkit-scrollbar {
   height: 6px;
 }
 
-.blog-content pre > code::-webkit-scrollbar-track {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.blog-content pre > code::-webkit-scrollbar-thumb {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
   border-radius: 3px;
 }
 
-.blog-content pre > code::-webkit-scrollbar-thumb:hover {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.45);
-}
-
-/* ── Code runner textarea — editor-style ────────────────── */
-.code-runner-textarea {
-  -moz-tab-size: 2;
-  tab-size: 2;
-  caret-color: #58a6ff;
-  letter-spacing: 0;
-  word-spacing: 0;
-}
-
-.code-runner-textarea::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.code-runner-textarea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.code-runner-textarea::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 3px;
-}
-
-.code-runner-textarea::-webkit-scrollbar-thumb:hover {
-  background: rgba(88, 166, 255, 0.4);
 }
 
 /* ── Code Playground (full-screen IDE) ────────────────────── */
@@ -1624,43 +1501,33 @@
 
 /* ── Responsive code blocks ──────────────────────────────── */
 
-/* Tablets & small laptops */
+/* Tablets & small laptops (legacy HTML pre only) */
 @media (max-width: 768px) {
-  .blog-content pre {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) {
     margin: 1.5rem -0.5rem;
     border-radius: 0.5rem;
   }
 
-  .blog-content pre > code {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code {
     font-size: 0.8rem;
     padding: 0.875rem 0.75rem 0.875rem 0;
   }
-
-  .blog-content .code-line {
-    padding-left: 3.5em;
-    padding-right: 0.75em;
-  }
-
-  .blog-content .code-line::before {
-    width: 2.5em;
-    font-size: 0.75em;
-  }
 }
 
-/* Mobile phones */
+/* Mobile phones (legacy HTML pre only) */
 @media (max-width: 480px) {
-  .blog-content pre {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) {
     margin: 1.25rem -1rem;
     border-radius: 0;
     border-left: none;
     border-right: none;
   }
 
-  .blog-content pre::before {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre)::before {
     height: 2.25rem;
   }
 
-  .blog-content pre > code::before {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code::before {
     top: 0.7rem;
     left: 0.75rem;
     width: 0.45rem;
@@ -1670,7 +1537,7 @@
       1.6rem 0 0 #28c840;
   }
 
-  .blog-content pre > code {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code {
     font-size: 0.75rem;
     line-height: 1.65;
     padding: 0.75rem 0.5rem 0.75rem 0;
@@ -1679,54 +1546,19 @@
     overflow-wrap: break-word;
   }
 
-  .blog-content .code-line {
-    padding-left: 2.8em;
-    padding-right: 0.5em;
-  }
-
-  .blog-content .code-line::before {
-    width: 2em;
-    padding-right: 0.5em;
-    font-size: 0.7em;
-  }
-
-  .blog-content .code-block-toolbar {
-    height: 2.25rem;
-    padding-left: 3rem;
-    padding-right: 0.25rem;
-  }
-
-  .blog-content pre > code[class*='language-']::after {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code[class*='language-']::after {
     height: 2.25rem;
     line-height: 2.25rem;
     font-size: 0.55rem;
     right: 5rem;
   }
-
-  .blog-content .code-toolbar-btn {
-    height: 1.5rem;
-    padding: 0 0.4rem;
-    font-size: 0.55rem;
-  }
-
-  .blog-content .code-toolbar-btn span {
-    display: none;
-  }
 }
 
-/* Very small phones */
+/* Very small phones (legacy HTML pre only) */
 @media (max-width: 360px) {
-  .blog-content pre > code {
+  .blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code {
     font-size: 0.7rem;
     line-height: 1.6;
-  }
-
-  .blog-content .code-line {
-    padding-left: 0.5em;
-  }
-
-  .blog-content .code-line::before {
-    display: none;
   }
 }
 
@@ -1754,76 +1586,76 @@
   }
 }
 
-/* ─── Heading responsive scale ───────────────────────────── */
+/* ─── Heading responsive scale (legacy HTML only) ────── */
 
 @media (max-width: 640px) {
-  .blog-content h2 {
+  .blog-content h2:not(.md-h) {
     font-size: 1.3em;
     padding: 0.6rem 0.75rem 0.6rem 2.5rem;
     margin-top: 2rem;
     margin-bottom: 1rem;
   }
 
-  .blog-content h2::before {
+  .blog-content h2:not(.md-h)::before {
     left: 0.6rem;
     font-size: 0.54em;
   }
 
-  .blog-content h3 {
+  .blog-content h3:not(.md-h) {
     font-size: 1.15em;
     padding-left: 2.25rem;
     margin-top: 1.75rem;
     margin-bottom: 0.75rem;
   }
 
-  .blog-content h3::before {
+  .blog-content h3:not(.md-h)::before {
     font-size: 0.52em;
   }
 
-  .blog-content h4 {
+  .blog-content h4:not(.md-h) {
     font-size: 0.97em;
     padding-left: 2rem;
     margin-top: 1.5rem;
   }
 
-  .blog-content blockquote {
+  .blog-content blockquote:not(.md-bq) {
     margin: 1.5rem 0;
     padding: 0.5rem 1rem;
   }
 
-  .blog-content hr {
+  .blog-content hr:not(.md-hr) {
     margin: 2rem 0;
   }
 
-  .blog-content ul > li {
+  .blog-content ul:not([class*='md-']) > li {
     padding-left: 1.35rem;
   }
 
-  .blog-content ol > li {
+  .blog-content ol:not([class*='md-']) > li {
     padding-left: 2rem;
   }
 }
 
 @media (max-width: 360px) {
-  .blog-content h2 {
+  .blog-content h2:not(.md-h) {
     font-size: 1.15em;
     padding: 0.5rem 0.5rem 0.5rem 2rem;
   }
 
-  .blog-content h2::before {
+  .blog-content h2:not(.md-h)::before {
     left: 0.4rem;
     font-size: 0.5em;
   }
 
-  .blog-content h3 {
+  .blog-content h3:not(.md-h) {
     font-size: 1.05em;
     padding-left: 1.75rem;
   }
 }
 
-/* ─── Horizontal rule ────────────────────────────────────── */
+/* ─── Horizontal rule (legacy HTML only) ───────────────── */
 
-.blog-content hr {
+.blog-content hr:not(.md-hr) {
   border: none;
   margin: 3rem 0;
   position: relative;
@@ -1837,7 +1669,7 @@
   );
 }
 
-.blog-content hr::before {
+.blog-content hr:not(.md-hr)::before {
   content: '◆';
   position: absolute;
   top: 50%;
@@ -1850,9 +1682,9 @@
   pointer-events: none;
 }
 
-/* ─── Images ──────────────────────────────────────────────── */
+/* ─── Images (legacy HTML only) ──────────────────────── */
 
-.blog-content img {
+.blog-content img:not(.md-img) {
   max-width: 100%;
   height: auto;
   border-radius: 0.625rem;
@@ -1861,19 +1693,19 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.blog-content img[data-alignment='left'] {
+.blog-content img[data-alignment='left']:not(.md-img) {
   float: left;
   margin: 0.75rem 1.5rem 1rem 0;
 }
 
-.blog-content img[data-alignment='right'] {
+.blog-content img[data-alignment='right']:not(.md-img) {
   float: right;
   margin: 0.75rem 0 1rem 1.5rem;
 }
 
 @media (max-width: 480px) {
-  .blog-content img[data-alignment='left'],
-  .blog-content img[data-alignment='right'] {
+  .blog-content img[data-alignment='left']:not(.md-img),
+  .blog-content img[data-alignment='right']:not(.md-img) {
     float: none;
     width: 100% !important;
     margin: 1.5rem 0;
@@ -1887,13 +1719,13 @@
   clear: both;
 }
 
-/* Block elements always clear floats */
-.blog-content h2,
-.blog-content h3,
-.blog-content h4,
-.blog-content hr,
-.blog-content blockquote,
-.blog-content pre {
+/* Block elements always clear floats (legacy HTML only) */
+.blog-content h2:not(.md-h),
+.blog-content h3:not(.md-h),
+.blog-content h4:not(.md-h),
+.blog-content hr:not(.md-hr),
+.blog-content blockquote:not(.md-bq),
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) {
   clear: both;
 }
 
@@ -1912,13 +1744,13 @@
   box-decoration-break: clone;
 }
 
-.blog-content strong {
+.blog-content strong:not(.md-strong) {
   color: #e6edf3;
   font-weight: 700;
   letter-spacing: -0.008em;
 }
 
-.blog-content em {
+.blog-content em:not(.md-em) {
   color: #b8c4d8;
   font-style: italic;
   font-family: var(--font-lora), 'Lora', 'Palatino Linotype', Georgia, serif;
@@ -2176,7 +2008,7 @@
 
 /* ── Language label badge (right side of tab bar) ─────────── */
 
-.blog-content pre > code[class*='language-']::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code[class*='language-']::after {
   position: absolute;
   top: 0;
   right: 9rem;
@@ -2195,126 +2027,126 @@
   z-index: 2;
 }
 
-.blog-content pre > code.language-javascript::after,
-.blog-content pre > code.language-js::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-javascript::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-js::after {
   content: 'JavaScript';
 }
 
-.blog-content pre > code.language-typescript::after,
-.blog-content pre > code.language-ts::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-typescript::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-ts::after {
   content: 'TypeScript';
 }
 
-.blog-content pre > code.language-jsx::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-jsx::after {
   content: 'JSX';
 }
 
-.blog-content pre > code.language-tsx::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-tsx::after {
   content: 'TSX';
 }
 
-.blog-content pre > code.language-python::after,
-.blog-content pre > code.language-py::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-python::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-py::after {
   content: 'Python';
 }
 
-.blog-content pre > code.language-cpp::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-cpp::after {
   content: 'C++';
 }
 
-.blog-content pre > code.language-c::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-c::after {
   content: 'C';
 }
 
-.blog-content pre > code.language-java::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-java::after {
   content: 'Java';
 }
 
-.blog-content pre > code.language-csharp::after,
-.blog-content pre > code.language-cs::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-csharp::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-cs::after {
   content: 'C#';
 }
 
-.blog-content pre > code.language-go::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-go::after {
   content: 'Go';
 }
 
-.blog-content pre > code.language-rust::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-rust::after {
   content: 'Rust';
 }
 
-.blog-content pre > code.language-php::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-php::after {
   content: 'PHP';
 }
 
-.blog-content pre > code.language-ruby::after,
-.blog-content pre > code.language-rb::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-ruby::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-rb::after {
   content: 'Ruby';
 }
 
-.blog-content pre > code.language-swift::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-swift::after {
   content: 'Swift';
 }
 
-.blog-content pre > code.language-kotlin::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-kotlin::after {
   content: 'Kotlin';
 }
 
-.blog-content pre > code.language-html::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-html::after {
   content: 'HTML';
 }
 
-.blog-content pre > code.language-css::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-css::after {
   content: 'CSS';
 }
 
-.blog-content pre > code.language-scss::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-scss::after {
   content: 'SCSS';
 }
 
-.blog-content pre > code.language-sql::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-sql::after {
   content: 'SQL';
 }
 
-.blog-content pre > code.language-json::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-json::after {
   content: 'JSON';
 }
 
-.blog-content pre > code.language-yaml::after,
-.blog-content pre > code.language-yml::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-yaml::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-yml::after {
   content: 'YAML';
 }
 
-.blog-content pre > code.language-bash::after,
-.blog-content pre > code.language-sh::after,
-.blog-content pre > code.language-shell::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-bash::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-sh::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-shell::after {
   content: 'Shell';
 }
 
-.blog-content pre > code.language-dockerfile::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-dockerfile::after {
   content: 'Docker';
 }
 
-.blog-content pre > code.language-markdown::after,
-.blog-content pre > code.language-md::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-markdown::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-md::after {
   content: 'Markdown';
 }
 
-.blog-content pre > code.language-plaintext::after,
-.blog-content pre > code.language-text::after {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-plaintext::after,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) > code.language-text::after {
   content: 'Text';
 }
 
-/* ── Base code text ───────────────────────────────────────── */
+/* ── Base code text (legacy HTML pre only) ────────────────── */
 
-.blog-content pre code {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) code {
   color: #adbac7;
 }
 
-/* ── Text selection inside code blocks ───────────────────── */
+/* ── Text selection inside code blocks (legacy HTML pre only) ─── */
 
-.blog-content pre code::selection,
-.blog-content pre code *::selection {
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) code::selection,
+.blog-content pre:not(.md-pre):not(.lesson-renderer-block-richtext pre) code *::selection {
   background: rgba(8, 131, 149, 0.28);
   color: inherit;
 }
@@ -2578,3 +2410,532 @@ html[data-dashboard] body {
 ::-webkit-scrollbar-thumb:hover {
   background: #333333;
 }
+
+/* ======================
+   Unified Markdown Code-Block Styles
+   ======================
+   Single source of truth for .md-* and .hljs-* rules consumed by
+   app/_components/markdown/{MarkdownRenderer,MarkdownPreview,CodeBlock}.jsx.
+   Scoped under viewer scope classes. Each viewer's container element should
+   add its scope class as well as .md-viewer (or, for admin previews,
+   .admin-preview).
+
+   Scopes:
+     .blog-content      — /blogs/[id] (also wraps admin blog preview)
+     .lesson-viewer     — bootcamp lesson / mentor task / mentor session
+     .event-viewer      — events
+     .resource-viewer   — resources (rich_text + others)
+     .roadmap-viewer    — roadmaps
+     .admin-preview     — admin editor inline previews
+     .mentor-viewer     — mentor task description
+*/
+
+.blog-content .md-viewer,
+.lesson-viewer.md-viewer,
+.event-viewer.md-viewer,
+.resource-viewer.md-viewer,
+.roadmap-viewer.md-viewer,
+.admin-preview.md-viewer,
+.mentor-viewer.md-viewer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  line-height: 1.65rem;
+  color: #908fa0;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+/* Headings */
+.blog-content .md-h,
+.lesson-viewer .md-h,
+.event-viewer .md-h,
+.resource-viewer .md-h,
+.roadmap-viewer .md-h,
+.admin-preview .md-h,
+.mentor-viewer .md-h {
+  font-weight: 700;
+  color: #d4e4fa;
+  margin-top: 0.75rem;
+  margin-bottom: -0.25rem;
+  min-width: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: normal;
+}
+.blog-content .md-h1, .lesson-viewer .md-h1, .event-viewer .md-h1, .resource-viewer .md-h1, .roadmap-viewer .md-h1, .admin-preview .md-h1, .mentor-viewer .md-h1 { font-size: 1.375rem; }
+.blog-content .md-h2, .lesson-viewer .md-h2, .event-viewer .md-h2, .resource-viewer .md-h2, .roadmap-viewer .md-h2, .admin-preview .md-h2, .mentor-viewer .md-h2 { font-size: 1.125rem; }
+.blog-content .md-h3, .lesson-viewer .md-h3, .event-viewer .md-h3, .resource-viewer .md-h3, .roadmap-viewer .md-h3, .admin-preview .md-h3, .mentor-viewer .md-h3 { font-size: 1rem; }
+.blog-content .md-h4, .lesson-viewer .md-h4, .event-viewer .md-h4, .resource-viewer .md-h4, .roadmap-viewer .md-h4, .admin-preview .md-h4, .mentor-viewer .md-h4 { font-size: 0.9rem; }
+
+/* Paragraphs */
+.blog-content .md-p,
+.lesson-viewer .md-p,
+.event-viewer .md-p,
+.resource-viewer .md-p,
+.roadmap-viewer .md-p,
+.admin-preview .md-p,
+.mentor-viewer .md-p {
+  line-height: 1.7;
+  word-break: break-word;
+  white-space: normal;
+  min-width: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+.blog-content .md-strong,
+.lesson-viewer .md-strong,
+.event-viewer .md-strong,
+.resource-viewer .md-strong,
+.roadmap-viewer .md-strong,
+.admin-preview .md-strong,
+.mentor-viewer .md-strong { color: #d4e4fa; font-weight: 600; }
+
+.blog-content .md-em,
+.lesson-viewer .md-em,
+.event-viewer .md-em,
+.resource-viewer .md-em,
+.roadmap-viewer .md-em,
+.admin-preview .md-em,
+.mentor-viewer .md-em { font-style: italic; }
+
+.blog-content .md-a,
+.lesson-viewer .md-a,
+.event-viewer .md-a,
+.resource-viewer .md-a,
+.roadmap-viewer .md-a,
+.admin-preview .md-a,
+.mentor-viewer .md-a { color: #8083ff; text-decoration: none; }
+.blog-content .md-a:hover,
+.lesson-viewer .md-a:hover,
+.event-viewer .md-a:hover,
+.resource-viewer .md-a:hover,
+.roadmap-viewer .md-a:hover,
+.admin-preview .md-a:hover,
+.mentor-viewer .md-a:hover { text-decoration: underline; }
+
+.blog-content .md-img,
+.lesson-viewer .md-img,
+.event-viewer .md-img,
+.resource-viewer .md-img,
+.roadmap-viewer .md-img,
+.admin-preview .md-img,
+.mentor-viewer .md-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: block;
+  margin: 0.5rem 0;
+}
+
+.blog-content .md-bq,
+.lesson-viewer .md-bq,
+.event-viewer .md-bq,
+.resource-viewer .md-bq,
+.roadmap-viewer .md-bq,
+.admin-preview .md-bq,
+.mentor-viewer .md-bq {
+  margin-left: 0.5rem;
+  border-left: 4px solid rgba(255, 255, 255, 0.12);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.blog-content .md-hr,
+.lesson-viewer .md-hr,
+.event-viewer .md-hr,
+.resource-viewer .md-hr,
+.roadmap-viewer .md-hr,
+.admin-preview .md-hr,
+.mentor-viewer .md-hr {
+  border: none;
+  border-top: 0.5px solid #273647;
+  margin: 0.75rem 0.375rem;
+}
+
+.blog-content .md-ul, .blog-content .md-ol,
+.lesson-viewer .md-ul, .lesson-viewer .md-ol,
+.event-viewer .md-ul, .event-viewer .md-ol,
+.resource-viewer .md-ul, .resource-viewer .md-ol,
+.roadmap-viewer .md-ul, .roadmap-viewer .md-ol,
+.admin-preview .md-ul, .admin-preview .md-ol,
+.mentor-viewer .md-ul, .mentor-viewer .md-ol {
+  padding-left: 1.5rem;
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.blog-content .md-ul .md-li, .lesson-viewer .md-ul .md-li, .event-viewer .md-ul .md-li, .resource-viewer .md-ul .md-li, .roadmap-viewer .md-ul .md-li, .admin-preview .md-ul .md-li, .mentor-viewer .md-ul .md-li { list-style-type: disc; }
+.blog-content .md-ol .md-li, .lesson-viewer .md-ol .md-li, .event-viewer .md-ol .md-li, .resource-viewer .md-ol .md-li, .roadmap-viewer .md-ol .md-li, .admin-preview .md-ol .md-li, .mentor-viewer .md-ol .md-li { list-style-type: decimal; }
+
+.blog-content .md-li,
+.lesson-viewer .md-li,
+.event-viewer .md-li,
+.resource-viewer .md-li,
+.roadmap-viewer .md-li,
+.admin-preview .md-li,
+.mentor-viewer .md-li { padding-left: 0.25rem; min-width: 0; }
+
+.blog-content .md-task input,
+.lesson-viewer .md-task input,
+.event-viewer .md-task input,
+.resource-viewer .md-task input,
+.roadmap-viewer .md-task input,
+.admin-preview .md-task input,
+.mentor-viewer .md-task input { margin-right: 0.4rem; accent-color: #8083ff; }
+
+.blog-content .md-inline-code,
+.lesson-viewer .md-inline-code,
+.event-viewer .md-inline-code,
+.resource-viewer .md-inline-code,
+.roadmap-viewer .md-inline-code,
+.admin-preview .md-inline-code,
+.mentor-viewer .md-inline-code {
+  background: rgba(128, 131, 255, 0.1);
+  color: #8083ff;
+  padding: 0.1em 0.4em;
+  border-radius: 0.35rem;
+  font-size: 0.875em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  letter-spacing: normal;
+  line-height: inherit;
+  text-align: left;
+}
+
+.blog-content .md-table-wrap,
+.lesson-viewer .md-table-wrap,
+.event-viewer .md-table-wrap,
+.resource-viewer .md-table-wrap,
+.roadmap-viewer .md-table-wrap,
+.admin-preview .md-table-wrap,
+.mentor-viewer .md-table-wrap { overflow-x: auto; width: 100%; margin: 0.5rem 0; }
+
+.blog-content .md-table,
+.lesson-viewer .md-table,
+.event-viewer .md-table,
+.resource-viewer .md-table,
+.roadmap-viewer .md-table,
+.admin-preview .md-table,
+.mentor-viewer .md-table {
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  text-align: left;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.blog-content .md-th,
+.lesson-viewer .md-th,
+.event-viewer .md-th,
+.resource-viewer .md-th,
+.roadmap-viewer .md-th,
+.admin-preview .md-th,
+.mentor-viewer .md-th {
+  color: #d4e4fa;
+  border-bottom: 0.5px solid rgba(68, 69, 84, 0.8);
+  padding: 0.5rem 1rem 0.5rem 0;
+  vertical-align: top;
+  font-weight: 700;
+}
+
+.blog-content .md-td,
+.lesson-viewer .md-td,
+.event-viewer .md-td,
+.resource-viewer .md-td,
+.roadmap-viewer .md-td,
+.admin-preview .md-td,
+.mentor-viewer .md-td {
+  border-bottom: 0.5px solid rgba(39, 54, 71, 0.5);
+  padding: 0.5rem 1rem 0.5rem 0;
+  vertical-align: top;
+  color: #908fa0;
+}
+
+/* Code blocks (the unified chrome) */
+.blog-content .md-code-block,
+.lesson-viewer .md-code-block,
+.event-viewer .md-code-block,
+.resource-viewer .md-code-block,
+.roadmap-viewer .md-code-block,
+.admin-preview .md-code-block,
+.mentor-viewer .md-code-block {
+  border-radius: 0.625rem;
+  overflow: hidden;
+  border: 0.5px solid #273647;
+  margin: 0.25rem 0;
+}
+
+.blog-content .md-code-header,
+.lesson-viewer .md-code-header,
+.event-viewer .md-code-header,
+.resource-viewer .md-code-header,
+.roadmap-viewer .md-code-header,
+.admin-preview .md-code-header,
+.mentor-viewer .md-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d1117;
+  padding: 0.625rem 1rem;
+  border-bottom: 0.5px solid #273647;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+.blog-content .md-code-lang,
+.lesson-viewer .md-code-lang,
+.event-viewer .md-code-lang,
+.resource-viewer .md-code-lang,
+.roadmap-viewer .md-code-lang,
+.admin-preview .md-code-lang,
+.mentor-viewer .md-code-lang {
+  font-size: 0.75rem;
+  color: #464554;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.blog-content .md-copy-btn,
+.lesson-viewer .md-copy-btn,
+.event-viewer .md-copy-btn,
+.resource-viewer .md-copy-btn,
+.roadmap-viewer .md-copy-btn,
+.admin-preview .md-copy-btn,
+.mentor-viewer .md-copy-btn {
+  font-size: 0.6875rem;
+  color: #8083ff;
+  background: rgba(128, 131, 255, 0.08);
+  border: 1px solid rgba(128, 131, 255, 0.2);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.875rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: normal;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+}
+
+.blog-content .md-copy-btn:hover,
+.lesson-viewer .md-copy-btn:hover,
+.event-viewer .md-copy-btn:hover,
+.resource-viewer .md-copy-btn:hover,
+.roadmap-viewer .md-copy-btn:hover,
+.admin-preview .md-copy-btn:hover,
+.mentor-viewer .md-copy-btn:hover { background: rgba(128, 131, 255, 0.15); }
+
+.blog-content .md-copy-btn.copied,
+.lesson-viewer .md-copy-btn.copied,
+.event-viewer .md-copy-btn.copied,
+.resource-viewer .md-copy-btn.copied,
+.roadmap-viewer .md-copy-btn.copied,
+.admin-preview .md-copy-btn.copied,
+.mentor-viewer .md-copy-btn.copied {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.blog-content .md-code-scroll,
+.lesson-viewer .md-code-scroll,
+.event-viewer .md-code-scroll,
+.resource-viewer .md-code-scroll,
+.roadmap-viewer .md-code-scroll,
+.admin-preview .md-code-scroll,
+.mentor-viewer .md-code-scroll { overflow-x: auto; }
+
+.blog-content .md-pre,
+.lesson-viewer .md-pre,
+.event-viewer .md-pre,
+.resource-viewer .md-pre,
+.roadmap-viewer .md-pre,
+.admin-preview .md-pre,
+.mentor-viewer .md-pre {
+  margin: 0;
+  padding: 1.125rem 1.25rem;
+  background: #010f1f;
+  overflow-x: auto;
+}
+
+.blog-content .md-pre code,
+.lesson-viewer .md-pre code,
+.event-viewer .md-pre code,
+.resource-viewer .md-pre code,
+.roadmap-viewer .md-pre code,
+.admin-preview .md-pre code,
+.mentor-viewer .md-pre code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  white-space: pre;
+  color: #d4e4fa;
+  background: transparent;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+/* Highlight.js token colors (One Dark Pro palette) */
+.blog-content .hljs-comment, .blog-content .hljs-quote,
+.lesson-viewer .hljs-comment, .lesson-viewer .hljs-quote,
+.event-viewer .hljs-comment, .event-viewer .hljs-quote,
+.resource-viewer .hljs-comment, .resource-viewer .hljs-quote,
+.roadmap-viewer .hljs-comment, .roadmap-viewer .hljs-quote,
+.admin-preview .hljs-comment, .admin-preview .hljs-quote,
+.mentor-viewer .hljs-comment, .mentor-viewer .hljs-quote { color: #818898; font-style: italic; }
+
+.blog-content .hljs-keyword, .blog-content .hljs-selector-tag, .blog-content .hljs-subst,
+.lesson-viewer .hljs-keyword, .lesson-viewer .hljs-selector-tag, .lesson-viewer .hljs-subst,
+.event-viewer .hljs-keyword, .event-viewer .hljs-selector-tag, .event-viewer .hljs-subst,
+.resource-viewer .hljs-keyword, .resource-viewer .hljs-selector-tag, .resource-viewer .hljs-subst,
+.roadmap-viewer .hljs-keyword, .roadmap-viewer .hljs-selector-tag, .roadmap-viewer .hljs-subst,
+.admin-preview .hljs-keyword, .admin-preview .hljs-selector-tag, .admin-preview .hljs-subst,
+.mentor-viewer .hljs-keyword, .mentor-viewer .hljs-selector-tag, .mentor-viewer .hljs-subst {
+  color: #f47b85;
+  font-weight: 600;
+}
+
+.blog-content .hljs-number, .blog-content .hljs-literal, .blog-content .hljs-variable, .blog-content .hljs-template-variable, .blog-content .hljs-tag .hljs-attr,
+.lesson-viewer .hljs-number, .lesson-viewer .hljs-literal, .lesson-viewer .hljs-variable, .lesson-viewer .hljs-template-variable, .lesson-viewer .hljs-tag .hljs-attr,
+.event-viewer .hljs-number, .event-viewer .hljs-literal, .event-viewer .hljs-variable, .event-viewer .hljs-template-variable, .event-viewer .hljs-tag .hljs-attr,
+.resource-viewer .hljs-number, .resource-viewer .hljs-literal, .resource-viewer .hljs-variable, .resource-viewer .hljs-template-variable, .resource-viewer .hljs-tag .hljs-attr,
+.roadmap-viewer .hljs-number, .roadmap-viewer .hljs-literal, .roadmap-viewer .hljs-variable, .roadmap-viewer .hljs-template-variable, .roadmap-viewer .hljs-tag .hljs-attr,
+.admin-preview .hljs-number, .admin-preview .hljs-literal, .admin-preview .hljs-variable, .admin-preview .hljs-template-variable, .admin-preview .hljs-tag .hljs-attr,
+.mentor-viewer .hljs-number, .mentor-viewer .hljs-literal, .mentor-viewer .hljs-variable, .mentor-viewer .hljs-template-variable, .mentor-viewer .hljs-tag .hljs-attr {
+  color: #5eedec;
+}
+
+.blog-content .hljs-string, .blog-content .hljs-doctag,
+.lesson-viewer .hljs-string, .lesson-viewer .hljs-doctag,
+.event-viewer .hljs-string, .event-viewer .hljs-doctag,
+.resource-viewer .hljs-string, .resource-viewer .hljs-doctag,
+.roadmap-viewer .hljs-string, .roadmap-viewer .hljs-doctag,
+.admin-preview .hljs-string, .admin-preview .hljs-doctag,
+.mentor-viewer .hljs-string, .mentor-viewer .hljs-doctag { color: #9be963; }
+
+.blog-content .hljs-title, .blog-content .hljs-section, .blog-content .hljs-selector-id,
+.lesson-viewer .hljs-title, .lesson-viewer .hljs-section, .lesson-viewer .hljs-selector-id,
+.event-viewer .hljs-title, .event-viewer .hljs-section, .event-viewer .hljs-selector-id,
+.resource-viewer .hljs-title, .resource-viewer .hljs-section, .resource-viewer .hljs-selector-id,
+.roadmap-viewer .hljs-title, .roadmap-viewer .hljs-section, .roadmap-viewer .hljs-selector-id,
+.admin-preview .hljs-title, .admin-preview .hljs-section, .admin-preview .hljs-selector-id,
+.mentor-viewer .hljs-title, .mentor-viewer .hljs-section, .mentor-viewer .hljs-selector-id {
+  color: #70b8ff;
+  font-weight: 600;
+}
+
+.blog-content .hljs-type, .blog-content .hljs-class .hljs-title,
+.lesson-viewer .hljs-type, .lesson-viewer .hljs-class .hljs-title,
+.event-viewer .hljs-type, .event-viewer .hljs-class .hljs-title,
+.resource-viewer .hljs-type, .resource-viewer .hljs-class .hljs-title,
+.roadmap-viewer .hljs-type, .roadmap-viewer .hljs-class .hljs-title,
+.admin-preview .hljs-type, .admin-preview .hljs-class .hljs-title,
+.mentor-viewer .hljs-type, .mentor-viewer .hljs-class .hljs-title { color: #5eedec; }
+
+.blog-content .hljs-tag, .blog-content .hljs-name, .blog-content .hljs-attribute,
+.lesson-viewer .hljs-tag, .lesson-viewer .hljs-name, .lesson-viewer .hljs-attribute,
+.event-viewer .hljs-tag, .event-viewer .hljs-name, .event-viewer .hljs-attribute,
+.resource-viewer .hljs-tag, .resource-viewer .hljs-name, .resource-viewer .hljs-attribute,
+.roadmap-viewer .hljs-tag, .roadmap-viewer .hljs-name, .roadmap-viewer .hljs-attribute,
+.admin-preview .hljs-tag, .admin-preview .hljs-name, .admin-preview .hljs-attribute,
+.mentor-viewer .hljs-tag, .mentor-viewer .hljs-name, .mentor-viewer .hljs-attribute { color: #f47b85; }
+
+.blog-content .hljs-regexp, .blog-content .hljs-link,
+.lesson-viewer .hljs-regexp, .lesson-viewer .hljs-link,
+.event-viewer .hljs-regexp, .event-viewer .hljs-link,
+.resource-viewer .hljs-regexp, .resource-viewer .hljs-link,
+.roadmap-viewer .hljs-regexp, .roadmap-viewer .hljs-link,
+.admin-preview .hljs-regexp, .admin-preview .hljs-link,
+.mentor-viewer .hljs-regexp, .mentor-viewer .hljs-link { color: #9be963; }
+
+.blog-content .hljs-symbol, .blog-content .hljs-bullet,
+.lesson-viewer .hljs-symbol, .lesson-viewer .hljs-bullet,
+.event-viewer .hljs-symbol, .event-viewer .hljs-bullet,
+.resource-viewer .hljs-symbol, .resource-viewer .hljs-bullet,
+.roadmap-viewer .hljs-symbol, .roadmap-viewer .hljs-bullet,
+.admin-preview .hljs-symbol, .admin-preview .hljs-bullet,
+.mentor-viewer .hljs-symbol, .mentor-viewer .hljs-bullet { color: #cc7bf4; }
+
+.blog-content .hljs-built_in, .blog-content .hljs-builtin-name,
+.lesson-viewer .hljs-built_in, .lesson-viewer .hljs-builtin-name,
+.event-viewer .hljs-built_in, .event-viewer .hljs-builtin-name,
+.resource-viewer .hljs-built_in, .resource-viewer .hljs-builtin-name,
+.roadmap-viewer .hljs-built_in, .roadmap-viewer .hljs-builtin-name,
+.admin-preview .hljs-built_in, .admin-preview .hljs-builtin-name,
+.mentor-viewer .hljs-built_in, .mentor-viewer .hljs-builtin-name { color: #70b8ff; }
+
+.blog-content .hljs-meta,
+.lesson-viewer .hljs-meta,
+.event-viewer .hljs-meta,
+.resource-viewer .hljs-meta,
+.roadmap-viewer .hljs-meta,
+.admin-preview .hljs-meta,
+.mentor-viewer .hljs-meta { color: #818898; }
+
+.blog-content .hljs-deletion,
+.lesson-viewer .hljs-deletion,
+.event-viewer .hljs-deletion,
+.resource-viewer .hljs-deletion,
+.roadmap-viewer .hljs-deletion,
+.admin-preview .hljs-deletion,
+.mentor-viewer .hljs-deletion { color: #f47b85; }
+
+.blog-content .hljs-addition,
+.lesson-viewer .hljs-addition,
+.event-viewer .hljs-addition,
+.resource-viewer .hljs-addition,
+.roadmap-viewer .hljs-addition,
+.admin-preview .hljs-addition,
+.mentor-viewer .hljs-addition { color: #9be963; }
+
+.blog-content .hljs-emphasis,
+.lesson-viewer .hljs-emphasis,
+.event-viewer .hljs-emphasis,
+.resource-viewer .hljs-emphasis,
+.roadmap-viewer .hljs-emphasis,
+.admin-preview .hljs-emphasis,
+.mentor-viewer .hljs-emphasis { font-style: italic; }
+
+.blog-content .hljs-strong,
+.lesson-viewer .hljs-strong,
+.event-viewer .hljs-strong,
+.resource-viewer .hljs-strong,
+.roadmap-viewer .hljs-strong,
+.admin-preview .hljs-strong,
+.mentor-viewer .hljs-strong { font-weight: 700; }
+
+.blog-content .hljs-params,
+.lesson-viewer .hljs-params,
+.event-viewer .hljs-params,
+.resource-viewer .hljs-params,
+.roadmap-viewer .hljs-params,
+.admin-preview .hljs-params,
+.mentor-viewer .hljs-params { color: #d4e4fa; }
+
+.blog-content .hljs-variable, .blog-content .hljs-template-variable,
+.lesson-viewer .hljs-variable, .lesson-viewer .hljs-template-variable,
+.event-viewer .hljs-variable, .event-viewer .hljs-template-variable,
+.resource-viewer .hljs-variable, .resource-viewer .hljs-template-variable,
+.roadmap-viewer .hljs-variable, .roadmap-viewer .hljs-template-variable,
+.admin-preview .hljs-variable, .admin-preview .hljs-template-variable,
+.mentor-viewer .hljs-variable, .mentor-viewer .hljs-template-variable { color: #fbad60; }
+
+.blog-content .hljs-operator, .blog-content .hljs-punctuation,
+.lesson-viewer .hljs-operator, .lesson-viewer .hljs-punctuation,
+.event-viewer .hljs-operator, .event-viewer .hljs-punctuation,
+.resource-viewer .hljs-operator, .resource-viewer .hljs-punctuation,
+.roadmap-viewer .hljs-operator, .roadmap-viewer .hljs-punctuation,
+.admin-preview .hljs-operator, .admin-preview .hljs-punctuation,
+.mentor-viewer .hljs-operator, .mentor-viewer .hljs-punctuation { color: #d3d7de; }

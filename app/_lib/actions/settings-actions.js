@@ -220,6 +220,20 @@ const DEFAULT_SETTINGS = [
     ],
   },
   {
+    key: 'homepage_mission',
+    category: 'page_content',
+    description: 'Single-paragraph mission text shown in the homepage About teaser',
+    value:
+      'To nurture competitive programming and problem-solving skills, and to mentor students into confident, industry-ready developers.',
+  },
+  {
+    key: 'homepage_vision',
+    category: 'page_content',
+    description: 'Single-paragraph vision text shown in the homepage About teaser',
+    value:
+      'To become the leading programming community at Netrokona University, producing world-class problem solvers who represent the university on national and international stages.',
+  },
+  {
     key: 'about_what_we_do',
     category: 'about',
     description: 'What we do items',
@@ -740,6 +754,104 @@ const DEFAULT_SETTINGS = [
     value: 'VIEW EVENTS',
     category: 'page_content',
     description: 'Hero section learn more button label',
+  },
+  {
+    key: 'hero_roadmap_nodes',
+    value: [
+      {
+        id: 'GP',
+        label: 'Graphics Programming',
+        link: '/roadmaps/graphics-programming-roadmap-beginner-to-expert-mmpp5z3o',
+        description:
+          'Master rendering pipelines, shaders, OpenGL/Vulkan, and real-time 3D graphics engines from beginner to expert.',
+      },
+      {
+        id: 'CV',
+        label: 'Computer Vision',
+        link: '/roadmaps/computer-vision-roadmap-beginner-to-expert-mmow7pry',
+        description:
+          'Explore image processing, object detection, and visual models to enable machines to interpret visual data.',
+      },
+      {
+        id: 'SYS',
+        label: 'System Design',
+        link: '/roadmaps/system-design-administration-roadmap-beginner-to-expert-mmp9kjef',
+        description:
+          'Architect robust distributed systems, manage cloud infrastructure, and master high-availability backend administration.',
+      },
+      {
+        id: 'MOB',
+        label: 'Mobile App Dev',
+        link: '/roadmaps/full-stack-mobile-app-development-mmopm53v',
+        description:
+          'Build cross-platform and native mobile applications focusing on performance, UI/UX, and state management.',
+      },
+      {
+        id: 'NLP',
+        label: 'Natural Language Processing',
+        link: '/roadmaps/natural-language-processing-nlp-roadmap-beginner-to-expert-mmowix0e',
+        description:
+          'Dive into NLP, text generation, transformers, and the semantic understanding of human languages.',
+      },
+      {
+        id: 'RAG',
+        label: 'Agentic AI & RAG',
+        link: '/roadmaps/agentic-ai-rag-roadmap-beginner-to-expert-mmoy9xw3',
+        description:
+          'Design autonomous AI agents and Retrieval-Augmented Generation flows using modern LLM orchestration.',
+      },
+      {
+        id: 'RL',
+        label: 'Reinforcement Learning',
+        link: '/roadmaps/reinforcement-learning-roadmap-beginner-to-expert-mmowoq45',
+        description:
+          'Train models through reward/penalty paradigms, diving into Q-learning, policy gradients, and agents.',
+      },
+      {
+        id: 'PAR',
+        label: 'Concurrency Parallelism',
+        link: '/roadmaps/concurrency-parallelism-roadmap-beginner-to-expert-mmpp8ca3',
+        description:
+          'Master multi-threading, concurrency models, asynchronous programming, and CPU/GPU-accelerated processing.',
+      },
+      {
+        id: 'WEB',
+        label: 'Full-Stack Web',
+        link: '/roadmaps/full-stack-web-development-roadmap-from-basics-to-mastery-mmopea6y',
+        description:
+          'Engineer modern web experiences from responsive frontends to scalable microservice backends.',
+      },
+      {
+        id: 'CP',
+        label: 'Competitive Programming',
+        link: '/roadmaps/competitive-programming-roadmap-beginner-to-expert-mmmpt26y',
+        description:
+          'Sharpen algorithmic intuition and master complex data structures under strict time and memory constraints.',
+      },
+      {
+        id: 'AI',
+        label: 'Machine Learning',
+        link: '/roadmaps/artificial-intelligence-machine-learning-roadmap-beginner-to-mmoumwg4',
+        description:
+          'Train predictive models, neural networks, and deep learning architectures to extract insights from datasets.',
+      },
+      {
+        id: 'SEC',
+        label: 'Cyber Security',
+        link: '/roadmaps/cyber-security-specialist-roadmap-beginner-to-expert-mmr1hblk',
+        description:
+          'Understand penetration testing, network defense, cryptography, and zero-trust security architectures.',
+      },
+      {
+        id: 'W3',
+        label: 'Web3 Blockchain',
+        link: '/roadmaps/web3-blockchain-development-roadmap-beginner-to-expert-mmp96crv',
+        description:
+          'Develop decentralized applications, smart contracts, and cryptographic ledger systems on modern blockchains.',
+      },
+    ],
+    category: 'page_content',
+    description: '3D globe roadmap nodes shown in the hero section',
   },
   {
     key: 'homepage_about_badge',

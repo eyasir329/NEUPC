@@ -51,14 +51,14 @@ export default async function HomePage() {
   } = await getHomePageData();
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen overflow-x-clip">
       <ScrollProgress />
       {/* Structured Data */}
       <OrganizationJsonLd />
       <WebsiteJsonLd />
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <Hero data={hero} settings={settings} />
+      <Hero data={hero} settings={settings} stats={stats} />
 
       {/* ── About ───────────────────────────────────────────────────── */}
       <About data={about} settings={settings} />

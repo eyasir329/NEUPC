@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { cn } from '@/app/_lib/utils/utils';
@@ -12,6 +14,7 @@ import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import SectionHeading from '@/app/_components/ui/SectionHeading';
 import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
+import PhotoLightbox from '@/app/_components/ui/PhotoLightbox';
 import {
   pageFadeUp as fadeUp,
   pageStagger as stagger,
@@ -56,8 +59,11 @@ function EmptyState({ icon, title, description, onClear }) {
 function AnimatedCounter({ value, suffix = '' }) {
   const [display, setDisplay] = useState(0);
   const num = parseInt(value, 10) || 0;
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   useEffect(() => {
-    if (num === 0) return;
+    if (num === 0 || reducedMotion) return;
     let start = 0;
     const duration = 1200;
     const startTime = performance.now();
@@ -70,8 +76,8 @@ function AnimatedCounter({ value, suffix = '' }) {
       if (progress < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }, [num]);
-  return <>{display}{suffix}</>;
+  }, [num, reducedMotion]);
+  return <>{reducedMotion ? num : display}{suffix}</>;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,24 +92,94 @@ function SearchIcon({ className }) {
 }
 
 // ---------------------------------------------------------------------------
-// Dropdown select for filters
+// Dropdown select for filters — same button-triggered listbox pattern as
+// the Events page's CategorySelect, for a consistent filter UI site-wide.
 // ---------------------------------------------------------------------------
 function FilterSelect({ value, onChange, options, label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isFiltered = value !== 'All';
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-xl border border-white/10 bg-white/4 px-3 py-1.5 pr-7 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition-all hover:border-neon-lime/30 hover:text-neon-lime focus:border-neon-lime/40 focus:text-neon-lime focus:outline-none [&>option]:bg-gray-950 [&>option]:text-zinc-300"
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         aria-label={label}
+        className={cn(
+          'flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+          isFiltered
+            ? 'border-neon-lime/30 bg-neon-lime/8 text-neon-lime'
+            : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 bg-white/4 text-zinc-400'
+        )}
       >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      <svg className="pointer-events-none absolute top-1/2 right-2 h-3 w-3 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-      </svg>
+        <span className="truncate">{value}</span>
+        <svg
+          className={cn(
+            'h-3 w-3 shrink-0 transition-transform duration-200',
+            open && 'rotate-180'
+          )}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          className="absolute top-full right-0 z-50 mt-1.5 max-h-64 min-w-full overflow-y-auto rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50"
+        >
+          {options.map((opt) => {
+            const active = value === opt;
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                className={cn(
+                  'flex min-h-[38px] w-full items-center justify-between gap-8 px-4 py-2.5 text-left font-mono text-[10px] tracking-wider whitespace-nowrap uppercase transition-colors',
+                  active
+                    ? 'bg-neon-lime/10 text-neon-lime'
+                    : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                )}
+              >
+                {opt}
+                {active && (
+                  <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -246,14 +322,15 @@ function getRankPercentileColor(topPercentage) {
 function parseResultRankTotal(result, contestName, contestTotals) {
   const fallback = {
     rank: null,
-    total: contestTotals[contestName] || 100,
-    topPercentage: 100,
-    percentile: 0,
+    total: null,
+    topPercentage: null,
+    percentile: null,
+    hasRealTotal: false,
   };
 
   if (!result) return fallback;
   const cleaned = result.replace(/\*/g, '');
-  
+
   // 1. "X out of Y"
   const outOfMatch = cleaned.match(/(\d+)\s+out\s+of\s+(\d+)/i);
   if (outOfMatch) {
@@ -262,10 +339,10 @@ function parseResultRankTotal(result, contestName, contestTotals) {
     if (rank > 0 && total > 0) {
       const topPercentage = (rank / total) * 100;
       const percentile = ((total - rank + 1) / total) * 100;
-      return { rank, total, topPercentage, percentile };
+      return { rank, total, topPercentage, percentile, hasRealTotal: true };
     }
   }
-  
+
   // 2. Standalone awards
   const lowercase = cleaned.toLowerCase();
   let rank = null;
@@ -276,25 +353,34 @@ function parseResultRankTotal(result, contestName, contestTotals) {
   } else if (lowercase.includes('3rd') || lowercase.includes('third')) {
     rank = 3;
   }
-  
+
   if (rank !== null) {
-    const total = contestTotals[contestName] || 100;
-    const topPercentage = (rank / total) * 100;
-    const percentile = ((total - rank + 1) / total) * 100;
-    return { rank, total, topPercentage, percentile };
+    // Only compute a percentage when we know the contest's real field size
+    // (from a prior "X out of Y" result for the same contest). Otherwise
+    // showing e.g. "Top 1.0%" off a made-up total-of-100 would be a lie.
+    const total = contestTotals[contestName];
+    if (total) {
+      const topPercentage = (rank / total) * 100;
+      const percentile = ((total - rank + 1) / total) * 100;
+      return { rank, total, topPercentage, percentile, hasRealTotal: true };
+    }
+    return { rank, total: null, topPercentage: null, percentile: null, hasRealTotal: false };
   }
-  
+
   return fallback;
 }
 
 function LeaderboardRankProgressBar({ topPercentage, className = '' }) {
   const percentile = 100 - topPercentage;
   const colors = getRankPercentileColor(topPercentage);
-  
+  const label = `Top ${topPercentage.toFixed(1)}% | Rank percentile: ${percentile.toFixed(1)}%`;
+
   return (
     <div
       className={cn("group/progress relative shrink-0", className)}
-      title={`Top ${topPercentage.toFixed(1)}% | Rank Percentile: ${percentile.toFixed(1)}%`}
+      title={label}
+      role="img"
+      aria-label={label}
     >
       <div className="relative h-10 w-2 rounded-full bg-white/10">
         <div
@@ -326,11 +412,17 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const memberNames = (achievement.member_achievements ?? [])
+    .map((m) => m.users?.full_name)
+    .filter(Boolean);
+  const displayNames = memberNames.length > 0 ? memberNames : participants;
   const image = achievement.featured_photo?.url;
 
   return (
-    <div className="group border-neon-lime/10 relative overflow-hidden rounded-2xl border bg-[#08090f]">
-      <div className="relative aspect-[3/2] w-full sm:aspect-[16/10] lg:aspect-[21/9]">
+    <div className="group border-neon-lime/10 relative flex h-full flex-col overflow-hidden rounded-2xl border bg-[#08090f]">
+      {/* On mobile the content sits below the image in its own panel; from
+          sm: up it overlays the photo (classic hero treatment). */}
+      <div className="relative aspect-[16/10] w-full shrink-0 sm:aspect-[16/9] lg:aspect-[21/9]">
         {/* Backdrop fill */}
         {image && (
           <Image
@@ -356,8 +448,8 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
           unoptimized
         />
 
-        {/* Bottom scrim */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-[#05060b] via-[#05060b]/85 to-transparent" />
+        {/* Bottom scrim — only needed when content overlays the photo */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/5 bg-linear-to-t from-[#05060b] via-[#05060b]/85 to-transparent sm:block" />
 
         {/* Top-left meta */}
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 sm:top-5 sm:left-5">
@@ -372,104 +464,106 @@ function FeaturedAchievementBanner({ achievement, onSelect }) {
           )}
         </div>
 
-        {/* Floating content */}
-        <div className="absolute inset-x-3 bottom-3 sm:inset-x-5 sm:bottom-5 lg:inset-x-8 lg:bottom-8">
-          <div className="max-w-2xl space-y-3 sm:space-y-4">
-            {/* Result chip + categories */}
-            <div className="flex flex-wrap items-center gap-2">
-              {achievement.result && rs && (
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase backdrop-blur-md sm:text-[11px]',
-                    rs.badge
-                  )}
-                >
-                  <span aria-hidden>{rs.emoji}</span>
-                  <ResultText text={achievement.result} />
-                </span>
-              )}
-              {cats.slice(0, 2).map((c) => (
-                <span
-                  key={c}
-                  className="rounded-full border border-white/15 bg-black/50 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-md sm:text-[10px]"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
+      </div>
 
-            {/* Title */}
-            <h3 className="kinetic-headline font-heading text-2xl leading-[1.05] font-black text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-5xl">
-              {achievement.title}
-            </h3>
-
-            {/* Contest name */}
-            {achievement.contest_name && (
-              <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] text-zinc-300 uppercase sm:text-[11px]">
-                <svg
-                  className="text-neon-lime h-3 w-3 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                  />
-                </svg>
-                {achievement.contest_url ? (
-                  <a
-                    href={achievement.contest_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-neon-lime"
-                  >
-                    {achievement.contest_name}
-                  </a>
-                ) : (
-                  achievement.contest_name
+      {/* Content — normal-flow panel below the image on mobile, overlay on
+          the photo from sm: up */}
+      <div className="p-4 sm:absolute sm:inset-x-5 sm:bottom-5 sm:p-0 lg:inset-x-8 lg:bottom-8">
+        <div className="max-w-2xl space-y-3 sm:space-y-4">
+          {/* Result chip + categories (categories hidden on phones to reduce noise) */}
+          <div className="flex flex-wrap items-center gap-2">
+            {achievement.result && rs && (
+              <span
+                className={cn(
+                  'inline-flex max-w-full items-center gap-1.5 truncate rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase backdrop-blur-md sm:text-[11px]',
+                  rs.badge
                 )}
-              </p>
-            )}
-
-            {/* Description — desktop only */}
-            {achievement.description && (
-              <p className="hidden max-w-xl text-sm leading-relaxed text-zinc-300 sm:block sm:text-base">
-                {achievement.description.length > 160
-                  ? `${achievement.description.slice(0, 160).trim()}…`
-                  : achievement.description}
-              </p>
-            )}
-
-            {/* CTA + team row */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-4">
-              <button
-                type="button"
-                onClick={() => onSelect?.(achievement)}
-                className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex min-h-[44px] items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none sm:px-7 sm:text-[11px]"
               >
-                Read Story
-                <span className="transition-transform group-hover/cta:translate-x-1">
-                  →
-                </span>
-              </button>
-              {(achievement.team_name || participants.length > 0) && (
-                <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-400 sm:text-[11px]">
-                  <span aria-hidden>{achievement.is_team ? '👥' : '👤'}</span>
-                  <span className="max-w-[18rem] truncate">
-                    {achievement.team_name ||
-                      participants
-                        .slice(0, 3)
-                        .map((p) => p.name || p)
-                        .filter(Boolean)
-                        .join(', ')}
-                    {participants.length > 3 && ` +${participants.length - 3}`}
-                  </span>
-                </p>
+                <span aria-hidden>{rs.emoji}</span>
+                <ResultText text={achievement.result} />
+              </span>
+            )}
+            {cats.slice(0, 2).map((c) => (
+              <span
+                key={c}
+                className="hidden rounded-full border border-white/15 bg-black/50 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-md sm:inline-block sm:text-[10px]"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+
+          {/* Title */}
+          <h3 className="kinetic-headline font-heading line-clamp-2 text-xl leading-[1.1] font-black text-white uppercase sm:text-3xl sm:leading-[1.05] sm:drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] lg:text-5xl">
+            {achievement.title}
+          </h3>
+
+          {/* Contest name */}
+          {achievement.contest_name && (
+            <p className="flex min-w-0 items-center gap-2 font-mono text-[10px] tracking-[0.2em] text-zinc-300 uppercase sm:text-[11px]">
+              <svg
+                className="text-neon-lime h-3 w-3 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                />
+              </svg>
+              {achievement.contest_url ? (
+                <a
+                  href={achievement.contest_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-neon-lime truncate"
+                >
+                  {achievement.contest_name}
+                </a>
+              ) : (
+                <span className="truncate">{achievement.contest_name}</span>
               )}
-            </div>
+            </p>
+          )}
+
+          {/* Description — large screens only, where the taller banner has room */}
+          {achievement.description && (
+            <p className="hidden max-w-xl text-sm leading-relaxed text-zinc-300 lg:block">
+              {achievement.description.length > 160
+                ? `${achievement.description.slice(0, 160).trim()}…`
+                : achievement.description}
+            </p>
+          )}
+
+          {/* CTA + team row */}
+          <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => onSelect?.(achievement)}
+              className="group/cta bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] focus-visible:outline-none sm:w-auto sm:px-7 sm:text-[11px]"
+            >
+              Read Story
+              <span className="transition-transform group-hover/cta:translate-x-1">
+                →
+              </span>
+            </button>
+            {(achievement.team_name || displayNames.length > 0) && (
+              <p className="flex min-w-0 items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-400 sm:text-[11px]">
+                <span aria-hidden>{achievement.is_team ? '👥' : '👤'}</span>
+                <span className="max-w-[18rem] truncate">
+                  {achievement.team_name ||
+                    displayNames
+                      .slice(0, 3)
+                      .map((p) => p.name || p)
+                      .filter(Boolean)
+                      .join(', ')}
+                  {displayNames.length > 3 && ` +${displayNames.length - 3}`}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -505,8 +599,16 @@ function AchievementDetailModal({ achievement, onClose }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const members = (achievement.member_achievements ?? []).map((m) => ({
+    id: m.id,
+    name: m.users?.full_name ?? 'Unknown member',
+    username: m.users?.member_profiles?.username ?? null,
+    avatarUrl: m.users?.avatar_url ?? null,
+    position: m.position ?? null,
+  }));
   const galleryImages = achievement.gallery_images ?? [];
   const [activePhoto, setActivePhoto] = useState(null);
+  const closeButtonRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -525,7 +627,16 @@ function AchievementDetailModal({ achievement, onClose }) {
     };
   }, [onClose, activePhoto]);
 
-  return (
+  // Move focus into the dialog on open so keyboard/screen-reader users
+  // aren't left tabbing through the page behind the modal.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
+  // Portal to <body> so `fixed inset-0` anchors to the viewport — any
+  // transformed ancestor (framer-motion sections) would otherwise become
+  // the containing block and the sheet would open in the wrong place.
+  return createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 sm:pt-24"
       onClick={onClose}
@@ -548,9 +659,23 @@ function AchievementDetailModal({ achievement, onClose }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl"
+        className="relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] [scrollbar-width:none] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl [&::-webkit-scrollbar]:hidden"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close button — sticky so it stays visible while the sheet scrolls */}
+        <div className="sticky top-0 z-20 h-0">
+          <button
+            ref={closeButtonRef}
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
         {/* ── Cover image — full & uncropped ── */}
         <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-t-3xl bg-black">
           {/* Blurred backdrop fill so the full image can show uncropped */}
@@ -571,17 +696,6 @@ function AchievementDetailModal({ achievement, onClose }) {
             unoptimized
           />
 
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-
           {/* Featured badge — top-left over image */}
           {achievement.is_featured && (
             <span className="absolute top-4 left-4 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/20 px-2.5 py-1 text-[10px] font-bold text-amber-300 backdrop-blur-sm">
@@ -591,9 +705,9 @@ function AchievementDetailModal({ achievement, onClose }) {
         </div>
 
         {/* ── Body ── */}
-        <div className="px-5 pt-5 pb-10 sm:px-6">
-          {/* Title block */}
-          <div className="mb-5 border-b border-white/8 pb-5">
+        <div className="px-5 pt-5 pb-10 sm:px-7">
+          {/* Header — chips, title, single meta row */}
+          <div className="mb-6 border-b border-white/8 pb-6">
             <div className="mb-3 flex flex-wrap items-center gap-1.5">
               {achievement.year && (
                 <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-zinc-300">
@@ -612,97 +726,147 @@ function AchievementDetailModal({ achievement, onClose }) {
             <h2 className="text-2xl leading-tight font-bold text-white sm:text-3xl">
               {achievement.title}
             </h2>
-          </div>
 
-          {/* Result + date row */}
-          <div className="mb-5 flex flex-wrap items-center gap-2.5">
-            {rs && (
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
-                  rs.badge
-                )}
-              >
-                {rs.emoji} <ResultText text={achievement.result} />
-              </span>
-            )}
-            {achievement.achievement_date && (
-              <span className="text-xs text-gray-400">
-                📅{' '}
-                {new Date(achievement.achievement_date).toLocaleDateString(
-                  'en-US',
-                  { year: 'numeric', month: 'long', day: 'numeric' }
-                )}
-              </span>
-            )}
-          </div>
-
-          {/* Contest */}
-          {achievement.contest_name && (
-            <div className="mb-4 flex items-start gap-3 rounded-xl border border-white/6 bg-white/3 px-4 py-3">
-              <span className="mt-0.5 text-base">🏟</span>
-              <div className="min-w-0 flex-1">
-                <p className="mb-0.5 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                  Contest
-                </p>
-                <p className="text-sm font-semibold text-gray-200">
+            {/* Result · date · contest — one compact meta row */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+              {rs && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
+                    rs.badge
+                  )}
+                >
+                  {rs.emoji} <ResultText text={achievement.result} />
+                </span>
+              )}
+              {achievement.achievement_date && (
+                <span className="text-xs text-zinc-400">
+                  {new Date(achievement.achievement_date).toLocaleDateString(
+                    'en-US',
+                    { year: 'numeric', month: 'short', day: 'numeric' }
+                  )}
+                </span>
+              )}
+              {achievement.contest_name && (
+                <span className="flex min-w-0 items-center gap-1 text-xs text-zinc-400">
+                  <span className="text-zinc-600" aria-hidden>·</span>
                   {achievement.contest_url ? (
                     <a
                       href={achievement.contest_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline underline-offset-2 transition-colors hover:text-blue-300"
+                      className="hover:text-neon-lime truncate underline underline-offset-2 transition-colors"
                     >
-                      {achievement.contest_name}{' '}
-                      <span className="text-blue-400 no-underline">↗</span>
+                      {achievement.contest_name} ↗
                     </a>
                   ) : (
-                    achievement.contest_name
+                    <span className="truncate">{achievement.contest_name}</span>
                   )}
-                </p>
-              </div>
+                </span>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Description */}
           {achievement.description && (
-            <p className="mb-5 text-sm leading-relaxed text-gray-400">
+            <p className="mb-6 text-sm leading-relaxed text-zinc-400">
               {achievement.description}
             </p>
           )}
 
-          {/* Participants / Team */}
-          {(participants.length > 0 || achievement.team_name) && (
-            <div className="mb-5">
-              <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                {achievement.is_team ? '👥 Team' : '👤 Participants'}
+          {/* Members / Team */}
+          {(members.length > 0 ||
+            participants.length > 0 ||
+            achievement.team_name) && (
+            <div className="mb-6">
+              <p className="mb-2.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                {achievement.is_team ? 'Team' : 'Participants'}
+                {achievement.team_name && (
+                  <span className="ml-2 normal-case tracking-normal text-sky-300">
+                    {achievement.team_name}
+                  </span>
+                )}
               </p>
-              {achievement.team_name && (
-                <p className="mb-2 text-sm font-semibold text-sky-300">
-                  {achievement.team_name}
-                </p>
-              )}
-              {participants.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {participants.map((p, i) => (
-                    <span
-                      key={i}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300"
-                    >
-                      {p}
-                    </span>
-                  ))}
+              {members.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {members.map((m) => {
+                    const inner = (
+                      <>
+                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                          {m.avatarUrl ? (
+                            <Image
+                              src={m.avatarUrl}
+                              alt={m.name}
+                              width={36}
+                              height={36}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-xs font-bold text-gray-500">
+                              {m.name[0]?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-gray-200 group-hover/member:text-neon-lime">
+                            {m.name}
+                          </p>
+                          <p className="truncate font-mono text-[10px] text-gray-500">
+                            {m.username ? `@${m.username}` : ''}
+                            {m.username && m.position ? ' · ' : ''}
+                            {m.position ?? ''}
+                          </p>
+                        </div>
+                        {m.username && (
+                          <span className="shrink-0 text-[10px] text-gray-600 transition-colors group-hover/member:text-neon-lime">
+                            ↗
+                          </span>
+                        )}
+                      </>
+                    );
+                    return m.username ? (
+                      <Link
+                        key={m.id}
+                        href={`/user/${m.username}`}
+                        className="group/member flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 transition-colors hover:border-neon-lime/40 hover:bg-white/[0.06]"
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"
+                      >
+                        {inner}
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
+                participants.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {participants.map((p, i) => (
+                      <span
+                        key={i}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           )}
 
           {/* Platform / Profile */}
           {(achievement.platform || achievement.profile_url) && (
-            <div className="mb-5 flex flex-wrap items-center gap-4">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
               {achievement.platform && (
-                <span className="text-xs font-medium text-gray-400">
-                  🖥 {achievement.platform}
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] font-bold tracking-wider text-zinc-300 uppercase">
+                  <span className="bg-neon-lime h-1.5 w-1.5 rounded-full" />
+                  {achievement.platform}
                 </span>
               )}
               {achievement.profile_url && (
@@ -710,9 +874,9 @@ function AchievementDetailModal({ achievement, onClose }) {
                   href={achievement.profile_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-medium text-blue-400 underline underline-offset-2 transition-colors hover:text-blue-300"
+                  className="hover:border-neon-lime/40 hover:text-neon-lime inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[10px] font-bold tracking-wider text-zinc-300 uppercase transition-colors"
                 >
-                  View Profile ↗
+                  Submission ↗
                 </a>
               )}
             </div>
@@ -721,8 +885,11 @@ function AchievementDetailModal({ achievement, onClose }) {
           {/* Gallery grid */}
           {galleryImages.length > 0 && (
             <div>
-              <p className="mb-3 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                🖼 Gallery ({galleryImages.length})
+              <p className="mb-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Gallery
+                <span className="ml-1.5 text-zinc-600 tabular-nums">
+                  {galleryImages.length}
+                </span>
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {galleryImages.map((img, i) => (
@@ -764,97 +931,15 @@ function AchievementDetailModal({ achievement, onClose }) {
 
       {/* ── Gallery lightbox (nested above the sheet) ── */}
       {activePhoto && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/95 p-4"
-          onClick={() => setActivePhoto(null)}
-        >
-          <button
-            onClick={() => setActivePhoto(null)}
-            aria-label="Close photo viewer"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-          {galleryImages.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = galleryImages.findIndex(
-                    (p) => p.id === activePhoto.id
-                  );
-                  setActivePhoto(
-                    galleryImages[
-                      (idx - 1 + galleryImages.length) % galleryImages.length
-                    ]
-                  );
-                }}
-                aria-label="Previous photo"
-                className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = galleryImages.findIndex(
-                    (p) => p.id === activePhoto.id
-                  );
-                  setActivePhoto(
-                    galleryImages[(idx + 1) % galleryImages.length]
-                  );
-                }}
-                aria-label="Next photo"
-                className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </>
-          )}
-          <div
-            className="max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Image
-              src={activePhoto.url}
-              alt={activePhoto.name ?? 'Gallery photo'}
-              width={1200}
-              height={900}
-              className="max-h-[85vh] max-w-[90vw] object-contain"
-              unoptimized
-            />
-          </div>
-          {galleryImages.length > 1 && (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white/60 tabular-nums backdrop-blur-sm">
-              {galleryImages.findIndex((p) => p.id === activePhoto.id) + 1} /{' '}
-              {galleryImages.length}
-            </p>
-          )}
-        </div>
+        <PhotoLightbox
+          photos={galleryImages}
+          activePhoto={activePhoto}
+          onClose={() => setActivePhoto(null)}
+          onSelect={setActivePhoto}
+        />
       )}
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -867,10 +952,10 @@ function ParticipationDetailModal({ record, onClose }) {
   const catColor =
     PARTICIPATION_CATEGORY_COLORS[record.category] ??
     'border-slate-500/30 bg-slate-500/10 text-slate-300';
-  const catEmoji = PARTICIPATION_CATEGORY_EMOJI[record.category] ?? '🎯';
   const members = record.team_members ?? [];
   const photos = record.photos ?? [];
   const [activePhoto, setActivePhoto] = useState(null);
+  const closeButtonRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -889,7 +974,16 @@ function ParticipationDetailModal({ record, onClose }) {
     };
   }, [onClose, activePhoto]);
 
-  return (
+  // Move focus into the dialog on open so keyboard/screen-reader users
+  // aren't left tabbing through the page behind the modal.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
+  // Portal to <body> so `fixed inset-0` anchors to the viewport — any
+  // transformed ancestor (framer-motion sections) would otherwise become
+  // the containing block and the sheet would open in the wrong place.
+  return createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 sm:pt-24"
       onClick={onClose}
@@ -912,9 +1006,23 @@ function ParticipationDetailModal({ record, onClose }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 max-h-[96vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl"
+        className="relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-950 shadow-[0_-8px_80px_rgba(0,0,0,0.8)] [scrollbar-width:none] sm:max-h-[calc(90vh-6rem)] sm:max-w-2xl sm:rounded-3xl [&::-webkit-scrollbar]:hidden"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close button — sticky so it stays visible while the sheet scrolls */}
+        <div className="sticky top-0 z-20 h-0">
+          <button
+            ref={closeButtonRef}
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
         {/* ── Cover image — full & uncropped ── */}
         <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-t-3xl bg-black">
           {/* Blurred backdrop fill so the full image can show uncropped */}
@@ -934,28 +1042,12 @@ function ParticipationDetailModal({ record, onClose }) {
             className="object-contain"
             unoptimized
           />
-
-          <button
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/80"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-
-          {record.is_team && (
-            <span className="absolute top-4 left-4 inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/20 px-2.5 py-1 text-[10px] font-bold text-sky-300 backdrop-blur-sm">
-              👥 Team
-            </span>
-          )}
         </div>
 
         {/* ── Body ── */}
-        <div className="px-5 pt-5 pb-10 sm:px-6">
-          {/* Title block */}
-          <div className="mb-5 border-b border-white/8 pb-5">
+        <div className="px-5 pt-5 pb-10 sm:px-7">
+          {/* Header — chips, title, single meta row */}
+          <div className="mb-6 border-b border-white/8 pb-6">
             <div className="mb-3 flex flex-wrap items-center gap-1.5">
               {record.year && (
                 <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-zinc-300">
@@ -965,87 +1057,83 @@ function ParticipationDetailModal({ record, onClose }) {
               {record.category && (
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
+                    'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
                     catColor
                   )}
                 >
-                  {catEmoji} {record.category}
+                  {record.category}
                 </span>
               )}
             </div>
             <h2 className="text-2xl leading-tight font-bold text-white sm:text-3xl">
               {record.contest_name}
             </h2>
-          </div>
 
-          {/* Result + date */}
-          <div className="mb-5 flex flex-wrap items-center gap-2.5">
-            {rs && (
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
-                  rs.badge
-                )}
-              >
-                {rs.emoji} <ResultText text={record.result} />
-              </span>
-            )}
-            {record.participation_date && (
-              <span className="text-xs text-gray-400">
-                📅{' '}
-                {new Date(record.participation_date).toLocaleDateString(
-                  'en-US',
-                  { year: 'numeric', month: 'long', day: 'numeric' }
-                )}
-              </span>
-            )}
-            {record.contest_url && (
-              <a
-                href={record.contest_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-300 transition-colors hover:border-blue-400/30 hover:text-blue-200"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  className="h-3 w-3 opacity-70"
+            {/* Result · date · contest link — one compact meta row */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+              {rs && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
+                    rs.badge
+                  )}
                 >
-                  <path d="M6.22 8.72a.75.75 0 0 0 1.06 1.06l5.22-5.22v1.69a.75.75 0 0 0 1.5 0v-3.5a.75.75 0 0 0-.75-.75h-3.5a.75.75 0 0 0 0 1.5h1.69L6.22 8.72Z" />
-                  <path d="M3.5 6.75c0-.69.56-1.25 1.25-1.25H7A.75.75 0 0 0 7 4H4.75A2.75 2.75 0 0 0 2 6.75v4.5A2.75 2.75 0 0 0 4.75 14h4.5A2.75 2.75 0 0 0 12 11.25V9a.75.75 0 0 0-1.5 0v2.25c0 .69-.56 1.25-1.25 1.25h-4.5c-.69 0-1.25-.56-1.25-1.25v-4.5Z" />
-                </svg>
-                Contest link
-              </a>
-            )}
+                  {rs.emoji} <ResultText text={record.result} />
+                </span>
+              )}
+              {record.participation_date && (
+                <span className="text-xs text-zinc-400">
+                  {new Date(record.participation_date).toLocaleDateString(
+                    'en-US',
+                    { year: 'numeric', month: 'short', day: 'numeric' }
+                  )}
+                </span>
+              )}
+              {record.contest_url && (
+                <span className="flex items-center gap-1 text-xs text-zinc-400">
+                  <span className="text-zinc-600" aria-hidden>·</span>
+                  <a
+                    href={record.contest_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-neon-lime underline underline-offset-2 transition-colors"
+                  >
+                    Contest page ↗
+                  </a>
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Linked achievement */}
           {record.achievements && (
-            <div className="mb-5 flex items-center gap-3 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-3">
-              <span className="text-lg">🏆</span>
-              <div>
-                <p className="mb-0.5 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                  Linked Achievement
-                </p>
-                <p className="text-sm font-semibold text-violet-200">
-                  {record.achievements.title}
-                </p>
-              </div>
+            <div className="mb-6 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-3">
+              <p className="mb-0.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Related achievement
+              </p>
+              <p className="text-sm font-semibold text-violet-200">
+                {record.achievements.title}
+              </p>
             </div>
           )}
 
           {/* Notes */}
           {record.notes && (
-            <p className="mb-5 text-sm leading-relaxed text-gray-400">
+            <p className="mb-6 text-sm leading-relaxed text-zinc-400">
               {record.notes}
             </p>
           )}
 
           {/* Lead member + team */}
           {(record.users || members.length > 0) && (
-            <div className="mb-5">
-              <p className="mb-2.5 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                {record.is_team ? '👥 Team Members' : '👤 Participant'}
+            <div className="mb-6">
+              <p className="mb-2.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                {record.is_team ? 'Team' : 'Participant'}
+                {record.team_name && (
+                  <span className="ml-2 normal-case tracking-normal text-sky-300">
+                    {record.team_name}
+                  </span>
+                )}
               </p>
               {record.users && (
                 <div className="mb-3 flex items-center gap-3">
@@ -1067,11 +1155,6 @@ function ParticipationDetailModal({ record, onClose }) {
                   <p className="flex-1 text-sm font-semibold text-white/85">
                     {record.users.full_name}
                   </p>
-                  {record.team_name && (
-                    <span className="text-xs text-sky-400">
-                      {record.team_name}
-                    </span>
-                  )}
                 </div>
               )}
               {members.length > 0 && (
@@ -1110,8 +1193,11 @@ function ParticipationDetailModal({ record, onClose }) {
           {/* Photos grid */}
           {photos.length > 0 && (
             <div>
-              <p className="mb-3 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-                🖼 Photos ({photos.length})
+              <p className="mb-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Photos
+                <span className="ml-1.5 text-zinc-600 tabular-nums">
+                  {photos.length}
+                </span>
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {photos.map((img, i) => (
@@ -1153,89 +1239,15 @@ function ParticipationDetailModal({ record, onClose }) {
 
       {/* ── Photo lightbox (nested above the sheet) ── */}
       {activePhoto && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/95 p-4"
-          onClick={() => setActivePhoto(null)}
-        >
-          <button
-            onClick={() => setActivePhoto(null)}
-            aria-label="Close photo viewer"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-          {photos.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = photos.findIndex((p) => p.id === activePhoto.id);
-                  setActivePhoto(
-                    photos[(idx - 1 + photos.length) % photos.length]
-                  );
-                }}
-                aria-label="Previous photo"
-                className="absolute top-1/2 left-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = photos.findIndex((p) => p.id === activePhoto.id);
-                  setActivePhoto(photos[(idx + 1) % photos.length]);
-                }}
-                aria-label="Next photo"
-                className="absolute top-1/2 right-4 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </>
-          )}
-          <div
-            className="max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Image
-              src={activePhoto.url}
-              alt={activePhoto.name ?? 'Photo'}
-              width={1200}
-              height={900}
-              className="max-h-[85vh] max-w-[90vw] object-contain"
-              unoptimized
-            />
-          </div>
-          {photos.length > 1 && (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white/60 tabular-nums backdrop-blur-sm">
-              {photos.findIndex((p) => p.id === activePhoto.id) + 1} /{' '}
-              {photos.length}
-            </p>
-          )}
-        </div>
+        <PhotoLightbox
+          photos={photos}
+          activePhoto={activePhoto}
+          onClose={() => setActivePhoto(null)}
+          onSelect={setActivePhoto}
+        />
       )}
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -1254,6 +1266,11 @@ function AchievementCard({ achievement, onClick }) {
   const participants = Array.isArray(achievement.participants)
     ? achievement.participants
     : [];
+  const cardMembers = (achievement.member_achievements ?? []).map((m) => ({
+    id: m.id,
+    name: m.users?.full_name ?? 'Member',
+    avatarUrl: m.users?.avatar_url ?? null,
+  }));
 
   return (
     <div
@@ -1275,7 +1292,11 @@ function AchievementCard({ achievement, onClick }) {
       {/* Cover image */}
       <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
-          src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
+          src={
+            achievement.featured_photo?.variants?.featured?.url ||
+            achievement.featured_photo?.url ||
+            '/placeholder-event.png'
+          }
           alt={achievement.featured_photo?.name ?? achievement.title}
           fill
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
@@ -1285,14 +1306,14 @@ function AchievementCard({ achievement, onClick }) {
         <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-[#08090f]/40 to-transparent" />
         <div className="absolute inset-0 bg-neon-lime/0 transition-colors duration-500 group-hover:bg-neon-lime/[0.04]" />
         {/* Top badges row */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        <div className="absolute top-3 right-3 left-3 flex items-center justify-end gap-1.5">
           {rs && (
-            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
+            <span className={cn('inline-flex max-w-[65%] items-center gap-1 truncate rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
               {rs.emoji} <ResultText text={achievement.result} />
             </span>
           )}
           {achievement.year && (
-            <span className="rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
+            <span className="shrink-0 rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
               {achievement.year}
             </span>
           )}
@@ -1306,8 +1327,8 @@ function AchievementCard({ achievement, onClick }) {
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-5">
-        {/* Category tags */}
-        {categories.length > 0 && (
+        {/* Category + platform tags */}
+        {(categories.length > 0 || achievement.platform) && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {categories.slice(0, 2).map((cat) => (
               <span
@@ -1317,6 +1338,11 @@ function AchievementCard({ achievement, onClick }) {
                 {cat}
               </span>
             ))}
+            {achievement.platform && (
+              <span className="border-neon-lime/20 bg-neon-lime/5 text-neon-lime/80 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
+                {achievement.platform}
+              </span>
+            )}
           </div>
         )}
 
@@ -1340,8 +1366,47 @@ function AchievementCard({ achievement, onClick }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 border-t border-white/6 pt-3.5">
-          <div className="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-zinc-500">
-            {achievement.is_team ? (
+          <div className="flex min-w-0 items-center gap-2 font-mono text-[10px] text-zinc-500">
+            {cardMembers.length > 0 ? (
+              <>
+                <span className="flex -space-x-2">
+                  {cardMembers.slice(0, 3).map((m) => (
+                    <span
+                      key={m.id}
+                      title={m.name}
+                      className="h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 border-[#08090f] bg-white/10"
+                    >
+                      {m.avatarUrl ? (
+                        <Image
+                          src={m.avatarUrl}
+                          alt={m.name}
+                          width={24}
+                          height={24}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-[9px] font-bold text-zinc-400">
+                          {m.name[0]?.toUpperCase()}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                  {cardMembers.length > 3 && (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#08090f] bg-white/10 text-[8px] font-bold text-zinc-300">
+                      +{cardMembers.length - 3}
+                    </span>
+                  )}
+                </span>
+                <span className="max-w-[110px] truncate">
+                  {achievement.is_team && achievement.team_name
+                    ? achievement.team_name
+                    : cardMembers.length === 1
+                      ? cardMembers[0].name
+                      : `${cardMembers.length} members`}
+                </span>
+              </>
+            ) : achievement.is_team ? (
               <>
                 <span>👥</span>
                 <span className="max-w-[130px] truncate">
@@ -1406,13 +1471,13 @@ function ParticipationRecordCard({ record, onClick }) {
         <div className="absolute inset-0 bg-linear-to-t from-[#08090f] via-[#08090f]/40 to-transparent" />
         <div className="absolute inset-0 bg-neon-lime/0 transition-colors duration-500 group-hover:bg-neon-lime/[0.04]" />
         {/* Top badges */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        <div className="absolute top-3 right-3 left-3 flex items-center justify-end gap-1.5">
           {rs && (
-            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
+            <span className={cn('inline-flex max-w-[65%] items-center gap-1 truncate rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold backdrop-blur-md', rs.badge)}>
               {rs.emoji} <ResultText text={record.result} />
             </span>
           )}
-          <span className="rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
+          <span className="shrink-0 rounded-lg bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
             {record.year}
           </span>
         </div>
@@ -1551,6 +1616,30 @@ export default function AchievementsClient({
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [selectedParticipation, setSelectedParticipation] = useState(null);
 
+  // ── Deep link: ?achievement=<id> auto-opens that achievement's detail modal ──
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const achievementId = searchParams.get('achievement');
+    if (!achievementId) return;
+    const match = achievements.find((a) => a.id === achievementId);
+    if (match) {
+      setSelectedAchievement(match);
+    }
+    // Always strip the `achievement` param — whether or not a match was found —
+    // so a stale/mismatched id (e.g. the homepage's 5-minute cache pointing
+    // at an achievement that was just edited/unfeatured) never leaves a
+    // dead link sitting in the URL with no visible effect. Other params
+    // (e.g. UTM tracking) are preserved.
+    const params = new URLSearchParams(searchParams);
+    params.delete('achievement');
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Scroll refs & callbacks ──────────────────────────────────────────────
   const gridRef = useRef(null);
   const leaderboardRef = useRef(null);
@@ -1636,12 +1725,18 @@ export default function AchievementsClient({
         total: parsed.total,
         topPercentage: parsed.topPercentage,
         percentile: parsed.percentile,
+        hasRealTotal: parsed.hasRealTotal,
       });
     });
-    
+
     return entries
       .sort((a, b) => {
-        if (b.percentile !== a.percentile) {
+        // Entries with a real percentile always outrank rank-only entries,
+        // since we can't compare a computed percentile to an unknown one.
+        if (a.hasRealTotal !== b.hasRealTotal) {
+          return a.hasRealTotal ? -1 : 1;
+        }
+        if (a.hasRealTotal && b.hasRealTotal && b.percentile !== a.percentile) {
           return b.percentile - a.percentile;
         }
         if (a.rank !== null && b.rank !== null) {
@@ -1902,29 +1997,30 @@ export default function AchievementsClient({
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
+                <div className="sm:pr-6 lg:pr-8">
                   <StatTile
                     value={<><AnimatedCounter value={propAchievements.length} />+</>}
                     label="Achievements"
                     mobileLabel="Total"
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={<><AnimatedCounter value={medalistCount} />+</>}
                     label="Medalists"
+                    mobileLabel="Medals"
                     accent
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={<><AnimatedCounter value={propParticipations.length} />+</>}
                     label="Participations"
                     mobileLabel="Events"
                   />
                 </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
+                <div className="sm:pl-6 lg:pl-8">
                   <StatTile
                     value={<><AnimatedCounter value={yearsActive} />+</>}
                     label="Years Active"
@@ -1977,7 +2073,7 @@ export default function AchievementsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
+            className="glass-panel relative z-20 space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search bar + Tab toggle row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1999,7 +2095,7 @@ export default function AchievementsClient({
                   <button
                     onClick={() => setSearchQuery('')}
                     aria-label="Clear search"
-                    className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-full p-0.5 text-zinc-500 transition-colors hover:text-zinc-300"
+                    className="absolute top-1/2 right-1 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-zinc-300"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -2010,27 +2106,24 @@ export default function AchievementsClient({
 
               {/* Tab toggle */}
               {propParticipations.length > 0 && (
-                <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-white/8 bg-white/2 p-0.5">
+                <div className="flex items-center gap-0.5 rounded-xl border border-white/8 bg-white/2 p-0.5 sm:w-auto sm:shrink-0">
                   {[
                     { key: 'achievements', label: '🏆 Achievements', count: propAchievements.length },
                     { key: 'participations', label: '📋 Participations', count: propParticipations.length },
                   ].map(({ key, label, count }) => (
                     <button
                       key={key}
-                      onClick={() => {
-                        setActiveTab(key);
-                        setSearchQuery('');
-                      }}
+                      onClick={() => setActiveTab(key)}
                       className={cn(
-                        'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all',
+                        'inline-flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider transition-all sm:flex-none sm:px-3 sm:text-[10px]',
                         activeTab === key
                           ? 'bg-neon-lime/15 text-neon-lime shadow-sm'
                           : 'text-zinc-500 hover:text-zinc-300'
                       )}
                     >
-                      {label}
+                      <span className="truncate">{label}</span>
                       <span className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[8px] tabular-nums',
+                        'shrink-0 rounded-full px-1.5 py-0.5 text-[8px] tabular-nums',
                         activeTab === key ? 'bg-neon-lime/20 text-neon-lime' : 'bg-white/5 text-zinc-600'
                       )}>
                         {count}
@@ -2053,7 +2146,7 @@ export default function AchievementsClient({
                         key={category.name}
                         onClick={() => { setActiveFilter(category.name); setAchPage(1); }}
                         className={cn(
-                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          'inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                           isActive
                             ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
                             : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
@@ -2071,8 +2164,9 @@ export default function AchievementsClient({
                     <FilterSelect value={achYearFilter} onChange={(v) => { setAchYearFilter(v); setAchPage(1); }} options={achievementYears} label="Year" />
                   )}
                   <FilterSelect value={achTypeFilter} onChange={(v) => { setAchTypeFilter(v); setAchPage(1); }} options={['All', 'Team', 'Individual']} label="Type" />
+                  <FilterSelect value={achResultFilter} onChange={(v) => { setAchResultFilter(v); setAchPage(1); }} options={['All', 'Medalist', 'Finalist', 'Qualified', 'Participant']} label="Result" />
                   {hasActiveAchievementFilters && (
-                    <button onClick={resetAchievementFilters} className="text-neon-lime hover:bg-neon-lime/10 rounded-lg p-1.5 transition-colors" title="Clear filters">
+                    <button onClick={resetAchievementFilters} aria-label="Clear filters" title="Clear filters" className="text-neon-lime hover:bg-neon-lime/10 flex h-11 w-11 items-center justify-center rounded-lg transition-colors">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   )}
@@ -2093,7 +2187,7 @@ export default function AchievementsClient({
                         key={cat}
                         onClick={() => { setParticipatCatFilter(cat); setParticipatPage(1); }}
                         className={cn(
-                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          'inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full px-3 py-1 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                           isActive
                             ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
                             : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
@@ -2110,7 +2204,7 @@ export default function AchievementsClient({
                     <FilterSelect value={participYearFilter} onChange={(v) => { setParticipatYearFilter(v); setParticipatPage(1); }} options={participationYears} label="Year" />
                   )}
                   {hasActiveParticipationFilters && (
-                    <button onClick={resetParticipationFilters} className="text-neon-lime hover:bg-neon-lime/10 rounded-lg p-1.5 transition-colors" title="Clear filters">
+                    <button onClick={resetParticipationFilters} aria-label="Clear filters" title="Clear filters" className="text-neon-lime hover:bg-neon-lime/10 flex h-11 w-11 items-center justify-center rounded-lg transition-colors">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   )}
@@ -2211,7 +2305,7 @@ export default function AchievementsClient({
             className="glass-panel space-y-6 rounded-2xl p-4 sm:p-6"
           >
             {/* Header / Filters row */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
+            <div className="relative z-20 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
                   Filters:
@@ -2270,8 +2364,10 @@ export default function AchievementsClient({
                           })()}
                         </div>
 
-                        {/* Rank progress bar */}
-                        <LeaderboardRankProgressBar topPercentage={entry.topPercentage} />
+                        {/* Rank progress bar — only when we have a real field size to compute it from */}
+                        {entry.hasRealTotal && (
+                          <LeaderboardRankProgressBar topPercentage={entry.topPercentage} />
+                        )}
 
                         {/* Info */}
                         <div className="min-w-0 flex-1">
@@ -2328,11 +2424,19 @@ export default function AchievementsClient({
                           </div>
                         )}
 
-                        {/* Rank Percentile Pill */}
+                        {/* Rank Percentile Pill — falls back to the raw result when the
+                            contest's field size isn't known, rather than showing a
+                            fabricated percentage */}
                         <div className="text-right shrink-0">
-                          <div className="font-heading text-lg font-black text-neon-lime">
-                            Top {entry.topPercentage.toFixed(1)}%
-                          </div>
+                          {entry.hasRealTotal ? (
+                            <div className="font-heading text-lg font-black text-neon-lime">
+                              Top {entry.topPercentage.toFixed(1)}%
+                            </div>
+                          ) : (
+                            <div className="font-heading text-lg font-black text-neon-lime">
+                              Rank #{entry.rank}
+                            </div>
+                          )}
                           <div className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
                             {entry.result}
                           </div>

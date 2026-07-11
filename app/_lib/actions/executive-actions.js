@@ -8,6 +8,7 @@
 import { auth } from '@/app/_lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { getUserRoles, getUserByEmail } from '@/app/_lib/services/data-service';
+import { generateUniqueUsername } from '@/app/_lib/services/data/members';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import {
@@ -1035,8 +1036,10 @@ export async function execUpdateProfileAction(formData) {
       .eq('user_id', user.id);
     if (error) return { error: error.message };
   } else {
+    const username = await generateUniqueUsername(user.full_name, user.id);
     const { error } = await supabaseAdmin.from('member_profiles').insert({
       user_id: user.id,
+      username,
       ...profileUpdates,
     });
     if (error) return { error: error.message };

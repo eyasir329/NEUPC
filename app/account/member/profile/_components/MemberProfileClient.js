@@ -72,7 +72,7 @@ import {
   ActionButton,
   Pill,
 } from '@/app/account/_components/ui';
-import { MOCK_PROFILE } from '@/app/user/[username]/_components/mockData';
+import { MOCK_PROFILE } from './mockData';
 
 const HANDLE_PLATFORMS = [
   { id: 'codeforces', name: 'Codeforces', color: '#ef4444' },
@@ -781,7 +781,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                 {user?.phone && (
                   <p className="text-[11px] text-zinc-400 font-mono mt-0.5">📞 {user.phone}</p>
                 )}
-                <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1 text-xs text-zinc-550 font-medium">
+                <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1 text-xs text-zinc-500 font-medium">
                   <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-600" /> {profile.location}</span>
                   <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-600" /> {profile.university}</span>
                 </div>
@@ -848,22 +848,22 @@ export default function MemberProfileClient({ user, memberProfile }) {
           <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
             <Code2 size={18} className="text-[#B6F36B] mb-1" />
             <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalSolved}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Solved Problems</span>
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Solved Problems</span>
           </div>
           <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
             <Flame size={18} className="text-orange-500 mb-1" />
             <span className="text-xl font-bold font-mono text-white">{profile.quickStats.currentStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Current Streak</span>
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Current Streak</span>
           </div>
           <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
             <Trophy size={18} className="text-yellow-500 mb-1" />
             <span className="text-xl font-bold font-mono text-white">{profile.quickStats.longestStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Longest Streak</span>
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Longest Streak</span>
           </div>
           <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
             <Award size={18} className="text-sky-400 mb-1" />
             <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalContests}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Contests Rated</span>
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Contests Rated</span>
           </div>
         </div>
 
@@ -982,7 +982,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                 {profile.references.map((ref, i) => (
                   <div key={i} className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl space-y-1 text-xs">
                     <div className="font-bold text-neutral-200">{ref.name}</div>
-                    <div className="text-[10px] text-zinc-550">{ref.designation} · {ref.institution}</div>
+                    <div className="text-[10px] text-zinc-500">{ref.designation} · {ref.institution}</div>
                     <div className="text-[10px] font-mono text-[#7C5CFF] hover:underline cursor-pointer">{ref.email}</div>
                   </div>
                 ))}
@@ -1159,7 +1159,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                         {renderHeatmap('GitHub Contributions', <Github size={13} className="text-sky-400" />, githubCols, totalGithubContributions, 'text-sky-400')}
 
                         {/* Legend */}
-                        <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-white/[0.03] text-[10.5px] font-mono text-zinc-550">
+                        <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-white/[0.03] text-[10.5px] font-mono text-zinc-500">
                           <span>Less</span>
                           <div className="w-[10px] h-[10px] rounded-sm bg-white/[0.02]" />
                           <div className="w-[10px] h-[10px] rounded-sm bg-emerald-950/70" />
@@ -1264,11 +1264,11 @@ export default function MemberProfileClient({ user, memberProfile }) {
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                                 <div>
                                   <span className="font-bold text-sm text-zinc-200">{exp.role}</span>
-                                  <span className="text-zinc-550 mx-1.5">@</span>
+                                  <span className="text-zinc-500 mx-1.5">@</span>
                                   <span className="text-[#B6F36B] font-semibold">{exp.company}</span>
                                   <span className="ml-2 bg-white/[0.03] border border-white/[0.08] px-2 py-0.5 rounded text-[9px] font-mono uppercase text-zinc-400">{exp.type}</span>
                                 </div>
-                                <span className="text-zinc-550 font-mono text-[11px]">{exp.period}</span>
+                                <span className="text-zinc-500 font-mono text-[11px]">{exp.period}</span>
                               </div>
                               <p className="text-xs text-zinc-400 leading-relaxed font-sans">{exp.description}</p>
                               <div className="flex flex-wrap gap-1">
@@ -1294,7 +1294,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                                   <span className="text-zinc-555 mx-1.5">@</span>
                                   <span className="text-[#B6F36B] font-semibold">{res.institution}</span>
                                 </div>
-                                <span className="text-zinc-550 font-mono text-[11px]">{res.period}</span>
+                                <span className="text-zinc-500 font-mono text-[11px]">{res.period}</span>
                               </div>
                               <p className="text-xs text-zinc-400 leading-relaxed font-sans">{res.description}</p>
                             </div>
@@ -1400,7 +1400,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                                 </div>
                                 <div className="text-right shrink-0">
                                   <div className="text-xs font-mono font-bold" style={{ color: h.color }}>{h.rating}</div>
-                                  <div className="text-[10px] text-zinc-550">{h.solved}</div>
+                                  <div className="text-[10px] text-zinc-500">{h.solved}</div>
                                 </div>
                               </a>
                             ))}
@@ -1414,7 +1414,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs font-mono text-left">
                             <thead>
-                              <tr className="border-b border-white/[0.06] text-zinc-550">
+                              <tr className="border-b border-white/[0.06] text-zinc-500">
                                 <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Platform</th>
                                 <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Contest Title</th>
                                 <th className="py-2.5 px-1 text-right text-[9px] uppercase tracking-wider font-bold">Rank</th>
@@ -1446,7 +1446,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                                   <span className="font-bold text-zinc-200">{item.event}</span>
                                   <span className="bg-[#7C5CFF]/15 border border-[#7C5CFF]/30 text-[#c4b5fd] px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold">{item.type}</span>
                                 </div>
-                                <div className="text-[10px] text-zinc-550 font-medium">Team: {item.team} · Roles: {item.role}</div>
+                                <div className="text-[10px] text-zinc-500 font-medium">Team: {item.team} · Roles: {item.role}</div>
                               </div>
                               <span className="text-emerald-450 font-bold shrink-0 text-right sm:text-left">{item.achievement}</span>
                             </div>
@@ -1467,9 +1467,9 @@ export default function MemberProfileClient({ user, memberProfile }) {
                             <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
                               <div>
                                 <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-550 font-mono shrink-0">{item.date}</span>
+                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
                             </div>
                           ))}
                         </div>
@@ -1483,7 +1483,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
                             <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
                               <div>
                                 <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
                               </div>
                               <span className="text-[10.5px] text-zinc-555 font-mono shrink-0">{item.date}</span>
                             </div>

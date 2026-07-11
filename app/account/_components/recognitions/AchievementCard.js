@@ -8,6 +8,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   getCategoryConfig,
@@ -290,24 +291,62 @@ export default function AchievementCard({
             </p>
           )}
 
-          {/* ── Participants (plain text list) ──────────────────────────── */}
-          {achievement.participants?.length > 0 && (
+          {/* ── Linked members (real accounts, clickable) ───────────────── */}
+          {achievement.member_achievements?.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
-              {achievement.participants.slice(0, 4).map((p) => (
-                <Pill
-                  key={p}
-                  tone="gray"
-                  className="border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] text-gray-300"
-                >
-                  {p}
-                </Pill>
-              ))}
-              {achievement.participants.length > 4 && (
+              {achievement.member_achievements.slice(0, 4).map((m) => {
+                const username = m.users?.member_profiles?.username;
+                const label = m.users?.full_name ?? 'Unknown member';
+                return username ? (
+                  <Link
+                    key={m.id}
+                    href={`/user/${username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Pill
+                      tone="gray"
+                      className="border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] text-gray-300 hover:border-amber-500/30 hover:text-amber-300"
+                    >
+                      {label}
+                    </Pill>
+                  </Link>
+                ) : (
+                  <Pill
+                    key={m.id}
+                    tone="gray"
+                    className="border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] text-gray-300"
+                  >
+                    {label}
+                  </Pill>
+                );
+              })}
+              {achievement.member_achievements.length > 4 && (
                 <span className="ml-1 text-[10px] font-semibold text-gray-500">
-                  +{achievement.participants.length - 4}
+                  +{achievement.member_achievements.length - 4}
                 </span>
               )}
             </div>
+          ) : (
+            achievement.participants?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {achievement.participants.slice(0, 4).map((p) => (
+                  <Pill
+                    key={p}
+                    tone="gray"
+                    className="border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] text-gray-300"
+                  >
+                    {p}
+                  </Pill>
+                ))}
+                {achievement.participants.length > 4 && (
+                  <span className="ml-1 text-[10px] font-semibold text-gray-500">
+                    +{achievement.participants.length - 4}
+                  </span>
+                )}
+              </div>
+            )
           )}
 
           {/* ── Platform + Links ────────────────────────────────────────── */}

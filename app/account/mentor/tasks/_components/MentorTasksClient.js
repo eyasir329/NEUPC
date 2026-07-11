@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
-import { marked } from 'marked';
+import MarkdownRenderer from '@/app/_components/markdown/MarkdownRenderer';
 
 const MultiBlockEditor = dynamic(
   () => import('@/app/account/admin/bootcamps/_components/MultiBlockEditor'),
@@ -65,56 +65,14 @@ const LessonContentRenderer = dynamic(
   { ssr: false }
 );
 
-// Lightweight markdown renderer for task/session descriptions
-const MD_DESC_STYLES = `
-.md-desc{display:grid;grid-template-columns:1fr;gap:.5rem;line-height:1.6;color:#908fa0;font-size:.8125rem;}
-.md-desc .md-h{font-weight:700;color:#d4e4fa;margin-top:.5rem;margin-bottom:-.25rem;}
-.md-desc .md-p{line-height:1.65;word-break:break-word;}
-.md-desc .md-strong{color:#d4e4fa;font-weight:600;}
-.md-desc .md-em{font-style:italic;}
-.md-desc .md-a{color:#8083ff;text-decoration:none;}.md-desc .md-a:hover{text-decoration:underline;}
-.md-desc .md-ul,.md-desc .md-ol{padding-left:1.25rem;display:flex;flex-direction:column;gap:.15rem;}
-.md-desc .md-ul .md-li{list-style-type:disc;}.md-desc .md-ol .md-li{list-style-type:decimal;}
-.md-desc .md-li{padding-left:.2rem;}
-.md-desc .md-inline-code{background:rgba(128,131,255,.1);color:#8083ff;padding:.1em .35em;border-radius:.3rem;font-size:.8em;font-family:monospace;}
-.md-desc .md-bq{border-left:3px solid rgba(255,255,255,.12);padding:.4rem .75rem;background:rgba(255,255,255,.02);border-radius:0 .4rem .4rem 0;}
-`;
-
-function buildDescRenderer() {
-  const r = new marked.Renderer();
-  r.heading = function ({ tokens, depth }) {
-    return `<h${depth} class="md-h md-h${depth}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
-  };
-  r.link = function ({ href, title, tokens }) {
-    return `<a href="${href}" class="md-a"${title ? ` title="${title}"` : ''} target="_blank" rel="noopener">${this.parser.parseInline(tokens)}</a>`;
-  };
-  r.code = ({ text }) =>
-    `<pre class="md-inline-code" style="display:block;white-space:pre-wrap;padding:.5rem .75rem;border-radius:.4rem;margin:.25rem 0;">${text}</pre>`;
-  return r;
-}
-
-const DESC_RENDERER = buildDescRenderer();
-
+// MarkdownDesc — now delegates to the shared <MarkdownRenderer> which
+// uses the unified .md-* and .hljs-* rules under the .mentor-viewer scope.
 function MarkdownDesc({ text, className = '' }) {
   if (!text) return null;
-  let html = '';
-  try {
-    html = marked.parse(text, {
-      gfm: true,
-      breaks: true,
-      renderer: DESC_RENDERER,
-    });
-  } catch {
-    html = `<p>${text}</p>`;
-  }
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: MD_DESC_STYLES }} />
-      <div
-        className={`md-desc ${className}`}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </>
+    <div className={`mentor-viewer ${className}`.trim()}>
+      <MarkdownRenderer source={text} scope="md-viewer mentor-viewer" />
+    </div>
   );
 }
 

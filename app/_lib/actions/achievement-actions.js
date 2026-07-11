@@ -39,12 +39,6 @@ export async function createAchievementAction(formData) {
   if (!result) return { error: 'Result is required.' };
   if (!year) return { error: 'Year is required.' };
 
-  const rawParticipants = formData.get('participants') || '';
-  const participants = rawParticipants
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean);
-
   const payload = {
     title,
     contest_name,
@@ -54,7 +48,6 @@ export async function createAchievementAction(formData) {
     category: formData.get('category')?.trim() || null,
     description: formData.get('description')?.trim() || null,
     achievement_date: formData.get('achievement_date') || null,
-    participants: participants.length ? participants : null,
     is_team: formData.get('is_team') === 'true',
     team_name: formData.get('team_name')?.trim() || null,
     platform: formData.get('platform')?.trim() || null,
@@ -96,12 +89,6 @@ export async function updateAchievementAction(formData) {
   if (!result) return { error: 'Result is required.' };
   if (!year) return { error: 'Year is required.' };
 
-  const rawParticipants = formData.get('participants') || '';
-  const participants = rawParticipants
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean);
-
   const payload = {
     title,
     contest_name,
@@ -111,7 +98,6 @@ export async function updateAchievementAction(formData) {
     category: formData.get('category')?.trim() || null,
     description: formData.get('description')?.trim() || null,
     achievement_date: formData.get('achievement_date') || null,
-    participants: participants.length ? participants : null,
     is_team: formData.get('is_team') === 'true',
     team_name: formData.get('team_name')?.trim() || null,
     platform: formData.get('platform')?.trim() || null,
@@ -159,6 +145,9 @@ export async function deleteAchievementAction(formData) {
   // Delete Drive files (non-fatal)
   const driveDeletes = [];
   if (row?.featured_photo?.id) driveDeletes.push(row.featured_photo.id);
+  for (const v of Object.values(row?.featured_photo?.variants ?? {})) {
+    if (v?.id) driveDeletes.push(v.id);
+  }
   for (const img of row?.gallery_images ?? []) {
     if (img?.id) driveDeletes.push(img.id);
   }
@@ -676,16 +665,21 @@ export async function deleteParticipationPhotoAction(formData) {
 // ACHIEVEMENT FEATURED PHOTO – UPLOAD
 // =============================================================================
 
+const FEATURED_PHOTO_SLOTS = ['original', 'standard', 'featured', 'square'];
+
 export async function uploadAchievementFeaturedPhotoAction(formData) {
   const admin = await requireAdmin();
 
   const achievementId = formData.get('achievement_id');
   const file = formData.get('file');
+  const slot = formData.get('slot') || 'original';
 
   if (!achievementId) return { error: 'Achievement ID is required.' };
   if (!file || typeof file === 'string') return { error: 'No file provided.' };
   if (!file.type?.startsWith('image/'))
     return { error: 'Only image files are allowed.' };
+  if (!FEATURED_PHOTO_SLOTS.includes(slot))
+    return { error: 'Invalid photo slot.' };
 
   const { data: existing } = await supabaseAdmin
     .from('achievements')
@@ -693,16 +687,19 @@ export async function uploadAchievementFeaturedPhotoAction(formData) {
     .eq('id', achievementId)
     .single();
 
-  if (existing?.featured_photo?.id) {
+  const existingVariants = existing?.featured_photo?.variants ?? {};
+  const existingSlotPhoto = existingVariants[slot];
+
+  if (existingSlotPhoto?.id) {
     try {
-      await deleteFromDrive(existing.featured_photo.id);
+      await deleteFromDrive(existingSlotPhoto.id);
     } catch (_) {}
   }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name?.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const filename = `achievement_featured_${achievementId.slice(0, 8)}_${Date.now()}.${ext}`;
+    const filename = `achievement_featured_${slot}_${achievementId.slice(0, 8)}_${Date.now()}.${ext}`;
 
     const { url, fileId } = await uploadToDrive(
       buffer,
@@ -710,7 +707,13 @@ export async function uploadAchievementFeaturedPhotoAction(formData) {
       file.type,
       'achievements'
     );
-    const featured_photo = { id: fileId, name: file.name, url };
+    const slotPhoto = { id: fileId, name: file.name, url };
+
+    const variants = { ...existingVariants, [slot]: slotPhoto };
+    // Keep top-level id/name/url pointed at the original for backward compat
+    // with any code still reading featured_photo.url directly.
+    const original = variants.original ?? slotPhoto;
+    const featured_photo = { ...original, variants };
 
     const { error: updateErr } = await supabaseAdmin
       .from('achievements')
@@ -723,10 +726,10 @@ export async function uploadAchievementFeaturedPhotoAction(formData) {
       admin.id,
       'achievement_featured_photo_upload',
       achievementId,
-      { fileId }
+      { fileId, slot }
     );
     revalidate();
-    return { success: true, ...featured_photo };
+    return { success: true, slot, ...slotPhoto };
   } catch (err) {
     return { error: err.message };
   }
@@ -750,9 +753,17 @@ export async function deleteAchievementFeaturedPhotoAction(formData) {
 
   if (fetchErr) return { error: fetchErr.message };
 
-  if (data?.featured_photo?.id) {
+  const variants = data?.featured_photo?.variants ?? {};
+  const fileIds = new Set(
+    Object.values(variants)
+      .map((v) => v?.id)
+      .filter(Boolean)
+  );
+  if (data?.featured_photo?.id) fileIds.add(data.featured_photo.id);
+
+  for (const fileId of fileIds) {
     try {
-      await deleteFromDrive(data.featured_photo.id);
+      await deleteFromDrive(fileId);
     } catch (err) {
       console.warn('Drive delete warning:', err.message);
     }

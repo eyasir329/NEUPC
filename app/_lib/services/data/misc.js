@@ -3,6 +3,8 @@
  */
 
 import { supabase, supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import { dbWrite } from '@/app/_lib/db/router';
+import { cached, key, TTL } from './_cache';
 
 // Get all permissions.
 export async function getAllPermissions() {
@@ -24,28 +26,62 @@ export async function getPermissionsByCategory(category) {
   return data;
 }
 
-// Get top members by problems solved.
+// Get top members by problems solved. Hot public read (leaderboard page) —
+// cached with a short TTL since ratings change via periodic sync, not per-request.
+//
+// member_statistics and member_profiles both FK to users but NOT to each
+// other, so member_profiles can't be embedded via PostgREST in one query
+// (there is no direct relationship for it to follow). Fetch the two
+// separately, keyed by user_id, and merge in code.
 export async function getLeaderboard(limit = 20) {
-  const { data, error } = await supabase
-    .from('member_statistics')
-    .select(
-      '*, member_profiles(user_id, student_id, users(full_name, avatar_url))'
-    )
-    .order('codeforces_rating', { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(error.message);
-  return data;
+  return cached(
+    key('leaderboard', 'top', limit),
+    async () => {
+      // member_statistics has two FKs to users (user_id, member_id) — must
+      // disambiguate the embed by constraint name or PostgREST rejects it.
+      const { data: stats, error } = await supabase
+        .from('member_statistics')
+        .select('*, users!member_statistics_user_id_fkey(full_name, avatar_url)')
+        .order('codeforces_rating', { ascending: false })
+        .limit(limit);
+      if (error) throw new Error(error.message);
+      if (!stats?.length) return [];
+
+      const userIds = stats.map((s) => s.user_id).filter(Boolean);
+      const { data: profiles } = await supabase
+        .from('member_profiles')
+        .select('user_id, student_id')
+        .in('user_id', userIds);
+
+      const studentIdByUser = Object.fromEntries(
+        (profiles ?? []).map((p) => [p.user_id, p.student_id])
+      );
+
+      return stats.map((s) => ({
+        ...s,
+        member_profiles: s.user_id
+          ? { user_id: s.user_id, student_id: studentIdByUser[s.user_id] ?? null, users: s.users }
+          : null,
+      }));
+    },
+    TTL.short
+  );
 }
 
 // Mark attendance for an event registration.
 export async function markAttendance(eventId, userId, attended = true) {
-  const { data, error } = await supabase
-    .from('event_registrations')
-    .update({ attended, status: attended ? 'attended' : 'confirmed' })
-    .eq('event_id', eventId)
-    .eq('user_id', userId)
-    .select()
-    .single();
+  const { data, error } = await dbWrite({
+    table: 'event_registrations',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('event_registrations')
+        .update({ attended, status: attended ? 'attended' : 'confirmed' })
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .select()
+        .single(),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -138,14 +174,20 @@ export async function getAssignableStaff() {
   return Array.from(staffMap.values());
 }
 
-// Get all bootcamps.
+// Get all bootcamps. Public listing — cached, invalidated by bootcamp writes.
 export async function getAllBootcamps() {
-  const { data, error } = await supabase
-    .from('bootcamps')
-    .select('*')
-    .order('start_date', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return cached(
+    key('bootcamps', 'all'),
+    async () => {
+      const { data, error } = await supabase
+        .from('bootcamps')
+        .select('*')
+        .order('start_date', { ascending: false });
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+    TTL.medium
+  );
 }
 
 // Get committee positions by category.
@@ -222,37 +264,44 @@ export async function getPendingGuestApplications() {
     });
 }
 
+// Public homepage stats — cheap counts, but hit on every landing-page view.
 export async function getPlatformStatistics() {
-  try {
-    const [userCount, memberCount, eventCount, contestCount] =
-      await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase
-          .from('member_profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('approved', true),
-        supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true })
-          .in('status', ['upcoming', 'ongoing', 'completed']),
-        supabase.from('contests').select('*', { count: 'exact', head: true }),
-      ]);
+  return cached(
+    key('stats', 'platform'),
+    async () => {
+      try {
+        const [userCount, memberCount, eventCount, contestCount] =
+          await Promise.all([
+            supabase.from('users').select('*', { count: 'exact', head: true }),
+            supabase
+              .from('member_profiles')
+              .select('*', { count: 'exact', head: true })
+              .eq('approved', true),
+            supabase
+              .from('events')
+              .select('*', { count: 'exact', head: true })
+              .in('status', ['upcoming', 'ongoing', 'completed']),
+            supabase.from('contests').select('*', { count: 'exact', head: true }),
+          ]);
 
-    return {
-      totalUsers: userCount.count || 0,
-      approvedMembers: memberCount.count || 0,
-      totalEvents: eventCount.count || 0,
-      totalContests: contestCount.count || 0,
-    };
-  } catch (error) {
-    console.error('Error fetching platform statistics:', error);
-    return {
-      totalUsers: 0,
-      approvedMembers: 0,
-      totalEvents: 0,
-      totalContests: 0,
-    };
-  }
+        return {
+          totalUsers: userCount.count || 0,
+          approvedMembers: memberCount.count || 0,
+          totalEvents: eventCount.count || 0,
+          totalContests: contestCount.count || 0,
+        };
+      } catch (error) {
+        console.error('Error fetching platform statistics:', error);
+        return {
+          totalUsers: 0,
+          approvedMembers: 0,
+          totalEvents: 0,
+          totalContests: 0,
+        };
+      }
+    },
+    TTL.medium
+  );
 }
 
 export async function getDashboardMetrics() {
@@ -300,21 +349,34 @@ export async function getDashboardMetrics() {
 }
 
 export async function bulkUpdateSubmissionStatus(taskId, ids, newStatus) {
-  const { error } = await supabase
-    .from('task_submissions')
-    .update({ status: newStatus })
-    .eq('task_id', taskId)
-    .in('id', ids);
+  const { error } = await dbWrite({
+    table: 'task_submissions',
+    op: 'update',
+    mutate: (client) =>
+      client
+        .from('task_submissions')
+        .update({ status: newStatus })
+        .eq('task_id', taskId)
+        .in('id', ids)
+        .select(),
+  });
   if (error) throw new Error(error.message);
   return { success: true };
 }
 
+// Public "our journey" timeline — cached, invalidated by journey_items writes.
 export async function getPublicJourneyItems() {
-  const { data, error } = await supabaseAdmin
-    .from('journey_items')
-    .select('id, year, event, icon, description, display_order')
-    .order('display_order', { ascending: true })
-    .order('year', { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return cached(
+    key('journey', 'public'),
+    async () => {
+      const { data, error } = await supabaseAdmin
+        .from('journey_items')
+        .select('id, year, event, icon, description, display_order')
+        .order('display_order', { ascending: true })
+        .order('year', { ascending: true });
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+    TTL.long
+  );
 }

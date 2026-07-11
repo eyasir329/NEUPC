@@ -105,6 +105,8 @@ export const CONTEST_PLATFORMS = [
   'SPOJ',
   'Kaggle',
   'Devpost',
+  'BAPSOJ',
+  'Facebook Hacker Cup',
   'Other',
 ];
 

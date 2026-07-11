@@ -11,7 +11,7 @@ export async function getAchievementsAdmin() {
     .select(
       `*,
        users!achievements_created_by_fkey(id, full_name, avatar_url),
-       member_achievements(id, user_id, position, users(id, full_name, avatar_url))`
+       member_achievements(id, user_id, position, users(id, full_name, avatar_url, member_profiles!member_profiles_user_id_fkey(username)))`
     )
     .order('year', { ascending: false })
     .order('created_at', { ascending: false });
@@ -40,7 +40,10 @@ export async function getAchievementsAdmin() {
 export async function getAllAchievements() {
   const { data, error } = await supabase
     .from('achievements')
-    .select('*')
+    .select(
+      `*,
+       member_achievements(id, user_id, position, users(id, full_name, avatar_url, member_profiles!member_profiles_user_id_fkey(username)))`
+    )
     .order('year', { ascending: false });
   if (error) throw new Error(error.message);
   return data;
