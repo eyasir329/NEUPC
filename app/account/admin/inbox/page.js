@@ -1,18 +1,18 @@
 /**
- * @file Admin inbox page — displays active notices filtered for the
- *   admin audience (notices targeting "all" or "admin" users).
+ * @file Admin inbox page — active notices for the admin audience.
+ *   UI is shared via {@link InboxClient}.
  * @module AdminInboxPage
  * @access admin
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getActiveNotices } from '@/app/_lib/services/data-service';
-import AdminNoticesClient from './_components/AdminNoticesClient';
+import InboxClient from '@/app/account/_components/inbox/InboxClient';
 
 export const metadata = { title: 'Inbox | Admin | NEUPC' };
 
 export default async function AdminInboxPage() {
-  const [{ user }, allNotices] = await Promise.all([
+  const [, allNotices] = await Promise.all([
     requireRole('admin'),
     getActiveNotices().catch(() => []),
   ]);
@@ -24,5 +24,11 @@ export default async function AdminInboxPage() {
       n.target_audience.includes('admin')
   );
 
-  return <AdminNoticesClient notices={notices} adminId={user.id} />;
+  return (
+    <InboxClient
+      notices={notices}
+      accent="sky"
+      subtitle="Notices and system announcements for administrators."
+    />
+  );
 }

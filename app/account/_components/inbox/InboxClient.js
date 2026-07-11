@@ -1,6 +1,6 @@
 /**
- * @file Mentor notices client component
- * @module MentorNoticesClient
+ * @file Admin notices client component
+ * @module AdminNoticesClient
  */
 
 'use client';
@@ -22,7 +22,12 @@ import {
   Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageShell, TabBar, PageHeader } from '@/app/account/_components/ui';
+import {
+  PageShell,
+  TabBar,
+  PageHeader,
+} from '@/app/account/_components/ui';
+import { inboxAccent } from './accent';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -33,127 +38,119 @@ const inDays = (d) => new Date(Date.now() + d * 86_400_000).toISOString();
 
 const MOCK_NOTICES = [
   {
-    id: 'n1',
-    title: 'NEUPC Mentorship Program — May Session Guidelines',
-    is_pinned: true,
-    priority: 'high',
-    notice_type: 'announcement',
-    content:
-      'All mentors are required to log a minimum of 2 sessions per week during May. Please ensure session notes are filled in within 24 hours. The mentorship committee will review logs on June 1.\n\nMentors who do not meet the minimum will receive a warning and may be placed on probation. Contact the admin panel if you have any conflicts.',
-    created_at: daysAgo(2),
-    expires_at: inDays(28),
-    target_audience: ['mentor', 'all'],
-  },
-  {
-    id: 'n2',
-    title: 'Critical: Platform Maintenance on May 20 — 2 AM to 6 AM BDT',
+    id: 'adm1',
+    title: 'System Update: Database Migration Scheduled — May 20',
     is_pinned: true,
     priority: 'critical',
     notice_type: 'alert',
     content:
-      'The NEUPC platform (including the mentor dashboard, session logging, and task submission) will be down for scheduled maintenance on May 20 from 2:00 AM to 6:00 AM BDT.\n\nPlease log any pending sessions and tasks before 1:30 AM. Students will be notified separately. No data loss expected.',
+      'A critical database migration is scheduled for May 20 from 2:00 AM to 6:00 AM BDT. All platform services will be temporarily unavailable. Admins must complete any bulk operations before 1:30 AM.\n\nPost-migration checks will be performed by the dev team. Contact the system administrator for queries.',
     created_at: daysAgo(1),
     expires_at: inDays(3),
-    target_audience: ['all'],
+    target_audience: ['admin', 'all'],
   },
   {
-    id: 'n3',
-    title: 'New Feature: In-App Session Video Calling (Beta)',
-    is_pinned: false,
-    priority: 'medium',
+    id: 'adm2',
+    title: 'New Role Assignments — May 2026 Committee',
+    is_pinned: true,
+    priority: 'high',
     notice_type: 'announcement',
     content:
-      'We have launched a beta version of in-app video calling for mentorship sessions. You can now start a session directly from the Sessions page without leaving the platform.\n\nThis feature is available to all mentors. Please report any issues via the Help Desk. We plan to move out of beta by June 15.',
-    created_at: daysAgo(4),
-    expires_at: null,
-    target_audience: ['mentor'],
+      'The May 2026 committee role assignments have been finalised. New executive and mentor accounts have been provisioned. Admins should verify role mappings in the Roles panel and confirm access controls are correctly applied for each new member.',
+    created_at: daysAgo(2),
+    expires_at: inDays(14),
+    target_audience: ['admin'],
   },
   {
-    id: 'n4',
-    title: 'Reminder: Submit Monthly Mentee Progress Reports by May 31',
+    id: 'adm3',
+    title: 'Pending Member Applications — Action Required',
     is_pinned: false,
     priority: 'high',
     notice_type: 'reminder',
     content:
-      'The deadline for submitting May progress reports for all active mentees is May 31, 11:59 PM. Reports should cover:\n• Problems solved this month\n• Contests participated in\n• Key milestones reached\n• Areas needing improvement\n\nSubmit via the Recommendations page. Late submissions will not be accepted.',
-    created_at: daysAgo(5),
-    expires_at: inDays(13),
-    target_audience: ['mentor'],
+      'There are currently 12 pending membership applications awaiting admin review. Applications older than 7 days require escalated review. Please process them via the Applications panel before May 28.\n\nStudents awaiting approval have been notified of the delay.',
+    created_at: daysAgo(3),
+    expires_at: inDays(6),
+    target_audience: ['admin'],
   },
   {
-    id: 'n5',
-    title: 'Mentor Training Webinar — Advanced Coaching Techniques',
+    id: 'adm4',
+    title: 'Spring Contest 2026 — System Capacity Check',
     is_pinned: false,
     priority: 'medium',
-    notice_type: 'event',
+    notice_type: 'announcement',
     content:
-      'NEUPC is hosting a mentor training webinar on May 25 at 7:00 PM BDT covering advanced coaching techniques, how to handle struggling mentees, and goal-setting frameworks. Attendance is optional but strongly encouraged for mentors in their first year.',
-    created_at: daysAgo(6),
-    expires_at: inDays(7),
-    target_audience: ['mentor'],
+      'The Spring Programming Contest 2026 is scheduled for June 5. The platform team should perform a load test by May 30 to verify contest infrastructure can handle peak concurrent submissions. Contact the DevOps lead to schedule the test.',
+    created_at: daysAgo(4),
+    expires_at: inDays(19),
+    target_audience: ['admin'],
   },
   {
-    id: 'n6',
-    title: 'Updated Code of Conduct for Mentorship Interactions',
+    id: 'adm5',
+    title: 'Security Audit — User Permissions Review',
+    is_pinned: false,
+    priority: 'medium',
+    notice_type: 'announcement',
+    content:
+      'As part of the annual security audit, all admin accounts should review active user permissions by May 31. Look for orphaned roles, inactive accounts with elevated access, and ensure multi-factor authentication is enabled for all privileged users.',
+    created_at: daysAgo(6),
+    expires_at: inDays(12),
+    target_audience: ['admin'],
+  },
+  {
+    id: 'adm6',
+    title: 'Updated Privacy Policy — Platform Compliance',
     is_pinned: false,
     priority: 'low',
     notice_type: 'general',
     content:
-      'The NEUPC mentorship code of conduct has been updated. Key changes include clearer guidelines on session cancellations (48-hour notice required), communication expectations, and conflict resolution procedures. Please review the full document in the resources section.',
+      'The NEUPC platform privacy policy has been updated to comply with the latest university data governance guidelines. All admin staff should read and acknowledge the updated policy. Changes cover data retention periods and third-party sharing restrictions.',
     created_at: daysAgo(10),
     expires_at: null,
-    target_audience: ['mentor', 'all'],
+    target_audience: ['all'],
   },
   {
-    id: 'n7',
-    title: 'Leaderboard Reset — New Month Starting June 1',
+    id: 'adm7',
+    title: 'Q1 2026 Analytics Report Published',
     is_pinned: false,
     priority: 'low',
     notice_type: 'general',
     content:
-      'The mentor leaderboard (ranked by sessions completed and mentee satisfaction ratings) will reset on June 1. Top 3 mentors of May will receive recognition certificates and featured placement on the public NEUPC website.',
+      'The Q1 2026 platform analytics report has been published and is available in the Analytics dashboard. Key highlights: 340 active members, 18 bootcamp cohorts running, 94% session completion rate. Share relevant findings with the faculty advisor.',
     created_at: daysAgo(14),
     expires_at: inDays(14),
-    target_audience: ['mentor'],
+    target_audience: ['admin'],
   },
 ];
 
-const PRIORITY_CONFIG = {
+// `medium` priority tracks the page accent (see inbox/accent.js); the others
+// are fixed semantic colors.
+const buildPriorityConfig = (a) => ({
   critical: {
     icon: AlertCircle,
     color: 'text-rose-400',
     bg: 'bg-rose-500/10',
-    dot: 'bg-rose-500',
-    glow: 'rgba(244,63,94,0.6)',
     badge: 'border-rose-500/20 bg-rose-500/10 text-rose-400',
   },
   high: {
     icon: AlertTriangle,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
-    dot: 'bg-amber-500',
-    glow: 'rgba(245,158,11,0.6)',
     badge: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
   },
   medium: {
     icon: Info,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-    dot: 'bg-blue-500',
-    glow: 'rgba(59,130,246,0.6)',
-    badge: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
+    color: a.mediumColor,
+    bg: a.mediumBg,
+    badge: a.mediumBadge,
   },
   low: {
     icon: CheckCircle,
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
-    dot: 'bg-emerald-500',
-    glow: 'rgba(16,185,129,0.6)',
     badge: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
   },
-};
-
-const cfg = (p) => PRIORITY_CONFIG[p] ?? PRIORITY_CONFIG.medium;
+});
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -189,7 +186,15 @@ function tabFilter(notices, id) {
   return notices;
 }
 
-export default function MentorNoticesClient({ notices: rawNotices = [] }) {
+export default function InboxClient({
+  notices: rawNotices = [],
+  accent = 'sky',
+  subtitle = 'Notices and system announcements.',
+}) {
+  const a = inboxAccent(accent);
+  const priorityConfig = useMemo(() => buildPriorityConfig(a), [a]);
+  const cfg = (p) => priorityConfig[p] ?? priorityConfig.medium;
+
   const notices = rawNotices.length === 0 ? MOCK_NOTICES : rawNotices;
 
   const [tab, setTab] = useState('all');
@@ -252,16 +257,16 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
   ];
 
   return (
-    <PageShell className="text-gray-300 selection:bg-amber-500/30">
+    <PageShell className={`text-gray-300 ${a.selection}`}>
       <div className="flex flex-col gap-6">
         <PageHeader
           icon={Bell}
           title="Inbox"
-          subtitle="Notices and announcements for mentors."
-          accent="amber"
+          subtitle={subtitle}
+          accent={accent}
           meta={
             pinnedCount > 0 ? (
-              <span className="flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold tracking-wide text-amber-400 uppercase">
+              <span className={`flex items-center gap-1.5 rounded-md ${a.pinnedBadge} px-2.5 py-1 text-xs font-semibold tracking-wide uppercase`}>
                 <Pin size={11} />
                 {pinnedCount} Pinned
               </span>
@@ -274,7 +279,6 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
           {/* Notices list */}
           <div className="flex min-w-0 flex-col gap-3 lg:col-span-2">
-            {/* Search + count row */}
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/6 pb-3">
               <p className="text-xs font-medium text-gray-500">
                 {filtered.length === 0
@@ -291,7 +295,7 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                     setSearch(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-44 rounded-lg border border-white/10 bg-white/5 py-1.5 pr-3 pl-8 text-xs text-white placeholder-gray-500 focus:border-amber-500/40 focus:outline-none"
+                  className={`w-44 rounded-lg border border-white/10 bg-white/5 py-1.5 pr-3 pl-8 text-xs text-white placeholder-gray-500 ${a.searchFocus} focus:outline-none`}
                 />
               </div>
             </div>
@@ -355,11 +359,10 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                           className={cn(
                             'group relative flex flex-col border-b border-white/4 transition-colors duration-200 last:border-b-0',
                             n.is_pinned
-                              ? 'bg-amber-500/3 hover:bg-amber-500/6'
+                              ? `${a.rowActive}`
                               : 'bg-white/1 hover:bg-white/3'
                           )}
                         >
-                          {/* Pinned dot */}
                           <AnimatePresence>
                             {n.is_pinned && (
                               <motion.div
@@ -367,12 +370,11 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
                                 transition={{ duration: 0.18 }}
-                                className="absolute top-1/2 left-4 h-2 w-2 -translate-y-1/2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                                className={`absolute top-1/2 left-4 h-2 w-2 -translate-y-1/2 rounded-full ${a.pinDot}`}
                               />
                             )}
                           </AnimatePresence>
 
-                          {/* Header row — click to expand */}
                           <div
                             className={cn(
                               'flex cursor-pointer items-start gap-4 p-4',
@@ -412,7 +414,7 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                                   {n.priority}
                                 </span>
                                 {n.is_pinned && (
-                                  <span className="inline-flex items-center gap-1 rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                                  <span className={`inline-flex items-center gap-1 rounded ${a.tag} px-1.5 py-0.5 text-[10px] font-semibold`}>
                                     <Pin size={9} /> Pinned
                                   </span>
                                 )}
@@ -447,7 +449,6 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                             </div>
                           </div>
 
-                          {/* Expanded body */}
                           <AnimatePresence initial={false}>
                             {isExpanded && (
                               <motion.div
@@ -497,7 +498,7 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                             className={cn(
                               'h-8 w-8 rounded-lg text-xs font-bold transition-colors',
                               currentPage === i + 1
-                                ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300'
+                                ? `${a.tabActive}`
                                 : 'text-gray-500 hover:bg-white/4 hover:text-gray-300'
                             )}
                           >
@@ -535,7 +536,7 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                   {
                     label: 'Pinned',
                     value: pinnedCount,
-                    color: 'text-amber-400 bg-amber-500/10',
+                    color: `${a.mediumColor} ${a.mediumBg}`,
                   },
                   {
                     label: 'High Priority',
@@ -545,7 +546,7 @@ export default function MentorNoticesClient({ notices: rawNotices = [] }) {
                   {
                     label: 'Announcements',
                     value: tabFilter(notices, 'announcements').length,
-                    color: 'text-violet-400 bg-violet-500/10',
+                    color: 'text-amber-400 bg-amber-500/10',
                   },
                 ].map(({ label, value, color }) => (
                   <div

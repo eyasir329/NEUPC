@@ -1,18 +1,18 @@
 /**
- * @file Mentor inbox page — displays active notices filtered for the
- *   mentor audience (notices targeting “all” or “mentor” users).
+ * @file Mentor inbox page — active notices for the mentor audience.
+ *   UI is shared via {@link InboxClient}.
  * @module MentorInboxPage
  * @access mentor
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getActiveNotices } from '@/app/_lib/services/data-service';
-import MentorNoticesClient from './_components/MentorNoticesClient';
+import InboxClient from '@/app/account/_components/inbox/InboxClient';
 
 export const metadata = { title: 'Inbox | Mentor | NEUPC' };
 
 export default async function MentorInboxPage() {
-  const [{ user }, allNotices] = await Promise.all([
+  const [, allNotices] = await Promise.all([
     requireRole('mentor'),
     getActiveNotices().catch(() => []),
   ]);
@@ -24,5 +24,11 @@ export default async function MentorInboxPage() {
       n.target_audience.includes('mentor')
   );
 
-  return <MentorNoticesClient notices={notices} mentorId={user.id} />;
+  return (
+    <InboxClient
+      notices={notices}
+      accent="amber"
+      subtitle="Notices and announcements for mentors."
+    />
+  );
 }

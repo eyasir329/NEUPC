@@ -1,18 +1,18 @@
 /**
- * @file Executive notices page — displays active notices filtered for the
- *   executive audience (notices targeting "all" or "executive" users).
- * @module ExecutiveNoticesPage
+ * @file Executive inbox page — active notices for the executive audience.
+ *   UI is shared via {@link InboxClient}.
+ * @module ExecutiveInboxPage
  * @access executive
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getActiveNotices } from '@/app/_lib/services/data-service';
-import ExecutiveNoticesClient from './_components/ExecutiveNoticesClient';
+import InboxClient from '@/app/account/_components/inbox/InboxClient';
 
 export const metadata = { title: 'Inbox | Executive | NEUPC' };
 
-export default async function ExecutiveNoticesPage() {
-  const [{ user }, allNotices] = await Promise.all([
+export default async function ExecutiveInboxPage() {
+  const [, allNotices] = await Promise.all([
     requireRole('executive'),
     getActiveNotices().catch(() => []),
   ]);
@@ -24,5 +24,11 @@ export default async function ExecutiveNoticesPage() {
       n.target_audience.includes('executive')
   );
 
-  return <ExecutiveNoticesClient notices={notices} executiveId={user.id} />;
+  return (
+    <InboxClient
+      notices={notices}
+      accent="blue"
+      subtitle="Announcements and updates for the executive committee."
+    />
+  );
 }
