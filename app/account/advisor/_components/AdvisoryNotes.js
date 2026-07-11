@@ -15,7 +15,7 @@ import {
   SectionHeader,
   ActionButton,
   Pill,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const SEED_NOTES = [
   {

@@ -27,7 +27,7 @@ import {
   Avatar,
   EmptyState,
   StaggerList,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const TYPE_TABS = [
   { value: 'all', label: 'All Types' },

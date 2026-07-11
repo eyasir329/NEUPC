@@ -13,7 +13,7 @@ import {
   SectionHeader,
   Sparkline,
   ActionButton,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 export default function AnalyticsDashboard({
   weekActivity = [12, 18, 9, 22, 30, 24, 28],

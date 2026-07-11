@@ -66,7 +66,7 @@ import {
   TabBar,
   ActionButton,
   StaggerList,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function cn(...classes) {

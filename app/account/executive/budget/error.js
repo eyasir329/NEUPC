@@ -11,7 +11,7 @@ import {
   PageShell,
   GlassCard,
   ActionButton,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 export default function Error({ error, reset }) {
   useEffect(() => {

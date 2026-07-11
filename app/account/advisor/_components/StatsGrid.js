@@ -15,7 +15,7 @@ import {
   BarChart3,
   Wallet,
 } from 'lucide-react';
-import { StatCard } from '@/app/account/_components/ui/dashboard';
+import { StatCard } from '@/app/account/_components/ui';
 
 export default function StatsGrid({ stats }) {
   return (

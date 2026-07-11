@@ -13,7 +13,7 @@ import {
   GlassCard,
   SectionHeader,
   Pill,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 function Toggle({ checked, onChange }) {

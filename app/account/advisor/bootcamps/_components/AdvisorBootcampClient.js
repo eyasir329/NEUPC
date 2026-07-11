@@ -42,7 +42,7 @@ import {
   EmptyState,
   Avatar,
   StaggerList,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 import { getAdvisorBootcampStudents } from '@/app/_lib/actions/bootcamp-actions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

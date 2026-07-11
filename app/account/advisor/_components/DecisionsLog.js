@@ -15,7 +15,7 @@ import {
   StaggerList,
   EmptyState,
   ActionButton,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const ACTION_ICON = {
   approved: CheckCircle,

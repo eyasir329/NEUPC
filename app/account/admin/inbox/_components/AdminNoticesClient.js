@@ -26,7 +26,7 @@ import {
   PageShell,
   TabBar,
   PageHeader,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');

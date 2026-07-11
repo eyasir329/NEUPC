@@ -17,7 +17,7 @@
 
 'use client';
 
-import { PageShell } from '@/app/account/_components/ui/dashboard';
+import { PageShell } from '@/app/account/_components/ui';
 import AdvisorHeader from './AdvisorHeader';
 import StatsGrid from './StatsGrid';
 import ActionQueue from './ActionQueue';

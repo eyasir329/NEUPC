@@ -36,7 +36,7 @@ import {
   StatCard,
   TabBar,
   EmptyState,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 export default function AdvisorCommitteeClient({
   initialMembers,
