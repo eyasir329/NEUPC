@@ -9,7 +9,7 @@
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getMemberProblemSolvingData } from '@/app/_lib/actions/problem-solving-actions';
 import { notFound } from 'next/navigation';
-import MemberProfileClient from './_components/MemberProfileClient';
+import PeerProfileClient from './_components/PeerProfileClient';
 import { PageShell } from '@/app/account/_components/ui';
 
 export async function generateMetadata({ params }) {
@@ -37,7 +37,7 @@ export default async function MemberProfilePage({ params }) {
 
   return (
     <PageShell className="text-gray-300">
-      <MemberProfileClient data={result.data} />
+      <PeerProfileClient data={result.data} />
     </PageShell>
   );
 }

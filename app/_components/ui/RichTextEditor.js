@@ -97,7 +97,7 @@ import {
   TableCellsMerge,
   TableCellsSplit,
 } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

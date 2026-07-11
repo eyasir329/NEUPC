@@ -37,7 +37,7 @@ import {
   Star,
 } from 'lucide-react';
 import { submitTaskAction } from '@/app/_lib/actions/member-tasks-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

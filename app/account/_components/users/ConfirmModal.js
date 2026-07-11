@@ -7,7 +7,7 @@
 'use client';
 
 import { X, AlertCircle, Loader2 } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 export default function ConfirmModal({
   open,

@@ -20,7 +20,7 @@ import {
   createResourceAction,
   deleteResourceAction,
 } from '@/app/_lib/actions/mentor-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 import {
   PageShell,
   PageHeader,

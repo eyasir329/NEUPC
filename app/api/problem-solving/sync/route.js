@@ -37,7 +37,7 @@ import {
   getPlatformId,
   getUserHandlesV2,
 } from '@/app/_lib/services/problem-solving-v2-helpers';
-import { syncPlatformWithBatches } from '@/app/_lib/services/problem-solving-batch-aware-sync';
+import { syncPlatformWithBatches } from '@/app/_lib/services/problem-solving-services/batch-sync';
 
 // Rate limit: 5 minutes for sync
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000;

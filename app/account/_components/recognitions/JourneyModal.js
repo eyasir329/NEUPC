@@ -11,7 +11,7 @@ import {
   updateJourneyItemAction,
   deleteJourneyItemAction,
 } from '@/app/_lib/actions/achievement-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 /* ── Micro SVG icons ───────────────────────────────────────────────── */
 const IconPlus = () => (

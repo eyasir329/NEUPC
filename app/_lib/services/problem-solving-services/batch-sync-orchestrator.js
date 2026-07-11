@@ -8,7 +8,7 @@
  * 4. Provides real-time progress updates
  * 5. Handles errors gracefully with retry logic
  *
- * @module problem-solving-batch-sync
+ * @module problem-solving-services/batch-sync-orchestrator
  */
 
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';

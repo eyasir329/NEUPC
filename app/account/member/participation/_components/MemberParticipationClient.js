@@ -48,7 +48,7 @@ import {
   ActionButton,
   PageShell,
 } from '@/app/account/_components/ui';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');

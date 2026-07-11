@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,

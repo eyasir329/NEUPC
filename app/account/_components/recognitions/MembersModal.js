@@ -12,7 +12,7 @@ import {
   addAchievementMemberAction,
   removeAchievementMemberAction,
 } from '@/app/_lib/actions/achievement-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 const POSITIONS = ['Team Lead', 'Member', 'Coach', 'Mentor', 'Co-Lead'];
 

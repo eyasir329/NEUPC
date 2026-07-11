@@ -1,6 +1,6 @@
 /**
  * @file Member Profile Client Component
- * @module MemberProfileClient
+ * @module PeerProfileClient
  *
  * Displays another member's problem solving profile,
  * statistics, activity heatmap, and badges.
@@ -115,7 +115,7 @@ function RecentSolveRow({ solve }) {
   );
 }
 
-export default function MemberProfileClient({ data }) {
+export default function PeerProfileClient({ data }) {
   const {
     profile,
     handles,

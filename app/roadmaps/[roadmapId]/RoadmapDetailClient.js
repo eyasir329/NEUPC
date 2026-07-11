@@ -10,7 +10,7 @@ import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import { incrementRoadmapViewAction } from '@/app/_lib/actions/roadmap-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 import JoinButton from '@/app/_components/ui/JoinButton';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';

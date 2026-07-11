@@ -10,7 +10,7 @@
  * - Checkpoint support for resume capability
  * - Progress tracking
  *
- * @module problem-solving-batch-aware-sync
+ * @module problem-solving-services/batch-sync
  */
 
 import {
@@ -21,7 +21,7 @@ import {
   BatchSyncOrchestrator,
   SYNC_STAGES,
   SYNC_STATUS,
-} from '@/app/_lib/services/problem-solving-batch-sync';
+} from '@/app/_lib/services/problem-solving-services/batch-sync-orchestrator';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
 import {
   V2_TABLES,

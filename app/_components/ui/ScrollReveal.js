@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useScrollReveal } from '@/app/_lib/utils/hooks';
+import { useScrollReveal } from '@/app/_hooks/useUiEffects';
 import { cn } from '@/app/_lib/utils/utils';
 
 // ─── Animation variant classes ──────────────────────────────────────────────

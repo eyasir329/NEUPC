@@ -26,7 +26,7 @@ import {
   toggleCommentApprovalAction,
   deleteCommentAction,
 } from '@/app/_lib/actions/blog-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 export default function CommentsModal({ post, onClose }) {
   const [comments, setComments] = useState([]);
