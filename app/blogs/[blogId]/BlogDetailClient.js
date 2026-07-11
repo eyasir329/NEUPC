@@ -316,7 +316,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
           'h-3 w-3 shrink-0 transition-transform',
           isActive
             ? 'text-emerald-400 translate-x-0.5'
-            : 'hidden text-zinc-650 group-hover:block group-hover:text-zinc-400'
+            : 'hidden text-zinc-600 group-hover:block group-hover:text-zinc-400'
         )}
         fill="none"
         viewBox="0 0 24 24"
@@ -383,7 +383,7 @@ export default function BlogDetailClient({
   const [letterSpacing, setLetterSpacing] = useState('normal');
   const [paraSpacing, setParaSpacing] = useState('normal');
   const [textAlign, setTextAlign] = useState('left');
-  const [contentWidth, setContentWidth] = useState('full');
+  const [contentWidth, setContentWidth] = useState('wide');
   const [focusMode, setFocusMode] = useState(false);
   const [tocCollapsed, setTocCollapsed] = useState(false);
   const [showReadingSettings, setShowReadingSettings] = useState(false);
@@ -739,7 +739,7 @@ export default function BlogDetailClient({
               <div className="flex items-center gap-3">
                 <Link
                   href="/blogs"
-                  className="group font-heading hover:border-neon-lime/30 hover:text-neon-lime flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all"
+                  className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
                 >
                   <svg
                     className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
@@ -801,7 +801,7 @@ export default function BlogDetailClient({
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setShowMobileTOC(false)}
             />
-            <div className="absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-955/95 shadow-2xl">
+            <div className="absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
                 <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
                   Table of Contents
@@ -858,7 +858,12 @@ export default function BlogDetailClient({
                 aria-hidden
                 className="h-full w-full object-cover opacity-10 grayscale"
               />
-              <div className="absolute inset-0 bg-linear-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
+              <div
+                className="absolute inset-0 transition-colors duration-500"
+                style={{
+                  background: `linear-gradient(to bottom, ${currentBg}b3, ${currentBg}66, ${currentBg})`,
+                }}
+              />
             </div>
           )}
 
@@ -906,14 +911,14 @@ export default function BlogDetailClient({
                 <span
                   className={cn(
                     'h-1.5 w-1.5 animate-pulse rounded-full',
-                    meta.featured ? 'bg-emerald-400' : 'bg-zinc-405'
+                    meta.featured ? 'bg-emerald-400' : 'bg-zinc-400'
                   )}
                 />
                 {meta.featured
                   ? 'Featured'
                   : getCategoryLabel(meta.category) || 'Blog'}
               </span>
-              {meta.category && !meta.featured && (
+              {meta.category && meta.featured && (
                 <span className="inline-flex min-h-[28px] items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
                   {getCategoryLabel(meta.category)}
                 </span>
@@ -970,7 +975,7 @@ export default function BlogDetailClient({
                 </span>
               </div>
               {meta.views > 0 && (
-                <div className="border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
                   <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
                     Views
                   </span>
@@ -1375,7 +1380,7 @@ export default function BlogDetailClient({
                       className={cn(
                         'flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200',
                         liked
-                          ? 'cursor-default border-rose-500/40 bg-rose-500/10 text-rose-405'
+                          ? 'cursor-default border-rose-500/40 bg-rose-500/10 text-rose-400'
                           : liking
                             ? 'cursor-wait border-white/10 bg-white/5 text-zinc-400'
                             : 'border-white/10 bg-white/5 text-zinc-400 hover:border-rose-500/30 hover:bg-rose-500/8 hover:text-rose-300 active:scale-95'
@@ -1441,7 +1446,7 @@ export default function BlogDetailClient({
                     {meta.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/10 bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-400 transition-colors hover:text-emerald-450 hover:border-emerald-500/20"
+                        className="rounded-full border border-white/10 bg-white/3 px-2.5 py-0.5 font-mono text-[9px] text-zinc-400 transition-colors hover:border-emerald-500/20 hover:text-emerald-400"
                       >
                         #{tag}
                       </span>
@@ -1450,7 +1455,7 @@ export default function BlogDetailClient({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-550 uppercase">
+                  <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                     Share:
                   </span>
                   {SHARE_PLATFORMS.map((p) => (
@@ -1458,7 +1463,8 @@ export default function BlogDetailClient({
                       key={p.key}
                       onClick={() => handleShare(p.key)}
                       title={`Share on ${p.label}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/5"
+                      aria-label={`Share on ${p.label}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
                     >
                       <svg
                         className="h-4 w-4"
@@ -1550,7 +1556,7 @@ export default function BlogDetailClient({
                 >
                   {/* TOC Glass Panel */}
                   {tocCollapsed ? (
-                    <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-zinc-955/70 px-2 py-4">
+                    <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/70 px-2 py-4">
                       <button
                         onClick={() => setTocCollapsed(false)}
                         title="Expand contents"
@@ -1577,7 +1583,7 @@ export default function BlogDetailClient({
                         title={`${Math.round(scrollProgress)}% read`}
                       >
                         <div
-                          className="absolute top-0 left-0 w-full rounded-full bg-emerald-550 transition-all duration-300"
+                          className="absolute top-0 left-0 w-full rounded-full bg-emerald-500 transition-all duration-300"
                           style={{ height: `${scrollProgress}%` }}
                         />
                       </div>
@@ -1658,7 +1664,7 @@ export default function BlogDetailClient({
                       </nav>
 
                       <div className="border-t border-[#27272A]/50 px-6 py-4">
-                        <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-550">
+                        <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-500">
                           <span>
                             {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                             {tableOfContents.length} sections
@@ -1680,62 +1686,43 @@ export default function BlogDetailClient({
                             Share Article
                           </h4>
                           <div className="flex gap-3">
-                            {[
-                              {
-                                icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
-                                tip: 'Share on Twitter',
-                                action: () => handleShare('twitter'),
-                              },
-                              {
-                                icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
-                                tip: 'Scroll to first code block',
-                                action: () => {
-                                  const firstPre =
-                                    contentRef.current?.querySelector('pre');
-                                  if (firstPre) {
-                                    const stickyNav =
-                                      document.querySelector(
-                                        '[data-sticky-nav]'
-                                      );
-                                    const offset =
-                                      (stickyNav?.offsetHeight ?? 60) + 16;
-                                    window.scrollTo({
-                                      top:
-                                        firstPre.getBoundingClientRect().top +
-                                        window.scrollY -
-                                        offset,
-                                      behavior: 'smooth',
-                                    });
-                                  }
-                                },
-                              },
-                              {
-                                icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
-                                tip: 'Copy link',
-                                action: handleCopy,
-                              },
-                            ].map(({ icon, tip, action }) => (
+                            {SHARE_PLATFORMS.map((p) => (
                               <button
-                                key={tip}
-                                title={tip}
-                                onClick={action}
+                                key={p.key}
+                                title={`Share on ${p.label}`}
+                                aria-label={`Share on ${p.label}`}
+                                onClick={() => handleShare(p.key)}
                                 className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
                               >
                                 <svg
-                                  className="h-4 w-4 text-zinc-450 transition-colors group-hover:text-emerald-400"
-                                  fill="none"
+                                  className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-emerald-400"
+                                  fill="currentColor"
                                   viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={1.75}
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d={icon}
-                                  />
+                                  <path d={p.icon} />
                                 </svg>
                               </button>
                             ))}
+                            <button
+                              title="Copy link"
+                              aria-label="Copy link"
+                              onClick={handleCopy}
+                              className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
+                            >
+                              <svg
+                                className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-emerald-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={1.75}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1845,6 +1832,29 @@ export default function BlogDetailClient({
             </div>
           </div>
         </section>
+
+        {/* ── Floating TOC button (small devices) ──────────────────────────── */}
+        {hasTOC && !showMobileTOC && (
+          <button
+            onClick={() => setShowMobileTOC(true)}
+            aria-label="Open table of contents"
+            className="fixed bottom-20 right-6 z-40 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-emerald-500/30 bg-[#05060B]/80 text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.25)] backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] xl:hidden"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h7"
+              />
+            </svg>
+          </button>
+        )}
 
         <ScrollToTop />
       </main>

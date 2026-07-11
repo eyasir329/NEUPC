@@ -102,7 +102,7 @@ function SocialBtn({ href, icon, label }) {
       target={href.startsWith('mailto') ? undefined : '_blank'}
       rel="noopener noreferrer"
       title={label}
-      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200"
+      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 sm:h-7 sm:w-7"
     >
       {icon}
     </a>
@@ -172,7 +172,12 @@ function Hero({ stats, settings }) {
               <div
                 className={cn(
                   'grid divide-x divide-white/8',
-                  `grid-cols-${Math.min(stats.length, 4)}`
+                  {
+                    1: 'grid-cols-1',
+                    2: 'grid-cols-2',
+                    3: 'grid-cols-3',
+                    4: 'grid-cols-2 sm:grid-cols-4',
+                  }[Math.min(stats.length, 4)]
                 )}
               >
                 {stats.slice(0, 4).map((stat, i) => (
@@ -181,7 +186,7 @@ function Hero({ stats, settings }) {
                     className={cn(
                       i === 0
                         ? 'pr-4 sm:pr-8'
-                        : i === stats.length - 1
+                        : i === Math.min(stats.length, 4) - 1
                           ? 'pl-4 sm:pl-8'
                           : 'px-4 sm:px-8'
                     )}
@@ -298,7 +303,7 @@ function CoreExecCard({ exec, index }) {
         name={exec.name}
         image={exec.image}
         className="absolute inset-0"
-        imgClassName="grayscale group-hover:grayscale-0 group-hover:scale-[1.04] transition-all duration-700 ease-out"
+        imgClassName="sm:grayscale sm:group-hover:grayscale-0 group-hover:scale-[1.04] transition-all duration-700 ease-out"
       />
 
       {/* Gradient */}
@@ -329,8 +334,8 @@ function CoreExecCard({ exec, index }) {
           </p>
         )}
 
-        {/* Hover-reveal socials */}
-        <div className="flex translate-y-2 gap-2 pt-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        {/* Socials — always visible on touch, hover-reveal on larger pointers */}
+        <div className="flex gap-2 pt-1 opacity-100 transition-all duration-300 sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
           <SocialBtn href={exec.github} icon={<GithubIcon />} label="GitHub" />
           <SocialBtn
             href={exec.linkedin}
@@ -380,14 +385,14 @@ function CouncilCard({ member, index }) {
           name={member.name}
           image={member.image}
           className="absolute inset-0"
-          imgClassName="grayscale group-hover:grayscale-0 transition-all duration-500"
+          imgClassName="sm:grayscale sm:group-hover:grayscale-0 transition-all duration-500"
         />
       </div>
 
       {/* Role tag */}
       <span
         className={cn(
-          'mb-2 inline-flex items-center self-start rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.3em] uppercase transition-colors duration-300',
+          'mb-2 inline-flex items-center self-start rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.25em] uppercase transition-colors duration-300 sm:text-[9px] sm:tracking-[0.3em]',
           isAlt
             ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
             : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
@@ -425,7 +430,7 @@ function CouncilCard({ member, index }) {
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="text-neon-lime/60 hover:text-neon-lime mt-1 font-mono text-[10px] transition-colors"
+              className="text-neon-lime/60 hover:text-neon-lime -mx-2 -my-2 mt-1 min-h-11 touch-manipulation px-2 py-2 font-mono text-[10px] transition-colors"
             >
               {expanded ? '↑ less' : '↓ more'}
             </button>
@@ -505,7 +510,8 @@ export default function CommitteeClient({
             <motion.div
               variants={stagger}
               initial="hidden"
-              animate="visible"
+              whileInView="visible"
+              viewport={viewport}
               className="grid gap-4 sm:gap-5 md:grid-cols-2"
             >
               {advisors.map((advisor, i) => (
@@ -520,7 +526,7 @@ export default function CommitteeClient({
         </section>
       )}
 
-      <Divider />
+      {advisors.length > 0 && <Divider />}
 
       {/* ── Core Executive ───────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 md:py-28 lg:px-8">
@@ -544,7 +550,7 @@ export default function CommitteeClient({
         </div>
       </section>
 
-      <Divider />
+      {propCore.length > 0 && propExecs.length > 0 && <Divider />}
 
       {/* ── Executive Council ─────────────────────────────────────────────── */}
       {propExecs.length > 0 && (

@@ -97,7 +97,7 @@ function resolveIcon(value, size = 20) {
     const C = value;
     return <C size={size} />;
   }
-  if (/^\p{Emoji}/u.test(value) && !/^[A-Za-z]/.test(value))
+  if (/^\p{Emoji_Presentation}/u.test(value) && !/^[A-Za-z0-9#*]/.test(value))
     return (
       <span style={{ fontSize: size * 1.15, lineHeight: 1 }}>{value}</span>
     );
@@ -125,10 +125,13 @@ function IconBox({ icon, size = 20, accent = 'lime', className }) {
 
 /* ─── Gallery slider ────────────────────────────────────────────────────── */
 
+const SWIPE_THRESHOLD = 40;
+
 function GallerySlider({ images }) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef(null);
+  const touchStartX = useRef(null);
   const total = images.length;
   const next = useCallback(() => setCurrent((p) => (p + 1) % total), [total]);
   const prev = useCallback(
@@ -144,15 +147,30 @@ function GallerySlider({ images }) {
 
   if (!total) return null;
 
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    setPaused(true);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (delta > SWIPE_THRESHOLD) prev();
+    else if (delta < -SWIPE_THRESHOLD) next();
+    touchStartX.current = null;
+    setPaused(false);
+  };
+
   return (
     <div
       className="group/slider relative mt-12 overflow-hidden rounded-2xl border border-white/8"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div
-        className="relative w-full overflow-hidden"
-        style={{ aspectRatio: '21/9' }}
+        className="relative w-full overflow-hidden aspect-[4/3] sm:aspect-[16/9] lg:aspect-[21/9]"
       >
         {images.map((img, i) => (
           <div
@@ -189,14 +207,14 @@ function GallerySlider({ images }) {
             <button
               onClick={prev}
               aria-label="Previous image"
-              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
+              className="absolute top-1/2 left-3 flex h-11 w-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-100 backdrop-blur-sm transition-all duration-300 hover:text-white sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover/slider:opacity-100"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={next}
               aria-label="Next image"
-              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
+              className="absolute top-1/2 right-3 flex h-11 w-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-100 backdrop-blur-sm transition-all duration-300 hover:text-white sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover/slider:opacity-100"
             >
               <ChevronRight size={18} />
             </button>
@@ -210,13 +228,17 @@ function GallerySlider({ images }) {
               key={i}
               onClick={() => setCurrent(i)}
               aria-label={`Go to slide ${i + 1}`}
-              className={cn(
-                'h-1.5 rounded-full transition-all duration-300',
-                i === current
-                  ? 'bg-neon-lime w-6'
-                  : 'w-1.5 bg-white/20 hover:bg-white/40'
-              )}
-            />
+              className="flex h-6 w-6 touch-manipulation items-center justify-center"
+            >
+              <span
+                className={cn(
+                  'h-1.5 rounded-full transition-all duration-300',
+                  i === current
+                    ? 'bg-neon-lime w-6'
+                    : 'w-1.5 bg-white/20 hover:bg-white/40'
+                )}
+              />
+            </button>
           ))}
         </div>
       )}
@@ -361,7 +383,7 @@ export default function AboutClient({
             <motion.div variants={fadeUp} className="flex items-center gap-3">
               <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
               <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
-                {settings?.about_page_badge || ''}
+                {settings?.about_page_badge || 'About · NEUPC'}
               </span>
             </motion.div>
 
@@ -371,7 +393,7 @@ export default function AboutClient({
               className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
             >
               {(() => {
-                const title = settings?.about_page_title || '';
+                const title = settings?.about_page_title || 'About NEUPC';
                 if (title.includes(' ')) {
                   return (
                     <>
@@ -476,7 +498,8 @@ export default function AboutClient({
           <motion.div
             variants={stagger}
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={viewport}
             className="grid gap-6 lg:grid-cols-2 lg:gap-8"
           >
             {/* Mission card */}

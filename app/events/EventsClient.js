@@ -52,6 +52,13 @@ const STATUS_STYLES = {
   },
 };
 
+const DEFAULT_STATUS_STYLE = {
+  dot: 'bg-zinc-500',
+  text: 'text-zinc-400',
+  badge: 'border-white/10 bg-white/5 text-zinc-400',
+  label: 'Event',
+};
+
 const STATUS_TABS = [
   { key: 'active', label: 'Active' },
   { key: 'upcoming', label: 'Upcoming' },
@@ -72,11 +79,13 @@ function getCover(event) {
   );
 }
 
+const EVENT_TIMEZONE = 'Asia/Dhaka';
+
 function fmtDate(value, opts = {}) {
   if (!value) return '';
   try {
     return new Date(value).toLocaleDateString('en-US', {
-      timeZone: 'UTC',
+      timeZone: EVENT_TIMEZONE,
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -91,7 +100,7 @@ function fmtTime(value) {
   if (!value) return '';
   try {
     return new Date(value).toLocaleTimeString('en-US', {
-      timeZone: 'UTC',
+      timeZone: EVENT_TIMEZONE,
       hour: 'numeric',
       minute: '2-digit',
     });
@@ -113,7 +122,7 @@ function StatTile({ value, label, mobileLabel, accent = false }) {
       >
         {value}
       </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
+      <span className="font-mono text-[9px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
         <span className="sm:hidden">{mobileLabel || label}</span>
         <span className="hidden sm:inline">{label}</span>
       </span>
@@ -131,8 +140,15 @@ function CategorySelect({ categories, value, onChange }) {
     function onClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const current = value === 'all' ? 'All Categories' : value;
@@ -143,6 +159,8 @@ function CategorySelect({ categories, value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all sm:min-w-44',
           isFiltered
@@ -172,7 +190,10 @@ function CategorySelect({ categories, value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50 sm:right-0 sm:left-auto">
+        <div
+          role="listbox"
+          className="absolute top-full left-0 z-50 mt-1.5 max-h-64 min-w-full overflow-y-auto rounded-xl border border-white/10 bg-[#0e1018] shadow-xl shadow-black/50 sm:right-0 sm:left-auto"
+        >
           {categories.map((c) => {
             const label = c === 'all' ? 'All Categories' : c;
             const active = value === c;
@@ -180,12 +201,14 @@ function CategorySelect({ categories, value, onChange }) {
               <button
                 key={c}
                 type="button"
+                role="option"
+                aria-selected={active}
                 onClick={() => {
                   onChange(c);
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center justify-between gap-8 px-4 py-2.5 text-left font-mono text-[10px] tracking-wider uppercase transition-colors',
+                  'flex min-h-[38px] w-full items-center justify-between gap-8 px-4 py-2.5 text-left font-mono text-[10px] tracking-wider uppercase transition-colors',
                   active
                     ? 'bg-neon-lime/10 text-neon-lime'
                     : 'text-zinc-400 hover:bg-white/5 hover:text-white'
@@ -218,8 +241,8 @@ function CategorySelect({ categories, value, onChange }) {
 
 // ─── Event card ───────────────────────────────────────────────────────────────
 
-function EventCard({ event, index = 0 }) {
-  const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
+function EventCard({ event }) {
+  const st = STATUS_STYLES[event.status] ?? DEFAULT_STATUS_STYLE;
   const image = getCover(event);
 
   return (
@@ -312,7 +335,7 @@ function EventCard({ event, index = 0 }) {
 
 function FeaturedBanner({ event }) {
   const image = getCover(event);
-  const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
+  const st = STATUS_STYLES[event.status] ?? DEFAULT_STATUS_STYLE;
 
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]">
@@ -674,25 +697,25 @@ export default function EventsClient({
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
+                <div className="sm:pr-6 lg:pr-8">
                   <StatTile
                     value={counts.all}
                     label="Total Events"
                     mobileLabel="Total"
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile value={counts.upcoming} label="Upcoming" accent />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={counts.ongoing}
                     label="Live Now"
                     mobileLabel="Live"
                   />
                 </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
+                <div className="sm:pl-6 lg:pl-8">
                   <StatTile
                     value={counts.completed}
                     label="Completed"
@@ -748,7 +771,7 @@ export default function EventsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
+            className="glass-panel relative z-20 space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search + category */}
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -767,11 +790,12 @@ export default function EventsClient({
                   />
                 </svg>
                 <input
-                  type="text"
+                  type="search"
                   value={search}
                   onChange={(e) => updateSearch(e.target.value)}
                   placeholder="Search events…"
-                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-sm text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8"
+                  aria-label="Search events"
+                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-base text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8 sm:text-sm"
                 />
                 {search && (
                   <button
@@ -806,38 +830,42 @@ export default function EventsClient({
 
             {/* Status tabs + clear-all row */}
             <div className="flex items-center gap-2">
-              <div className="scrollbar-none -mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5">
-                {STATUS_TABS.map((tab) => {
-                  const active = statusFilter === tab.key;
-                  const count = counts[tab.key] ?? counts.all;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => updateStatus(tab.key)}
-                      className={cn(
-                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                        active
-                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                      )}
-                    >
-                      {tab.label}
-                      <span
+              <div className="relative flex-1 overflow-hidden">
+                <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
+                  {STATUS_TABS.map((tab) => {
+                    const active = statusFilter === tab.key;
+                    const count = counts[tab.key] ?? counts.all;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => updateStatus(tab.key)}
                         className={cn(
-                          'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                          active ? 'bg-black/20' : 'bg-white/10'
+                          'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                          active
+                            ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                            : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                         )}
                       >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                        {tab.label}
+                        <span
+                          className={cn(
+                            'rounded-full px-1.5 py-px text-[9px] tabular-nums',
+                            active ? 'bg-black/20' : 'bg-white/10'
+                          )}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-l from-[rgba(12,14,22,0.9)] to-transparent" />
               </div>
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAll}
-                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                  aria-label={`Clear ${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''}`}
+                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 >
                   <svg
                     className="h-3 w-3"
@@ -872,8 +900,8 @@ export default function EventsClient({
                   animate="visible"
                   className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
-                  {items.map((event, i) => (
-                    <EventCard key={event.id} event={event} index={i} />
+                  {items.map((event) => (
+                    <EventCard key={event.id} event={event} />
                   ))}
                 </motion.div>
                 <InlinePagination

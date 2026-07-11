@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import { driveImageUrl } from '@/app/_lib/utils/utils';
@@ -19,14 +19,22 @@ export default function EventGalleryViewer({ items, eventTitle }) {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   const isOpen = lightboxIndex >= 0;
+  const closeButtonRef = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   /* ── Lightbox helpers ── */
-  const open = (i) => setLightboxIndex(i);
-  const close = () => setLightboxIndex(-1);
+  const open = (i, e) => {
+    triggerRef.current = e?.currentTarget ?? null;
+    setLightboxIndex(i);
+  };
+  const close = () => {
+    setLightboxIndex(-1);
+    triggerRef.current?.focus();
+  };
   const next = useCallback(
     () => setLightboxIndex((p) => (p + 1) % items.length),
     [items.length]
@@ -54,6 +62,11 @@ export default function EventGalleryViewer({ items, eventTitle }) {
     };
   }, [isOpen, next, prev]);
 
+  /* move focus into the dialog when it opens */
+  useEffect(() => {
+    if (isOpen) closeButtonRef.current?.focus();
+  }, [isOpen]);
+
   /* ── Grid layout helper ── */
   const getSpan = (index, total) => {
     if (index === 0 && total > 1) return 'col-span-2 row-span-2'; // hero
@@ -72,7 +85,7 @@ export default function EventGalleryViewer({ items, eventTitle }) {
             <button
               key={item.id}
               type="button"
-              onClick={() => open(i)}
+              onClick={(e) => open(i, e)}
               aria-label={item.caption || `View photo ${i + 1}`}
               className={`group relative overflow-hidden rounded-2xl border border-white/8 bg-slate-900/60 text-left transition-all duration-500 hover:-translate-y-0.5 hover:border-violet-500/30 hover:shadow-2xl hover:shadow-violet-900/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 ${getSpan(i, items.length)}`}
             >
@@ -141,6 +154,7 @@ export default function EventGalleryViewer({ items, eventTitle }) {
             </span>
             {/* close */}
             <button
+              ref={closeButtonRef}
               onClick={close}
               className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
               aria-label="Close lightbox"

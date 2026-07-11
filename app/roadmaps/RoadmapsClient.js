@@ -15,6 +15,8 @@ import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
 import HeroAmbient from '@/app/_components/ui/HeroAmbient';
 import ScrollCue from '@/app/_components/ui/ScrollCue';
 import SectionEyebrow from '@/app/_components/ui/SectionEyebrow';
+import SortSelect from '@/app/_components/ui/SortSelect';
+import StatTile from '@/app/_components/ui/StatTile';
 import { cn, driveImageUrl } from '@/app/_lib/utils/utils';
 import {
   pageFadeUp as fadeUp,
@@ -134,27 +136,6 @@ function DifficultyBadge({ difficulty }) {
       <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} />
       {c.label}
     </span>
-  );
-}
-
-// ─── Stat tile (exact pattern from events + achievements) ─────────────────────
-
-function StatTile({ value, label, mobileLabel, accent = false }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
-      <span
-        className={cn(
-          'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
-          accent ? 'text-neon-lime' : 'text-white'
-        )}
-      >
-        {value}
-      </span>
-      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
-        <span className="sm:hidden">{mobileLabel || label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
-    </div>
   );
 }
 
@@ -344,7 +325,6 @@ export default function RoadmapsClient({
   settings = {},
 }) {
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
   const [difficulty, setDifficulty] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setPage] = useState(1);
@@ -377,14 +357,6 @@ export default function RoadmapsClient({
     ];
   }, [roadmaps]);
 
-  const counts = useMemo(() => {
-    const map = { all: roadmaps.length };
-    categories.forEach(({ category: c, count }) => {
-      map[c] = count;
-    });
-    return map;
-  }, [roadmaps, categories]);
-
   const featuredCount = featuredRoadmaps.length;
   const beginnerCount = useMemo(
     () => roadmaps.filter((r) => r.difficulty === 'beginner').length,
@@ -395,7 +367,6 @@ export default function RoadmapsClient({
     let list = roadmaps;
     if (difficulty !== 'all')
       list = list.filter((r) => r.difficulty === difficulty);
-    if (category) list = list.filter((r) => r.category === category);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -412,17 +383,16 @@ export default function RoadmapsClient({
       if (sortBy === 'title') return a.title.localeCompare(b.title);
       return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
-  }, [roadmaps, difficulty, category, search, sortBy]);
+  }, [roadmaps, difficulty, search, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const pageItems = filtered.slice(
     (currentPage - 1) * PER_PAGE,
     currentPage * PER_PAGE
   );
-  const hasFilters = !!(search || category || difficulty !== 'all');
+  const hasFilters = !!(search || difficulty !== 'all');
   const activeFilterCount =
     (search.trim() ? 1 : 0) +
-    (category ? 1 : 0) +
     (difficulty !== 'all' ? 1 : 0) +
     (sortBy !== 'newest' ? 1 : 0);
 
@@ -434,17 +404,12 @@ export default function RoadmapsClient({
     setPage(p);
     setTimeout(scrollToGrid, 50);
   }
-  function handleCategory(c) {
-    setCategory((p) => (p === c ? '' : c));
-    setPage(1);
-  }
   function handleSearch(e) {
     setSearch(e.target.value);
     setPage(1);
   }
   function clearAll() {
     setSearch('');
-    setCategory('');
     setDifficulty('all');
     setSortBy('newest');
     setPage(1);
@@ -479,7 +444,7 @@ export default function RoadmapsClient({
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black text-white uppercase select-none"
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] leading-none font-black wrap-anywhere text-white uppercase select-none"
             >
               {heroTitle.includes('&') ? (
                 <>
@@ -518,25 +483,25 @@ export default function RoadmapsClient({
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
-                <div className="pr-3 sm:pr-6 lg:pr-8">
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-white/8">
+                <div className="sm:pr-6 lg:pr-8">
                   <StatTile
                     value={roadmaps.length}
                     label="Roadmaps"
                     mobileLabel="Total"
                   />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile value={categories.length} label="Domains" accent />
                 </div>
-                <div className="px-3 sm:px-6 lg:px-8">
+                <div className="sm:px-6 lg:px-8">
                   <StatTile
                     value={featuredCount}
                     label="Featured"
                     mobileLabel="Picks"
                   />
                 </div>
-                <div className="pl-3 sm:pl-6 lg:pl-8">
+                <div className="sm:pl-6 lg:pl-8">
                   <StatTile
                     value={beginnerCount}
                     label="Beginner Friendly"
@@ -593,7 +558,7 @@ export default function RoadmapsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
+            className="glass-panel relative z-20 space-y-3 rounded-2xl p-3 sm:p-4"
           >
             {/* Search + sort row */}
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -616,7 +581,8 @@ export default function RoadmapsClient({
                   value={search}
                   onChange={handleSearch}
                   placeholder="Search roadmaps, categories…"
-                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-sm text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8"
+                  aria-label="Search roadmaps"
+                  className="focus:border-neon-lime/30 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-9 pl-9 text-base text-white transition outline-none placeholder:text-zinc-600 focus:bg-white/8 sm:text-sm"
                 />
                 {search && (
                   <button
@@ -644,97 +610,48 @@ export default function RoadmapsClient({
                 )}
               </div>
 
-              <select
+              <SortSelect
+                options={SORT_OPTIONS}
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
+                onChange={(v) => {
+                  setSortBy(v);
                   setPage(1);
                 }}
-                className="focus:border-neon-lime/30 shrink-0 cursor-pointer rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-[10px] tracking-wider text-zinc-300 uppercase transition outline-none sm:min-w-40"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Sort roadmaps"
+              />
             </div>
 
-            {/* Difficulty tabs */}
-            <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
-              {difficultyTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setDifficulty(tab.id);
-                    setPage(1);
-                  }}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                    difficulty === tab.id
-                      ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                      : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Category tabs + clear */}
-            {/* <div className="flex items-center gap-2">
-              <div className="scrollbar-none -mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5">
-                <button
-                  onClick={() => {
-                    setCategory('');
-                    setPage(1);
-                  }}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                    !category
-                      ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                      : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                  )}
-                >
-                  All
-                  <span
-                    className={cn(
-                      'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                      !category ? 'bg-black/20' : 'bg-white/10'
-                    )}
-                  >
-                    {counts.all}
-                  </span>
-                </button>
-
-                {categories.map(({ category: cat, count }) => (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategory(cat)}
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
-                      category === cat
-                        ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
-                        : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
-                    )}
-                  >
-                    {getCategoryIcon(cat)} {cat}
-                    <span
+            {/* Difficulty tabs + clear */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 overflow-hidden">
+                <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
+                  {difficultyTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setDifficulty(tab.id);
+                        setPage(1);
+                      }}
+                      aria-pressed={difficulty === tab.id}
                       className={cn(
-                        'rounded-full px-1.5 py-px text-[9px] tabular-nums',
-                        category === cat ? 'bg-black/20' : 'bg-white/10'
+                        'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                        difficulty === tab.id
+                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                          : 'hover:border-neon-lime/30 hover:text-neon-lime border border-white/10 text-zinc-500'
                       )}
                     >
-                      {count}
-                    </span>
-                  </button>
-                ))}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-linear-to-l from-[rgba(12,14,22,0.9)] to-transparent" />
               </div>
 
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAll}
-                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                  aria-label={`Clear ${activeFilterCount} filter${activeFilterCount !== 1 ? 's' : ''}`}
+                  className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime hover:bg-neon-lime/15 inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 >
                   <svg
                     className="h-3 w-3"
@@ -752,7 +669,7 @@ export default function RoadmapsClient({
                   {activeFilterCount}
                 </button>
               )}
-            </div> */}
+            </div>
           </motion.div>
 
           {/* Cards grid */}

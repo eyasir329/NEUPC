@@ -801,7 +801,6 @@ export const getHomePageData = unstable_cache(
         recentBlogs,
         joinData,
         settings,
-        roadmaps,
       ] = await Promise.all([
         getHeroData(),
         getAboutData(),
@@ -814,7 +813,6 @@ export const getHomePageData = unstable_cache(
         getPublicRecentBlogs(6),
         getJoinPageData(),
         getAllPublicSettings(),
-        getPublicRoadmaps(),
       ]);
       return {
         hero,
@@ -829,7 +827,6 @@ export const getHomePageData = unstable_cache(
         stats: about.stats || [],
         joinBenefits: joinData.benefits,
         settings,
-        roadmaps,
       };
     } catch {
       return {

@@ -873,7 +873,7 @@ export default function RoadmapDetailClient({
                 )}
               </div>
               <div>
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-650 uppercase sm:text-[10px]">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
                   Curator
                 </span>
                 <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -883,7 +883,7 @@ export default function RoadmapDetailClient({
             </div>
             {meta.date && (
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-650 uppercase sm:text-[10px]">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
                   Published
                 </span>
                 <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -893,7 +893,7 @@ export default function RoadmapDetailClient({
             )}
             {meta.readTimeLabel && (
               <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-650 uppercase sm:text-[10px]">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
                   Read Time
                 </span>
                 <span className="font-heading mt-0.5 block text-[13px] font-bold text-white sm:text-sm">
@@ -903,7 +903,7 @@ export default function RoadmapDetailClient({
             )}
             {viewCount > 0 && (
               <div className="border-white/8 bg-white/3 rounded-xl border px-3 py-2.5 backdrop-blur-sm sm:px-4">
-                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-650 uppercase sm:text-[10px]">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">
                   Views
                 </span>
                 <span className="font-heading text-white mt-0.5 block text-[13px] font-bold sm:text-sm">
@@ -1006,14 +1006,14 @@ export default function RoadmapDetailClient({
                         <span className="font-heading text-xs font-bold tracking-wider text-white uppercase">
                           Learning Path
                         </span>
-                        <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-650 tabular-nums">
+                        <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
                           {tocItems.filter((s) => s.level === 2).length}
                         </span>
                       </div>
                       <button
                         onClick={() => setTocCollapsed(true)}
                         title="Collapse"
-                        className="hover:text-emerald-400 flex h-6 w-6 items-center justify-center rounded-md text-zinc-650 transition-all hover:bg-white/8"
+                        className="hover:text-emerald-400 flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8"
                       >
                         <svg
                           className="h-3.5 w-3.5"
@@ -1051,7 +1051,7 @@ export default function RoadmapDetailClient({
                       ))}
                     </nav>
                     <div className="border-t border-[#27272A]/50 px-6 py-4">
-                      <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-zinc-650">
+                      <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-zinc-600">
                         <span>
                           {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                           {tableOfContents.length} sections
@@ -1141,7 +1141,7 @@ export default function RoadmapDetailClient({
             {/* Reading controls */}
             <div className="mb-6 space-y-3">
               <div className="border border-white/5 bg-white/[0.02] backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
-                <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-550 uppercase">
+                <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                   <svg
                     className="text-emerald-400 h-4 w-4"
                     fill="none"
@@ -1228,7 +1228,7 @@ export default function RoadmapDetailClient({
                 <div className="border border-white/5 bg-[#141416]/90 backdrop-blur-md rounded-xl p-5 shadow-2xl">
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                     <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-550 uppercase">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                         Typeface
                       </p>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1431,7 +1431,7 @@ export default function RoadmapDetailClient({
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
-                    <p className="text-[10px] text-zinc-650">
+                    <p className="text-[10px] text-zinc-600">
                       Settings saved in your browser
                     </p>
                     <button
@@ -1514,7 +1514,7 @@ export default function RoadmapDetailClient({
             ) : (
               <div className="border border-white/5 bg-white/[0.02] flex flex-col items-center justify-center rounded-2xl p-16 text-center">
                 <div className="mb-4 text-5xl">📭</div>
-                <p className="font-mono text-sm tracking-wider text-zinc-550">
+                <p className="font-mono text-sm tracking-wider text-zinc-500">
                   No learning content available yet. Check back soon!
                 </p>
               </div>

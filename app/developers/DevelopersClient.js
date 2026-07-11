@@ -109,7 +109,7 @@ function SocialBtn({ href, icon, label }) {
       target="_blank"
       rel="noopener noreferrer"
       title={label}
-      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200"
+      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 sm:h-7 sm:w-7"
     >
       {icon}
     </a>
@@ -197,14 +197,24 @@ function Hero({ stats, settings }) {
               variants={fadeUp}
               className="border-t border-white/8 pt-6 sm:pt-8"
             >
-              <div className="grid grid-cols-4 divide-x divide-white/8">
+              <div
+                className={cn(
+                  'grid divide-x divide-white/8',
+                  {
+                    1: 'grid-cols-1',
+                    2: 'grid-cols-2',
+                    3: 'grid-cols-3',
+                    4: 'grid-cols-2 sm:grid-cols-4',
+                  }[Math.min(stats.length, 4)]
+                )}
+              >
                 {stats.slice(0, 4).map((stat, i) => (
                   <div
                     key={i}
                     className={cn(
                       i === 0
                         ? 'pr-4 sm:pr-8'
-                        : i === 3
+                        : i === Math.min(stats.length, 4) - 1
                           ? 'pl-4 sm:pl-8'
                           : 'px-4 sm:px-8'
                     )}
@@ -248,7 +258,7 @@ function DeveloperCard({ dev, index }) {
         name={dev.name}
         image={dev.profileImage}
         className="absolute inset-0"
-        imgClassName="grayscale group-hover:grayscale-0 group-hover:scale-[1.04] transition-all duration-700 ease-out"
+        imgClassName="sm:grayscale sm:group-hover:grayscale-0 group-hover:scale-[1.04] transition-all duration-700 ease-out"
       />
 
       {/* Gradient overlay */}
@@ -294,8 +304,8 @@ function DeveloperCard({ dev, index }) {
           </div>
         )}
 
-        {/* Hover-reveal socials */}
-        <div className="flex translate-y-2 gap-2 pt-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        {/* Socials — always visible on touch, hover-reveal on larger pointers */}
+        <div className="flex gap-2 pt-1 opacity-100 transition-all duration-300 sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
           <SocialBtn href={dev.github} icon={<GithubIcon />} label="GitHub" />
           <SocialBtn
             href={dev.linkedin}
@@ -607,7 +617,8 @@ export default function DevelopersClient({
             <motion.div
               variants={stagger}
               initial="hidden"
-              animate="visible"
+              whileInView="visible"
+              viewport={viewport}
               className="grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4"
             >
               {coreDevelopers.map((dev, i) => (

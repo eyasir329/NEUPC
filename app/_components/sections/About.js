@@ -7,15 +7,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 const DEFAULTS = {
   title: 'Who We Are',
   description1:
     "NEUPC is the nexus of algorithmic thought and software craftsmanship at Netrokona University. We are a collective of developers, researchers, and visionaries pushing the boundaries of what's possible in the digital realm.",
-  description2:
-    'The club serves as a platform where students can explore competitive programming, software development, research discussions, and emerging technologies beyond the academic syllabus.',
   mission:
     'To nurture competitive programming and problem-solving skills, and to mentor students into confident, industry-ready developers.',
   vision:
@@ -53,13 +50,8 @@ const textVariant = {
 };
 
 function About({ data = {}, settings = {} }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const {
-    title = DEFAULTS.title,
-    description1 = DEFAULTS.description1,
-    description2 = DEFAULTS.description2,
-  } = data;
+  const { title = DEFAULTS.title, description1 = DEFAULTS.description1 } =
+    data;
   const mission = settings?.homepage_mission || '';
   const vision = settings?.homepage_vision || '';
   const missionText = Array.isArray(mission)
@@ -185,37 +177,6 @@ function About({ data = {}, settings = {} }) {
               <p className="font-sans text-base leading-[1.9] font-light text-zinc-400 sm:text-lg">
                 {description1}
               </p>
-
-              {/* {description2 && !isExpanded && (
-                <div className="flex w-full justify-end md:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(true)}
-                    className="font-heading text-neon-lime inline-flex touch-manipulation items-center gap-2 text-[10px] font-bold tracking-widest uppercase transition-colors hover:opacity-80 sm:text-[11px]"
-                  >
-                    Read More
-                    <span aria-hidden className="text-base leading-none">
-                      +
-                    </span>
-                  </button>
-                </div>
-              )} */}
-
-              {/* {description2 && isExpanded && (
-                <>
-                  <p className="font-sans text-sm leading-[1.9] font-light text-zinc-500 sm:text-base">
-                    {description2}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(false)}
-                    className="font-heading inline-flex touch-manipulation items-center gap-1.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-300 sm:text-[11px]"
-                  >
-                    <span aria-hidden>−</span>
-                    Collapse
-                  </button>
-                </>
-              )} */}
             </div>
 
             {/* Mission / Vision */}

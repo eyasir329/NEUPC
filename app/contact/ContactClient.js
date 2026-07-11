@@ -166,6 +166,7 @@ function FaqItem({ faq, isActive, onToggle }) {
       />
       <button
         onClick={onToggle}
+        aria-expanded={isActive}
         className="relative z-10 flex w-full items-start justify-between gap-4 p-5 text-left"
       >
         <span
@@ -288,7 +289,12 @@ export default function ContactClient({
       fd.set('name', formData.name);
       fd.set('email', formData.email);
       fd.set('subject', formData.subject);
-      fd.set('message', formData.message);
+      fd.set(
+        'message',
+        formData.phone.trim()
+          ? `${formData.message}\n\nPhone: ${formData.phone.trim()}`
+          : formData.message
+      );
       const result = await submitContactFormAction(fd);
       if (result?.error) {
         setErrors({ submit: result.error });
@@ -308,7 +314,7 @@ export default function ContactClient({
   };
 
   const inputBase =
-    'w-full rounded-xl border bg-white/[0.015] px-4 py-3 text-sm text-white placeholder-zinc-650 outline-none backdrop-blur-sm transition-all duration-300 focus:bg-white/[0.035] sm:text-base';
+    'w-full rounded-xl border bg-white/[0.015] px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none backdrop-blur-sm transition-all duration-300 focus:bg-white/[0.035] sm:text-base';
   const inputNormal =
     'border-white/8 focus:border-neon-lime/30 focus:ring-1 focus:ring-neon-lime/15';
   const inputError =
@@ -421,7 +427,8 @@ export default function ContactClient({
               <motion.div
                 variants={fadeUp}
                 initial="hidden"
-                animate="visible"
+                whileInView="visible"
+                viewport={viewport}
                 className="glass-panel group hover:border-neon-lime/20 relative overflow-hidden rounded-2xl p-6 transition-all duration-300 sm:p-8"
               >
                 <div className="mb-6 flex items-center gap-3">
@@ -448,7 +455,7 @@ export default function ContactClient({
                             {icon}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="mt-1 font-mono text-[9px] leading-none font-bold tracking-widest text-zinc-500 uppercase">
+                            <p className="font-mono text-[9px] leading-none font-bold tracking-widest text-zinc-500 uppercase">
                               {label}
                             </p>
                             {isLink ? (
@@ -476,7 +483,8 @@ export default function ContactClient({
                 <motion.div
                   variants={fadeUp}
                   initial="hidden"
-                  animate="visible"
+                  whileInView="visible"
+                  viewport={viewport}
                   className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:border-white/12 sm:p-8"
                 >
                   <div className="mb-6 flex items-center gap-3">
@@ -556,7 +564,8 @@ export default function ContactClient({
                 <motion.div
                   variants={fadeUp}
                   initial="hidden"
-                  animate="visible"
+                  whileInView="visible"
+                  viewport={viewport}
                   className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:border-white/12 sm:p-8"
                 >
                   <div className="mb-6 flex items-center gap-3">
@@ -607,14 +616,17 @@ export default function ContactClient({
                               {contact.email}
                             </a>
                           </div>
-                          <a
-                            href={contact.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-zinc-400 transition-all duration-300 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-400 hover:shadow-[0_0_15px_-4px_rgba(14,165,233,0.2)]"
-                          >
-                            <LinkedInIcon className="h-4 w-4" />
-                          </a>
+                          {contact.linkedin && contact.linkedin !== '#' && (
+                            <a
+                              href={contact.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`${contact.name} on LinkedIn`}
+                              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-zinc-400 transition-all duration-300 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-400 hover:shadow-[0_0_15px_-4px_rgba(14,165,233,0.2)] sm:h-9 sm:w-9"
+                            >
+                              <LinkedInIcon className="h-4 w-4" />
+                            </a>
+                          )}
                         </motion.div>
                       );
                     })}
@@ -627,7 +639,8 @@ export default function ContactClient({
             <motion.div
               variants={fadeUp}
               initial="hidden"
-              animate="visible"
+              whileInView="visible"
+              viewport={viewport}
               className="lg:col-span-7"
             >
               <div className="glass-panel rounded-2xl p-6 sm:p-8 lg:p-10">
@@ -719,10 +732,14 @@ export default function ContactClient({
                   {/* Name + Email */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
+                      <label
+                        htmlFor="contact-name"
+                        className="text-zinc-500 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase"
+                      >
                         Full Name <span className="text-neon-lime">*</span>
                       </label>
                       <input
+                        id="contact-name"
                         type="text"
                         name="name"
                         value={formData.name}
@@ -740,10 +757,14 @@ export default function ContactClient({
                       )}
                     </div>
                     <div>
-                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
+                      <label
+                        htmlFor="contact-email"
+                        className="text-zinc-500 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase"
+                      >
                         Email <span className="text-neon-lime">*</span>
                       </label>
                       <input
+                        id="contact-email"
                         type="email"
                         name="email"
                         value={formData.email}
@@ -765,10 +786,14 @@ export default function ContactClient({
                   {/* Phone + Subject */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
+                      <label
+                        htmlFor="contact-phone"
+                        className="text-zinc-500 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase"
+                      >
                         Phone <span className="text-zinc-600">(optional)</span>
                       </label>
                       <input
+                        id="contact-phone"
                         type="tel"
                         name="phone"
                         value={formData.phone}
@@ -778,11 +803,15 @@ export default function ContactClient({
                       />
                     </div>
                     <div>
-                      <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
+                      <label
+                        htmlFor="contact-subject"
+                        className="text-zinc-500 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase"
+                      >
                         Subject <span className="text-neon-lime">*</span>
                       </label>
                       <div className="relative">
                         <select
+                          id="contact-subject"
                           name="subject"
                           value={formData.subject}
                           onChange={handleChange}
@@ -806,7 +835,7 @@ export default function ContactClient({
                             </option>
                           ))}
                         </select>
-                        <div className="text-zinc-550 pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                        <div className="text-zinc-500 pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                           <svg
                             className="h-4 w-4"
                             fill="none"
@@ -832,14 +861,19 @@ export default function ContactClient({
 
                   {/* Message */}
                   <div>
-                    <label className="text-zinc-550 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase">
+                    <label
+                      htmlFor="contact-message"
+                      className="text-zinc-500 mb-1.5 block font-mono text-[9px] font-bold tracking-widest uppercase"
+                    >
                       Message <span className="text-neon-lime">*</span>
                     </label>
                     <textarea
+                      id="contact-message"
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
                       rows={8}
+                      maxLength={500}
                       placeholder="Tell us what's on your mind..."
                       className={cn(
                         inputBase,

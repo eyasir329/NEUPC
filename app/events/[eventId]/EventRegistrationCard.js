@@ -272,11 +272,12 @@ function TeamMemberSearch({
       {!isFull && (
         <div className="relative">
           <input
+            id="team-members-search"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or email…"
-            className="focus:border-neon-lime/40 focus:ring-neon-lime/20 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-mono text-xs text-white placeholder-zinc-600 transition-all outline-none focus:ring-1"
+            className="focus:border-neon-lime/40 focus:ring-neon-lime/20 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-mono text-base text-white placeholder-zinc-600 transition-all outline-none focus:ring-1 sm:text-xs"
           />
           {searching && (
             <div className="absolute top-3 right-3">
@@ -856,19 +857,26 @@ export default function EventRegistrationCard({ event, session }) {
                 {isTeamEvent && (
                   <div className="mb-4 space-y-3">
                     <div>
-                      <label className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                      <label
+                        htmlFor="team-name-input"
+                        className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase"
+                      >
                         Team Name
                       </label>
                       <input
+                        id="team-name-input"
                         type="text"
                         value={teamName}
                         onChange={(e) => setTeamName(e.target.value)}
                         placeholder="Enter team name"
-                        className="focus:border-neon-lime/40 focus:ring-neon-lime/20 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-mono text-sm text-white placeholder-zinc-600 transition-all outline-none focus:ring-1"
+                        className="focus:border-neon-lime/40 focus:ring-neon-lime/20 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-mono text-base text-white placeholder-zinc-600 transition-all outline-none focus:ring-1 sm:text-sm"
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                      <label
+                        htmlFor="team-members-search"
+                        className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase"
+                      >
                         Team Members
                       </label>
                       <TeamMemberSearch

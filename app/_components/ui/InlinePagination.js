@@ -68,12 +68,13 @@ export default function InlinePagination({
       </p>
 
       {/* Page buttons */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
         {/* Prev */}
         <button
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
-          className="hover:border-neon-lime/30 hover:text-neon-lime flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all disabled:pointer-events-none disabled:opacity-30"
+          aria-label="Previous page"
+          className="hover:border-neon-lime/30 hover:text-neon-lime flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-2.5 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all disabled:pointer-events-none disabled:opacity-30 sm:px-3"
         >
           <svg
             className="h-3.5 w-3.5"
@@ -88,7 +89,7 @@ export default function InlinePagination({
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Prev
+          <span className="hidden sm:inline">Prev</span>
         </button>
 
         {/* Page numbers */}
@@ -104,6 +105,8 @@ export default function InlinePagination({
             <button
               key={p}
               onClick={() => onPageChange(p)}
+              aria-label={`Page ${p}`}
+              aria-current={p === currentPage ? 'page' : undefined}
               className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-xl font-mono text-[10px] font-bold transition-all',
                 p === currentPage
@@ -120,9 +123,10 @@ export default function InlinePagination({
         <button
           disabled={currentPage === totalPages}
           onClick={() => onPageChange(currentPage + 1)}
-          className="hover:border-neon-lime/30 hover:text-neon-lime flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all disabled:pointer-events-none disabled:opacity-30"
+          aria-label="Next page"
+          className="hover:border-neon-lime/30 hover:text-neon-lime flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-2.5 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all disabled:pointer-events-none disabled:opacity-30 sm:px-3"
         >
-          Next
+          <span className="hidden sm:inline">Next</span>
           <svg
             className="h-3.5 w-3.5"
             fill="none"

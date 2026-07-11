@@ -163,11 +163,11 @@ export default function PublicProfileClient({ profile }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="shrink-0">{icon}</span>
-              <span className="text-[11px] font-bold font-mono text-zinc-350 tracking-wider uppercase">{title}</span>
+              <span className="text-[11px] font-bold font-mono text-zinc-400 tracking-wider uppercase">{title}</span>
             </div>
             {filterElement}
           </div>
-          <span className="text-[10px] font-mono text-zinc-550">
+          <span className="text-[10px] font-mono text-zinc-500">
             Total logs: <strong className={labelColorClass}>{totalCount}</strong>
           </span>
         </div>
@@ -298,10 +298,10 @@ export default function PublicProfileClient({ profile }) {
                 <p className="text-sm font-mono text-zinc-400">@{profile.username}{profile.email ? ` · ${profile.email}` : ''}</p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1 text-xs text-zinc-500 font-medium">
                   {profile.location && (
-                    <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-650" /> {profile.location}</span>
+                    <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-600" /> {profile.location}</span>
                   )}
                   {profile.university && (
-                    <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-650" /> {profile.university}</span>
+                    <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-600" /> {profile.university}</span>
                   )}
                 </div>
               </div>
@@ -335,28 +335,28 @@ export default function PublicProfileClient({ profile }) {
               <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
                 <Code2 size={18} className="text-[#B6F36B] mb-1" />
                 <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalSolved}</span>
-                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Solved Problems</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Solved Problems</span>
               </div>
             )}
             {profile.quickStats.currentStreak > 0 && (
               <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
                 <Flame size={18} className="text-orange-500 mb-1" />
                 <span className="text-xl font-bold font-mono text-white">{profile.quickStats.currentStreak} Days</span>
-                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Current Streak</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Current Streak</span>
               </div>
             )}
             {profile.quickStats.longestStreak > 0 && (
               <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
                 <Trophy size={18} className="text-yellow-500 mb-1" />
                 <span className="text-xl font-bold font-mono text-white">{profile.quickStats.longestStreak} Days</span>
-                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Longest Streak</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Longest Streak</span>
               </div>
             )}
             {profile.quickStats.totalContests > 0 && (
               <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
                 <Target size={18} className="text-[#7C5CFF] mb-1" />
                 <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalContests}</span>
-                <span className="text-[9px] uppercase tracking-wider text-zinc-550 font-mono">Contests Rated</span>
+                <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Contests Rated</span>
               </div>
             )}
           </div>
@@ -421,7 +421,7 @@ export default function PublicProfileClient({ profile }) {
                     <div className="absolute left-[-4.5px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#7C5CFF] border border-[#030408]" />
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-zinc-200">{edu.institution}</span>
-                      <span className="text-zinc-550 font-mono">{edu.period}</span>
+                      <span className="text-zinc-500 font-mono">{edu.period}</span>
                     </div>
                     <div className="text-xs text-[#B6F36B] font-medium">{edu.degree}</div>
                     <div className="text-[10px] text-zinc-500 font-mono">{edu.result}</div>
@@ -439,7 +439,7 @@ export default function PublicProfileClient({ profile }) {
                 {profile.references.map((ref, i) => (
                   <div key={i} className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl space-y-1 text-xs">
                     <div className="font-bold text-neutral-200">{ref.name}</div>
-                    <div className="text-[10px] text-zinc-550">{ref.designation} · {ref.institution}</div>
+                    <div className="text-[10px] text-zinc-500">{ref.designation} · {ref.institution}</div>
                     <div className="text-[10px] font-mono text-[#7C5CFF] hover:underline cursor-pointer">{ref.email}</div>
                   </div>
                 ))}
@@ -509,7 +509,7 @@ export default function PublicProfileClient({ profile }) {
                         : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'
                     }`}
                   >
-                    <Icon size={14} className={isActive ? 'text-[#B6F36B]' : 'text-zinc-550'} />
+                    <Icon size={14} className={isActive ? 'text-[#B6F36B]' : 'text-zinc-500'} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -547,7 +547,7 @@ export default function PublicProfileClient({ profile }) {
                           <select
                             value={heatmapRange}
                             onChange={(e) => setHeatmapRange(e.target.value)}
-                            className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-350 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
+                            className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-400 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
                           >
                             <option value="12">Last 12 Months</option>
                             <option value="6">Last 6 Months</option>
@@ -580,11 +580,11 @@ export default function PublicProfileClient({ profile }) {
                         {renderHeatmap('GitHub Contributions', <Github size={13} className="text-sky-400" />, githubCols, totalGithubContributions, 'text-sky-400')}
 
                         {/* Legend */}
-                        <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-white/[0.03] text-[10.5px] font-mono text-zinc-550">
+                        <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-white/[0.03] text-[10.5px] font-mono text-zinc-500">
                           <span>Less</span>
                           <div className="w-[10px] h-[10px] rounded-sm bg-white/[0.02]" />
                           <div className="w-[10px] h-[10px] rounded-sm bg-emerald-950/70" />
-                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-850/80" />
+                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-800/80" />
                           <div className="w-[10px] h-[10px] rounded-sm bg-emerald-600/90" />
                           <div className="w-[10px] h-[10px] rounded-sm bg-emerald-400" />
                           <span>More</span>
@@ -676,7 +676,7 @@ export default function PublicProfileClient({ profile }) {
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                                 <div>
                                   <span className="font-bold text-sm text-zinc-200">{exp.role}</span>
-                                  <span className="text-zinc-550 mx-1.5">@</span>
+                                  <span className="text-zinc-500 mx-1.5">@</span>
                                   <span className="text-[#B6F36B] font-semibold">{exp.company}</span>
                                   <span className="ml-2 bg-white/[0.03] border border-white/[0.08] px-2 py-0.5 rounded text-[9px] font-mono uppercase text-zinc-400">{exp.type}</span>
                                 </div>
@@ -705,7 +705,7 @@ export default function PublicProfileClient({ profile }) {
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                                 <div>
                                   <span className="font-bold text-sm text-zinc-200">{res.role}</span>
-                                  <span className="text-zinc-550 mx-1.5">@</span>
+                                  <span className="text-zinc-500 mx-1.5">@</span>
                                   <span className="text-[#7C5CFF] font-semibold">{res.institution}</span>
                                 </div>
                                 <span className="text-zinc-500 font-mono text-[11px]">{res.period}</span>
@@ -725,10 +725,10 @@ export default function PublicProfileClient({ profile }) {
                           {profile.publications.map((pub, i) => (
                             <div key={i} className="p-4 bg-white/[0.01] border border-white/[0.03] rounded-xl space-y-2 text-xs">
                               <div className="flex items-center justify-between">
-                                <span className="font-bold text-sm text-zinc-250">{pub.title}</span>
-                                <span className="bg-emerald-500/10 border border-emerald-550/20 text-emerald-450 px-2 py-0.5 rounded font-mono text-[9px] uppercase font-bold">{pub.status}</span>
+                                <span className="font-bold text-sm text-zinc-200">{pub.title}</span>
+                                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono text-[9px] uppercase font-bold">{pub.status}</span>
                               </div>
-                              <div className="text-zinc-450 font-mono text-[11px]">Journal: {pub.journal} · Date: {pub.date}</div>
+                              <div className="text-zinc-400 font-mono text-[11px]">Journal: {pub.journal} · Date: {pub.date}</div>
                             </div>
                           ))}
                         </div>
@@ -761,13 +761,13 @@ export default function PublicProfileClient({ profile }) {
                                   {h.platform.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                  <div className="text-xs text-neutral-450 font-semibold">{h.platform}</div>
+                                  <div className="text-xs text-neutral-400 font-semibold">{h.platform}</div>
                                   <div className="text-sm font-bold text-neutral-200 group-hover:text-white">{h.handle}</div>
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
                                 <div className="text-xs font-mono font-bold" style={{ color: h.color }}>{h.rating}</div>
-                                <div className="text-[10px] text-zinc-550">{h.solved} solved</div>
+                                <div className="text-[10px] text-zinc-500">{h.solved} solved</div>
                               </div>
                             </a>
                           ))}
@@ -782,7 +782,7 @@ export default function PublicProfileClient({ profile }) {
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs font-mono text-left">
                             <thead>
-                              <tr className="border-b border-white/[0.06] text-zinc-550">
+                              <tr className="border-b border-white/[0.06] text-zinc-500">
                                 <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Platform</th>
                                 <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Contest Title</th>
                                 <th className="py-2.5 px-1 text-right text-[9px] uppercase tracking-wider font-bold">Rank</th>
@@ -792,10 +792,10 @@ export default function PublicProfileClient({ profile }) {
                             <tbody>
                               {profile.contests.map((c, i) => (
                                 <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
-                                  <td className="py-3 px-1 font-bold text-zinc-350">{c.host}</td>
+                                  <td className="py-3 px-1 font-bold text-zinc-400">{c.host}</td>
                                   <td className="py-3 px-1 text-zinc-200">{c.name}</td>
-                                  <td className="py-3 px-1 text-right text-zinc-350">{c.rank}</td>
-                                  <td className="py-3 px-1 text-right text-emerald-450 font-bold">{c.rating}</td>
+                                  <td className="py-3 px-1 text-right text-zinc-400">{c.rank}</td>
+                                  <td className="py-3 px-1 text-right text-emerald-400 font-bold">{c.rating}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -820,7 +820,7 @@ export default function PublicProfileClient({ profile }) {
                               </div>
                               <div className="text-right shrink-0">
                                 <span className="text-[#B6F36B] font-bold font-mono">{item.rank}</span>
-                                <div className="text-[10px] text-zinc-550 font-mono mt-0.5">{item.date}</div>
+                                <div className="text-[10px] text-zinc-500 font-mono mt-0.5">{item.date}</div>
                               </div>
                             </div>
                           ))}
@@ -842,9 +842,9 @@ export default function PublicProfileClient({ profile }) {
                             <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
                               <div>
                                 <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-550 font-mono shrink-0">{item.date}</span>
+                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
                             </div>
                           ))}
                         </div>
@@ -860,9 +860,9 @@ export default function PublicProfileClient({ profile }) {
                             <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
                               <div>
                                 <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-550 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-555 font-mono shrink-0">{item.date}</span>
+                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
                             </div>
                           ))}
                         </div>
