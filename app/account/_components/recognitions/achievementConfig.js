@@ -193,14 +193,7 @@ export function getStatCards(stats) {
 
 // ─── Date formatting ──────────────────────────────────────────────────────────
 
-export function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+export { formatDateOrDash as formatDate } from '@/app/_lib/utils/utils';
 
 export function formatRelativeDate(dateStr) {
   if (!dateStr) return '';

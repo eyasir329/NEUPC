@@ -21,6 +21,7 @@ import {
   Calendar,
   Code2,
 } from 'lucide-react';
+import { formatDate } from '@/app/_lib/utils/utils';
 
 // Badge configuration
 const BADGE_CONFIG = {
@@ -194,15 +195,6 @@ function getBadgeConfig(badgeId) {
       border: 'border-gray-500/25',
     }
   );
-}
-
-function formatDate(iso) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function BadgeCard({ badge }) {

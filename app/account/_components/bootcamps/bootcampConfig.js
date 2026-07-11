@@ -116,15 +116,7 @@ export function sortBootcamps(bootcamps, sortKey) {
 // DATE FORMATTING
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function formatDate(dateString) {
-  if (!dateString) return '—';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+export { formatDateOrDash as formatDate } from '@/app/_lib/utils/utils';
 
 export function formatRelativeDate(dateString) {
   if (!dateString) return '—';

@@ -6,16 +6,7 @@
 import { Edit3, Trash2 } from 'lucide-react';
 import { Avatar } from '@/app/account/_components/ui';
 import { committeeAccent } from './accent';
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  const date = new Date(iso);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+import { formatDateOrDash as formatDate } from '@/app/_lib/utils/utils';
 
 function StatusBadge({ isCurrent }) {
   return (
