@@ -13,7 +13,7 @@ import { useRole } from './RoleContext';
 import AccountSidebar from './AccountSidebar';
 import DashboardTopbar from './DashboardTopbar';
 import CodeRunnerClient from '../member/code-runner/_components/CodeRunnerClient';
-import { getSidebarNavigation } from '@/app/_lib/config/sidebarConfig';
+import { getSidebarNavigation } from '@/app/_lib/config/sidebar-config';
 import { cn } from '@/app/_lib/utils/utils';
 
 

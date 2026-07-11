@@ -11,7 +11,7 @@
 import { redirect } from 'next/navigation';
 import { requireAuth } from '@/app/_lib/auth/auth-guard';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
-import { roleDashboards } from '@/app/_lib/config/roleDashboardConfig';
+import { roleDashboards } from '@/app/_lib/config/role-dashboard-config';
 import AccountPageClient from './_components/AccountPageClient';
 import AccountHeader from './_components/AccountHeader';
 import AvailableRoles from './_components/AvailableRoles';
