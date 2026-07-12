@@ -46,9 +46,9 @@ import {
   PageShell,
   PageHeader,
   StatCard,
+  StatGrid,
   TabBar,
 } from '@/app/account/_components/ui';
-import { StatGrid } from '@/app/account/_components/ui/StatCard';
 
 import {
   getTodayDateString,

@@ -102,7 +102,7 @@ function SocialBtn({ href, icon, label }) {
       target={href.startsWith('mailto') ? undefined : '_blank'}
       rel="noopener noreferrer"
       title={label}
-      className="hover:border-neon-lime/30 hover:text-neon-lime flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 sm:h-7 sm:w-7"
+      className="hover:border-neon-lime hover:bg-neon-lime hover:text-surface flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all duration-200 hover:-translate-y-0.5 sm:h-8 sm:w-8"
     >
       {icon}
     </a>
@@ -355,49 +355,31 @@ function CoreExecCard({ exec, index }) {
 
 // ─── Executive council card ───────────────────────────────────────────────────
 
-function CouncilCard({ member, index }) {
-  const [expanded, setExpanded] = useState(false);
-  const text = member.bio || member.responsibility || '';
-  const isLong = text.length > 80;
-  const isAlt = index % 2 === 1;
-
+function CouncilCard({ member }) {
   return (
     <motion.div
       variants={cardReveal}
-      whileHover={{ y: -3 }}
+      whileHover={{ y: -4 }}
       transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-      className={cn(
-        'glass-panel group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 p-5 transition-all duration-300 sm:p-6',
-        isAlt ? 'hover:border-neon-violet/20' : 'hover:border-neon-lime/20'
-      )}
+      className="glass-panel group hover:border-neon-lime/30 relative flex flex-col overflow-hidden rounded-2xl border border-white/10 p-5 shadow-lg shadow-black/20 transition-colors duration-300 sm:p-6"
     >
       {/* Ambient glow */}
-      <div
-        className={cn(
-          'pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100',
-          isAlt ? 'bg-neon-violet/5' : 'bg-neon-lime/5'
-        )}
-      />
+      <div className="bg-neon-lime/8 pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
 
       {/* Photo */}
-      <div className="bg-surface relative mb-5 aspect-square w-full overflow-hidden rounded-xl border border-white/8">
+      <div className="bg-surface relative mb-5 aspect-square w-full overflow-hidden rounded-xl border border-white/10">
         <Avatar
           name={member.name}
           image={member.image}
           className="absolute inset-0"
-          imgClassName="sm:grayscale sm:group-hover:grayscale-0 transition-all duration-500"
+          imgClassName="sm:grayscale sm:group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700 ease-out"
         />
+        {/* Grounding scrim */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-black/50 to-transparent" />
       </div>
 
       {/* Role tag */}
-      <span
-        className={cn(
-          'mb-2 inline-flex items-center self-start rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.25em] uppercase transition-colors duration-300 sm:text-[9px] sm:tracking-[0.3em]',
-          isAlt
-            ? 'border-neon-violet/25 bg-neon-violet/8 text-neon-violet'
-            : 'border-neon-lime/25 bg-neon-lime/8 text-neon-lime'
-        )}
-      >
+      <span className="border-neon-lime/25 bg-neon-lime/8 text-neon-lime mb-2 inline-flex items-center self-start rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.22em] uppercase">
         {member.role}
       </span>
 
@@ -408,38 +390,15 @@ function CouncilCard({ member, index }) {
 
       {/* Meta */}
       {(member.department || member.academicSession) && (
-        <p className="mt-1 font-mono text-[9px] tracking-wider text-zinc-600 uppercase">
+        <p className="mt-1 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
           {[member.department, member.academicSession]
             .filter(Boolean)
             .join(' · ')}
         </p>
       )}
 
-      {/* Bio */}
-      {text && (
-        <div className="mt-3">
-          <p
-            className={cn(
-              'text-xs leading-relaxed text-zinc-500',
-              !expanded && isLong && 'line-clamp-2'
-            )}
-          >
-            {text}
-          </p>
-          {isLong && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="text-neon-lime/60 hover:text-neon-lime -mx-2 -my-2 mt-1 min-h-11 touch-manipulation px-2 py-2 font-mono text-[10px] transition-colors"
-            >
-              {expanded ? '↑ less' : '↓ more'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Socials */}
-      <div className="mt-auto flex items-center gap-1.5 border-t border-white/5 pt-4">
+      {/* Socials — always visible on touch, hover-reveal on larger pointers */}
+      <div className="mt-auto flex items-center gap-1.5 border-t border-white/8 pt-4 opacity-100 transition-opacity duration-300 sm:opacity-0 sm:group-hover:opacity-100">
         <SocialBtn href={member.github} icon={<GithubIcon />} label="GitHub" />
         <SocialBtn
           href={member.linkedin}
@@ -565,7 +524,7 @@ export default function CommitteeClient({
               className="grid gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4"
             >
               {propExecs.map((member, i) => (
-                <CouncilCard key={member.id || i} member={member} index={i} />
+                <CouncilCard key={member.id || i} member={member} />
               ))}
             </motion.div>
           </div>

@@ -32,7 +32,7 @@ import {
   ActionButton,
   EmptyState,
   Avatar,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 export default function AdvisorClubOverviewClient({
   platformStats = {},

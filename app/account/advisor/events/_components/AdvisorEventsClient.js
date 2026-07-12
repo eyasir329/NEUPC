@@ -14,7 +14,7 @@ import {
   Users,
   Shield,
 } from 'lucide-react';
-import { GlassCard, Pill } from '@/app/account/_components/ui/dashboard';
+import { GlassCard, Pill } from '@/app/account/_components/ui';
 import EventListLayout from '@/app/account/_components/events/EventListLayout';
 import EventContentDetail from '@/app/account/_components/events/EventContentDetail';
 import { enrichEvent } from '@/app/account/_components/events/eventUtils';

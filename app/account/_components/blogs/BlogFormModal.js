@@ -44,7 +44,7 @@ import {
   uploadBlogImageAction,
 } from '@/app/_lib/actions/blog-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 // ─── Segmented select ─────────────────────────────────────────────────────────
 

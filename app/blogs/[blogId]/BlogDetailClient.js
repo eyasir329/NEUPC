@@ -29,7 +29,10 @@ import {
   incrementViewAction,
   likePostAction,
 } from '@/app/_lib/actions/blog-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import {
+  useScrollLock,
+  useHidePublicHeader,
+} from '@/app/_hooks/useUiEffects';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -224,6 +227,14 @@ export default function BlogDetailClient({
   const [showReadingSettings, setShowReadingSettings] = useState(false);
   const [showMobileTOC, setShowMobileTOC] = useState(false);
   useScrollLock(showMobileTOC);
+  // Sticky reading toolbar (back link / category / TOC button) stays out of
+  // the way until the reader scrolls past the "Appearance" bar, at which
+  // point it swaps out the site navbar and pins itself to the very top.
+  // Scrolling back to the top reverses it — scroll position is the single
+  // source of truth, so there's no separate exit control to keep in sync.
+  const [scrolledPastAppearance, setScrolledPastAppearance] = useState(false);
+  useHidePublicHeader(scrolledPastAppearance);
+  const appearanceBarRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
   const contentRef = useRef(null);
@@ -298,37 +309,56 @@ export default function BlogDetailClient({
     const container = contentRef.current;
     if (!container) return;
 
-    const headings = container.querySelectorAll('h2, h3');
-    const seen = {};
-    headings.forEach((h) => {
-      if (!h.id) {
-        const text = h.textContent.trim();
-        let slug =
-          text
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
-        if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
-        else seen[slug] = 1;
-        h.id = slug;
-      }
-    });
+    const buildToc = () => {
+      const headings = container.querySelectorAll('h2, h3');
+      const seen = {};
+      headings.forEach((h) => {
+        if (!h.id) {
+          const text = h.textContent.trim();
+          let slug =
+            text
+              .toLowerCase()
+              .replace(/[^\w\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+          if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+          else seen[slug] = 1;
+          h.id = slug;
+        }
+      });
 
-    const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
-    const toc = Array.from(headingsWithIds).map((h) => ({
-      id: h.id,
-      title: h.textContent.trim(),
-      level: h.tagName === 'H3' ? 3 : 2,
-    }));
-    if (toc.length) {
-      setTableOfContents(toc);
-      setActiveSection(toc[0].id);
-    } else {
-      setTableOfContents([]);
-      setActiveSection('');
-    }
+      const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
+      const toc = Array.from(headingsWithIds).map((h) => ({
+        id: h.id,
+        title: h.textContent.trim(),
+        level: h.tagName === 'H3' ? 3 : 2,
+      }));
+      setTableOfContents((prev) => {
+        if (
+          prev.length === toc.length &&
+          prev.every((s, i) => s.id === toc[i].id)
+        )
+          return prev;
+        setActiveSection(toc.length ? toc[0].id : '');
+        return toc;
+      });
+    };
+
+    buildToc();
+    // The rendered content can be replaced after mount (hydration swaps the
+    // dangerouslySetInnerHTML subtree), which strips the injected heading
+    // ids. Rebuild when that happens or TOC clicks / scroll-spy go dead.
+    let raf = 0;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(buildToc);
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [meta.content]);
 
   useEffect(() => {
@@ -337,9 +367,17 @@ export default function BlogDetailClient({
         document.documentElement.scrollHeight -
         document.documentElement.clientHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
+      // Toolbar swap: active once the Appearance bar has scrolled up past
+      // the viewport top. Computed here (not via IntersectionObserver) so a
+      // single large scroll jump can't miss a threshold-crossing callback.
+      const bar = appearanceBarRef.current;
+      if (bar) {
+        setScrolledPastAppearance(bar.getBoundingClientRect().bottom < 0);
+      }
       if (tableOfContents.length) {
         const stickyNav = document.querySelector('[data-sticky-nav]');
-        const threshold = (stickyNav?.offsetHeight ?? 60) + 24;
+        const threshold =
+          (stickyNav?.getBoundingClientRect().bottom ?? 60) + 24;
         for (let i = tableOfContents.length - 1; i >= 0; i--) {
           const el = document.getElementById(tableOfContents[i].id);
           if (el && el.getBoundingClientRect().top <= threshold) {
@@ -396,16 +434,20 @@ export default function BlogDetailClient({
   }, [bgTheme, contentWidth, tocCollapsed]);
 
   const scrollToSection = useCallback((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const stickyNav = document.querySelector('[data-sticky-nav]');
-      const offset = (stickyNav?.offsetHeight ?? 60) + 16;
-      window.scrollTo({
-        top: el.getBoundingClientRect().top + window.scrollY - offset,
-        behavior: 'smooth',
-      });
-    }
+    // Close the overlay first: useScrollLock keeps overflow hidden while it
+    // is open, which makes window.scrollTo a no-op.
     setShowMobileTOC(false);
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const stickyNav = document.querySelector('[data-sticky-nav]');
+        const offset = (stickyNav?.getBoundingClientRect().bottom ?? 60) + 16;
+        window.scrollTo({
+          top: el.getBoundingClientRect().top + window.scrollY - offset,
+          behavior: 'smooth',
+        });
+      }
+    }, 50);
   }, []);
 
   const handleShare = useCallback(
@@ -489,11 +531,11 @@ export default function BlogDetailClient({
   return (
     <>
       <main
-        className="relative min-h-screen text-white transition-colors duration-500"
+        className="relative min-h-screen overflow-x-clip text-white transition-colors duration-500"
         style={{ background: currentBg }}
       >
         {/* ── Reading Progress Bar ─────────────────────────────────────────── */}
-        <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
+        <div className="fixed top-0 right-0 left-0 z-[210] h-0.5 bg-white/5">
           <div
             className="h-full transition-all duration-150"
             style={{
@@ -506,79 +548,86 @@ export default function BlogDetailClient({
         </div>
 
         {/* ── Sticky Mini Nav ──────────────────────────────────────────────── */}
-        <div
-          data-sticky-nav
-          className="sticky top-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
-          style={{ backgroundColor: `${currentBg}cc` }}
-        >
-          <div className="mx-auto w-full max-w-screen-2xl px-4 py-3 sm:px-6 lg:px-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/blogs"
-                  className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
-                >
-                  <svg
-                    className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                  All Blogs
-                </Link>
-                <span className="hidden text-zinc-700 sm:block">/</span>
-                {meta.category && (
-                  <span className="border-neon-emerald/25 bg-neon-emerald/8 text-neon-emerald hidden rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:block">
-                    {getCategoryLabel(meta.category)}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
-                  {Math.round(scrollProgress)}% · {meta.readTimeLabel}
-                </span>
-                {hasTOC && (
-                  <button
-                    onClick={() => setShowMobileTOC(!showMobileTOC)}
-                    aria-label="Open table of contents"
-                    aria-expanded={showMobileTOC}
-                    className="hover:border-neon-emerald/30 hover:text-neon-emerald flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all active:bg-white/10 xl:hidden"
+        {/* Hidden on initial load; scrolling past the Appearance bar swaps
+            out the site navbar and pins this bar to the top. Fixed (not
+            sticky) so mounting it doesn't shift the page flow — a sticky bar
+            would push the Appearance bar back into view and un-trigger the
+            IntersectionObserver, causing a flicker loop at the boundary. */}
+        {scrolledPastAppearance && (
+          <div
+            data-sticky-nav
+            className="fixed top-0 right-0 left-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
+            style={{ backgroundColor: `${currentBg}cc` }}
+          >
+            <div className="mx-auto w-full max-w-screen-2xl px-4 py-3 sm:px-6 lg:px-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/blogs"
+                    className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
                   >
                     <svg
-                      className="h-4 w-4"
+                      className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
+                      strokeWidth={2.5}
                     >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h7"
+                        d="M15 19l-7-7 7-7"
                       />
                     </svg>
-                  </button>
-                )}
+                    All Blogs
+                  </Link>
+                  <span className="hidden text-zinc-700 sm:block">/</span>
+                  {meta.category && (
+                    <span className="border-neon-emerald/25 bg-neon-emerald/8 text-neon-emerald hidden rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:block">
+                      {getCategoryLabel(meta.category)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
+                    {Math.round(scrollProgress)}% · {meta.readTimeLabel}
+                  </span>
+                  {hasTOC && (
+                    <button
+                      onClick={() => setShowMobileTOC(!showMobileTOC)}
+                      aria-label="Open table of contents"
+                      aria-expanded={showMobileTOC}
+                      className="hover:border-neon-emerald/30 hover:text-neon-emerald flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all active:bg-white/10 xl:hidden"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 6h16M4 12h16M4 18h7"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── Mobile TOC Overlay ────────────────────────────────────────────── */}
         {showMobileTOC && hasTOC && (
-          <div className="fixed inset-0 z-50 xl:hidden">
+          <div className="fixed inset-0 z-[210] xl:hidden">
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setShowMobileTOC(false)}
             />
-            <div className="absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl">
+            <div className="absolute top-16 right-4 left-4 flex max-h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
                 <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
                   Table of Contents
@@ -801,7 +850,7 @@ export default function BlogDetailClient({
             {/* ── Article Column ────────────────────────────────────────────── */}
             <article className="w-full min-w-0 flex-1 transition-all duration-300">
               {/* Reading controls */}
-              <div className="mb-6 space-y-3">
+              <div ref={appearanceBarRef} className="mb-6 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 backdrop-blur-sm">
                   <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg
@@ -1163,7 +1212,7 @@ export default function BlogDetailClient({
               >
                 <div
                   className={cn(
-                    'sticky top-24 space-y-6 transition-opacity duration-300',
+                    'sticky top-[calc(var(--header-h,69px)+5rem)] space-y-6 transition-opacity duration-300',
                     focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
                   )}
                 >
@@ -1362,8 +1411,13 @@ export default function BlogDetailClient({
         </div>
 
         {/* ── Related Articles (mobile / no TOC fallback) ───────────────────── */}
-        {relatedBlogs.length > 0 && !hasTOC && (
-          <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
+        {relatedBlogs.length > 0 && (
+          <section
+            className={cn(
+              'relative overflow-hidden py-12 sm:py-16 lg:py-20',
+              hasTOC && 'xl:hidden'
+            )}
+          >
             <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
             <div className="pointer-events-none absolute inset-0 z-0">
               <div className="bg-neon-emerald/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
@@ -1445,29 +1499,6 @@ export default function BlogDetailClient({
             </div>
           </div>
         </section>
-
-        {/* ── Floating TOC button (small devices) ──────────────────────────── */}
-        {hasTOC && !showMobileTOC && (
-          <button
-            onClick={() => setShowMobileTOC(true)}
-            aria-label="Open table of contents"
-            className="fixed right-6 bottom-20 z-40 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border border-emerald-500/30 bg-[#05060B]/80 text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.25)] backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] xl:hidden"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h7"
-              />
-            </svg>
-          </button>
-        )}
 
         <ScrollToTop />
       </main>

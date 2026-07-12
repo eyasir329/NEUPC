@@ -16,7 +16,7 @@ import {
   SectionHeader,
   Pill,
   EmptyState,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const SEVERITY = {
   critical: { tone: 'rose', icon: AlertTriangle },

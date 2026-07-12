@@ -32,7 +32,7 @@ import {
   ActionButton,
   TabBar,
   EmptyState,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const RANGE_TABS = [
   { value: '7d', label: '7D' },

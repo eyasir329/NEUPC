@@ -258,7 +258,7 @@ export async function generateBlogTextAction(
   }
 }
 
-import { blogSchema } from '@/app/_lib/config/schemas';
+import { blogSchema } from '@/app/_lib/config/validation-schemas';
 
 // ... (in createBlogAction)
 

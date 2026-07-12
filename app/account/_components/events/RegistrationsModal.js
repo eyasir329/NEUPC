@@ -25,7 +25,7 @@ import {
   AlertCircle,
   Trophy,
 } from 'lucide-react';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 import { getFallbackAvatarUrl } from '@/app/_lib/utils/utils';
 
 // ─── Config ───────────────────────────────────────────────────────────────────

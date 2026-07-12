@@ -19,7 +19,7 @@ import {
   Send,
 } from 'lucide-react';
 import { cn } from '@/app/_lib/utils/utils';
-import { useScrollReveal } from '@/app/_lib/utils/hooks';
+import { useScrollReveal } from '@/app/_hooks/useUiEffects';
 
 const SOCIAL_ICONS = {
   github: Github,

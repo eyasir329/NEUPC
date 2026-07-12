@@ -3,8 +3,7 @@
  *
  * The dark-glass primitives (PageShell, GlassCard, StatCard, etc.) live
  * in ./dashboard.js and are used by the member, advisor, and executive
- * panels. The Card/Button/Badge files predate them — kept as direct
- * imports because nothing currently routes through this barrel for them.
+ * panels.
  *
  * @module account/ui
  */
@@ -16,6 +15,7 @@ export {
   SectionHeader,
   IconChip,
   StatCard,
+  StatGrid,
   Pill,
   GradientBar,
   TabBar,

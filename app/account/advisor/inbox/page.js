@@ -1,18 +1,18 @@
 /**
- * @file Advisor inbox page — displays active notices filtered for the
- *   advisor audience (notices targeting "all" or "advisor" users).
+ * @file Advisor inbox page — active notices for the advisor audience.
+ *   UI is shared via {@link InboxClient}.
  * @module AdvisorInboxPage
  * @access advisor
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getActiveNotices } from '@/app/_lib/services/data-service';
-import AdvisorNoticesClient from './_components/AdvisorNoticesClient';
+import InboxClient from '@/app/account/_components/inbox/InboxClient';
 
 export const metadata = { title: 'Inbox | Advisor | NEUPC' };
 
 export default async function AdvisorInboxPage() {
-  const [{ user }, allNotices] = await Promise.all([
+  const [, allNotices] = await Promise.all([
     requireRole('advisor'),
     getActiveNotices().catch(() => []),
   ]);
@@ -24,5 +24,11 @@ export default async function AdvisorInboxPage() {
       n.target_audience.includes('advisor')
   );
 
-  return <AdvisorNoticesClient notices={notices} advisorId={user.id} />;
+  return (
+    <InboxClient
+      notices={notices}
+      accent="violet"
+      subtitle="Notices and announcements for faculty advisors."
+    />
+  );
 }

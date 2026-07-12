@@ -14,7 +14,7 @@ import {
   deleteAchievementGalleryImageAction,
 } from '@/app/_lib/actions/achievement-actions';
 import { getCategoryConfig } from './achievementConfig';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 export default function GalleryModal({ achievement, onClose }) {
   const [files, setFiles] = useState([]);

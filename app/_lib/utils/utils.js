@@ -43,6 +43,18 @@ export function formatDate(dateStr, options = {}) {
 }
 
 /**
+ * Format a date like {@link formatDate}, but render empty/missing values
+ * as an em dash — the convention used by dashboard tables and config cards.
+ *
+ * @param {string} dateStr - ISO date string
+ * @param {Intl.DateTimeFormatOptions} [options] - Overrides for the defaults
+ * @returns {string} Formatted date or '—'
+ */
+export function formatDateOrDash(dateStr, options = {}) {
+  return dateStr ? formatDate(dateStr, options) : '—';
+}
+
+/**
  * Estimate reading time based on word count.
  *
  * @param {string} content - Text content

@@ -15,7 +15,7 @@ import {
   MEDIA_ALLOWED_MIME,
   slugify,
 } from '@/app/_lib/resources/constants';
-import { parseResourceFormData, parseTags } from '@/app/_lib/resources/schemas';
+import { parseResourceFormData, parseTags } from '@/app/_lib/resources/resource-schemas';
 import {
   normalizeEmbed,
   sanitizeRichHtml,

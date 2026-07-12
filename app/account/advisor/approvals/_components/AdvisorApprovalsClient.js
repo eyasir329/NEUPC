@@ -43,7 +43,7 @@ import {
   Avatar,
   EmptyState,
   StatCard,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 const TAB_DEFS = [

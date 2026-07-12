@@ -14,7 +14,7 @@ import {
   GlassCard,
   SectionHeader,
   Pill,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

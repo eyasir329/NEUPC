@@ -10,7 +10,10 @@ import Link from 'next/link';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import { cn, getInitials, driveImageUrl } from '@/app/_lib/utils/utils';
 import { incrementRoadmapViewAction } from '@/app/_lib/actions/roadmap-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import {
+  useScrollLock,
+  useHidePublicHeader,
+} from '@/app/_hooks/useUiEffects';
 import JoinButton from '@/app/_components/ui/JoinButton';
 import ScrollToTop from '@/app/_components/ui/ScrollToTop';
 import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
@@ -97,27 +100,21 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       onClick={onClick}
       className={cn(
         'group relative flex w-full touch-manipulation items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 active:bg-white/5',
-        level === 3 ? 'pl-8' : 'pl-3',
+        level === 3 ? 'pl-8' : 'pl-4',
         isActive
-          ? 'text-emerald-400'
-          : isPast
-            ? 'text-zinc-500 hover:text-zinc-300'
-            : 'text-zinc-600 hover:text-zinc-400'
+          ? 'font-semibold text-emerald-400'
+          : 'text-zinc-400 hover:text-zinc-200'
       )}
     >
       {isActive && (
-        <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-emerald-400" />
+        <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-emerald-500" />
       )}
       <span className="flex min-w-0 items-center gap-2">
         {level === 2 && sectionNum != null && (
           <span
             className={cn(
-              'shrink-0 font-mono text-[9px] font-bold tabular-nums',
-              isActive
-                ? 'text-emerald-400/70'
-                : isPast
-                  ? 'text-zinc-600'
-                  : 'text-zinc-700'
+              'shrink-0 font-mono text-[10px] font-bold tabular-nums',
+              isActive ? 'text-emerald-400/80' : 'text-zinc-600'
             )}
           >
             {String(sectionNum).padStart(2, '0')}
@@ -127,29 +124,20 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
           <span
             className={cn(
               'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-              isActive
-                ? 'bg-emerald-400'
-                : isPast
-                  ? 'bg-zinc-600'
-                  : 'bg-zinc-700'
+              isActive ? 'bg-emerald-500' : 'bg-zinc-700'
             )}
           />
         )}
-        <span
-          className={cn(
-            'line-clamp-2 font-sans text-xs leading-snug font-medium transition-colors',
-            isActive && 'font-semibold'
-          )}
-        >
+        <span className="line-clamp-2 font-sans text-[12px] leading-snug">
           {section.title}
         </span>
       </span>
       <svg
         className={cn(
-          'h-3.5 w-3.5 shrink-0 transition-transform',
+          'h-3 w-3 shrink-0 transition-transform',
           isActive
             ? 'translate-x-0.5 text-emerald-400'
-            : 'hidden text-zinc-700 group-hover:block group-hover:text-zinc-500'
+            : 'hidden text-zinc-600 group-hover:block group-hover:text-zinc-400'
         )}
         fill="none"
         viewBox="0 0 24 24"
@@ -175,12 +163,12 @@ function RelatedRoadmapCard({ roadmap }) {
   return (
     <Link
       href={`/roadmaps/${roadmap.slug || roadmap.id}`}
-      className="group block rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all hover:border-emerald-500/30 hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+      className="group block rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
     >
-      <div className="mb-4 font-mono text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
+      <div className="mb-4 font-mono text-[9px] font-bold tracking-wider text-emerald-400 uppercase">
         {roadmap.category || 'Roadmap'}
       </div>
-      <h4 className="font-heading line-clamp-2 text-lg font-bold tracking-tight text-white transition-colors group-hover:text-emerald-400">
+      <h4 className="font-heading line-clamp-2 text-lg font-bold text-white transition-colors group-hover:text-emerald-400">
         {roadmap.title}
       </h4>
       <div className="mt-6 flex items-center gap-4 font-mono text-[9px] tracking-widest uppercase">
@@ -221,8 +209,17 @@ export default function RoadmapDetailClient({
   const [contentWidth, setContentWidth] = useState('full');
   const [focusMode, setFocusMode] = useState(false);
   const [showReadingSettings, setShowReadingSettings] = useState(false);
+  // Sticky reading toolbar (back link / category / TOC button) stays out of
+  // the way until the reader scrolls past the "Reading Config" bar, at which
+  // point it swaps out the site navbar and pins itself to the very top.
+  // Scrolling back to the top reverses it — scroll position is the single
+  // source of truth, so there's no separate exit control to keep in sync.
+  const [scrolledPastAppearance, setScrolledPastAppearance] = useState(false);
+  useHidePublicHeader(scrolledPastAppearance);
+  const appearanceBarRef = useRef(null);
   const contentRef = useRef(null);
   const tocNavRef = useRef(null);
+  const tocInitRef = useRef(false);
 
   // ── Normalize roadmap ─────────────────────────────────────────────────────
   const meta = useMemo(() => {
@@ -288,39 +285,57 @@ export default function RoadmapDetailClient({
     const container = contentRef.current;
     if (!container) return;
 
-    // Inject IDs into all h2 and h3 elements that don't have them
-    const headings = container.querySelectorAll('h2, h3');
-    const seen = {};
-    headings.forEach((h) => {
-      if (!h.id) {
-        const text = h.textContent.trim();
-        let slug =
-          text
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
-        if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
-        else seen[slug] = 1;
-        h.id = slug;
-      }
-    });
+    const buildToc = () => {
+      // Inject IDs into all h2 and h3 elements that don't have them
+      const headings = container.querySelectorAll('h2, h3');
+      const seen = {};
+      headings.forEach((h) => {
+        if (!h.id) {
+          const text = h.textContent.trim();
+          let slug =
+            text
+              .toLowerCase()
+              .replace(/[^\w\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '') || `heading-${h.tagName.toLowerCase()}`;
+          if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+          else seen[slug] = 1;
+          h.id = slug;
+        }
+      });
 
-    // Query all h2[id] and h3[id] elements inside the container
-    const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
-    const toc = Array.from(headingsWithIds).map((h) => ({
-      id: h.id,
-      title: h.textContent,
-      level: h.tagName === 'H3' ? 3 : 2,
-    }));
-    if (toc.length) {
-      setTableOfContents(toc);
-      setActiveSection(toc[0].id);
-    } else {
-      setTableOfContents([]);
-      setActiveSection('');
-    }
+      const headingsWithIds = container.querySelectorAll('h2[id], h3[id]');
+      const toc = Array.from(headingsWithIds).map((h) => ({
+        id: h.id,
+        title: h.textContent,
+        level: h.tagName === 'H3' ? 3 : 2,
+      }));
+      setTableOfContents((prev) => {
+        if (
+          prev.length === toc.length &&
+          prev.every((s, i) => s.id === toc[i].id)
+        )
+          return prev;
+        setActiveSection(toc.length ? toc[0].id : '');
+        return toc;
+      });
+    };
+
+    buildToc();
+    // The rendered content can be replaced after mount (hydration swaps the
+    // dangerouslySetInnerHTML subtree), which strips the injected heading
+    // ids. Rebuild when that happens or TOC clicks / scroll-spy go dead.
+    let raf = 0;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(buildToc);
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [meta.content]);
 
   // ── Scroll tracking ───────────────────────────────────────────────────────
@@ -330,10 +345,21 @@ export default function RoadmapDetailClient({
         document.documentElement.scrollHeight -
         document.documentElement.clientHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
+      // Toolbar swap: active once the Reading Config bar has scrolled up
+      // past the viewport top. Computed here (not via IntersectionObserver)
+      // so a single large scroll jump can't miss a threshold-crossing
+      // callback.
+      const bar = appearanceBarRef.current;
+      if (bar) {
+        setScrolledPastAppearance(bar.getBoundingClientRect().bottom < 0);
+      }
       if (tableOfContents.length) {
         for (let i = tableOfContents.length - 1; i >= 0; i--) {
           const el = document.getElementById(tableOfContents[i].id);
-          if (el && el.getBoundingClientRect().top <= 140) {
+          const stickyNav = document.querySelector('[data-sticky-nav]');
+          const threshold =
+            (stickyNav?.getBoundingClientRect().bottom ?? 60) + 24;
+          if (el && el.getBoundingClientRect().top <= threshold) {
             setActiveSection(tableOfContents[i].id);
             break;
           }
@@ -348,6 +374,11 @@ export default function RoadmapDetailClient({
   // ── Auto-scroll TOC to active ─────────────────────────────────────────────
   useEffect(() => {
     if (!tocNavRef.current || !activeSection) return;
+    // Skip the very first set (on mount) to avoid jarring scroll on load.
+    if (!tocInitRef.current) {
+      tocInitRef.current = true;
+      return;
+    }
     tocNavRef.current
       .querySelector(`[data-section-id="${activeSection}"]`)
       ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -383,16 +414,20 @@ export default function RoadmapDetailClient({
   }, [bgTheme, contentWidth, tocCollapsed]);
 
   const scrollToSection = useCallback((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const nav = document.querySelector('[data-sticky-nav]');
-      const offset = (nav?.offsetHeight ?? 60) + 16;
-      window.scrollTo({
-        top: el.getBoundingClientRect().top + window.scrollY - offset,
-        behavior: 'smooth',
-      });
-    }
+    // Close the overlay first: useScrollLock keeps overflow hidden while it
+    // is open, which makes window.scrollTo a no-op.
     setShowMobileTOC(false);
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const nav = document.querySelector('[data-sticky-nav]');
+        const offset = (nav?.getBoundingClientRect().bottom ?? 60) + 16;
+        window.scrollTo({
+          top: el.getBoundingClientRect().top + window.scrollY - offset,
+          behavior: 'smooth',
+        });
+      }
+    }, 50);
   }, []);
 
   const handleShare = useCallback(
@@ -457,97 +492,106 @@ export default function RoadmapDetailClient({
 
   return (
     <main
-      className="relative min-h-screen text-white transition-colors duration-500"
+      className="relative min-h-screen overflow-x-clip text-white transition-colors duration-500"
       style={{ background: currentBg }}
     >
       {/* ── Reading Progress Bar ─────────────────────────────────────────────── */}
-      <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
+      <div className="fixed top-0 right-0 left-0 z-[210] h-0.5 bg-white/5">
         <div
           className="h-full transition-all duration-150"
           style={{
             width: `${scrollProgress}%`,
-            background: 'linear-gradient(to right, #34d399, #10b981)',
+            background:
+              'linear-gradient(to right, #10B981, #10B981cc, #B6F36B)',
+            boxShadow: '0 0 8px rgba(16,185,129,0.6)',
           }}
         />
       </div>
 
       {/* ── Sticky Mini Nav ──────────────────────────────────────────────────── */}
-      <div
-        data-sticky-nav
-        className="sticky top-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
-        style={{ backgroundColor: `${currentBg}cc` }}
-      >
-        <div className="mx-auto w-full max-w-[96rem] px-4 py-3 sm:px-6 lg:px-12">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/roadmaps"
-                className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
-              >
-                <svg
-                  className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                All Roadmaps
-              </Link>
-              <span className="hidden text-zinc-700 sm:block">/</span>
-              {meta.category && (
-                <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-zinc-300 uppercase sm:block">
-                  {meta.category}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
-                {Math.round(scrollProgress)}%
-                {meta.readTimeLabel ? ` · ${meta.readTimeLabel}` : ''}
-              </span>
-              {hasTOC && (
-                <button
-                  onClick={() => setShowMobileTOC(!showMobileTOC)}
-                  aria-label="Open learning path"
-                  aria-expanded={showMobileTOC}
-                  className="flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400 active:bg-white/10 xl:hidden"
+      {/* Hidden on initial load; scrolling past the Reading Config bar
+          swaps out the site navbar and pins this bar to the top. Fixed (not
+          sticky) so mounting it doesn't shift the page flow — a sticky bar
+          would push the Reading Config bar back into view and un-trigger
+          the IntersectionObserver, causing a flicker loop at the boundary. */}
+      {scrolledPastAppearance && (
+        <div
+          data-sticky-nav
+          className="fixed top-0 right-0 left-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
+          style={{ backgroundColor: `${currentBg}cc` }}
+        >
+          <div className="mx-auto w-full max-w-screen-2xl px-4 py-3 sm:px-6 lg:px-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/roadmaps"
+                  className="group font-heading flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-emerald-500/30 hover:text-emerald-400"
                 >
                   <svg
-                    className="h-4 w-4"
+                    className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    strokeWidth={2.5}
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h7"
+                      d="M15 19l-7-7 7-7"
                     />
                   </svg>
-                </button>
-              )}
+                  All Roadmaps
+                </Link>
+                <span className="hidden text-zinc-700 sm:block">/</span>
+                {meta.category && (
+                  <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-zinc-300 uppercase sm:block">
+                    {meta.category}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="hidden font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums md:block">
+                  {Math.round(scrollProgress)}%
+                  {meta.readTimeLabel ? ` · ${meta.readTimeLabel}` : ''}
+                </span>
+                {hasTOC && (
+                  <button
+                    onClick={() => setShowMobileTOC(!showMobileTOC)}
+                    aria-label="Open learning path"
+                    aria-expanded={showMobileTOC}
+                    className="flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400 active:bg-white/10 xl:hidden"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h7"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Mobile TOC Overlay ────────────────────────────────────────────────── */}
       {showMobileTOC && hasTOC && (
-        <div className="fixed inset-0 z-50 xl:hidden">
+        <div className="fixed inset-0 z-[210] xl:hidden">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowMobileTOC(false)}
           />
-          <div className="absolute top-24 right-4 left-4 flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#141416]/95 shadow-2xl backdrop-blur-md">
+          <div className="absolute top-16 right-4 left-4 flex max-h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl">
             <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-              <h3 className="font-heading text-sm font-black tracking-wider text-white uppercase">
+              <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
                 Learning Path
               </h3>
               <button
@@ -591,7 +635,7 @@ export default function RoadmapDetailClient({
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
+      <section className="relative overflow-hidden pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pt-40 lg:pb-20">
         {/* Background cover image */}
         {meta.thumbnail && (
           <div className="absolute inset-0 z-0">
@@ -749,7 +793,7 @@ export default function RoadmapDetailClient({
       <div className="h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
 
       {/* ── Main Reading Layout ───────────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[96rem] px-4 py-10 sm:px-6 lg:px-12">
+      <div className="mx-auto w-full max-w-[96rem] px-4 py-10 sm:px-6 lg:px-8 xl:px-12">
         <div
           className={cn(
             'flex transition-[gap] duration-300',
@@ -767,15 +811,17 @@ export default function RoadmapDetailClient({
             >
               <div
                 className={cn(
-                  'sticky top-24 transition-opacity duration-300',
+                  'sticky top-[calc(var(--header-h,69px)+5rem)] space-y-6 transition-opacity duration-300',
                   focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
                 )}
               >
+                {/* TOC Glass Panel */}
                 {tocCollapsed ? (
-                  <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.02] px-1 py-4">
+                  <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/70 px-2 py-4">
                     <button
                       onClick={() => setTocCollapsed(false)}
                       title="Expand contents"
+                      aria-label="Expand table of contents"
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-emerald-500/10 hover:text-emerald-400"
                     >
                       <svg
@@ -792,19 +838,35 @@ export default function RoadmapDetailClient({
                         />
                       </svg>
                     </button>
-                    <div className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8">
+                    <div className="h-px w-6 bg-white/10" />
+                    <div
+                      className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8"
+                      title={`${Math.round(scrollProgress)}% read`}
+                    >
                       <div
-                        className="absolute top-0 left-0 w-full rounded-full bg-emerald-400 transition-all duration-300"
+                        className="absolute top-0 left-0 w-full rounded-full bg-emerald-500 transition-all duration-300"
                         style={{ height: `${scrollProgress}%` }}
                       />
                     </div>
                     <span className="font-mono text-[9px] text-zinc-500 tabular-nums">
                       {Math.round(scrollProgress)}%
                     </span>
+                    <div className="h-px w-6 bg-white/10" />
+                    <span
+                      className="font-mono text-[9px] font-bold tracking-widest text-emerald-400/80 tabular-nums"
+                      title={`Section ${activeIdx >= 0 ? activeIdx + 1 : 0} of ${tableOfContents.length}`}
+                    >
+                      {String(activeIdx >= 0 ? activeIdx + 1 : 0).padStart(
+                        2,
+                        '0'
+                      )}
+                      <span className="text-zinc-700">/</span>
+                      {String(tableOfContents.length).padStart(2, '0')}
+                    </span>
                   </div>
                 ) : (
                   <div
-                    className="overflow-hidden rounded-[2rem] border border-white/5"
+                    className="overflow-hidden rounded-2xl border border-white/10"
                     style={{
                       background: 'rgba(20, 20, 22, 0.45)',
                       backdropFilter: 'blur(24px)',
@@ -812,50 +874,38 @@ export default function RoadmapDetailClient({
                     }}
                   >
                     <div className="flex items-center justify-between border-b border-[#27272A]/50 px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="h-3.5 w-3.5 text-emerald-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 6h16M4 12h16M4 18h7"
-                          />
-                        </svg>
-                        <span className="font-heading text-xs font-bold tracking-wider text-white uppercase">
-                          Learning Path
-                        </span>
-                        <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
+                      <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase">
+                        Learning Path
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-md bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 tabular-nums">
                           {tocItems.filter((s) => s.level === 2).length}
                         </span>
-                      </div>
-                      <button
-                        onClick={() => setTocCollapsed(true)}
-                        title="Collapse"
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-emerald-400"
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                        <button
+                          onClick={() => setTocCollapsed(true)}
+                          title="Collapse"
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 transition-all hover:bg-white/8 hover:text-white"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 19l-7-7 7-7"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
+
                     <nav
                       ref={tocNavRef}
-                      className="max-h-[calc(100dvh-200px)] space-y-0.5 overflow-y-auto p-3"
+                      className="max-h-[calc(100dvh-280px)] space-y-1 overflow-y-auto px-4 py-4"
                       style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgba(255,255,255,0.1) transparent',
@@ -873,8 +923,9 @@ export default function RoadmapDetailClient({
                         />
                       ))}
                     </nav>
+
                     <div className="border-t border-[#27272A]/50 px-6 py-4">
-                      <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-zinc-600">
+                      <div className="mb-2 flex items-center justify-between text-[10px] text-zinc-500">
                         <span>
                           {activeIdx >= 0 ? activeIdx + 1 : 0} /{' '}
                           {tableOfContents.length} sections
@@ -885,73 +936,70 @@ export default function RoadmapDetailClient({
                       </div>
                       <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                         <div
-                          className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-300"
                           style={{ width: `${scrollProgress}%` }}
                         />
                       </div>
 
+                      {/* Share Roadmap */}
                       <div className="mt-6 space-y-3">
-                        <h4 className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
-                          Share & Tools
+                        <h4 className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                          Share Roadmap
                         </h4>
-                        <div className="flex gap-2">
-                          {[
-                            {
-                              icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
-                              tip: 'Share on Twitter',
-                              action: () => handleShare('twitter'),
-                            },
-                            {
-                              icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
-                              tip: 'Scroll to first code block',
-                              action: () => {
-                                const firstPre =
-                                  contentRef.current?.querySelector('pre');
-                                if (firstPre) {
-                                  const stickyNav =
-                                    document.querySelector('[data-sticky-nav]');
-                                  const offset =
-                                    (stickyNav?.offsetHeight ?? 60) + 16;
-                                  window.scrollTo({
-                                    top:
-                                      firstPre.getBoundingClientRect().top +
-                                      window.scrollY -
-                                      offset,
-                                    behavior: 'smooth',
-                                  });
-                                }
-                              },
-                            },
-                            {
-                              icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
-                              tip: 'Copy link',
-                              action: handleCopy,
-                            },
-                          ].map(({ icon, tip, action }) => (
+                        <div className="flex gap-3">
+                          {SHARE_PLATFORMS.map((p) => (
                             <button
-                              key={tip}
-                              title={tip}
-                              aria-label={tip}
-                              onClick={action}
-                              className="group flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 active:bg-white/8"
+                              key={p.key}
+                              title={`Share on ${p.label}`}
+                              aria-label={`Share on ${p.label}`}
+                              onClick={() => handleShare(p.key)}
+                              className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
                             >
                               <svg
                                 className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-emerald-400"
-                                fill="none"
+                                fill="currentColor"
                                 viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={1.75}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d={icon}
-                                />
+                                <path d={p.icon} />
                               </svg>
                             </button>
                           ))}
+                          <button
+                            title="Copy link"
+                            aria-label="Copy link"
+                            onClick={handleCopy}
+                            className="group flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/3 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
+                          >
+                            <svg
+                              className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-emerald-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.75}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                              />
+                            </svg>
+                          </button>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Related Roadmaps — hidden when sidebar collapsed */}
+                {!tocCollapsed && relatedRoadmaps.length > 0 && (
+                  <div className="space-y-4 pt-4">
+                    <h3 className="px-2 font-mono text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                      Related Roadmaps
+                    </h3>
+                    <div className="space-y-3">
+                      {relatedRoadmaps.map((rm) => (
+                        <RelatedRoadmapCard key={rm.id} roadmap={rm} />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -962,7 +1010,7 @@ export default function RoadmapDetailClient({
           {/* ── Article ───────────────────────────────────────────────────────── */}
           <article className="w-full min-w-0 flex-1 transition-all duration-300">
             {/* Reading controls */}
-            <div className="mb-6 space-y-3">
+            <div ref={appearanceBarRef} className="mb-6 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 backdrop-blur-sm">
                 <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                   <svg
@@ -1215,7 +1263,7 @@ export default function RoadmapDetailClient({
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <span className="font-mono text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                   Share:
                 </span>
@@ -1224,7 +1272,8 @@ export default function RoadmapDetailClient({
                     key={p.key}
                     onClick={() => handleShare(p.key)}
                     title={`Share on ${p.label}`}
-                    className="hover:border-emerald-550/30 flex h-9 w-9 items-center justify-center rounded-full border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:text-emerald-400"
+                    aria-label={`Share on ${p.label}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1238,10 +1287,10 @@ export default function RoadmapDetailClient({
                 <button
                   onClick={handleCopy}
                   className={cn(
-                    'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-all',
+                    'flex h-9 items-center gap-1.5 rounded-full border px-3.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
                     copied
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                      : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-emerald-500/20 hover:text-emerald-400'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                      : 'border-white/10 bg-white/5 text-zinc-400 hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400'
                   )}
                 >
                   {copied ? (
@@ -1286,9 +1335,14 @@ export default function RoadmapDetailClient({
         </div>
       </div>
 
-      {/* ── Related Roadmaps ───────────────────────────────────────────────────── */}
+      {/* ── Related Roadmaps (mobile / no TOC fallback) ───────────────────────── */}
       {relatedRoadmaps.length > 0 && (
-        <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
+        <section
+          className={cn(
+            'relative overflow-hidden py-12 sm:py-16 lg:py-20',
+            hasTOC && 'xl:hidden'
+          )}
+        >
           <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
             <div className="absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-emerald-500/[0.02] blur-[150px]" />

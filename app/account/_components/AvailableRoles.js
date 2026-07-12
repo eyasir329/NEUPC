@@ -10,7 +10,7 @@
 
 import { LayoutDashboard } from 'lucide-react';
 import RoleCard from './RoleCard';
-import { colorClasses } from '@/app/_lib/config/roleDashboardConfig';
+import { colorClasses } from '@/app/_lib/config/role-dashboard-config';
 
 export default function AvailableRoles({ availableRoles, accountStatus }) {
   if (accountStatus !== 'active') {

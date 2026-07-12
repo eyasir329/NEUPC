@@ -32,7 +32,7 @@ import {
   EmptyState,
   TabBar,
   Avatar,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
 
 const TYPE_TABS = [

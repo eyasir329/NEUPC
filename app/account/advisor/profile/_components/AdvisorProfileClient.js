@@ -26,7 +26,7 @@ import {
   Avatar,
   Pill,
   ActionButton,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 export default function AdvisorProfileClient({ user }) {
   const [signingOut, setSigningOut] = useState(false);

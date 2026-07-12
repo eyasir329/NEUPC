@@ -14,7 +14,7 @@ import {
   Pill,
   ActionButton,
   EmptyState,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const CATEGORY_TONE = {
   Contest: 'rose',

@@ -13,7 +13,7 @@ import {
   GlassCard,
   SectionHeader,
   ActionButton,
-} from '@/app/account/_components/ui/dashboard';
+} from '@/app/account/_components/ui';
 
 const REPORTS = [
   { label: 'Annual Report', href: '/account/advisor/reports', tone: 'emerald' },

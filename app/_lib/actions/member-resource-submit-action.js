@@ -13,7 +13,7 @@ import {
   sanitizeRichHtml,
 } from '@/app/_lib/resources/embed-utils';
 import { slugify } from '@/app/_lib/resources/constants';
-import { parseResourceFormData } from '@/app/_lib/resources/schemas';
+import { parseResourceFormData } from '@/app/_lib/resources/resource-schemas';
 import { upsertTags } from '@/app/_lib/actions/resource-actions';
 
 const URL_TYPES = [

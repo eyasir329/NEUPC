@@ -23,7 +23,7 @@ import {
   uploadAchievementFeaturedPhotoAction,
   deleteAchievementFeaturedPhotoAction,
 } from '@/app/_lib/actions/achievement-actions';
-import { useScrollLock } from '@/app/_lib/utils/hooks';
+import { useScrollLock } from '@/app/_hooks/useUiEffects';
 
 export default function AchievementFormModal({ achievement, onClose }) {
   const router = useRouter();
