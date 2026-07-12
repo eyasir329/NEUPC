@@ -699,6 +699,42 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Legacy raw-HTML blocks (LessonContentRenderer `html` type) carry inline
+   overflow:hidden on tables; !important keeps wide tables scrollable so
+   they can't stretch the mobile layout viewport. */
+.lesson-renderer-block-richtext table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto !important;
+}
+
+/* Raw-HTML blocks render without the .tiptap-viewer-content scope, so the
+   Tailwind Preflight reset (ul/ol { list-style:none; padding:0 }) leaves
+   their lists flat and unmarked. Restore default list rendering here.
+   Inline styles on the element still win, so authored HTML is unaffected. */
+.lesson-renderer-block-richtext ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.lesson-renderer-block-richtext ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.lesson-renderer-block-richtext ul ul,
+.lesson-renderer-block-richtext ol ol,
+.lesson-renderer-block-richtext ul ol,
+.lesson-renderer-block-richtext ol ul {
+  margin-bottom: 0;
+}
+
+.lesson-renderer-block-richtext li {
+  margin-bottom: 0.25rem;
+}
+
 .tiptap-editor-content th,
 .tiptap-viewer-content th,
 .tiptap-editor-content td,
@@ -2357,6 +2393,12 @@
 /* Hide public header/footer on dashboard pages */
 html[data-dashboard] [data-public-header],
 html[data-dashboard] [data-public-footer] {
+  display: none;
+}
+
+/* Swap the site navbar for a page-local reading toolbar (e.g. blog/roadmap
+   reading-settings panel) without the dashboard scroll-lock side effects. */
+html[data-hide-public-header] [data-public-header] {
   display: none;
 }
 

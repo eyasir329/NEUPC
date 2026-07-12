@@ -113,3 +113,22 @@ export function useScrollLock(enabled = true) {
     };
   }, [enabled]);
 }
+
+/**
+ * useHidePublicHeader — Toggles the `data-hide-public-header` attribute on
+ * `<html>`, which swaps out the site navbar via CSS (see global.css). Used
+ * by reading-mode toolbars (blog/roadmap detail) that show their own sticky
+ * bar in place of the navbar while active. Restores on unmount/toggle-off.
+ *
+ * @param {boolean} [enabled=true]
+ */
+export function useHidePublicHeader(enabled = true) {
+  useEffect(() => {
+    if (!enabled) return;
+    const html = document.documentElement;
+    html.setAttribute('data-hide-public-header', '');
+    return () => {
+      html.removeAttribute('data-hide-public-header');
+    };
+  }, [enabled]);
+}
