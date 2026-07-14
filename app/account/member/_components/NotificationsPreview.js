@@ -103,7 +103,11 @@ export default function NotificationsPreview({ items = [] }) {
                     >
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: notif.title.replace(
+                          __html: notif.title
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(
                             /'([^']+)'/g,
                             "<span class='text-indigo-400'>'$1'</span>"
                           ),
