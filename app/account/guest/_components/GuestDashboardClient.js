@@ -47,100 +47,6 @@ import {
   EmptyState,
 } from '@/app/account/_components/ui';
 
-// ─── Fallback data (shown when DB returns empty) ───────────────────────────────
-
-const FALLBACK_EVENTS = [
-  {
-    id: 'fe1',
-    title: 'Web Development Workshop',
-    category: 'Workshop',
-    start_date: new Date(Date.now() + 3 * 86400000).toISOString(),
-    location: 'CSE Lab-B',
-    venue_type: 'offline',
-    status: 'upcoming',
-  },
-  {
-    id: 'fe2',
-    title: 'Competitive Programming Contest #12',
-    category: 'Contest',
-    start_date: new Date(Date.now() + 5 * 86400000).toISOString(),
-    location: 'Online',
-    venue_type: 'online',
-    status: 'upcoming',
-  },
-  {
-    id: 'fe3',
-    title: 'Advanced Algorithms Bootcamp',
-    category: 'Bootcamp',
-    start_date: new Date(Date.now() + 8 * 86400000).toISOString(),
-    location: 'CSE Lab-A',
-    venue_type: 'offline',
-    status: 'upcoming',
-  },
-];
-
-const FALLBACK_REGISTRATIONS = [
-  {
-    id: 'fr1',
-    status: 'attended',
-    attended: true,
-    registered_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    events: {
-      title: 'JavaScript Fundamentals',
-      start_date: new Date(Date.now() - 10 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr2',
-    status: 'attended',
-    attended: true,
-    registered_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    events: {
-      title: 'Git & GitHub Workshop',
-      start_date: new Date(Date.now() - 15 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr3',
-    status: 'registered',
-    attended: false,
-    registered_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    events: {
-      title: 'Intro to Competitive Programming',
-      start_date: new Date(Date.now() + 2 * 86400000).toISOString(),
-    },
-  },
-];
-
-const FALLBACK_NOTICES = [
-  {
-    id: 'fn1',
-    notice_type: 'event',
-    is_pinned: false,
-    title: 'Registration open: Web Dev Workshop',
-    content:
-      'Registration is now open until Feb 21. Limited to 40 participants.',
-    created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: 'fn2',
-    notice_type: 'general',
-    is_pinned: true,
-    title: 'New resource added: DP Cheatsheet',
-    content:
-      'A comprehensive dynamic programming reference sheet is now available in Resources.',
-    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
-  },
-  {
-    id: 'fn3',
-    notice_type: 'deadline',
-    is_pinned: false,
-    title: 'NEUPC Monthly Contest #27 starts soon',
-    content: 'Starts May 24, 20:00 BDT on Codeforces — 2.5 hours, 6 problems.',
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-  },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(iso) {
@@ -217,9 +123,18 @@ function GuestHero({ userName, avatarUrl, stats, latestApplication }) {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-2xl font-bold text-indigo-400"
+              className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-2xl font-bold text-indigo-400"
             >
-              {userName.substring(0, 2).toUpperCase()}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={userName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                userName.substring(0, 2).toUpperCase()
+              )}
             </motion.div>
             <span className="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full border border-indigo-500/40 bg-indigo-500/20 text-[10px] font-black text-indigo-300 shadow-lg backdrop-blur-sm">
               G
@@ -263,7 +178,7 @@ function GuestHero({ userName, avatarUrl, stats, latestApplication }) {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-amber-400 uppercase">
-                  <Clock className="h-4 w-4 animate-spin" /> Under Review
+                  <Clock className="h-4 w-4 animate-pulse" /> Under Review
                 </span>
                 <span className="text-[11px] font-medium text-zinc-500">
                   Submitted {fmtDate(latestApplication.created_at)}
@@ -350,11 +265,9 @@ export default function GuestDashboardClient({
   notices = [],
   latestApplication,
 }) {
-  const displayEvents = events.length ? events : FALLBACK_EVENTS;
-  const displayRegistrations = registrations.length
-    ? registrations
-    : FALLBACK_REGISTRATIONS;
-  const displayNotices = notices.length ? notices : FALLBACK_NOTICES;
+  const displayEvents = events;
+  const displayRegistrations = registrations;
+  const displayNotices = notices;
 
   const userName = user?.full_name?.split(' ')[0] || 'Guest';
   const isImage =
@@ -502,7 +415,7 @@ export default function GuestDashboardClient({
             <div className="divide-y divide-white/5">
               {upcomingEvents.map((e) => {
                 const isRegistered = displayRegistrations.some(
-                  (r) => r.events?.title === e.title || r.event_id === e.id
+                  (r) => r.event_id === e.id && r.status !== 'cancelled'
                 );
                 const evDate = fmtDate(e.start_date);
                 const evMo = evDate.split(' ')[0].toUpperCase();
@@ -588,6 +501,16 @@ export default function GuestDashboardClient({
             </ActionButton>
           </div>
 
+          {displayNotices.length === 0 && (
+            <div className="p-10 text-center">
+              <EmptyState
+                icon={Bell}
+                title="No notices yet"
+                description="Club announcements will appear here."
+                accent="violet"
+              />
+            </div>
+          )}
           <div className="divide-y divide-white/5">
             {displayNotices.slice(0, 3).map((n) => {
               const Ico = NOTICE_ICON[n.notice_type] ?? Info;

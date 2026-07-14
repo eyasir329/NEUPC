@@ -223,7 +223,7 @@ function EventsTab({ registrations }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 whileHover={{ backgroundColor: 'rgba(255,255,255,0.01)' }}
-                className="flex items-center gap-4 px-6 py-4.5 transition-colors"
+                className="flex flex-wrap items-center gap-4 px-4 py-4.5 transition-colors sm:flex-nowrap sm:px-6"
               >
                 <div className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-white/10 bg-zinc-950/40 py-2 text-center shadow-inner">
                   <span className="text-[9px] font-black tracking-wider text-violet-400 uppercase">
@@ -406,69 +406,6 @@ function CertificatesTab({ attended }) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-const FALLBACK_REGISTRATIONS = [
-  {
-    id: 'fr1',
-    status: 'attended',
-    attended: true,
-    registered_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    team_name: null,
-    events: {
-      title: 'JavaScript Fundamentals',
-      category: 'Seminar',
-      start_date: new Date(Date.now() - 10 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr2',
-    status: 'attended',
-    attended: true,
-    registered_at: new Date(Date.now() - 20 * 86400000).toISOString(),
-    team_name: 'Team Alpha',
-    events: {
-      title: 'NEUPC Hackathon 2025',
-      category: 'Hackathon',
-      start_date: new Date(Date.now() - 20 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr3',
-    status: 'registered',
-    attended: false,
-    registered_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    team_name: null,
-    events: {
-      title: 'Web Development Workshop',
-      category: 'Workshop',
-      start_date: new Date(Date.now() + 3 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr4',
-    status: 'confirmed',
-    attended: false,
-    registered_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    team_name: null,
-    events: {
-      title: 'Competitive Programming Contest #12',
-      category: 'Contest',
-      start_date: new Date(Date.now() + 5 * 86400000).toISOString(),
-    },
-  },
-  {
-    id: 'fr5',
-    status: 'attended',
-    attended: true,
-    registered_at: new Date(Date.now() - 35 * 86400000).toISOString(),
-    team_name: null,
-    events: {
-      title: 'Git & GitHub Workshop',
-      category: 'Workshop',
-      start_date: new Date(Date.now() - 35 * 86400000).toISOString(),
-    },
-  },
-];
-
 const TABS = [
   { id: 'timeline', label: 'Timeline', icon: TrendingUp },
   { id: 'events', label: 'Events', icon: CalendarDays },
@@ -477,11 +414,9 @@ const TABS = [
 ];
 
 export default function GuestParticipationClient({
-  registrations: rawRegistrations = [],
+  registrations = [],
   certificates = [],
 }) {
-  const registrations =
-    rawRegistrations.length > 0 ? rawRegistrations : FALLBACK_REGISTRATIONS;
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search).get('tab');

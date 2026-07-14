@@ -133,3 +133,13 @@ export async function deleteNotice(id) {
   if (error) throw new Error(error.message);
   return { success: true };
 }
+
+// Get the ids of notices a user has marked read.
+export async function getUserNoticeReadIds(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('notice_reads')
+    .select('notice_id')
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.notice_id);
+}
