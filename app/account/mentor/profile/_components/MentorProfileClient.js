@@ -6,7 +6,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Mail, Phone, Github, Code, Edit2, Save, X } from 'lucide-react';
+import { updateMentorProfileAction } from '@/app/_lib/actions/mentor-actions';
 import {
   PageShell,
   PageHeader,
@@ -17,7 +19,12 @@ import {
   ActionButton,
 } from '@/app/account/_components/ui';
 
-export default function MentorProfileClient({ user, memberProfile }) {
+export default function MentorProfileClient({
+  user,
+  memberProfile,
+  codeforcesHandle,
+}) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -39,20 +46,12 @@ export default function MentorProfileClient({ user, memberProfile }) {
     setMessage(null);
     try {
       const fd = new FormData(e.target);
-      const updates = {
-        bio: fd.get('bio'),
-        github: fd.get('github'),
-        codeforces_handle: fd.get('codeforces_handle'),
-        skills,
-      };
-      const res = await fetch('/api/account/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
+      fd.set('skills', skills.join(','));
+      const res = await updateMentorProfileAction(fd);
+      if (res?.error) throw new Error(res.error);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setEditing(false);
+      router.refresh();
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     }
@@ -67,7 +66,11 @@ export default function MentorProfileClient({ user, memberProfile }) {
       label: 'Student ID',
       value: memberProfile?.student_id || '—',
     },
-    { icon: User, label: 'Session', value: memberProfile?.session || '—' },
+    {
+      icon: User,
+      label: 'Session',
+      value: memberProfile?.academic_session || '—',
+    },
     {
       icon: User,
       label: 'Department',
@@ -82,7 +85,7 @@ export default function MentorProfileClient({ user, memberProfile }) {
         icon={User}
         title="Profile"
         subtitle="Manage your mentor profile information"
-        accent="blue"
+        accent="emerald"
         actions={
           !editing && (
             <ActionButton
@@ -190,7 +193,7 @@ export default function MentorProfileClient({ user, memberProfile }) {
                   <Code className="h-4 w-4 shrink-0 text-gray-400" />
                   <input
                     name="codeforces_handle"
-                    defaultValue={memberProfile?.codeforces_handle || ''}
+                    defaultValue={codeforcesHandle || ''}
                     placeholder="your_handle"
                     className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
                   />
@@ -276,10 +279,10 @@ export default function MentorProfileClient({ user, memberProfile }) {
                   </a>
                 </div>
               )}
-              {memberProfile?.codeforces_handle && (
+              {codeforcesHandle && (
                 <div className="flex items-center gap-2 text-sm text-gray-300">
                   <Code className="h-4 w-4 text-gray-400" />
-                  <span>{memberProfile.codeforces_handle}</span>
+                  <span>{codeforcesHandle}</span>
                 </div>
               )}
               {skills.length > 0 && (
