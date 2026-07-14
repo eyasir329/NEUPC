@@ -13,7 +13,6 @@ import {
   Search,
   X,
   Award,
-  BookOpen,
   Sparkles,
   User,
 } from 'lucide-react';
@@ -72,9 +71,9 @@ export default function AdvisorAchievementsClient({
       {/* Page Header */}
       <PageHeader
         icon={Trophy}
-        title="Recognition Ledger"
-        subtitle="Review official academic certificates, programming contest accolades, and club team triumphs."
-        accent="amber"
+        title="Achievements"
+        subtitle="Review contest accolades, certifications, and club team triumphs."
+        accent="indigo"
       />
 
       {/* KPI Stats Grid */}
@@ -121,7 +120,7 @@ export default function AdvisorAchievementsClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search accolades by title, contest keywords, or descriptions…"
-            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
           />
           {query && (
             <button
@@ -300,7 +299,7 @@ function DetailModal({ achievement, onClose }) {
 
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <span className="block font-mono text-[9px] font-bold tracking-widest text-amber-400 uppercase">
+                <span className="block font-mono text-[10px] font-bold tracking-widest text-amber-400 uppercase">
                   Official Club Recognition
                 </span>
                 <h3 className="mt-1.5 text-lg leading-snug font-extrabold text-white">

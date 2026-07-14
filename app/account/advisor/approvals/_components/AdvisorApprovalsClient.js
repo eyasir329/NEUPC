@@ -6,22 +6,18 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   UserCheck,
   UserPlus,
   DollarSign,
-  CheckCircle,
-  XCircle,
   Search,
   Mail,
   Phone,
   Calendar,
   X,
-  AlertCircle,
   ClipboardCheck,
   Building,
-  GraduationCap,
-  Sparkles,
   TrendingDown,
   TrendingUp,
   Award,
@@ -39,7 +35,6 @@ import {
   PageHeader,
   GlassCard,
   TabBar,
-  Pill,
   Avatar,
   EmptyState,
   StatCard,
@@ -62,6 +57,7 @@ export default function AdvisorApprovalsClient({
   const [selected, setSelected] = useState(null);
   const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const tabs = TAB_DEFS.map((t) => ({
     ...t,
@@ -108,7 +104,7 @@ export default function AdvisorApprovalsClient({
         } else {
           toast.success(result?.success || 'Approved successfully!');
           closeReview();
-          window.location.reload();
+          router.refresh();
         }
       } catch {
         toast.error('An unexpected error occurred.');
@@ -133,7 +129,7 @@ export default function AdvisorApprovalsClient({
         } else {
           toast.success(result?.success || 'Rejected join request.');
           closeReview();
-          window.location.reload();
+          router.refresh();
         }
       } catch {
         toast.error('An unexpected error occurred.');
@@ -180,13 +176,13 @@ export default function AdvisorApprovalsClient({
       {/* Dynamic Shell Header */}
       <PageHeader
         icon={ClipboardCheck}
-        title="Approvals Hub"
+        title="Approvals"
         subtitle={
           totalPending === 0
             ? 'Inbox zero — all pending requests review queue cleared.'
             : `${totalPending} items awaiting advisor review`
         }
-        accent="amber"
+        accent="indigo"
       />
 
       {/* Overview StatCards */}
@@ -249,7 +245,7 @@ export default function AdvisorApprovalsClient({
                   ? 'Search by student name, email, or student ID…'
                   : 'Search by description or associated event…'
             }
-            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
           />
           {query && (
             <button
@@ -439,7 +435,7 @@ function BudgetEntriesList({ items, onReview }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                       isIncome
                         ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                         : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -530,7 +526,7 @@ function ReviewModal({
               <div className="flex items-center gap-4">
                 <Avatar name={item.name || '?'} size="lg" />
                 <div className="min-w-0 flex-1">
-                  <span className="block font-mono text-[9px] font-bold tracking-widest text-orange-400 uppercase">
+                  <span className="block font-mono text-[10px] font-bold tracking-widest text-orange-400 uppercase">
                     NEUPC Candidate Member
                   </span>
                   <p className="mt-1 truncate text-base font-bold text-white">
@@ -579,7 +575,7 @@ function ReviewModal({
                   src={item.users?.avatar_url}
                 />
                 <div className="min-w-0 flex-1">
-                  <span className="block font-mono text-[9px] font-bold tracking-widest text-blue-400 uppercase">
+                  <span className="block font-mono text-[10px] font-bold tracking-widest text-blue-400 uppercase">
                     Profile Verification Review
                   </span>
                   <p className="mt-1 truncate text-base font-bold text-white">
@@ -627,14 +623,14 @@ function ReviewModal({
             <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-emerald-500/10 to-transparent p-5 font-mono text-xs">
               <div className="absolute top-0 right-0 -z-10 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
               <div className="border-b border-dashed border-white/10 pb-4 text-center">
-                <span className="mb-1 block text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
+                <span className="mb-1 block text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
                   Financial Transaction Slip
                 </span>
                 <span className="text-2xl font-black text-white">
                   ৳{Number(item.amount).toLocaleString()}
                 </span>
                 <span
-                  className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-wider uppercase ${
+                  className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                     item.entry_type === 'income'
                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                       : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -681,7 +677,7 @@ function ReviewModal({
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder="Specify rejection comments if declining this applicant..."
-                className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                className="w-full resize-none rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
             </div>
           )}
@@ -697,7 +693,7 @@ function ReviewModal({
             </button>
             {isJoin && (
               <button
-                onClick={handleReject}
+                onClick={onReject}
                 type="button"
                 disabled={submitting}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-rose-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.35)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"

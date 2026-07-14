@@ -6,15 +6,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Bell, Save, Shield, User, Sparkles } from 'lucide-react';
+import { Settings, Bell, Save, User } from 'lucide-react';
 import {
   PageShell,
   PageHeader,
   GlassCard,
   SectionHeader,
-  Pill,
 } from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
+import { saveAdvisorNotificationPrefsAction } from '@/app/_lib/actions/advisor-actions';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -23,7 +23,7 @@ function Toggle({ checked, onChange }) {
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all duration-300 ${
         checked
-          ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+          ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
           : 'bg-white/10'
       }`}
     >
@@ -36,22 +36,27 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+const DEFAULT_PREFS = {
+  pending_verifications: true,
+  budget_approvals: true,
+  committee_changes: false,
+  monthly_reports: true,
+};
+
 export default function AdvisorSettingsClient({ user }) {
   const [savingNotif, setSavingNotif] = useState(false);
 
   const [notifSettings, setNotifSettings] = useState({
-    pending_verifications: true,
-    budget_approvals: true,
-    committee_changes: false,
-    monthly_reports: true,
+    ...DEFAULT_PREFS,
+    ...(user?.notification_prefs || {}),
   });
 
   const handleSaveNotifications = async (e) => {
     e.preventDefault();
     setSavingNotif(true);
-    // Simulate backend save
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success('Advisor settings preferences saved successfully.');
+    const res = await saveAdvisorNotificationPrefsAction(notifSettings);
+    if (res?.error) toast.error(res.error);
+    else toast.success('Notification preferences saved.');
     setSavingNotif(false);
   };
 
@@ -61,9 +66,9 @@ export default function AdvisorSettingsClient({ user }) {
     <PageShell>
       <PageHeader
         icon={Settings}
-        title="Oversight Preferences"
-        subtitle="Manage your advisor permissions, system notification routing, and governance preferences."
-        accent="amber"
+        title="Settings"
+        subtitle="Manage your advisor account details and notification preferences."
+        accent="indigo"
       />
 
       {/* Account Info Cards */}
@@ -72,7 +77,7 @@ export default function AdvisorSettingsClient({ user }) {
           icon={User}
           title="Faculty Credentials"
           subtitle="Administrative identity fields synchronized with the active university directory."
-          accent="amber"
+          accent="indigo"
         />
         <div className="mt-4 space-y-3">
           {[
@@ -103,7 +108,7 @@ export default function AdvisorSettingsClient({ user }) {
               )}
               {badge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black tracking-widest uppercase ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-widest uppercase ${
                     badge.tone === 'emerald'
                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                       : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -123,7 +128,7 @@ export default function AdvisorSettingsClient({ user }) {
           icon={Bell}
           title="Governance Alerts & Summaries"
           subtitle="Subscribe to critical triggers requiring faculty review or operational records."
-          accent="amber"
+          accent="indigo"
         />
         <form onSubmit={handleSaveNotifications} className="mt-4 space-y-4">
           {[
@@ -168,7 +173,7 @@ export default function AdvisorSettingsClient({ user }) {
             <button
               type="submit"
               disabled={savingNotif}
-              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white transition-all select-none hover:bg-amber-700 active:scale-95 disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white transition-all select-none hover:bg-indigo-500 active:scale-95 disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {savingNotif

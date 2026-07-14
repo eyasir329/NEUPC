@@ -44,7 +44,7 @@ export default function BudgetOverview({ budgetData, budgetUtilization = 0 }) {
         }
       />
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
           <p className="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
             Allocated

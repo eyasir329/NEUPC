@@ -40,9 +40,9 @@ export default function StatsGrid({ stats }) {
       />
       <StatCard
         icon={Calendar}
-        label="Events · Semester"
-        value={stats.eventsSemester}
-        sublabel="This term"
+        label="Total Events"
+        value={stats.totalEvents}
+        sublabel="All time"
         accent="violet"
         href="/account/advisor/events"
         delay={0.08}
@@ -58,19 +58,18 @@ export default function StatsGrid({ stats }) {
       />
       <StatCard
         icon={BarChart3}
-        label="Growth Rate"
-        value={`${stats.participationGrowth}%`}
-        sublabel="Participation YoY"
+        label="Upcoming Events"
+        value={stats.upcomingEvents}
+        sublabel="Scheduled or ongoing"
         accent="cyan"
         href="/account/advisor/analytics"
-        trend={{ dir: 'up', value: `${stats.participationGrowth}%` }}
         delay={0.16}
       />
       <StatCard
         icon={Wallet}
         label="Budget Used"
         value={`${stats.budgetUtilization}%`}
-        sublabel="of allocated"
+        sublabel="of recorded income"
         accent="rose"
         href="/account/advisor/budget"
         delay={0.2}

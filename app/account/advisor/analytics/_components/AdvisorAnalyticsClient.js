@@ -20,7 +20,6 @@ import {
   UserPlus,
   UserCheck,
   Mail,
-  Award,
 } from 'lucide-react';
 import {
   PageShell,
@@ -28,7 +27,6 @@ import {
   GlassCard,
   StatCard,
   SectionHeader,
-  Pill,
   ActionButton,
   TabBar,
   EmptyState,
@@ -74,9 +72,9 @@ export default function AdvisorAnalyticsClient({
       {/* Page Header */}
       <PageHeader
         icon={BarChart3}
-        title="Intelligence Centre"
-        subtitle="Analyze platform growth metrics, upcoming activities, and global club performance."
-        accent="violet"
+        title="Analytics"
+        subtitle="Platform growth metrics, event performance, and club engagement."
+        accent="indigo"
         actions={
           <div className="w-full sm:w-auto">
             <TabBar tabs={RANGE_TABS} value={range} onChange={setRange} />
@@ -171,7 +169,7 @@ export default function AdvisorAnalyticsClient({
             accent="violet"
           />
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <EngagementTile
               label="Registrations"
               value={engagement.totalRegistrations}
@@ -422,7 +420,7 @@ function EngagementTile({ label, value, tone }) {
       className={`flex flex-col items-center justify-center rounded-xl border p-3.5 text-center select-none ${ENGAGE_TONE[tone]}`}
     >
       <span className="text-xl font-black text-white">{value}</span>
-      <span className="mt-1 font-mono text-[9px] font-bold tracking-widest text-gray-500 uppercase">
+      <span className="mt-1 font-mono text-[10px] font-bold tracking-widest text-gray-500 uppercase">
         {label}
       </span>
     </div>

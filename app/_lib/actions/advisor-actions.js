@@ -14,6 +14,11 @@ import {
   rejectJoinRequest,
   approveMemberProfile,
   approveBudgetEntry,
+  createActivityLog,
+  createAdvisorNote,
+  setAdvisorNotePinned,
+  deleteAdvisorNote,
+  updateUser,
 } from '@/app/_lib/services/data-service';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
@@ -30,6 +35,14 @@ async function requireAdvisor() {
   if (user?.account_status !== 'active' || !user?.is_online)
     redirect('/account');
   return user;
+}
+
+async function logDecision(userId, action, entityType, entityId, details = {}) {
+  try {
+    await createActivityLog(userId, action, entityType, entityId, details);
+  } catch (err) {
+    console.error('Advisor decision log error:', err);
+  }
 }
 
 function revalidateApprovals() {
@@ -55,6 +68,12 @@ export async function approveJoinRequestAction(formData) {
 
   try {
     await approveJoinRequest(requestId, advisor.id);
+    await logDecision(
+      advisor.id,
+      'approve_join_request',
+      'join_request',
+      requestId
+    );
     revalidateApprovals();
     return { success: 'Join request approved successfully.' };
   } catch (error) {
@@ -73,6 +92,13 @@ export async function rejectJoinRequestAction(formData) {
 
   try {
     await rejectJoinRequest(requestId, advisor.id, reason);
+    await logDecision(
+      advisor.id,
+      'reject_join_request',
+      'join_request',
+      requestId,
+      { reason }
+    );
     revalidateApprovals();
     return { success: 'Join request rejected.' };
   } catch (error) {
@@ -93,6 +119,12 @@ export async function approveMemberProfileAction(formData) {
 
   try {
     await approveMemberProfile(userId, advisor.id);
+    await logDecision(
+      advisor.id,
+      'approve_member_profile',
+      'member_profile',
+      userId
+    );
     revalidateApprovals();
     return { success: 'Member profile approved successfully.' };
   } catch (error) {
@@ -113,11 +145,114 @@ export async function approveBudgetEntryAction(formData) {
 
   try {
     await approveBudgetEntry(entryId, advisor.id);
+    await logDecision(
+      advisor.id,
+      'approve_budget_entry',
+      'budget_entry',
+      entryId
+    );
     revalidateApprovals();
     revalidatePath('/account/advisor/budget');
     return { success: 'Budget entry approved successfully.' };
   } catch (error) {
     console.error('Approve budget entry error:', error);
     return { error: 'Failed to approve budget entry.' };
+  }
+}
+
+// =============================================================================
+// ADVISORY NOTE ACTIONS
+// =============================================================================
+
+const NOTE_TAGS = ['Strategy', 'Membership', 'Budget', 'Policy'];
+
+export async function createAdvisorNoteAction(formData) {
+  const advisor = await requireAdvisor();
+  const text = formData.get('text')?.trim();
+  const tag = formData.get('tag');
+
+  if (!text) return { error: 'Note text is required.' };
+  if (text.length > 2000)
+    return { error: 'Note is too long (max 2000 characters).' };
+
+  try {
+    const note = await createAdvisorNote(
+      advisor.id,
+      text,
+      NOTE_TAGS.includes(tag) ? tag : 'Strategy'
+    );
+    revalidatePath('/account/advisor');
+    return { success: 'Note saved.', note };
+  } catch (error) {
+    console.error('Create advisor note error:', error);
+    return { error: 'Failed to save note.' };
+  }
+}
+
+export async function toggleAdvisorNotePinAction(formData) {
+  const advisor = await requireAdvisor();
+  const noteId = formData.get('noteId');
+  const pinned = formData.get('pinned') === 'true';
+
+  if (!noteId) return { error: 'Note ID is required.' };
+
+  try {
+    await setAdvisorNotePinned(noteId, advisor.id, pinned);
+    revalidatePath('/account/advisor');
+    return { success: pinned ? 'Note pinned.' : 'Note unpinned.' };
+  } catch (error) {
+    console.error('Toggle advisor note pin error:', error);
+    return { error: 'Failed to update note.' };
+  }
+}
+
+export async function deleteAdvisorNoteAction(formData) {
+  const advisor = await requireAdvisor();
+  const noteId = formData.get('noteId');
+
+  if (!noteId) return { error: 'Note ID is required.' };
+
+  try {
+    await deleteAdvisorNote(noteId, advisor.id);
+    revalidatePath('/account/advisor');
+    return { success: 'Note deleted.' };
+  } catch (error) {
+    console.error('Delete advisor note error:', error);
+    return { error: 'Failed to delete note.' };
+  }
+}
+
+// =============================================================================
+// NOTIFICATION PREFERENCE ACTIONS
+// =============================================================================
+
+const ADVISOR_PREF_KEYS = [
+  'pending_verifications',
+  'budget_approvals',
+  'committee_changes',
+  'monthly_reports',
+];
+
+export async function saveAdvisorNotificationPrefsAction(prefs) {
+  const advisor = await requireAdvisor();
+
+  const clean = {};
+  for (const key of ADVISOR_PREF_KEYS) {
+    if (typeof prefs?.[key] === 'boolean') clean[key] = prefs[key];
+  }
+
+  try {
+    await updateUser(advisor.id, {
+      notification_prefs: {
+        ...(advisor.notification_prefs || {}),
+        ...clean,
+      },
+    });
+
+    revalidatePath('/account/advisor/settings');
+    return { success: 'Notification preferences saved.' };
+  } catch (error) {
+    console.error('Save advisor notification prefs error:', error);
+    return { error: 'Failed to save preferences.' };
   }
 }

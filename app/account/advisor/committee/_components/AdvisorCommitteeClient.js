@@ -323,9 +323,9 @@ export default function AdvisorCommitteeClient({
         {/* Header */}
         <PageHeader
           icon={ShieldCheck}
-          title="Committee Governance"
+          title="Committee"
           subtitle={`${live.totalMembers} total members · ${live.currentMembers} active terms · ${live.totalPositions} positions`}
-          accent="violet"
+          accent="indigo"
           actions={
             <div className="flex items-center gap-2">
               <Link
@@ -414,7 +414,7 @@ export default function AdvisorCommitteeClient({
                   ? 'Search positions by title or category…'
                   : 'Search members by name, email, or position…'
               }
-              className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+              className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-9 pl-10 text-sm text-white transition-all outline-none placeholder:text-gray-600 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
             />
             {search && (
               <button

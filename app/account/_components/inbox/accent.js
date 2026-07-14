@@ -10,7 +10,7 @@
  * @module inbox/accent
  */
 
-/** @typedef {'sky' | 'violet' | 'blue' | 'amber'} InboxAccent */
+/** @typedef {'sky' | 'violet' | 'blue' | 'amber' | 'indigo'} InboxAccent */
 
 export const INBOX_ACCENTS = {
   sky: {
@@ -49,6 +49,18 @@ export const INBOX_ACCENTS = {
     mediumBg: 'bg-blue-500/10',
     mediumBadge: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
   },
+  indigo: {
+    selection: 'selection:bg-indigo-500/30',
+    pinnedBadge: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400',
+    searchFocus: 'focus:border-indigo-500/40',
+    rowActive: 'bg-indigo-500/3 hover:bg-indigo-500/6',
+    pinDot: 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]',
+    tag: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400',
+    tabActive: 'border border-indigo-500/30 bg-indigo-500/20 text-indigo-300',
+    mediumColor: 'text-indigo-400',
+    mediumBg: 'bg-indigo-500/10',
+    mediumBadge: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400',
+  },
   amber: {
     selection: 'selection:bg-amber-500/30',
     pinnedBadge: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
@@ -67,4 +79,5 @@ export const INBOX_ACCENTS = {
  * Resolve an inbox accent's class map, defaulting to sky for unknown values.
  * @param {InboxAccent} [accent]
  */
-export const inboxAccent = (accent) => INBOX_ACCENTS[accent] ?? INBOX_ACCENTS.sky;
+export const inboxAccent = (accent) =>
+  INBOX_ACCENTS[accent] ?? INBOX_ACCENTS.sky;

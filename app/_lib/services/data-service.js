@@ -5,6 +5,7 @@
 
 export * from './data/achievements';
 export * from './data/activity';
+export * from './data/advisor-notes';
 export * from './data/applications';
 export * from './data/blogs';
 export * from './data/budget';

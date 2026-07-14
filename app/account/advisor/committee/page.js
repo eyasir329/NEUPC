@@ -17,7 +17,7 @@ import AdvisorCommitteeClient from './_components/AdvisorCommitteeClient';
 export const metadata = { title: 'Committee | Advisor | NEUPC' };
 
 export default async function AdvisorCommitteePage() {
-  const { user } = await requireRole('advisor');
+  await requireRole('advisor');
 
   const [members, positions, users] = await Promise.all([
     getAllCommitteeMembers().catch(() => []),

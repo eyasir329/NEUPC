@@ -294,7 +294,7 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
       </div>
 
       {/* Enrollment stats */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           {
             label: 'Total',
@@ -419,13 +419,13 @@ function BootcampTrackCard({ bootcamp, onViewStudents }) {
                           <p className="text-xs font-bold text-violet-400">
                             {m.sessionsCount}
                           </p>
-                          <p className="text-[9px] text-gray-600">sessions</p>
+                          <p className="text-[10px] text-gray-600">sessions</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs font-bold text-cyan-400">
                             {m.menteesCount}
                           </p>
-                          <p className="text-[9px] text-gray-600">mentees</p>
+                          <p className="text-[10px] text-gray-600">mentees</p>
                         </div>
                       </div>
                     </div>

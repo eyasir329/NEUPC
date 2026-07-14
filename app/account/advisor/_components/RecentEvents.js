@@ -16,10 +16,11 @@ import {
   EmptyState,
 } from '@/app/account/_components/ui';
 
-const APPROVAL_TONE = {
-  Approved: 'emerald',
-  Pending: 'amber',
-  Rejected: 'rose',
+const STATUS_TONE = {
+  Upcoming: 'cyan',
+  Ongoing: 'emerald',
+  Completed: 'gray',
+  Cancelled: 'rose',
 };
 
 const TYPE_TONE = {
@@ -77,8 +78,8 @@ export default function RecentEvents({ recentEvents = [] }) {
                     </span>
                   </div>
                 </div>
-                <Pill tone={APPROVAL_TONE[event.approval] ?? 'gray'}>
-                  {event.approval}
+                <Pill tone={STATUS_TONE[event.status] ?? 'gray'}>
+                  {event.status}
                 </Pill>
               </div>
             </li>
