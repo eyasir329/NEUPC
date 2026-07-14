@@ -36,94 +36,6 @@ function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 'n1',
-    notification_type: 'event',
-    title: 'Web3 & Smart Contract Workshop starts in 2 hours',
-    message:
-      'Reminder for your registered event on May 12 at 14:00 in CSE Seminar Hall.',
-    created_at: ago(0.05),
-    is_read: false,
-  },
-  {
-    id: 'n2',
-    notification_type: 'mention',
-    title: 'Sajid Hossain replied to your thread',
-    message:
-      '"How to debug Express middleware order?" — your reply was upvoted 12 times.',
-    created_at: ago(0.2),
-    is_read: false,
-  },
-  {
-    id: 'n3',
-    notification_type: 'achievement',
-    title: "You earned the 'Open-Source Contributor' badge",
-    message: '5 PRs merged in NEUPC repos this month.',
-    created_at: ago(3),
-    is_read: false,
-  },
-  {
-    id: 'n4',
-    notification_type: 'mention',
-    title: 'Nusrat Jahan mentioned you',
-    message: '"@you check this elegant DP transition for LIS!" in #algorithms.',
-    created_at: ago(6),
-    is_read: false,
-  },
-  {
-    id: 'n5',
-    notification_type: 'system',
-    title: 'Codeforces sync completed',
-    message: '+12 new submissions imported. Rating updated to 1547.',
-    created_at: ago(8),
-    is_read: false,
-  },
-  {
-    id: 'n6',
-    notification_type: 'event',
-    title: "Inter-University Hackathon '26 registration opens tomorrow",
-    message: 'Save your seat — limited to 312 participants across 78 teams.',
-    created_at: ago(24),
-    is_read: true,
-  },
-  {
-    id: 'n7',
-    notification_type: 'lesson',
-    title: 'New lesson available: JWT Authentication',
-    message:
-      'In Full-Stack Web Development bootcamp · 22 min · by Tanvir Ahmed.',
-    created_at: ago(36),
-    is_read: true,
-  },
-  {
-    id: 'n8',
-    notification_type: 'achievement',
-    title: '30-day streak milestone reached!',
-    message: "You've solved problems 30 days in a row. Keep it up!",
-    created_at: ago(48),
-    is_read: true,
-  },
-  {
-    id: 'n9',
-    notification_type: 'system',
-    title: 'Profile review approved',
-    message: 'Your member profile changes are now live.',
-    created_at: ago(72),
-    is_read: true,
-  },
-  {
-    id: 'n10',
-    notification_type: 'event',
-    title: 'Reminder: NEUPC Monthly Contest #27',
-    message: 'Starts May 24, 20:00 BDT on Codeforces — 2.5 hours, 6 problems.',
-    created_at: ago(96),
-    is_read: true,
-  },
-];
-
 const TYPE_CONFIG = {
   event: { icon: Calendar, color: 'text-blue-400', bg: 'bg-blue-500/10' },
   mention: { icon: AtSign, color: 'text-violet-400', bg: 'bg-violet-500/10' },
@@ -171,10 +83,7 @@ export default function MemberNotificationsClient({
   notifications: serverNotifs = [],
   unreadCount: _initialUnread = 0,
 }) {
-  const useMock = serverNotifs.length === 0;
-  const [notifs, setNotifs] = useState(
-    useMock ? MOCK_NOTIFICATIONS : serverNotifs
-  );
+  const [notifs, setNotifs] = useState(serverNotifs);
   const [tab, setTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
@@ -223,12 +132,12 @@ export default function MemberNotificationsClient({
     setNotifs((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
-    if (!useMock) startTransition(() => markAsReadAction(id).catch(() => {}));
+    startTransition(() => markAsReadAction(id).catch(() => {}));
   };
 
   const markAllRead = () => {
     setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    if (!useMock) startTransition(() => markAllAsReadAction().catch(() => {}));
+    startTransition(() => markAllAsReadAction().catch(() => {}));
   };
 
   const del = (id) => {
@@ -243,8 +152,7 @@ export default function MemberNotificationsClient({
       }
       return remaining;
     });
-    if (!useMock)
-      startTransition(() => deleteNotificationAction(id).catch(() => {}));
+    startTransition(() => deleteNotificationAction(id).catch(() => {}));
   };
 
   return (

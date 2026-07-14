@@ -9,11 +9,13 @@ import { motion } from 'framer-motion';
 import { Medal, Flame, Trophy } from 'lucide-react';
 
 export default function MemberHeader({ firstName, userLevel, streakDays = 0 }) {
-  const xpPct = Math.round((userLevel.xp / userLevel.nextLevelXp) * 100);
-  const rankPct = Math.max(
-    1,
-    Math.round((userLevel.rank / userLevel.totalMembers) * 100)
-  ); // Top X%
+  const xpPct = userLevel.nextLevelXp
+    ? Math.min(100, Math.round((userLevel.xp / userLevel.nextLevelXp) * 100))
+    : 0;
+  const rankPct =
+    userLevel.rank && userLevel.totalMembers
+      ? Math.max(1, Math.round((userLevel.rank / userLevel.totalMembers) * 100))
+      : null; // Top X%
 
   return (
     <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 p-8 backdrop-blur-xl md:flex-row md:items-center">
@@ -45,13 +47,15 @@ export default function MemberHeader({ firstName, userLevel, streakDays = 0 }) {
               <Medal className="h-3.5 w-3.5" />
               {userLevel.level}
             </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="flex cursor-default items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-tight text-zinc-400 uppercase"
-            >
-              <Trophy className="h-3.5 w-3.5" />#{userLevel.rank} of{' '}
-              {userLevel.totalMembers}
-            </motion.div>
+            {userLevel.rank != null && (
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex cursor-default items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-tight text-zinc-400 uppercase"
+              >
+                <Trophy className="h-3.5 w-3.5" />#{userLevel.rank} of{' '}
+                {userLevel.totalMembers}
+              </motion.div>
+            )}
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="flex cursor-default items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold tracking-tight text-amber-400 uppercase"
@@ -72,7 +76,8 @@ export default function MemberHeader({ firstName, userLevel, streakDays = 0 }) {
           <span className="font-mono text-xs font-medium text-zinc-100">
             {userLevel.xp.toLocaleString()}{' '}
             <span className="text-zinc-500">
-              / {userLevel.nextLevelXp.toLocaleString()} XP
+              / {userLevel.nextLevelXp.toLocaleString()}{' '}
+              {userLevel.unit || 'XP'}
             </span>
           </span>
         </div>
@@ -86,7 +91,7 @@ export default function MemberHeader({ firstName, userLevel, streakDays = 0 }) {
         </div>
         <div className="flex items-center justify-between text-[10px] font-medium tracking-widest text-zinc-500 uppercase">
           <span>{xpPct}% complete</span>
-          <span>Top {rankPct}% of members</span>
+          {rankPct != null && <span>Top {rankPct}% of members</span>}
         </div>
       </div>
     </div>

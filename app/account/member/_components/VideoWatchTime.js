@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlayCircle, Calendar, Clock } from 'lucide-react';
+import { PlayCircle, Clock } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -16,114 +16,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-
-const watchData = [
-  {
-    date: 'Mon',
-    minutes: 45,
-    videos: [
-      {
-        title: 'Intro to React Hooks',
-        course: 'Frontend Development',
-        minutes: 25,
-      },
-      {
-        title: 'useState Deep Dive',
-        course: 'Frontend Development',
-        minutes: 20,
-      },
-    ],
-  },
-  {
-    date: 'Tue',
-    minutes: 120,
-    videos: [
-      {
-        title: 'useEffect Patterns',
-        course: 'Frontend Development',
-        minutes: 45,
-      },
-      { title: 'Custom Hooks', course: 'Frontend Development', minutes: 40 },
-      {
-        title: 'Node.js Event Loop',
-        course: 'Backend with Node.js',
-        minutes: 35,
-      },
-    ],
-  },
-  {
-    date: 'Wed',
-    minutes: 80,
-    videos: [
-      {
-        title: 'Express Middleware',
-        course: 'Backend with Node.js',
-        minutes: 50,
-      },
-      { title: 'REST API Design', course: 'Backend with Node.js', minutes: 30 },
-    ],
-  },
-  {
-    date: 'Thu',
-    minutes: 150,
-    videos: [
-      { title: 'Context API', course: 'Frontend Development', minutes: 60 },
-      {
-        title: 'Performance Optimization',
-        course: 'Frontend Development',
-        minutes: 55,
-      },
-      { title: 'Big O Notation', course: 'DSA Mastery Track', minutes: 35 },
-    ],
-  },
-  {
-    date: 'Fri',
-    minutes: 90,
-    videos: [
-      { title: 'Binary Search', course: 'DSA Mastery Track', minutes: 45 },
-      { title: 'Linked Lists', course: 'DSA Mastery Track', minutes: 45 },
-    ],
-  },
-  {
-    date: 'Sat',
-    minutes: 210,
-    videos: [
-      { title: 'Tree Traversal', course: 'DSA Mastery Track', minutes: 70 },
-      { title: 'Graph Algorithms', course: 'DSA Mastery Track', minutes: 80 },
-      {
-        title: 'Dynamic Programming Intro',
-        course: 'DSA Mastery Track',
-        minutes: 60,
-      },
-    ],
-  },
-  {
-    date: 'Sun',
-    minutes: 60,
-    videos: [
-      {
-        title: 'MongoDB Aggregation',
-        course: 'Backend with Node.js',
-        minutes: 35,
-      },
-      {
-        title: 'Authentication Flows',
-        course: 'Backend with Node.js',
-        minutes: 25,
-      },
-    ],
-  },
-];
-
-const timeFilters = [
-  'Day',
-  'Week',
-  'Month',
-  '6 Months',
-  'Year',
-  'All',
-  'Custom',
-];
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -158,21 +50,18 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function VideoWatchTime({ roadmaps }) {
-  const [timeFilter, setTimeFilter] = useState('Week');
+export default function VideoWatchTime({ roadmaps, watchData = [] }) {
   const [trackFilter, setTrackFilter] = useState('All Tracks');
 
-  const filteredData = watchData
-    .map((day) => {
-      if (trackFilter === 'All Tracks') return day;
-      const videos = day.videos.filter((v) => v.course === trackFilter);
-      return {
-        ...day,
-        videos,
-        minutes: videos.reduce((s, v) => s + v.minutes, 0),
-      };
-    })
-    .filter((day) => day.videos.length > 0);
+  const filteredData = watchData.map((day) => {
+    if (trackFilter === 'All Tracks') return day;
+    const videos = day.videos.filter((v) => v.course === trackFilter);
+    return {
+      ...day,
+      videos,
+      minutes: videos.reduce((s, v) => s + v.minutes, 0),
+    };
+  });
 
   return (
     <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-8 shadow-lg shadow-black/20 backdrop-blur-xl">
@@ -186,7 +75,7 @@ export default function VideoWatchTime({ roadmaps }) {
               Video Watch Time
             </h3>
             <p className="mt-1 text-xs text-zinc-500">
-              Time spent across video lessons
+              Time spent across video lessons · last 7 days
             </p>
           </div>
         </div>
@@ -204,41 +93,8 @@ export default function VideoWatchTime({ roadmaps }) {
               </option>
             ))}
           </select>
-
-          <div className="flex max-w-full overflow-x-auto rounded-lg border border-white/10 bg-zinc-950 p-1">
-            {timeFilters.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setTimeFilter(filter)}
-                className={`rounded-md px-3 py-1 text-[10px] font-bold tracking-widest whitespace-nowrap uppercase transition-colors ${
-                  timeFilter === filter
-                    ? 'bg-white/10 text-zinc-100'
-                    : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
-
-      {timeFilter === 'Custom' && (
-        <div className="mb-6 flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
-          <Calendar className="h-4 w-4 text-zinc-400" />
-          <input
-            type="date"
-            className="bg-transparent text-xs text-zinc-300 [color-scheme:dark] focus:outline-none"
-            defaultValue="2026-05-01"
-          />
-          <span className="text-xs text-zinc-500">to</span>
-          <input
-            type="date"
-            className="bg-transparent text-xs text-zinc-300 [color-scheme:dark] focus:outline-none"
-            defaultValue="2026-05-16"
-          />
-        </div>
-      )}
 
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">

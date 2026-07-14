@@ -97,10 +97,12 @@ export default function NextContestCountdown({ contest }) {
             ></div>
             {contest.location}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Users className="h-4 w-4" />
-            {contest.registered} going
-          </div>
+          {contest.registered && (
+            <div className="flex items-center gap-1.5">
+              <Users className="h-4 w-4" />
+              Registered
+            </div>
+          )}
         </div>
       </div>
 

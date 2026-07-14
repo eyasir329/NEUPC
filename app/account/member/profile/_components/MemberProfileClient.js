@@ -1,14 +1,22 @@
 /**
  * @file Member profile client dashboard component.
  * Redesigned for FHD screens using high-fidelity glassmorphic sections matching the public profile view.
- * Supports viewing the full mock profile and toggling to the edit form.
+ * All displayed data is read from the database; sections without a data
+ * source are hidden rather than filled with placeholders.
  * Uses a tabbed layout, unified styling, and reduces duplicate/redundant data.
  * @module MemberProfileClient
  */
 
 'use client';
 
-import { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
+import {
+  useState,
+  useTransition,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check,
@@ -28,15 +36,11 @@ import {
   Globe,
   User,
   Activity,
-  Sparkles,
   GraduationCap,
   BookOpen,
   Hash,
-  Briefcase,
-  MapPin,
   Phone,
   Mail,
-  FileText,
   PenTool,
   Flame,
   Target,
@@ -72,7 +76,6 @@ import {
   ActionButton,
   Pill,
 } from '@/app/account/_components/ui';
-import { MOCK_PROFILE } from './mockData';
 
 const HANDLE_PLATFORMS = [
   { id: 'codeforces', name: 'Codeforces', color: '#ef4444' },
@@ -114,9 +117,9 @@ function FormField({ label, name, defaultValue, placeholder, textarea }) {
 
 function SectionTitle({ icon: Icon, label }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
+    <div className="mb-4 flex items-center gap-2">
       {Icon && <Icon size={16} className="text-[#B6F36B]" />}
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+      <h3 className="font-mono text-xs font-semibold tracking-wider text-zinc-400 uppercase">
         {label}
       </h3>
     </div>
@@ -305,7 +308,16 @@ const getSocialLink = (platform, val) => {
   return val;
 };
 
-export default function MemberProfileClient({ user, memberProfile }) {
+export default function MemberProfileClient({
+  user,
+  memberProfile,
+  handles = [],
+  userStats = null,
+  dailyActivity = [],
+  memberAchievements = [],
+  certificates = [],
+  contestParticipations = [],
+}) {
   const router = useRouter();
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
@@ -321,30 +333,52 @@ export default function MemberProfileClient({ user, memberProfile }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('overview');
-  const [dsaPlatform, setDsaPlatform] = useState('leetcode');
   const [heatmapRange, setHeatmapRange] = useState('12');
-  const [dailyFilter, setDailyFilter] = useState('all');
 
-  const profile = MOCK_PROFILE;
+  // Real solve-activity map: date string -> problems solved that day
+  const activityByDate = useMemo(() => {
+    const map = {};
+    for (const row of dailyActivity) {
+      if (row?.activity_date) map[row.activity_date] = row.problems_solved || 0;
+    }
+    return map;
+  }, [dailyActivity]);
 
   const getBaseProfileFormData = () => {
     const fd = new FormData();
     fd.set('username', memberProfile?.username || '');
     fd.set('bio', memberProfile?.bio || '');
-    fd.set('skills', memberProfile?.skills ? memberProfile.skills.join(', ') : '');
-    fd.set('interests', memberProfile?.interests ? memberProfile.interests.join(', ') : '');
+    fd.set(
+      'skills',
+      memberProfile?.skills ? memberProfile.skills.join(', ') : ''
+    );
+    fd.set(
+      'interests',
+      memberProfile?.interests ? memberProfile.interests.join(', ') : ''
+    );
     fd.set('linkedin', memberProfile?.linkedin || '');
     fd.set('github', memberProfile?.github || '');
     fd.set('facebook', memberProfile?.facebook || '');
     fd.set('x_handle', memberProfile?.x_handle || '');
-    
+
     const platforms = [
-      'codeforces', 'atcoder', 'leetcode', 'codechef', 'hackerrank', 
-      'spoj', 'cses', 'vjudge', 'toph', 'lightoj', 'uva', 
-      'beecrowd', 'facebookhackercup'
+      'codeforces',
+      'atcoder',
+      'leetcode',
+      'codechef',
+      'hackerrank',
+      'spoj',
+      'cses',
+      'vjudge',
+      'toph',
+      'lightoj',
+      'uva',
+      'beecrowd',
+      'facebookhackercup',
     ];
-    platforms.forEach(p => {
-      const handleVal = memberProfile?.[`${p}_handle`] ?? memberProfile?.[p] ?? '';
+    platforms.forEach((p) => {
+      const handleVal =
+        memberProfile?.[`${p}_handle`] ?? memberProfile?.[p] ?? '';
       fd.set(`${p}_handle`, handleVal);
     });
     return fd;
@@ -466,14 +500,14 @@ export default function MemberProfileClient({ user, memberProfile }) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const fd = getBaseProfileFormData();
-    
+
     const cpPlatforms = ['codeforces', 'atcoder', 'leetcode', 'codechef'];
-    cpPlatforms.forEach(p => {
+    cpPlatforms.forEach((p) => {
       fd.set(`${p}_handle`, formData.get(`${p}_handle`) || '');
     });
 
     const socialPlatforms = ['github', 'linkedin', 'facebook'];
-    socialPlatforms.forEach(p => {
+    socialPlatforms.forEach((p) => {
       fd.set(p, formData.get(`${p}_handle`) || '');
     });
 
@@ -494,7 +528,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
   }
 
   // Helper function to generate grid cells based on range and platform type
-  const generateGridCells = (range, platformType) => {
+  const generateGridCells = (range) => {
     const cells = [];
     const today = new Date();
     const days = range === '12' ? 364 : range === '6' ? 182 : 30;
@@ -508,41 +542,15 @@ export default function MemberProfileClient({ user, memberProfile }) {
       curr.setDate(startDate.getDate() + i);
       const dateStr = curr.toISOString().split('T')[0];
 
-      let count = 0;
-      if (platformType === 'problems') {
-        count = (profile.activity.leetcode[dateStr] || 0) +
-                (profile.activity.codeforces[dateStr] || 0) +
-                (profile.activity.codechef[dateStr] || 0) +
-                (profile.activity.atcoder[dateStr] || 0);
-      } else if (platformType === 'daily') {
-        if (dailyFilter === 'all') {
-          count = (profile.activity.todolist?.[dateStr] || 0) +
-                  (profile.activity.courseWatchTime?.[dateStr] || 0);
-        } else if (dailyFilter === 'todolist') {
-          count = profile.activity.todolist?.[dateStr] || 0;
-        } else if (dailyFilter === 'courseWatchTime') {
-          count = profile.activity.courseWatchTime?.[dateStr] || 0;
-        }
-      } else if (platformType === 'github') {
-        count = profile.activity.github[dateStr] || 0;
-      }
-
-      cells.push({ dateStr, count });
+      cells.push({ dateStr, count: activityByDate[dateStr] || 0 });
     }
     return cells;
   };
 
   const problemSolvingCells = useMemo(() => {
-    return generateGridCells(heatmapRange, 'problems');
-  }, [heatmapRange]);
-
-  const dailyActivityCells = useMemo(() => {
-    return generateGridCells(heatmapRange, 'daily');
-  }, [heatmapRange, dailyFilter]);
-
-  const githubCells = useMemo(() => {
-    return generateGridCells(heatmapRange, 'github');
-  }, [heatmapRange]);
+    return generateGridCells(heatmapRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heatmapRange, activityByDate]);
 
   const problemSolvingCols = useMemo(() => {
     const cols = [];
@@ -552,68 +560,58 @@ export default function MemberProfileClient({ user, memberProfile }) {
     return cols;
   }, [problemSolvingCells]);
 
-  const dailyActivityCols = useMemo(() => {
-    const cols = [];
-    for (let i = 0; i < dailyActivityCells.length; i += 7) {
-      cols.push(dailyActivityCells.slice(i, i + 7));
-    }
-    return cols;
-  }, [dailyActivityCells]);
-
-  const githubCols = useMemo(() => {
-    const cols = [];
-    for (let i = 0; i < githubCells.length; i += 7) {
-      cols.push(githubCells.slice(i, i + 7));
-    }
-    return cols;
-  }, [githubCells]);
-
   const totalProblemSolving = useMemo(() => {
     return problemSolvingCells.reduce((sum, c) => sum + c.count, 0);
   }, [problemSolvingCells]);
 
-  const totalDailyActivity = useMemo(() => {
-    return dailyActivityCells.reduce((sum, c) => sum + c.count, 0);
-  }, [dailyActivityCells]);
-
-  const totalGithubContributions = useMemo(() => {
-    return githubCells.reduce((sum, c) => sum + c.count, 0);
-  }, [githubCells]);
-
   const getHeatmapColor = (count) => {
-    if (count === 0) return 'bg-white/[0.02] hover:bg-white/[0.08] border border-white/[0.01]';
-    if (count === 1) return 'bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-900/30';
-    if (count === 2) return 'bg-emerald-800/80 hover:bg-emerald-700 border border-emerald-700/30';
-    if (count <= 4) return 'bg-emerald-600/90 hover:bg-emerald-500 border border-emerald-500/30';
+    if (count === 0)
+      return 'bg-white/[0.02] hover:bg-white/[0.08] border border-white/[0.01]';
+    if (count === 1)
+      return 'bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-900/30';
+    if (count === 2)
+      return 'bg-emerald-800/80 hover:bg-emerald-700 border border-emerald-700/30';
+    if (count <= 4)
+      return 'bg-emerald-600/90 hover:bg-emerald-500 border border-emerald-500/30';
     return 'bg-emerald-400 border border-emerald-300/40 shadow-[0_0_10px_rgba(52,211,153,0.3)]';
   };
 
-  const renderHeatmap = (title, icon, cols, totalCount, labelColorClass = 'text-[#B6F36B]', filterElement = null) => {
+  const renderHeatmap = (
+    title,
+    icon,
+    cols,
+    totalCount,
+    labelColorClass = 'text-[#B6F36B]',
+    filterElement = null
+  ) => {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-white/[0.03] pb-2">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="shrink-0">{icon}</span>
-              <span className="text-[11px] font-bold font-mono text-zinc-355 tracking-wider uppercase">{title}</span>
+              <span className="text-zinc-355 font-mono text-[11px] font-bold tracking-wider uppercase">
+                {title}
+              </span>
             </div>
             {filterElement}
           </div>
-          <span className="text-[10px] font-mono text-zinc-555">
-            Total logs: <strong className={labelColorClass}>{totalCount}</strong>
+          <span className="text-zinc-555 font-mono text-[10px]">
+            Total logs:{' '}
+            <strong className={labelColorClass}>{totalCount}</strong>
           </span>
         </div>
 
-        <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-          <div className="min-w-[640px] flex flex-col pt-1 pr-1">
+        <div className="scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent overflow-x-auto pb-2">
+          <div className="flex min-w-[640px] flex-col pt-1 pr-1">
             <div className="flex gap-2">
-              <div className="flex-1 flex gap-[3px]">
+              <div className="flex flex-1 gap-[3px]">
                 {cols.map((col, colIdx) => (
                   <div key={colIdx} className="flex flex-col gap-[3px]">
                     {col.map((cell, cellIdx) => (
                       <div
                         key={cellIdx}
-                        className={`w-[10px] h-[10px] rounded-sm transition-colors cursor-pointer ${getHeatmapColor(cell.count)}`}
+                        className={`h-[10px] w-[10px] cursor-pointer rounded-sm transition-colors ${getHeatmapColor(cell.count)}`}
                         title={`${cell.dateStr}: ${cell.count} actions`}
                       />
                     ))}
@@ -627,50 +625,71 @@ export default function MemberProfileClient({ user, memberProfile }) {
     );
   };
 
-  const dsaStats = profile.codingProfiles.find(p => p.platform.toLowerCase() === dsaPlatform) || profile.codingProfiles[0];
+  const totalSolved = userStats?.total_solved ?? 0;
+  const easySolved = userStats?.easy_solved ?? 0;
+  const mediumSolved = userStats?.medium_solved ?? 0;
+  const hardSolved = userStats?.hard_solved ?? 0;
+  const pctOf = (n) =>
+    totalSolved > 0 ? Math.round((n / totalSolved) * 100) : 0;
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
-  const solvedPercentage = Math.min(100, Math.round((dsaStats.solved / 1000) * 100));
+  const solvedPercentage = Math.min(
+    100,
+    Math.round((totalSolved / 1000) * 100)
+  );
   const strokeOffset = circumference - (solvedPercentage / 100) * circumference;
 
   const codingProfiles = useMemo(() => {
     const getPlatformURL = (platformId, handle) => {
       if (!handle) return '#';
       switch (platformId) {
-        case 'codeforces': return `https://codeforces.com/profile/${handle}`;
-        case 'leetcode': return `https://leetcode.com/${handle}`;
-        case 'atcoder': return `https://atcoder.jp/users/${handle}`;
-        case 'codechef': return `https://www.codechef.com/users/${handle}`;
-        case 'github': return `https://github.com/${handle}`;
-        case 'linkedin': return `https://linkedin.com/in/${handle}`;
-        case 'facebook': return `https://facebook.com/${handle}`;
-        default: return '#';
+        case 'codeforces':
+          return `https://codeforces.com/profile/${handle}`;
+        case 'leetcode':
+          return `https://leetcode.com/${handle}`;
+        case 'atcoder':
+          return `https://atcoder.jp/users/${handle}`;
+        case 'codechef':
+          return `https://www.codechef.com/users/${handle}`;
+        case 'github':
+          return `https://github.com/${handle}`;
+        case 'linkedin':
+          return `https://linkedin.com/in/${handle}`;
+        case 'facebook':
+          return `https://facebook.com/${handle}`;
+        default:
+          return '#';
       }
     };
 
     return HANDLE_PLATFORMS.map((p) => {
-      const dbHandle = memberProfile?.[`${p.id}_handle`] ?? memberProfile?.[p.id];
+      const dbHandle =
+        memberProfile?.[`${p.id}_handle`] ?? memberProfile?.[p.id];
+      const live = handles.find((h) => h.platform?.code === p.id);
       return {
         platform: p.name,
         platformId: p.id,
         handle: dbHandle || 'Not set',
-        rating: dbHandle ? 'Linked' : 'Unlinked',
-        solved: dbHandle ? 'Syncing' : '—',
+        rating: live?.rating
+          ? `${live.rating}${live.max_rating ? ` (max ${live.max_rating})` : ''}`
+          : dbHandle
+            ? 'Linked'
+            : 'Unlinked',
+        solved: '',
         color: p.color,
         url: dbHandle ? getPlatformURL(p.id, dbHandle) : '#',
       };
     });
-  }, [memberProfile]);
+  }, [memberProfile, handles]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'projects', label: 'Projects & Experience', icon: Briefcase },
     { id: 'competitive', label: 'Competitive Programming', icon: Trophy },
     { id: 'awards', label: 'Awards & Credentials', icon: Award },
   ];
 
   return (
-    <PageShell className="text-gray-300 selection:bg-[#7C5CFF]/30 max-w-[1600px] mx-auto pb-16">
+    <PageShell className="mx-auto max-w-[1600px] pb-16 text-gray-300 selection:bg-[#7C5CFF]/30">
       {cropSrc && (
         <AvatarCropModal
           src={cropSrc}
@@ -680,19 +699,21 @@ export default function MemberProfileClient({ user, memberProfile }) {
       )}
 
       {/* Identity Banner Card */}
-      <GlassCard className="relative overflow-hidden p-6 sm:p-8 mb-6">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
+      <GlassCard className="relative mb-6 overflow-hidden p-6 sm:p-8">
+        <div className="absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-violet-500 via-purple-500 to-sky-500" />
         {editingIdentity ? (
           <form onSubmit={handleSaveIdentity} className="relative space-y-4">
-            <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3 mb-3">
-              <User className="text-[#B6F36B] size-4" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+            <div className="mb-3 flex items-center gap-2 border-b border-white/[0.06] pb-3">
+              <User className="size-4 text-[#B6F36B]" />
+              <h3 className="font-mono text-xs font-semibold tracking-wider text-zinc-400 uppercase">
                 Edit Personal Info
               </h3>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[10px] text-gray-400 font-mono uppercase">Display Name</label>
+                <label className="font-mono text-[10px] text-gray-400 uppercase">
+                  Display Name
+                </label>
                 <input
                   name="full_name"
                   defaultValue={user?.full_name ?? ''}
@@ -702,7 +723,9 @@ export default function MemberProfileClient({ user, memberProfile }) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] text-gray-400 font-mono uppercase">Phone Number</label>
+                <label className="font-mono text-[10px] text-gray-400 uppercase">
+                  Phone Number
+                </label>
                 <input
                   name="phone"
                   defaultValue={user?.phone ?? ''}
@@ -712,43 +735,54 @@ export default function MemberProfileClient({ user, memberProfile }) {
                 />
               </div>
             </div>
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setEditingIdentity(false)}
-                className="px-3.5 py-2 border border-white/10 rounded-xl text-[11px] font-bold text-gray-400 hover:bg-white/[0.04] transition cursor-pointer"
+                className="cursor-pointer rounded-xl border border-white/10 px-3.5 py-2 text-[11px] font-bold text-gray-400 transition hover:bg-white/[0.04]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingIdentity}
-                className="px-3.5 py-2 bg-[#7C5CFF] rounded-xl text-[11px] font-bold text-white hover:bg-[#6c4beb] transition flex items-center gap-1.5 cursor-pointer"
+                className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#7C5CFF] px-3.5 py-2 text-[11px] font-bold text-white transition hover:bg-[#6c4beb]"
               >
-                {savingIdentity && <Loader2 size={12} className="animate-spin" />}
+                {savingIdentity && (
+                  <Loader2 size={12} className="animate-spin" />
+                )}
                 <span>Save</span>
               </button>
             </div>
           </form>
         ) : (
-          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="relative flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex items-center gap-6">
-              <div className="relative group shrink-0">
+              <div className="group relative shrink-0">
                 <Avatar
                   user={user}
                   size="xl"
-                  src={user?.avatar_url?.startsWith('/api/image/') ? user.avatar_url : null}
-                  name={user?.full_name || profile.name}
+                  src={
+                    user?.avatar_url?.startsWith('/api/image/')
+                      ? user.avatar_url
+                      : null
+                  }
+                  name={user?.full_name || 'Member'}
                 />
                 {avatarUploading ? (
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/65 backdrop-blur-sm">
                     <Loader2 className="size-5 animate-spin text-white" />
                   </div>
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white gap-1 select-none">
-                    <label htmlFor="avatar-file-input" className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer">
+                  <div className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-full bg-black/65 text-white opacity-0 transition-opacity select-none group-hover:opacity-100">
+                    <label
+                      htmlFor="avatar-file-input"
+                      className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center"
+                    >
                       <Camera size={16} className="text-zinc-200" />
-                      <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-350">Update</span>
+                      <span className="text-zinc-350 text-[9px] font-bold tracking-wider uppercase">
+                        Update
+                      </span>
                     </label>
                   </div>
                 )}
@@ -760,79 +794,95 @@ export default function MemberProfileClient({ user, memberProfile }) {
                   onChange={handleAvatarFileChange}
                   disabled={avatarUploading}
                 />
-                {user?.avatar_url?.startsWith('/api/image/') && !avatarUploading && (
-                  <button
-                    onClick={handleAvatarRemove}
-                    title="Remove Photo"
-                    className="absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-md border border-white/10 transition-transform active:scale-95"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                )}
+                {user?.avatar_url?.startsWith('/api/image/') &&
+                  !avatarUploading && (
+                    <button
+                      onClick={handleAvatarRemove}
+                      title="Remove Photo"
+                      className="absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full border border-white/10 bg-rose-600 text-white shadow-md transition-transform hover:bg-rose-500 active:scale-95"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  )}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold text-white">{user?.full_name || profile.name}</h2>
-                  <span className="bg-[#B6F36B]/15 border border-[#B6F36B]/25 text-[#B6F36B] text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full">
+                  <h2 className="text-2xl font-bold text-white">
+                    {user?.full_name || 'Member'}
+                  </h2>
+                  <span className="rounded-full border border-[#B6F36B]/25 bg-[#B6F36B]/15 px-2.5 py-0.5 text-[10px] font-extrabold text-[#B6F36B] uppercase">
                     Verified Member
                   </span>
                 </div>
-                <p className="text-xs text-neutral-500 font-mono mt-1">@{memberProfile?.username || profile.username} · {user?.email || profile.email}</p>
+                <p className="mt-1 font-mono text-xs text-neutral-500">
+                  @{memberProfile?.username || 'unset'} · {user?.email || ''}
+                </p>
                 {user?.phone && (
-                  <p className="text-[11px] text-zinc-400 font-mono mt-0.5">📞 {user.phone}</p>
+                  <p className="mt-0.5 font-mono text-[11px] text-zinc-400">
+                    📞 {user.phone}
+                  </p>
                 )}
-                <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1 text-xs text-zinc-500 font-medium">
-                  <span className="flex items-center gap-1.5"><MapPin size={13} className="text-zinc-600" /> {profile.location}</span>
-                  <span className="flex items-center gap-1.5"><GraduationCap size={13} className="text-zinc-600" /> {profile.university}</span>
+                <div className="flex flex-wrap justify-center gap-4 pt-1 text-xs font-medium text-zinc-500 sm:justify-start">
+                  {memberProfile?.department && (
+                    <span className="flex items-center gap-1.5">
+                      <GraduationCap size={13} className="text-zinc-600" />{' '}
+                      {memberProfile.department}
+                    </span>
+                  )}
+                  {memberProfile?.student_id && (
+                    <span className="flex items-center gap-1.5">
+                      <Hash size={13} className="text-zinc-600" />{' '}
+                      {memberProfile.student_id}
+                    </span>
+                  )}
+                  {memberProfile?.academic_session && (
+                    <span className="flex items-center gap-1.5">
+                      <BookOpen size={13} className="text-zinc-600" /> Session{' '}
+                      {memberProfile.academic_session}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={() => alert('Compiling latest Academic CV PDF document...')}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#7C5CFF]/15 border border-[#7C5CFF]/30 hover:bg-[#7C5CFF]/25 hover:border-[#7C5CFF]/50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                <FileText size={13} className="text-[#B6F36B]" />
-                <span>Download CV</span>
-              </button>
-              <button
                 onClick={() => setEditingIdentity(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-white border border-white/[0.08] rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-xs font-bold text-white transition-all hover:bg-white/[0.08]"
               >
                 <Pencil size={13} />
                 <span>Edit Personal Info</span>
               </button>
 
               {/* Social links */}
-              {(memberProfile?.github || profile.socials.github) && (
+              {memberProfile?.github && (
                 <>
-                  <div className="hidden sm:block h-6 w-[1px] bg-white/[0.08]" />
+                  <div className="hidden h-6 w-[1px] bg-white/[0.08] sm:block" />
                   <a
-                    href={getSocialLink('github', memberProfile?.github || profile.socials.github)}
+                    href={getSocialLink('github', memberProfile?.github)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#B6F36B]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-all hover:border-[#B6F36B]/40 hover:bg-white/[0.06] hover:text-white"
                   >
                     <Github size={14} />
                   </a>
                 </>
               )}
-              {(memberProfile?.linkedin || profile.socials.linkedin) && (
+              {memberProfile?.linkedin && (
                 <a
-                  href={getSocialLink('linkedin', memberProfile?.linkedin || profile.socials.linkedin)}
+                  href={getSocialLink('linkedin', memberProfile?.linkedin)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#7C5CFF]/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-all hover:border-[#7C5CFF]/40 hover:bg-white/[0.06] hover:text-white"
                 >
                   <Linkedin size={14} />
                 </a>
               )}
-              {(memberProfile?.facebook || profile.socials.facebook) && (
+              {memberProfile?.facebook && (
                 <a
-                  href={getSocialLink('facebook', memberProfile?.facebook || profile.socials.facebook)}
+                  href={getSocialLink('facebook', memberProfile?.facebook)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-all hover:border-blue-500/40 hover:bg-white/[0.06] hover:text-white"
                 >
                   <Facebook size={14} />
                 </a>
@@ -844,48 +894,62 @@ export default function MemberProfileClient({ user, memberProfile }) {
 
       <div className="space-y-6">
         {/* Quick Stats counters */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Code2 size={18} className="text-[#B6F36B] mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalSolved}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Solved Problems</span>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.05] bg-[#0c0e16]/60 p-4">
+            <Code2 size={18} className="mb-1 text-[#B6F36B]" />
+            <span className="font-mono text-xl font-bold text-white">
+              {totalSolved}
+            </span>
+            <span className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
+              Solved Problems
+            </span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Flame size={18} className="text-orange-500 mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.currentStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Current Streak</span>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.05] bg-[#0c0e16]/60 p-4">
+            <Flame size={18} className="mb-1 text-orange-500" />
+            <span className="font-mono text-xl font-bold text-white">
+              {userStats?.current_streak ?? 0} Days
+            </span>
+            <span className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
+              Current Streak
+            </span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Trophy size={18} className="text-yellow-500 mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.longestStreak} Days</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Longest Streak</span>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.05] bg-[#0c0e16]/60 p-4">
+            <Trophy size={18} className="mb-1 text-yellow-500" />
+            <span className="font-mono text-xl font-bold text-white">
+              {userStats?.longest_streak ?? 0} Days
+            </span>
+            <span className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
+              Longest Streak
+            </span>
           </div>
-          <div className="flex flex-col items-center justify-center p-4 bg-[#0c0e16]/60 border border-white/[0.05] rounded-2xl">
-            <Award size={18} className="text-sky-400 mb-1" />
-            <span className="text-xl font-bold font-mono text-white">{profile.quickStats.totalContests}</span>
-            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Contests Rated</span>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.05] bg-[#0c0e16]/60 p-4">
+            <Award size={18} className="mb-1 text-sky-400" />
+            <span className="font-mono text-xl font-bold text-white">
+              {contestParticipations.length}
+            </span>
+            <span className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
+              Contests Joined
+            </span>
           </div>
         </div>
 
         {/* Layout Grid columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
           {/* Left Column details */}
-          <div className="lg:col-span-4 space-y-6">
-            
+          <div className="space-y-6 lg:col-span-4">
             {/* Tech Stack & Core Focus Area (Merged) */}
-            <GlassCard className="p-5 space-y-4">
+            <GlassCard className="space-y-4 p-5">
               <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
                 <div className="flex items-center gap-2">
                   <Code2 size={16} className="text-[#B6F36B]" />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                  <h3 className="font-mono text-xs font-semibold tracking-wider text-zinc-400 uppercase">
                     Skills & Focus Areas
                   </h3>
                 </div>
                 {!editingSkills && (
                   <button
                     onClick={() => setEditingSkills(true)}
-                    className="text-zinc-500 hover:text-white transition cursor-pointer"
+                    className="cursor-pointer text-zinc-500 transition hover:text-white"
                     title="Edit Skills"
                   >
                     <Pencil size={12} />
@@ -896,37 +960,51 @@ export default function MemberProfileClient({ user, memberProfile }) {
               {editingSkills ? (
                 <form onSubmit={handleSaveSkills} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-gray-400 font-mono uppercase">Skills (comma-separated)</label>
+                    <label className="font-mono text-[10px] text-gray-400 uppercase">
+                      Skills (comma-separated)
+                    </label>
                     <input
                       name="skills"
-                      defaultValue={memberProfile?.skills ? memberProfile.skills.join(', ') : ''}
+                      defaultValue={
+                        memberProfile?.skills
+                          ? memberProfile.skills.join(', ')
+                          : ''
+                      }
                       className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs text-white outline-none focus:border-violet-500/50"
                       placeholder="C++, Python, React, Next.js..."
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-gray-400 font-mono uppercase">Primary Domains (comma-separated)</label>
+                    <label className="font-mono text-[10px] text-gray-400 uppercase">
+                      Primary Domains (comma-separated)
+                    </label>
                     <input
                       name="interests"
-                      defaultValue={memberProfile?.interests ? memberProfile.interests.join(', ') : ''}
+                      defaultValue={
+                        memberProfile?.interests
+                          ? memberProfile.interests.join(', ')
+                          : ''
+                      }
                       className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs text-white outline-none focus:border-violet-500/50"
                       placeholder="Competitive Programming, AI/ML..."
                     />
                   </div>
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setEditingSkills(false)}
-                      className="px-2.5 py-1 border border-white/10 rounded-lg text-[10px] text-gray-400 hover:bg-white/[0.04]"
+                      className="rounded-lg border border-white/10 px-2.5 py-1 text-[10px] text-gray-400 hover:bg-white/[0.04]"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={savingSkills}
-                      className="px-2.5 py-1 bg-[#7C5CFF] rounded-lg text-[10px] text-white font-bold flex items-center gap-1"
+                      className="flex items-center gap-1 rounded-lg bg-[#7C5CFF] px-2.5 py-1 text-[10px] font-bold text-white"
                     >
-                      {savingSkills && <Loader2 size={10} className="animate-spin" />}
+                      {savingSkills && (
+                        <Loader2 size={10} className="animate-spin" />
+                      )}
                       Save
                     </button>
                   </div>
@@ -934,9 +1012,12 @@ export default function MemberProfileClient({ user, memberProfile }) {
               ) : (
                 <>
                   <div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {(memberProfile?.skills && memberProfile.skills.length > 0 ? memberProfile.skills : profile.skills).map((s, i) => (
-                        <span key={i} className="px-2 py-0.5 text-[10.5px] font-mono rounded bg-[#7C5CFF]/10 border border-[#7C5CFF]/20 text-[#c4b5fd] uppercase">
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(memberProfile?.skills || []).map((s, i) => (
+                        <span
+                          key={i}
+                          className="rounded border border-[#7C5CFF]/20 bg-[#7C5CFF]/10 px-2 py-0.5 font-mono text-[10.5px] text-[#c4b5fd] uppercase"
+                        >
                           {s}
                         </span>
                       ))}
@@ -944,10 +1025,15 @@ export default function MemberProfileClient({ user, memberProfile }) {
                   </div>
 
                   <div className="border-t border-white/[0.04] pt-4">
-                    <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Primary Domains</span>
+                    <span className="mb-2 block font-mono text-[10px] font-bold text-zinc-500 uppercase">
+                      Primary Domains
+                    </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {(memberProfile?.interests && memberProfile.interests.length > 0 ? memberProfile.interests : profile.areasOfInterest).map((interest, i) => (
-                        <span key={i} className="px-2 py-0.5 text-[10px] font-semibold rounded bg-[#B6F36B]/5 border border-[#B6F36B]/15 text-[#B6F36B]/80 uppercase">
+                      {(memberProfile?.interests || []).map((interest, i) => (
+                        <span
+                          key={i}
+                          className="rounded border border-[#B6F36B]/15 bg-[#B6F36B]/5 px-2 py-0.5 text-[10px] font-semibold text-[#B6F36B]/80 uppercase"
+                        >
                           {interest.replace(/-/g, ' ')}
                         </span>
                       ))}
@@ -960,65 +1046,41 @@ export default function MemberProfileClient({ user, memberProfile }) {
             {/* Academic Timeline */}
             <GlassCard className="p-5">
               <SectionTitle icon={GraduationCap} label="Academic Timeline" />
-              <div className="space-y-4">
-                {profile.education.map((edu, i) => (
-                  <div key={i} className="relative pl-4 border-l border-white/[0.06] last:pb-0 pb-4 space-y-1">
-                    <div className="absolute left-[-4.5px] top-1.5 w-2 h-2 rounded-full bg-[#B6F36B]" />
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="font-bold text-zinc-200">{edu.degree}</span>
-                      <span className="text-zinc-500 font-mono text-[10px]">{edu.period}</span>
-                    </div>
-                    <div className="text-[11px] text-zinc-400">{edu.institution}</div>
-                    <div className="text-[10px] font-mono text-[#B6F36B]/80">{edu.result}</div>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-
-            {/* Contacts & References (Merged & Collapsed) */}
-            <GlassCard className="p-5 space-y-4">
-              <SectionTitle icon={User} label="References" />
-              <div className="space-y-3">
-                {profile.references.map((ref, i) => (
-                  <div key={i} className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl space-y-1 text-xs">
-                    <div className="font-bold text-neutral-200">{ref.name}</div>
-                    <div className="text-[10px] text-zinc-500">{ref.designation} · {ref.institution}</div>
-                    <div className="text-[10px] font-mono text-[#7C5CFF] hover:underline cursor-pointer">{ref.email}</div>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-
-            {/* Hobbies & Extracurriculars (Merged) */}
-            <GlassCard className="p-5 space-y-4">
-              <SectionTitle icon={Sparkles} label="Interests & Activities" />
-              <div>
-                <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Extracurricular Roles</span>
-                <ul className="space-y-1.5 text-[11px] text-zinc-400 list-disc pl-4 leading-relaxed">
-                  {profile.extracurriculars.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="border-t border-white/[0.04] pt-4">
-                <span className="text-[10px] uppercase font-bold text-zinc-500 font-mono block mb-2">Hobbies</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {profile.hobbies.map((hobby, i) => (
-                    <span key={i} className="px-2.5 py-0.5 text-[10.5px] rounded bg-zinc-800/40 border border-zinc-700/20 text-zinc-300">
-                      {hobby}
+              {memberProfile ? (
+                <div className="relative space-y-1 border-l border-white/[0.06] pl-4">
+                  <div className="absolute top-1.5 left-[-4.5px] h-2 w-2 rounded-full bg-[#B6F36B]" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-bold text-zinc-200">
+                      {memberProfile.department}
                     </span>
-                  ))}
+                    <span className="font-mono text-[10px] text-zinc-500">
+                      Session {memberProfile.academic_session}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400">
+                    Student ID: {memberProfile.student_id}
+                    {memberProfile.semester
+                      ? ` · Semester ${memberProfile.semester}`
+                      : ''}
+                  </div>
+                  {memberProfile.cgpa != null && (
+                    <div className="font-mono text-[10px] text-[#B6F36B]/80">
+                      CGPA: {memberProfile.cgpa}
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  No academic details on file yet.
+                </p>
+              )}
             </GlassCard>
-
           </div>
 
           {/* Right Column details */}
-          <div className="lg:col-span-8 space-y-6">
-            
+          <div className="space-y-6 lg:col-span-8">
             {/* Custom Tab Navigation */}
-            <div className="flex border-b border-white/[0.04] gap-1 overflow-x-auto">
+            <div className="flex gap-1 overflow-x-auto border-b border-white/[0.04]">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1026,13 +1088,16 @@ export default function MemberProfileClient({ user, memberProfile }) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    className={`flex cursor-pointer items-center gap-2 border-b-2 px-5 py-3 text-xs font-semibold tracking-wide whitespace-nowrap transition-all ${
                       isActive
-                        ? 'border-[#B6F36B] text-white bg-white/[0.02]'
-                        : 'border-transparent text-zinc-450 hover:text-zinc-200 hover:bg-white/[0.01]'
+                        ? 'border-[#B6F36B] bg-white/[0.02] text-white'
+                        : 'text-zinc-450 border-transparent hover:bg-white/[0.01] hover:text-zinc-200'
                     }`}
                   >
-                    <Icon size={14} className={isActive ? 'text-[#B6F36B]' : 'text-zinc-555'} />
+                    <Icon
+                      size={14}
+                      className={isActive ? 'text-[#B6F36B]' : 'text-zinc-555'}
+                    />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1049,23 +1114,22 @@ export default function MemberProfileClient({ user, memberProfile }) {
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  
                   {/* TAB 1: OVERVIEW */}
                   {activeTab === 'overview' && (
                     <>
                       {/* About & Objectives */}
-                      <GlassCard className="p-6 space-y-4">
+                      <GlassCard className="space-y-4 p-6">
                         <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
                           <div className="flex items-center gap-2">
                             <User size={16} className="text-[#B6F36B]" />
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                            <h3 className="font-mono text-xs font-semibold tracking-wider text-zinc-400 uppercase">
                               About & Objectives
                             </h3>
                           </div>
                           {!editingAbout && (
                             <button
                               onClick={() => setEditingAbout(true)}
-                              className="text-zinc-500 hover:text-white transition cursor-pointer"
+                              className="cursor-pointer text-zinc-500 transition hover:text-white"
                               title="Edit About"
                             >
                               <Pencil size={12} />
@@ -1074,9 +1138,14 @@ export default function MemberProfileClient({ user, memberProfile }) {
                         </div>
 
                         {editingAbout ? (
-                          <form onSubmit={handleSaveAbout} className="space-y-4">
+                          <form
+                            onSubmit={handleSaveAbout}
+                            className="space-y-4"
+                          >
                             <div className="space-y-1">
-                              <label className="text-[10px] text-gray-400 font-mono uppercase">Username</label>
+                              <label className="font-mono text-[10px] text-gray-400 uppercase">
+                                Username
+                              </label>
                               <input
                                 name="username"
                                 defaultValue={memberProfile?.username ?? ''}
@@ -1085,48 +1154,56 @@ export default function MemberProfileClient({ user, memberProfile }) {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] text-gray-400 font-mono uppercase">Bio / Career Objective</label>
+                              <label className="font-mono text-[10px] text-gray-400 uppercase">
+                                Bio / Career Objective
+                              </label>
                               <textarea
                                 name="bio"
                                 defaultValue={memberProfile?.bio ?? ''}
                                 placeholder="Tell us about yourself…"
                                 rows={4}
-                                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs text-white outline-none focus:border-violet-500/50 resize-none"
+                                className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs text-white outline-none focus:border-violet-500/50"
                               />
                             </div>
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex justify-end gap-2">
                               <button
                                 type="button"
                                 onClick={() => setEditingAbout(false)}
-                                className="px-3 py-1.5 border border-white/10 rounded-lg text-[11px] text-gray-400 hover:bg-white/[0.04]"
+                                className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-gray-400 hover:bg-white/[0.04]"
                               >
                                 Cancel
                               </button>
                               <button
                                 type="submit"
                                 disabled={savingAbout}
-                                className="px-3 py-1.5 bg-[#7C5CFF] rounded-lg text-[11px] text-white font-bold flex items-center gap-1"
+                                className="flex items-center gap-1 rounded-lg bg-[#7C5CFF] px-3 py-1.5 text-[11px] font-bold text-white"
                               >
-                                {savingAbout && <Loader2 size={11} className="animate-spin" />}
+                                {savingAbout && (
+                                  <Loader2 size={11} className="animate-spin" />
+                                )}
                                 Save
                               </button>
                             </div>
                           </form>
                         ) : (
-                          <p className="text-sm text-zinc-300 leading-relaxed font-sans">
-                            {memberProfile?.bio || profile.careerObjective}
+                          <p className="font-sans text-sm leading-relaxed text-zinc-300">
+                            {memberProfile?.bio ||
+                              'No bio added yet — click the pencil to introduce yourself.'}
                           </p>
                         )}
                       </GlassCard>
 
                       {/* Three Activity Heatmaps */}
-                      <GlassCard className="p-6 space-y-8">
+                      <GlassCard className="space-y-8 p-6">
                         <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
-                          <SectionTitle icon={Activity} label="Activity & Contribution Analytics" />
+                          <SectionTitle
+                            icon={Activity}
+                            label="Activity & Contribution Analytics"
+                          />
                           <select
                             value={heatmapRange}
                             onChange={(e) => setHeatmapRange(e.target.value)}
-                            className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-355 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
+                            className="text-zinc-355 cursor-pointer rounded-xl border border-white/[0.06] bg-[#110f15] px-3 py-1.5 font-mono text-xs font-bold tracking-wide hover:bg-[#1a1820] focus:outline-none"
                           >
                             <option value="12">Last 12 Months</option>
                             <option value="6">Last 6 Months</option>
@@ -1134,208 +1211,125 @@ export default function MemberProfileClient({ user, memberProfile }) {
                           </select>
                         </div>
 
-                        {/* 1. Daily Platform Activity Heatmap */}
+                        {/* Problem Solving Activity Heatmap (live solve data) */}
                         {renderHeatmap(
-                          'Daily Platform Activity',
-                          <Activity size={13} className="text-[#7C5CFF]" />,
-                          dailyActivityCols,
-                          totalDailyActivity,
-                          'text-[#7C5CFF]',
-                          <select
-                            value={dailyFilter}
-                            onChange={(e) => setDailyFilter(e.target.value)}
-                            className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-400 border border-white/[0.06] rounded-xl px-2.5 py-1 text-[10px] focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
-                          >
-                            <option value="all">All Daily Activity</option>
-                            <option value="todolist">To-Do List</option>
-                            <option value="courseWatchTime">Course Watch Time</option>
-                          </select>
+                          'Problem Solving Activity',
+                          <Code2 size={13} className="text-[#B6F36B]" />,
+                          problemSolvingCols,
+                          totalProblemSolving,
+                          'text-[#B6F36B]'
                         )}
 
-                        {/* 2. Problem Solving Activity Heatmap */}
-                        {renderHeatmap('Problem Solving Activity', <Code2 size={13} className="text-[#B6F36B]" />, problemSolvingCols, totalProblemSolving, 'text-[#B6F36B]')}
-
-                        {/* 3. GitHub Contributions Heatmap */}
-                        {renderHeatmap('GitHub Contributions', <Github size={13} className="text-sky-400" />, githubCols, totalGithubContributions, 'text-sky-400')}
-
                         {/* Legend */}
-                        <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-white/[0.03] text-[10.5px] font-mono text-zinc-500">
+                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/[0.03] pt-4 font-mono text-[10.5px] text-zinc-500">
                           <span>Less</span>
-                          <div className="w-[10px] h-[10px] rounded-sm bg-white/[0.02]" />
-                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-950/70" />
-                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-850/80" />
-                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-600/90" />
-                          <div className="w-[10px] h-[10px] rounded-sm bg-emerald-400" />
+                          <div className="h-[10px] w-[10px] rounded-sm bg-white/[0.02]" />
+                          <div className="h-[10px] w-[10px] rounded-sm bg-emerald-950/70" />
+                          <div className="bg-emerald-850/80 h-[10px] w-[10px] rounded-sm" />
+                          <div className="h-[10px] w-[10px] rounded-sm bg-emerald-600/90" />
+                          <div className="h-[10px] w-[10px] rounded-sm bg-emerald-400" />
                           <span>More</span>
                         </div>
                       </GlassCard>
 
                       {/* Donut Progress */}
                       <GlassCard className="p-5">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                           <div className="flex-1">
-                            <div className="flex items-center justify-between mb-4">
-                              <SectionTitle icon={Code2} label="Problem Solving Metrics" />
-                              <select
-                                value={dsaPlatform}
-                                onChange={(e) => setDsaPlatform(e.target.value)}
-                                className="bg-[#110f15] hover:bg-[#1a1820] text-zinc-200 border border-white/[0.06] rounded-xl px-3 py-1.5 text-xs focus:outline-none cursor-pointer font-mono font-bold tracking-wide"
-                              >
-                                <option value="leetcode">LeetCode</option>
-                                <option value="codeforces">Codeforces</option>
-                                <option value="codechef">CodeChef</option>
-                                <option value="atcoder">AtCoder</option>
-                              </select>
+                            <div className="mb-4 flex items-center justify-between">
+                              <SectionTitle
+                                icon={Code2}
+                                label="Problem Solving Metrics"
+                              />
                             </div>
-                            <p className="text-xs text-zinc-400 leading-relaxed font-sans max-w-md">
-                              Live statistics aggregated across online judges showing overall problem metrics, easy/medium/hard category distribution, and code performance profiles.
+                            <p className="max-w-md font-sans text-xs leading-relaxed text-zinc-400">
+                              Live statistics aggregated across online judges
+                              showing overall problem metrics, easy/medium/hard
+                              category distribution, and code performance
+                              profiles.
                             </p>
                           </div>
 
-                          <div className="flex justify-center items-center relative h-36 shrink-0 md:mr-6">
-                            <svg className="w-32 h-32 transform -rotate-90">
-                              <circle cx="64" cy="64" r={radius} className="stroke-neutral-800" strokeWidth="8" fill="transparent" />
-                              <circle cx="64" cy="64" r={radius} className="stroke-[#B6F36B] transition-all duration-500" strokeWidth="8" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeOffset} strokeLinecap="round" />
+                          <div className="relative flex h-36 shrink-0 items-center justify-center md:mr-6">
+                            <svg className="h-32 w-32 -rotate-90 transform">
+                              <circle
+                                cx="64"
+                                cy="64"
+                                r={radius}
+                                className="stroke-neutral-800"
+                                strokeWidth="8"
+                                fill="transparent"
+                              />
+                              <circle
+                                cx="64"
+                                cy="64"
+                                r={radius}
+                                className="stroke-[#B6F36B] transition-all duration-500"
+                                strokeWidth="8"
+                                fill="transparent"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={strokeOffset}
+                                strokeLinecap="round"
+                              />
                             </svg>
-                            <div className="absolute flex flex-col justify-center items-center text-center">
-                              <span className="text-3xl font-extrabold font-mono text-neutral-100 tracking-tight">{dsaStats.solved}</span>
-                              <span className="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5 font-mono">Solved</span>
+                            <div className="absolute flex flex-col items-center justify-center text-center">
+                              <span className="font-mono text-3xl font-extrabold tracking-tight text-neutral-100">
+                                {totalSolved}
+                              </span>
+                              <span className="mt-0.5 font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                                Solved
+                              </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 border-t border-white/[0.04] pt-4 mt-4 text-center font-mono text-[10.5px]">
+                        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.04] pt-4 text-center font-mono text-[10.5px]">
                           <div>
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Easy</span>
-                            <span className="text-emerald-400 font-bold">40% solved</span>
+                            <span className="mb-0.5 block text-[9px] text-zinc-500 uppercase">
+                              Easy
+                            </span>
+                            <span className="font-bold text-emerald-400">
+                              {pctOf(easySolved)}% ({easySolved})
+                            </span>
                           </div>
                           <div className="border-x border-white/[0.04]">
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Medium</span>
-                            <span className="text-amber-400 font-bold">50% solved</span>
+                            <span className="mb-0.5 block text-[9px] text-zinc-500 uppercase">
+                              Medium
+                            </span>
+                            <span className="font-bold text-amber-400">
+                              {pctOf(mediumSolved)}% ({mediumSolved})
+                            </span>
                           </div>
                           <div>
-                            <span className="block text-zinc-500 uppercase text-[9px] mb-0.5">Hard</span>
-                            <span className="text-rose-500 font-bold">10% solved</span>
+                            <span className="mb-0.5 block text-[9px] text-zinc-500 uppercase">
+                              Hard
+                            </span>
+                            <span className="font-bold text-rose-500">
+                              {pctOf(hardSolved)}% ({hardSolved})
+                            </span>
                           </div>
                         </div>
                       </GlassCard>
                     </>
                   )}
 
-                  {/* TAB 2: PROJECTS & EXPERIENCE */}
-                  {activeTab === 'projects' && (
-                    <>
-                      {/* Showcase Projects */}
-                      <GlassCard className="p-6">
-                        <SectionTitle icon={Award} label="Computational Projects" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {profile.projects.map((p, i) => (
-                            <div key={i} className="p-4 bg-white/[0.01] border border-white/[0.03] hover:border-[#B6F36B]/20 rounded-xl space-y-3 flex flex-col justify-between hover:bg-white/[0.02] transition-all">
-                              <div className="space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-sm text-zinc-200">{p.title}</span>
-                                  <span className="text-[10px] font-mono font-bold text-yellow-500">★ {p.stars} stars</span>
-                                </div>
-                                <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">{p.desc}</p>
-                              </div>
-                              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/[0.02] text-[10px] font-mono">
-                                <div className="flex gap-1">
-                                  {p.tags.map((t, idx) => (
-                                    <span key={idx} className="bg-white/[0.03] px-2 py-0.5 rounded text-zinc-500">{t}</span>
-                                  ))}
-                                </div>
-                                <a href={p.url} className="text-[#7C5CFF] hover:underline flex items-center gap-0.5">
-                                  <span>Source</span>
-                                  <ExternalLink size={10} />
-                                </a>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </GlassCard>
+                  {/* TAB: COMPETITIVE PROGRAMMING */}
 
-                      {/* Professional Timeline */}
-                      <GlassCard className="p-6">
-                        <SectionTitle icon={Briefcase} label="Professional & Research Timeline" />
-                        <div className="space-y-6">
-                          {profile.workExperience.map((exp, i) => (
-                            <div key={i} className="relative pl-5 border-l border-white/[0.06] last:pb-0 pb-6 space-y-2">
-                              <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#7C5CFF] border border-[#030408]" />
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                                <div>
-                                  <span className="font-bold text-sm text-zinc-200">{exp.role}</span>
-                                  <span className="text-zinc-500 mx-1.5">@</span>
-                                  <span className="text-[#B6F36B] font-semibold">{exp.company}</span>
-                                  <span className="ml-2 bg-white/[0.03] border border-white/[0.08] px-2 py-0.5 rounded text-[9px] font-mono uppercase text-zinc-400">{exp.type}</span>
-                                </div>
-                                <span className="text-zinc-500 font-mono text-[11px]">{exp.period}</span>
-                              </div>
-                              <p className="text-xs text-zinc-400 leading-relaxed font-sans">{exp.description}</p>
-                              <div className="flex flex-wrap gap-1">
-                                {exp.skills.map((s, idx) => (
-                                  <span key={idx} className="bg-[#7C5CFF]/5 border border-[#7C5CFF]/15 px-2 py-0.5 rounded text-[10px] font-mono text-zinc-400">{s}</span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </GlassCard>
-
-                      {/* Research Experience */}
-                      <GlassCard className="p-6">
-                        <SectionTitle icon={GraduationCap} label="Research Fellowships" />
-                        <div className="space-y-6">
-                          {profile.research.map((res, i) => (
-                            <div key={i} className="relative pl-5 border-l border-white/[0.06] last:pb-0 pb-6 space-y-2">
-                              <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#7C5CFF] border border-[#030408]" />
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                                <div>
-                                  <span className="font-bold text-sm text-zinc-200">{res.role}</span>
-                                  <span className="text-zinc-555 mx-1.5">@</span>
-                                  <span className="text-[#B6F36B] font-semibold">{res.institution}</span>
-                                </div>
-                                <span className="text-zinc-500 font-mono text-[11px]">{res.period}</span>
-                              </div>
-                              <p className="text-xs text-zinc-400 leading-relaxed font-sans">{res.description}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </GlassCard>
-
-                      {/* Research Publications */}
-                      <GlassCard className="p-6">
-                        <SectionTitle icon={Award} label="Scholarly Publications" />
-                        <div className="space-y-4">
-                          {profile.publications.map((pub, i) => (
-                            <div key={i} className="p-4 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs space-y-1">
-                              <div className="flex justify-between items-start gap-4">
-                                <span className="font-bold text-zinc-200">{pub.title}</span>
-                                <a href={pub.url} target="_blank" rel="noreferrer" className="text-[#7C5CFF] hover:underline shrink-0">Link</a>
-                              </div>
-                              <div className="text-zinc-455 font-mono text-[11px]">Journal: {pub.journal} · Date: {pub.date}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </GlassCard>
-                    </>
-                  )}
-
-                  {/* TAB 3: COMPETITIVE PROGRAMMING */}
                   {activeTab === 'competitive' && (
                     <>
                       {/* Coding Handles card */}
-                      <GlassCard className="p-5 space-y-4">
+                      <GlassCard className="space-y-4 p-5">
                         <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
                           <div className="flex items-center gap-2">
                             <Globe size={16} className="text-[#B6F36B]" />
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                            <h3 className="font-mono text-xs font-semibold tracking-wider text-zinc-400 uppercase">
                               Platform Standings & Handles
                             </h3>
                           </div>
                           {!editingHandles && (
                             <button
                               onClick={() => setEditingHandles(true)}
-                              className="text-zinc-500 hover:text-white transition cursor-pointer"
+                              className="cursor-pointer text-zinc-500 transition hover:text-white"
                               title="Edit Handles"
                             >
                               <Pencil size={12} />
@@ -1344,63 +1338,88 @@ export default function MemberProfileClient({ user, memberProfile }) {
                         </div>
 
                         {editingHandles ? (
-                          <form onSubmit={handleSaveHandles} className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <form
+                            onSubmit={handleSaveHandles}
+                            className="space-y-4"
+                          >
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                               {HANDLE_PLATFORMS.map((p) => (
                                 <div key={p.id} className="space-y-1">
-                                  <label className="block text-[10px] text-gray-400 font-mono uppercase">{p.name} Handle</label>
+                                  <label className="block font-mono text-[10px] text-gray-400 uppercase">
+                                    {p.name} Handle
+                                  </label>
                                   <input
                                     name={`${p.id}_handle`}
-                                    defaultValue={memberProfile?.[`${p.id}_handle`] ?? memberProfile?.[p.id] ?? ''}
+                                    defaultValue={
+                                      memberProfile?.[`${p.id}_handle`] ??
+                                      memberProfile?.[p.id] ??
+                                      ''
+                                    }
                                     placeholder={`${p.id}_username`}
                                     className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 font-mono text-[12px] text-white outline-none focus:border-violet-500/50"
                                   />
                                 </div>
                               ))}
                             </div>
-                            <div className="flex gap-2 justify-end pt-2">
+                            <div className="flex justify-end gap-2 pt-2">
                               <button
                                 type="button"
                                 onClick={() => setEditingHandles(false)}
-                                className="px-3 py-1.5 border border-white/10 rounded-lg text-[11px] text-gray-400 hover:bg-white/[0.04]"
+                                className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-gray-400 hover:bg-white/[0.04]"
                               >
                                 Cancel
                               </button>
                               <button
                                 type="submit"
                                 disabled={savingHandles}
-                                className="px-3 py-1.5 bg-[#7C5CFF] rounded-lg text-[11px] text-white font-bold flex items-center gap-1"
+                                className="flex items-center gap-1 rounded-lg bg-[#7C5CFF] px-3 py-1.5 text-[11px] font-bold text-white"
                               >
-                                {savingHandles && <Loader2 size={11} className="animate-spin" />}
+                                {savingHandles && (
+                                  <Loader2 size={11} className="animate-spin" />
+                                )}
                                 Save
                               </button>
                             </div>
                           </form>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {codingProfiles.map((h, i) => (
                               <a
                                 key={i}
                                 href={h.url}
                                 target={h.url !== '#' ? '_blank' : undefined}
                                 rel="noreferrer"
-                                className="group flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-[#B6F36B]/30 hover:bg-white/[0.04] transition-all duration-200"
+                                className="group flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] p-3.5 transition-all duration-200 hover:border-[#B6F36B]/30 hover:bg-white/[0.04]"
                               >
                                 <div className="flex items-center gap-3">
                                   <div
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-                                    style={{ backgroundColor: h.color + '22', border: `1px solid ${h.color}44` }}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                                    style={{
+                                      backgroundColor: h.color + '22',
+                                      border: `1px solid ${h.color}44`,
+                                    }}
                                   >
                                     {h.platform.slice(0, 2).toUpperCase()}
                                   </div>
                                   <div>
-                                    <div className="text-xs text-neutral-455 font-semibold">{h.platform}</div>
-                                    <div className="text-sm font-bold text-neutral-200 group-hover:text-white">{h.handle}</div>
+                                    <div className="text-neutral-455 text-xs font-semibold">
+                                      {h.platform}
+                                    </div>
+                                    <div className="text-sm font-bold text-neutral-200 group-hover:text-white">
+                                      {h.handle}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <div className="text-xs font-mono font-bold" style={{ color: h.color }}>{h.rating}</div>
-                                  <div className="text-[10px] text-zinc-500">{h.solved}</div>
+                                <div className="shrink-0 text-right">
+                                  <div
+                                    className="font-mono text-xs font-bold"
+                                    style={{ color: h.color }}
+                                  >
+                                    {h.rating}
+                                  </div>
+                                  <div className="text-[10px] text-zinc-500">
+                                    {h.solved}
+                                  </div>
                                 </div>
                               </a>
                             ))}
@@ -1410,47 +1429,60 @@ export default function MemberProfileClient({ user, memberProfile }) {
 
                       {/* Rated Contests */}
                       <GlassCard className="p-6">
-                        <SectionTitle icon={Trophy} label="Online Rated Contests" />
+                        <SectionTitle
+                          icon={Trophy}
+                          label="Contest Participation"
+                        />
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs font-mono text-left">
+                          <table className="w-full text-left font-mono text-xs">
                             <thead>
                               <tr className="border-b border-white/[0.06] text-zinc-500">
-                                <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Platform</th>
-                                <th className="py-2.5 px-1 text-[9px] uppercase tracking-wider font-bold">Contest Title</th>
-                                <th className="py-2.5 px-1 text-right text-[9px] uppercase tracking-wider font-bold">Rank</th>
-                                <th className="py-2.5 px-1 text-right text-[9px] uppercase tracking-wider font-bold">Delta</th>
+                                <th className="px-1 py-2.5 text-[9px] font-bold tracking-wider uppercase">
+                                  Platform
+                                </th>
+                                <th className="px-1 py-2.5 text-[9px] font-bold tracking-wider uppercase">
+                                  Contest Title
+                                </th>
+                                <th className="px-1 py-2.5 text-right text-[9px] font-bold tracking-wider uppercase">
+                                  Rank
+                                </th>
+                                <th className="px-1 py-2.5 text-right text-[9px] font-bold tracking-wider uppercase">
+                                  Score
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              {profile.contests.map((c, i) => (
-                                <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
-                                  <td className="py-3 px-1 font-bold text-zinc-350">{c.host}</td>
-                                  <td className="py-3 px-1 text-zinc-200">{c.name}</td>
-                                  <td className="py-3 px-1 text-right text-zinc-350">{c.rank}</td>
-                                  <td className="py-3 px-1 text-right text-emerald-450 font-bold">{c.rating}</td>
+                              {contestParticipations.length === 0 && (
+                                <tr>
+                                  <td
+                                    colSpan={4}
+                                    className="py-6 text-center text-zinc-500"
+                                  >
+                                    No contest participation recorded yet.
+                                  </td>
+                                </tr>
+                              )}
+                              {contestParticipations.map((c, i) => (
+                                <tr
+                                  key={c.id || i}
+                                  className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.01]"
+                                >
+                                  <td className="text-zinc-350 px-1 py-3 font-bold">
+                                    {c.contests?.platform || '—'}
+                                  </td>
+                                  <td className="px-1 py-3 text-zinc-200">
+                                    {c.contests?.title || 'Contest'}
+                                  </td>
+                                  <td className="text-zinc-350 px-1 py-3 text-right">
+                                    {c.rank ?? '—'}
+                                  </td>
+                                  <td className="text-emerald-450 px-1 py-3 text-right font-bold">
+                                    {c.score ?? '—'}
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
-                        </div>
-                      </GlassCard>
-
-                      {/* Offline Competitive Records */}
-                      <GlassCard className="p-6">
-                        <SectionTitle icon={Award} label="Championships & Offline Contests" />
-                        <div className="space-y-4">
-                          {profile.offlineParticipation.map((item, i) => (
-                            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-zinc-200">{item.event}</span>
-                                  <span className="bg-[#7C5CFF]/15 border border-[#7C5CFF]/30 text-[#c4b5fd] px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold">{item.type}</span>
-                                </div>
-                                <div className="text-[10px] text-zinc-500 font-medium">Team: {item.team} · Roles: {item.role}</div>
-                              </div>
-                              <span className="text-emerald-450 font-bold shrink-0 text-right sm:text-left">{item.achievement}</span>
-                            </div>
-                          ))}
                         </div>
                       </GlassCard>
                     </>
@@ -1461,15 +1493,45 @@ export default function MemberProfileClient({ user, memberProfile }) {
                     <div className="flex flex-col gap-6">
                       {/* Awards */}
                       <GlassCard className="p-5">
-                        <SectionTitle icon={Trophy} label="Honors & Achievements" />
+                        <SectionTitle
+                          icon={Trophy}
+                          label="Honors & Achievements"
+                        />
                         <div className="space-y-4">
-                          {profile.achievements.map((item, i) => (
-                            <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
+                          {memberAchievements.length === 0 && (
+                            <p className="text-xs text-zinc-500">
+                              No achievements recorded yet.
+                            </p>
+                          )}
+                          {memberAchievements.map((row, i) => (
+                            <div
+                              key={row.id || i}
+                              className="flex items-start justify-between gap-4 rounded-xl border border-white/[0.03] bg-white/[0.01] p-3 text-xs"
+                            >
                               <div>
-                                <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="font-bold text-zinc-200">
+                                  {row.achievements?.title}
+                                </div>
+                                <div className="mt-0.5 text-[10px] font-medium text-zinc-500">
+                                  {[
+                                    row.achievements?.result,
+                                    row.achievements?.category,
+                                    row.achievements?.team_name,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-500 font-mono shrink-0">{item.date}</span>
+                              <span className="shrink-0 font-mono text-[10.5px] text-zinc-500">
+                                {row.achievements?.achievement_date
+                                  ? new Date(
+                                      row.achievements.achievement_date
+                                    ).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                  : row.achievements?.year || ''}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -1477,28 +1539,54 @@ export default function MemberProfileClient({ user, memberProfile }) {
 
                       {/* Certificates */}
                       <GlassCard className="p-5">
-                        <SectionTitle icon={Award} label="Professional Certifications" />
+                        <SectionTitle
+                          icon={Award}
+                          label="Professional Certifications"
+                        />
                         <div className="space-y-4">
-                          {profile.certificates.map((item, i) => (
-                            <div key={i} className="flex justify-between items-start gap-4 p-3 bg-white/[0.01] border border-white/[0.03] rounded-xl text-xs">
+                          {certificates.length === 0 && (
+                            <p className="text-xs text-zinc-500">
+                              No certificates issued yet.
+                            </p>
+                          )}
+                          {certificates.map((item, i) => (
+                            <div
+                              key={item.id || i}
+                              className="flex items-start justify-between gap-4 rounded-xl border border-white/[0.03] bg-white/[0.01] p-3 text-xs"
+                            >
                               <div>
-                                <div className="font-bold text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-500 font-medium mt-0.5">{item.issuer}</div>
+                                <div className="font-bold text-zinc-200">
+                                  {item.title}
+                                </div>
+                                <div className="mt-0.5 text-[10px] font-medium text-zinc-500">
+                                  {[
+                                    item.certificate_type,
+                                    item.certificate_number,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </div>
                               </div>
-                              <span className="text-[10.5px] text-zinc-555 font-mono shrink-0">{item.date}</span>
+                              <span className="text-zinc-555 shrink-0 font-mono text-[10.5px]">
+                                {item.issue_date
+                                  ? new Date(
+                                      item.issue_date
+                                    ).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                  : ''}
+                              </span>
                             </div>
                           ))}
                         </div>
                       </GlassCard>
                     </div>
                   )}
-
                 </motion.div>
               </AnimatePresence>
             </div>
-
           </div>
-
         </div>
       </div>
     </PageShell>

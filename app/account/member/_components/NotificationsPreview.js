@@ -6,6 +6,10 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  markAsReadAction,
+  markAllAsReadAction,
+} from '@/app/_lib/actions/notification-actions';
 import Link from 'next/link';
 import { Bell, ArrowRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,12 +26,16 @@ export default function NotificationsPreview({ items = [] }) {
   const [list, setList] = useState(items);
   const visible = list.slice(0, 3);
 
-  const markAll = () =>
+  const markAll = () => {
     setList((prev) => prev.map((n) => ({ ...n, is_read: true })));
-  const markOne = (id) =>
+    markAllAsReadAction().catch(() => {});
+  };
+  const markOne = (id) => {
     setList((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
+    markAsReadAction(id).catch(() => {});
+  };
 
   const unreadCount = list.filter((n) => !n.is_read).length;
 

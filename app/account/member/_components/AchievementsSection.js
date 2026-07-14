@@ -30,7 +30,7 @@ export default function AchievementsSection({ achievements }) {
           </div>
         </div>
         <Link
-          href="/account/member/achievements"
+          href="/account/member/participation"
           className="flex shrink-0 items-center gap-2 text-xs font-bold tracking-widest text-amber-400 uppercase transition-colors hover:text-amber-300"
         >
           View All <ArrowRight className="h-4 w-4" />

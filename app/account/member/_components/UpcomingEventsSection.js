@@ -34,6 +34,11 @@ export default function UpcomingEventsSection({ upcomingEvents }) {
         </Link>
       </div>
 
+      {upcomingEvents.length === 0 && (
+        <p className="py-6 text-center text-sm text-zinc-500">
+          No upcoming events right now — check back soon.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {upcomingEvents.map((event) => (
           <EventCard
@@ -42,7 +47,7 @@ export default function UpcomingEventsSection({ upcomingEvents }) {
             title={event.title}
             time={event.time}
             location={event.location}
-            attendees={`${event.attendees} going`}
+            attendees={event.attendees ? `${event.attendees} going` : null}
             type={event.category}
             status={event.status}
           />
@@ -94,7 +99,11 @@ function EventCard({ date, title, time, location, attendees, type, status }) {
             <span className="truncate">{location}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
-            <Users className="h-3.5 w-3.5" /> {attendees}
+            {attendees && (
+              <>
+                <Users className="h-3.5 w-3.5" /> {attendees}
+              </>
+            )}
           </span>
         </div>
       </div>

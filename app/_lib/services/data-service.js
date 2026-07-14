@@ -17,6 +17,8 @@ export * from './data/discussions';
 export * from './data/events';
 export * from './data/gallery';
 export * from './data/members';
+export * from './data/member-dashboard';
+export * from './data/member-profile';
 export * from './data/member-todos';
 export * from './data/mentor-dashboard';
 export * from './data/mentorship';

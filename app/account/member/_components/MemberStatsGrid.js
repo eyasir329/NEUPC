@@ -21,33 +21,43 @@ export default function MemberStatsGrid({ stats }) {
         icon={<Code2 className="h-5 w-5 text-emerald-600" />}
         title="Problems Solved"
         value={stats.problemsSolved}
-        subtitle="Across 5 platforms"
-        badge="+12 / week"
+        subtitle={
+          stats.platformCount > 0
+            ? `Across ${stats.platformCount} platform${stats.platformCount > 1 ? 's' : ''}`
+            : 'Connect a judge handle'
+        }
+        badge={
+          stats.solvedThisWeek > 0 ? `+${stats.solvedThisWeek} / week` : null
+        }
         badgeType="success"
         href="/account/member/problem-solving"
       />
       <StatCard
         icon={<TrendingUp className="h-5 w-5 text-violet-400" />}
         title="Contest Rating"
-        value={stats.contestRating}
-        subtitle="Specialist tier"
-        badge="+34"
-        badgeType="success"
+        value={stats.contestRating ?? 'Unrated'}
+        subtitle={
+          stats.ratingBand
+            ? `${stats.ratingBand}${stats.ratingPlatform ? ` · ${stats.ratingPlatform}` : ''}`
+            : 'No rated contests yet'
+        }
         href="/account/member/problem-solving"
       />
       <StatCard
         icon={<Calendar className="h-5 w-5 text-indigo-400" />}
         title="Upcoming Events"
         value={stats.upcomingEvents}
-        subtitle="2 this week"
+        subtitle={
+          stats.upcomingEvents > 0 ? 'Open for registration' : 'None scheduled'
+        }
         href="/account/member/events"
       />
       <StatCard
         icon={<Trophy className="h-5 w-5 text-amber-400" />}
         title="Achievements"
         value={stats.achievements}
-        subtitle="2 in progress"
-        href="/account/member/achievements"
+        subtitle={stats.achievements > 0 ? 'Earned so far' : 'None yet'}
+        href="/account/member/participation"
       />
     </div>
   );
