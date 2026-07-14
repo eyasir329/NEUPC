@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   CalendarDays,
   Clock,

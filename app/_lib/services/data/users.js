@@ -1071,6 +1071,16 @@ export async function getParticipationRecordsAdmin() {
   return data ?? [];
 }
 
+// Get a user's platform handles (V1 schema: platform + handle columns).
+export async function getUserHandlesBasic(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('user_handles')
+    .select('platform, handle')
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /**
  * Get user's bootcamp enrollments for LMS context dropdown.
  */

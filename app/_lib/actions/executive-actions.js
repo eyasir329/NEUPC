@@ -325,7 +325,7 @@ export async function execUpdateRegistrationAction(formData) {
 }
 
 export async function execMarkAttendedAction(formData) {
-  const user = await requireExecutive();
+  await requireExecutive();
   const id = formData.get('id');
   if (!id) return { error: 'Registration ID is required.' };
   const attended = formData.get('attended') === 'true';
@@ -679,7 +679,7 @@ export async function execBulkAddGalleryAction(formData) {
 }
 
 export async function execUpdateGalleryItemAction(formData) {
-  const user = await requireExecutive();
+  await requireExecutive();
   const id = formData.get('id');
   if (!id) return { error: 'Item ID is required.' };
   const url = formData.get('url')?.trim();
@@ -716,7 +716,7 @@ export async function execUpdateGalleryItemAction(formData) {
 }
 
 export async function execDeleteGalleryItemAction(formData) {
-  const user = await requireExecutive();
+  await requireExecutive();
   const id = formData.get('id');
   if (!id) return { error: 'Item ID is required.' };
   const { error } = await supabaseAdmin
@@ -781,7 +781,7 @@ export async function execCreateNoticeAction(formData) {
 }
 
 export async function execUpdateNoticeAction(formData) {
-  const user = await requireExecutive();
+  await requireExecutive();
   const id = formData.get('id');
   if (!id) return { error: 'Notice ID is required.' };
   const title = formData.get('title')?.trim();
@@ -820,7 +820,7 @@ export async function execUpdateNoticeAction(formData) {
 }
 
 export async function execDeleteNoticeAction(formData) {
-  const user = await requireExecutive();
+  await requireExecutive();
   const id = formData.get('id');
   if (!id) return { error: 'Notice ID is required.' };
   const { error } = await supabaseAdmin.from('notices').delete().eq('id', id);
@@ -1077,6 +1077,46 @@ export async function execUpdateProfileAction(formData) {
 
   revalidatePath('/account/executive/profile');
   return { success: true };
+}
+
+// =============================================================================
+// SETTINGS
+// =============================================================================
+
+const EXEC_PREF_KEYS = [
+  'event_registrations',
+  'membership_applications',
+  'budget_requests',
+  'system_alerts',
+];
+
+export async function execSaveNotificationPrefsAction(prefs) {
+  const user = await requireExecutive();
+
+  const clean = {};
+  for (const key of EXEC_PREF_KEYS) {
+    if (typeof prefs?.[key] === 'boolean') clean[key] = prefs[key];
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({
+        notification_prefs: {
+          ...(user.notification_prefs || {}),
+          ...clean,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/account/executive/settings');
+    return { success: 'Notification preferences saved.' };
+  } catch (error) {
+    console.error('Save executive notification prefs error:', error);
+    return { error: 'Failed to save preferences.' };
+  }
 }
 
 // =============================================================================

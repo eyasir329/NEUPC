@@ -117,14 +117,14 @@ export default function ExecutiveProfileClient({
             <div className="mt-3 flex flex-wrap justify-center gap-1.5">
               <Pill
                 tone="emerald"
-                className="font-mono text-[9px] font-semibold tracking-wider uppercase"
+                className="font-mono text-[10px] font-semibold tracking-wider uppercase"
               >
                 Active Executive
               </Pill>
               {user?.role === 'admin' && (
                 <Pill
                   tone="rose"
-                  className="font-mono text-[9px] font-semibold tracking-wider uppercase"
+                  className="font-mono text-[10px] font-semibold tracking-wider uppercase"
                 >
                   Global Admin
                 </Pill>
@@ -385,8 +385,8 @@ export default function ExecutiveProfileClient({
                       </p>
                     ) : (
                       <span className="text-xs text-gray-600 italic">
-                        No summary description registered yet. Click 'Edit
-                        Profile' to add.
+                        No summary description registered yet. Click
+                        &lsquo;Edit Profile&rsquo; to add.
                       </span>
                     )}
                   </div>

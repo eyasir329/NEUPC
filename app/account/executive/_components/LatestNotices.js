@@ -5,7 +5,8 @@
 
 'use client';
 
-import { Megaphone, Plus, Eye } from 'lucide-react';
+import { Megaphone, ArrowRight } from 'lucide-react';
+import { formatDate } from '@/app/_lib/utils/utils';
 import {
   GlassCard,
   SectionHeader,
@@ -25,35 +26,38 @@ export default function LatestNotices({ latestNotices }) {
           <ActionButton
             tone="primary"
             href="/account/executive/inbox"
-            icon={Plus}
+            icon={ArrowRight}
           >
-            Create
+            View all
           </ActionButton>
         }
       />
-      <div className="space-y-2.5">
-        {latestNotices.map((notice, idx) => (
-          <div
-            key={idx}
-            className="flex items-center justify-between gap-3 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-white/10 hover:bg-white/4"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-gray-200">
-                {notice.title}
-              </p>
-              <p className="mt-0.5 text-xs text-gray-500">{notice.date}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Pill tone={notice.status === 'Published' ? 'emerald' : 'amber'}>
-                {notice.status}
+      {latestNotices.length === 0 ? (
+        <p className="rounded-xl border border-white/6 bg-white/2 p-4 text-sm text-gray-500">
+          No notices published yet.
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          {latestNotices.map((notice) => (
+            <div
+              key={notice.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-white/10 hover:bg-white/4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-200">
+                  {notice.title}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {notice.date ? formatDate(notice.date) : ''}
+                </p>
+              </div>
+              <Pill tone={notice.active ? 'emerald' : 'gray'}>
+                {notice.active ? 'Active' : 'Expired'}
               </Pill>
-              <button className="rounded-lg border border-white/6 bg-white/2 p-1.5 text-gray-400 transition-all hover:bg-white/6 hover:text-white">
-                <Eye className="h-3.5 w-3.5" />
-              </button>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </GlassCard>
   );
 }

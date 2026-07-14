@@ -11,6 +11,6 @@ import ExecutiveSettingsClient from './_components/ExecutiveSettingsClient';
 export const metadata = { title: 'Settings | Executive | NEUPC' };
 
 export default async function ExecutiveSettingsPage() {
-  const { user } = await requireRole('executive');
+  const { user } = await requireRole(['executive', 'admin']);
   return <ExecutiveSettingsClient user={user} />;
 }

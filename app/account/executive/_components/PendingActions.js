@@ -5,12 +5,9 @@
 
 'use client';
 
+import Link from 'next/link';
 import { UserCheck, UserPlus, FileText, Calendar, Zap } from 'lucide-react';
-import {
-  GlassCard,
-  SectionHeader,
-  ActionButton,
-} from '@/app/account/_components/ui';
+import { GlassCard, SectionHeader } from '@/app/account/_components/ui';
 
 const iconMap = { UserCheck, UserPlus, FileText, Calendar };
 
@@ -22,7 +19,7 @@ const ACCENT_ROW = {
 };
 
 export default function PendingActions({ pendingActions }) {
-  const totalCount = pendingActions.reduce((sum, a) => sum + a.count, 0);
+  const totalCount = pendingActions.reduce((sum, a) => sum + (a.count || 0), 0);
 
   return (
     <GlassCard padding="p-5">
@@ -41,28 +38,28 @@ export default function PendingActions({ pendingActions }) {
         {pendingActions.map((action) => {
           const Icon = iconMap[action.icon];
           const chip = ACCENT_ROW[action.color] ?? ACCENT_ROW.blue;
+          const [border, bg, text] = chip.split(' ');
           return (
-            <div
+            <Link
               key={action.id}
-              className={`cursor-pointer rounded-xl border p-4 transition-all hover:brightness-110 ${chip.split(' ')[0]} ${chip.split(' ')[1]}`}
+              href={action.href}
+              className={`group rounded-xl border p-4 transition-all hover:brightness-110 ${border} ${bg}`}
             >
               <div className="mb-3 flex items-center justify-between">
-                {Icon && (
-                  <Icon className={`h-4.5 w-4.5 ${chip.split(' ')[2]}`} />
-                )}
-                <span className={`text-2xl font-bold ${chip.split(' ')[2]}`}>
-                  {action.count}
+                {Icon && <Icon className={`h-4.5 w-4.5 ${text}`} />}
+                <span className={`text-2xl font-bold ${text}`}>
+                  {action.count || 0}
                 </span>
               </div>
               <p className="text-sm font-semibold text-gray-200">
                 {action.label}
               </p>
-              <button
-                className={`mt-2 text-[11px] font-medium ${chip.split(' ')[2]} hover:underline`}
+              <span
+                className={`mt-2 inline-block text-[11px] font-medium ${text} group-hover:underline`}
               >
                 View details →
-              </button>
-            </div>
+              </span>
+            </Link>
           );
         })}
       </div>

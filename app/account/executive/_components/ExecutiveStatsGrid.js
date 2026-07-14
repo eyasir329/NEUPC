@@ -12,7 +12,7 @@ import {
   AlertCircle,
   TrendingUp,
   Megaphone,
-  BarChart3,
+  UserPlus,
 } from 'lucide-react';
 import { GlassCard, IconChip } from '@/app/account/_components/ui';
 
@@ -22,14 +22,12 @@ const STAT_CONFIGS = [
     label: 'Total Events',
     icon: Calendar,
     accent: 'blue',
-    trend: { dir: 'up', value: '+12%' },
   },
   {
     key: 'activeMembers',
     label: 'Active Members',
     icon: Users,
     accent: 'emerald',
-    trend: { dir: 'up', value: '+8%' },
   },
   {
     key: 'pendingRegistrations',
@@ -43,7 +41,6 @@ const STAT_CONFIGS = [
     label: 'Total Participation',
     icon: TrendingUp,
     accent: 'violet',
-    trend: { dir: 'up', value: '+15%' },
   },
   {
     key: 'activeNotices',
@@ -53,12 +50,11 @@ const STAT_CONFIGS = [
     alert: 'Live',
   },
   {
-    key: 'engagementRate',
-    label: 'Engagement Rate',
-    icon: BarChart3,
+    key: 'pendingApplications',
+    label: 'Pending Applications',
+    icon: UserPlus,
     accent: 'cyan',
-    trend: { dir: 'up', value: '+5%' },
-    suffix: '%',
+    alert: 'Needs Review',
   },
 ];
 
@@ -66,9 +62,8 @@ export default function ExecutiveStatsGrid({ stats }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
       {STAT_CONFIGS.map((cfg, i) => {
-        const value = cfg.suffix
-          ? `${stats[cfg.key]}${cfg.suffix}`
-          : stats[cfg.key];
+        const value = stats?.[cfg.key] ?? 0;
+        const showAlert = cfg.alert && value > 0;
         return (
           <motion.div
             key={cfg.key}
@@ -80,12 +75,7 @@ export default function ExecutiveStatsGrid({ stats }) {
             <GlassCard hover padding="p-4" className="flex h-full flex-col">
               <div className="flex min-h-9 items-start justify-between gap-3">
                 <IconChip icon={cfg.icon} accent={cfg.accent} />
-                {cfg.trend && (
-                  <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-emerald-400">
-                    ↑ {cfg.trend.value}
-                  </span>
-                )}
-                {cfg.alert && (
+                {showAlert && (
                   <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-amber-400">
                     {cfg.alert}
                   </span>

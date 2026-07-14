@@ -151,7 +151,6 @@ export default function RegistrationsClient({ events }) {
     return matchSearch && matchStatus;
   });
 
-  const selectedEvent = events.find((e) => e.id === selectedEventId);
 
   const stats = {
     total: registrations.length,

@@ -18,7 +18,6 @@ import {
   Download,
   Clock,
   TrendingUp,
-  Award,
   FileText,
   DollarSign,
   GraduationCap,
@@ -29,7 +28,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  HelpCircle,
 } from 'lucide-react';
 import {
   PageShell,
@@ -142,7 +140,7 @@ export default function ReportsClient({
   }, [budgetEntries, budgetQuery]);
 
   // 3. Events Workspace Filters
-  const events = eventsData.events || [];
+  const events = useMemo(() => eventsData.events || [], [eventsData.events]);
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       if (!eventQuery) return true;
@@ -635,7 +633,7 @@ export default function ReportsClient({
                               </span>
                               <Pill
                                 tone={statusTone}
-                                className="font-mono text-[9px] uppercase"
+                                className="font-mono text-[10px] uppercase"
                               >
                                 {e.status}
                               </Pill>
@@ -659,7 +657,7 @@ export default function ReportsClient({
                               <p className="font-mono text-sm font-bold text-white">
                                 {e.registrationCount ?? 0}
                               </p>
-                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                              <p className="text-[10px] tracking-wide text-gray-500 uppercase">
                                 Registered
                               </p>
                             </div>
@@ -667,7 +665,7 @@ export default function ReportsClient({
                               <p className="font-mono text-sm font-bold text-white">
                                 {e.attendedCount ?? 0}
                               </p>
-                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                              <p className="text-[10px] tracking-wide text-gray-500 uppercase">
                                 Attended
                               </p>
                             </div>
@@ -675,14 +673,14 @@ export default function ReportsClient({
                               <p className="font-mono text-sm font-bold text-violet-400">
                                 {attendanceRate}%
                               </p>
-                              <p className="text-[9px] tracking-wide text-gray-500 uppercase">
+                              <p className="text-[10px] tracking-wide text-gray-500 uppercase">
                                 Conv. Rate
                               </p>
                             </div>
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex justify-between text-[9px] text-gray-500">
+                            <div className="flex justify-between text-[10px] text-gray-500">
                               <span>Attendance Performance Bar</span>
                               <span>
                                 {e.attendedCount} / {e.registrationCount}
@@ -913,7 +911,7 @@ export default function ReportsClient({
                         </div>
                         <Pill
                           tone="blue"
-                          className="font-mono text-[9px] tracking-wide uppercase"
+                          className="font-mono text-[10px] tracking-wide uppercase"
                         >
                           LMS Active
                         </Pill>
@@ -948,7 +946,7 @@ export default function ReportsClient({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-semibold tracking-wide text-emerald-400 uppercase">
+                            <span className="text-[10px] font-semibold tracking-wide text-emerald-400 uppercase">
                               {post.category || 'Tech'}
                             </span>
                             <h5
@@ -965,7 +963,7 @@ export default function ReportsClient({
                             tone={
                               post.status === 'published' ? 'emerald' : 'gray'
                             }
-                            className="font-mono text-[9px] whitespace-nowrap uppercase"
+                            className="font-mono text-[10px] whitespace-nowrap uppercase"
                           >
                             {post.status}
                           </Pill>

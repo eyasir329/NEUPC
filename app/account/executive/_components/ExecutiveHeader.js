@@ -6,12 +6,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Crown, Shield, Flame } from 'lucide-react';
+import { Crown, Shield } from 'lucide-react';
 
-export default function ExecutiveHeader({ session }) {
-  const firstName = session?.user?.name?.split(' ')[0] || 'Executive';
-  const fullName = session?.user?.name || 'Executive';
-  const initials = fullName
+export default function ExecutiveHeader({ firstName, fullName }) {
+  const startYear =
+    new Date().getMonth() >= 6
+      ? new Date().getFullYear()
+      : new Date().getFullYear() - 1;
+  const initials = (fullName || '')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -51,7 +53,7 @@ export default function ExecutiveHeader({ session }) {
               className="flex cursor-default items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-tight text-zinc-400 uppercase"
             >
               <Shield className="h-3.5 w-3.5" />
-              Term 2025–2026
+              Term {startYear}–{startYear + 1}
             </motion.div>
           </div>
         </div>
