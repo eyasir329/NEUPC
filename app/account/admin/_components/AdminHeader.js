@@ -45,10 +45,14 @@ export default function AdminHeader({ stats }) {
             </motion.div>
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="flex cursor-default items-center gap-1.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold tracking-tight text-emerald-300 uppercase"
+              className={`flex cursor-default items-center gap-1.5 rounded-2xl border px-2.5 py-1 text-xs font-semibold tracking-tight uppercase ${
+                health >= 90
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+              }`}
             >
               <Activity className="h-3.5 w-3.5" />
-              All systems healthy
+              {health >= 90 ? 'All systems healthy' : 'Attention needed'}
             </motion.div>
             {pending > 0 && (
               <motion.div

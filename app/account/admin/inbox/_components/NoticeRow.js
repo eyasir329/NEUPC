@@ -61,7 +61,7 @@ export default function NoticeRow({ notice, onEdit }) {
     <>
       {/* ── Main Row ──────────────────────────────────────────────────────── */}
       <div
-        className={`group grid cursor-pointer grid-cols-[1fr_auto] gap-x-3 gap-y-2 border-b border-slate-700/40 px-4 py-3.5 transition-colors hover:bg-slate-800/40 sm:grid-cols-[1fr_auto_auto_auto] ${notice.priority === 'critical' ? 'border-l-2 border-l-red-500' : ''} ${notice.priority === 'high' ? 'border-l-2 border-l-yellow-500' : ''} `}
+        className={`group border-white/10/40 grid cursor-pointer grid-cols-[1fr_auto] gap-x-3 gap-y-2 border-b px-4 py-3.5 transition-colors hover:bg-white/5 sm:grid-cols-[1fr_auto_auto_auto] ${notice.priority === 'critical' ? 'border-l-2 border-l-red-500' : ''} ${notice.priority === 'high' ? 'border-l-2 border-l-yellow-500' : ''} `}
         onClick={() => setExpanded((v) => !v)}
       >
         {/* ── Left: title + badges ─────────────────────────────────────── */}
@@ -92,7 +92,7 @@ export default function NoticeRow({ notice, onEdit }) {
             </span>
             {/* Expiry status */}
             {expired && (
-              <span className="rounded-full border border-slate-600/30 bg-slate-700/60 px-2 py-0.5 text-xs text-slate-400">
+              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-xs text-zinc-400">
                 ⏳ Expired
               </span>
             )}
@@ -104,7 +104,7 @@ export default function NoticeRow({ notice, onEdit }) {
           </div>
 
           {/* Meta: creator + dates (visible on mobile too) */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
             <span>By {creatorName}</span>
             <span>{formatDate(notice.created_at)}</span>
             {notice.expires_at && (
@@ -126,7 +126,7 @@ export default function NoticeRow({ notice, onEdit }) {
             className={`rounded-lg p-1.5 transition-colors ${
               pinned
                 ? 'bg-violet-500/10 text-violet-400 hover:bg-violet-500/20'
-                : 'text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-violet-500/10 hover:text-violet-400'
+                : 'text-zinc-500 opacity-0 group-hover:opacity-100 hover:bg-violet-500/10 hover:text-violet-400'
             }`}
           >
             <svg
@@ -145,7 +145,7 @@ export default function NoticeRow({ notice, onEdit }) {
               onEdit(notice);
             }}
             title="Edit"
-            className="rounded-lg p-1.5 text-slate-500 opacity-0 transition-colors group-hover:opacity-100 hover:bg-blue-500/10 hover:text-blue-400"
+            className="rounded-lg p-1.5 text-zinc-500 opacity-0 transition-colors group-hover:opacity-100 hover:bg-blue-500/10 hover:text-blue-400"
           >
             <svg
               viewBox="0 0 20 20"
@@ -171,7 +171,7 @@ export default function NoticeRow({ notice, onEdit }) {
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="rounded bg-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600"
+                className="rounded bg-white/10 px-2 py-1 text-xs text-zinc-300 transition-colors hover:bg-white/15"
               >
                 No
               </button>
@@ -183,7 +183,7 @@ export default function NoticeRow({ notice, onEdit }) {
                 setConfirmDelete(true);
               }}
               title="Delete"
-              className="rounded-lg p-1.5 text-slate-500 opacity-0 transition-colors group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+              className="rounded-lg p-1.5 text-zinc-500 opacity-0 transition-colors group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
             >
               <svg
                 viewBox="0 0 20 20"
@@ -203,7 +203,7 @@ export default function NoticeRow({ notice, onEdit }) {
           <svg
             viewBox="0 0 20 20"
             fill="currentColor"
-            className={`h-4 w-4 shrink-0 text-slate-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            className={`h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
           >
             <path
               fillRule="evenodd"
@@ -216,20 +216,20 @@ export default function NoticeRow({ notice, onEdit }) {
 
       {/* ── Expanded content ──────────────────────────────────────────────── */}
       {expanded && (
-        <div className="space-y-3 border-b border-slate-700/40 bg-slate-800/30 px-4 py-4">
+        <div className="border-white/10/40 bg-white/5/30 space-y-3 border-b px-4 py-4">
           {/* Content */}
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-300">
             {notice.content}
           </p>
 
           {/* Target audience */}
           {notice.target_audience?.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-slate-500">Target:</span>
+              <span className="text-xs text-zinc-500">Target:</span>
               {notice.target_audience.map((a) => (
                 <span
                   key={a}
-                  className="rounded-full border border-slate-600/30 bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300"
+                  className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-xs text-zinc-300"
                 >
                   {a}
                 </span>
@@ -240,7 +240,7 @@ export default function NoticeRow({ notice, onEdit }) {
           {/* Attachments */}
           {notice.attachments?.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">Attachments:</p>
+              <p className="text-xs text-zinc-500">Attachments:</p>
               {notice.attachments.map((url, i) => (
                 <a
                   key={i}
@@ -266,7 +266,7 @@ export default function NoticeRow({ notice, onEdit }) {
             </div>
           )}
 
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-zinc-600">
             Last updated: {formatDateTime(notice.updated_at)}
           </p>
         </div>

@@ -1,34 +1,28 @@
 /**
- * @file Admin inbox page — active notices for the admin audience.
- *   UI is shared via {@link InboxClient}.
+ * @file Admin inbox page — full notice management (create, edit, pin,
+ *   archive) for administrators, plus stats. Rendering is handled by
+ *   {@link NoticeManagementClient}.
  * @module AdminInboxPage
  * @access admin
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
-import { getActiveNotices } from '@/app/_lib/services/data-service';
-import InboxClient from '@/app/account/_components/inbox/InboxClient';
+import { getNoticesAdmin } from '@/app/_lib/services/data-service';
+import { PageShell } from '@/app/account/_components/ui';
+import NoticeManagementClient from './_components/NoticeManagementClient';
 
 export const metadata = { title: 'Inbox | Admin | NEUPC' };
+export const revalidate = 0;
 
 export default async function AdminInboxPage() {
-  const [, allNotices] = await Promise.all([
+  const [, { notices, stats }] = await Promise.all([
     requireRole('admin'),
-    getActiveNotices().catch(() => []),
+    getNoticesAdmin().catch(() => ({ notices: [], stats: {} })),
   ]);
 
-  const notices = allNotices.filter(
-    (n) =>
-      !n.target_audience ||
-      n.target_audience.includes('all') ||
-      n.target_audience.includes('admin')
-  );
-
   return (
-    <InboxClient
-      notices={notices}
-      accent="sky"
-      subtitle="Notices and system announcements for administrators."
-    />
+    <PageShell>
+      <NoticeManagementClient initialNotices={notices} stats={stats} />
+    </PageShell>
   );
 }

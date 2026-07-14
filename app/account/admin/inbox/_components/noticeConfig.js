@@ -18,7 +18,7 @@ export const TYPE_CONFIG = {
   general: {
     label: 'General',
     emoji: '📢',
-    badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    badge: 'bg-white/10 text-zinc-300 border-white/15',
   },
   urgent: {
     label: 'Urgent',
@@ -55,13 +55,13 @@ export const PRIORITY_CONFIG = {
     label: 'Low',
     emoji: '🟢',
     badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    ring: 'border-slate-700/50',
+    ring: 'border-white/10',
   },
   medium: {
     label: 'Medium',
     emoji: '🔵',
     badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    ring: 'border-slate-700/50',
+    ring: 'border-white/10',
   },
   high: {
     label: 'High',
@@ -89,8 +89,8 @@ export function getStatCards(stats) {
       label: 'Total',
       value: stats.total,
       icon: '📋',
-      color: 'from-slate-500/20 to-slate-600/20 border-slate-500/20',
-      text: 'text-slate-300',
+      color: 'from-white/10 to-white/5 border-white/10',
+      text: 'text-zinc-300',
     },
     {
       label: 'Pinned',
@@ -110,8 +110,8 @@ export function getStatCards(stats) {
       label: 'Expired',
       value: stats.expired,
       icon: '⏳',
-      color: 'from-slate-500/20 to-zinc-500/20 border-slate-500/20',
-      text: 'text-slate-400',
+      color: 'from-white/10 to-white/5 border-white/10',
+      text: 'text-zinc-400',
     },
     {
       label: 'Critical',

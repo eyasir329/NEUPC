@@ -29,7 +29,7 @@ function StatCard({ card }) {
     >
       <span className="text-2xl">{card.icon}</span>
       <div>
-        <p className="text-xs tracking-wide text-slate-400 uppercase">
+        <p className="text-xs tracking-wide text-zinc-400 uppercase">
           {card.label}
         </p>
         <p className={`text-xl font-bold ${card.text}`}>{card.value}</p>
@@ -139,7 +139,7 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-slate-700/50 pb-0">
+      <div className="flex flex-wrap gap-1 border-b border-white/10 pb-0">
         {TABS.map(({ id, label }) => (
           <button
             key={id}
@@ -147,7 +147,7 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
             className={`rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               tab === id
                 ? 'border-sky-500 bg-sky-900/20 text-sky-400'
-                : 'border-transparent text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                : 'border-transparent text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
             }`}
           >
             {label}
@@ -159,7 +159,7 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <svg
-            className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500"
+            className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-500"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -173,14 +173,14 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search title or content…"
-            className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 pr-4 pl-9 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+            className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pr-4 pl-9 text-sm text-white placeholder-zinc-500 focus:ring-2 focus:ring-sky-500 focus:outline-none"
           />
         </div>
 
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
         >
           <option value="">All Types</option>
           {NOTICE_TYPES.map((t) => {
@@ -196,7 +196,7 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
-          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
         >
           <option value="">All Priorities</option>
           {PRIORITIES.map((p) => {
@@ -211,11 +211,11 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
       </div>
 
       {/* Count */}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-zinc-500">
         Showing{' '}
-        <span className="font-semibold text-slate-400">{filtered.length}</span>{' '}
+        <span className="font-semibold text-zinc-400">{filtered.length}</span>{' '}
         of{' '}
-        <span className="font-semibold text-slate-400">
+        <span className="font-semibold text-zinc-400">
           {initialNotices.length}
         </span>{' '}
         notices
@@ -231,10 +231,10 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <span className="mb-4 text-5xl">📭</span>
-          <h3 className="mb-1 text-lg font-semibold text-slate-300">
+          <h3 className="mb-1 text-lg font-semibold text-zinc-300">
             No notices found
           </h3>
-          <p className="mb-6 text-sm text-slate-500">
+          <p className="mb-6 text-sm text-zinc-500">
             {search || typeFilter || priorityFilter
               ? 'Try adjusting your filters.'
               : 'Be the first to post a notice for your club.'}

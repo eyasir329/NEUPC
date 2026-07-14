@@ -1,11 +1,12 @@
 /**
- * @file [userId] API route
+ * @file [userId] API route — updates a user's name, email, and role.
  * @module [userId]Route
  */
 
 import { NextResponse } from 'next/server';
 import { requireApiAuth, isAuthError } from '@/app/_lib/auth/api-guard';
-import { updateUser } from '@/app/_lib/services/data-service';
+import { updateUser, updateAdminUser } from '@/app/_lib/services/data-service';
+import { revalidatePath } from 'next/cache';
 
 export async function PUT(request, { params }) {
   try {
@@ -13,7 +14,7 @@ export async function PUT(request, { params }) {
     if (isAuthError(authResult)) return authResult;
 
     const adminId = authResult.user.id;
-    const { userId } = params;
+    const { userId } = await params;
     const { fullName, email, role } = await request.json();
 
     if (!fullName || !email || !role) {
@@ -23,15 +24,14 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const { success, error } = await updateUser(
-      userId,
-      { name: fullName, email, role },
-      adminId
-    );
+    // full_name + role (user_roles table) via the admin-audited path
+    await updateAdminUser(userId, { fullName, role }, adminId);
 
-    if (!success) {
-      return NextResponse.json({ error }, { status: 400 });
-    }
+    // email lives on the users row
+    await updateUser(userId, { email });
+
+    revalidatePath('/account/admin/users');
+    revalidatePath('/account/executive/users');
 
     return NextResponse.json({
       success: true,
@@ -40,7 +40,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error(`API Error [${new Date().toISOString()}]:`, error);
     return NextResponse.json(
-      { error: 'An internal server error occurred' },
+      { error: error.message || 'An internal server error occurred' },
       { status: 500 }
     );
   }
