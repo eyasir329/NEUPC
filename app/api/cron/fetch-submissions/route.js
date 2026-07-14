@@ -19,8 +19,9 @@ function verifyCronSecret(request) {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
+    // Fail closed in production — an unset secret must not expose the route.
     console.warn('CRON_SECRET not configured');
-    return true; // Allow in development
+    return process.env.NODE_ENV !== 'production';
   }
 
   return authHeader === `Bearer ${cronSecret}`;

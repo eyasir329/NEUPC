@@ -6,7 +6,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
-import { auth } from '@/app/_lib/auth/auth';
 import { uploadToDrive } from '@/app/_lib/integrations/gdrive';
 import { extractDriveFileId } from '@/app/_lib/utils/utils';
 import {
@@ -380,8 +379,9 @@ export async function toggleLessonLock(lessonId, isLocked) {
  * Get a single lesson with full details.
  */
 export async function getLesson(lessonId) {
-  const session = await auth();
-  if (!session?.user?.email) throw new Error('Unauthorized');
+  // Enrollment (or free-preview) check — a bare session check would let any
+  // logged-in user read paid lesson content and exam questions.
+  await requireLessonAccess(lessonId);
 
   const { data, error } = await supabaseAdmin
     .from('lessons')
@@ -401,8 +401,7 @@ export async function getLesson(lessonId) {
  * id/title/duration/video_source/video_id, so we only need the rest.
  */
 export async function getLessonContent(lessonId) {
-  const session = await auth();
-  if (!session?.user?.email) throw new Error('Unauthorized');
+  await requireLessonAccess(lessonId);
 
   const { data, error } = await supabaseAdmin
     .from('lessons')
