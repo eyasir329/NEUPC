@@ -68,7 +68,6 @@ export default async function AccountPage() {
   }
 
   const availableRoles = getAvailableDashboards(userRoles, user);
-
   // Single accessible dashboard → smooth client-side redirect
   const redirectPath =
     availableRoles.length === 1 ? availableRoles[0].config.path : null;
@@ -82,12 +81,11 @@ export default async function AccountPage() {
       </div>
 
       {/* No overflow-x-hidden here — it would break position:sticky on the profile card */}
-      <div className="relative z-10 w-full bg-[#030408] px-4 pt-24 pb-16 sm:px-6 sm:pt-28 lg:px-8 lg:pt-28 selection:bg-[#7C5CFF]/30">
+      <div className="relative z-10 w-full bg-[#030408] px-4 pt-24 pb-16 selection:bg-[#7C5CFF]/30 sm:px-6 sm:pt-28 lg:px-8 lg:pt-28">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-
             {/* Left col — sticky profile card, clears the navbar */}
-            <div className="lg:col-span-4 lg:sticky lg:top-24">
+            <div className="lg:sticky lg:top-24 lg:col-span-4">
               <AccountHeader
                 session={session.user}
                 accountStatus={user?.account_status}
@@ -125,7 +123,6 @@ export default async function AccountPage() {
                 userRoles={userRoles}
               />
             </div>
-
           </div>
         </div>
       </div>
