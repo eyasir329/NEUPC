@@ -1,41 +1,40 @@
 /**
- * @file Mentee progress overview component
+ * @file Mentee overview component — the mentor's real active mentorships
+ *   and assigned bootcamps, linked to the management pages.
  * @module MenteeProgressOverview
  */
 
 'use client';
 
-import { CheckCircle, Target, AlertCircle, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Users, GraduationCap, ArrowRight } from 'lucide-react';
+import { formatDate } from '@/app/_lib/utils/utils';
 import {
   GlassCard,
   SectionHeader,
-  GradientBar,
   Pill,
   ActionButton,
   Avatar,
   EmptyState,
 } from '@/app/account/_components/ui';
 
-const STATUS_CONFIG = {
-  Excellent: { tone: 'emerald', icon: CheckCircle },
-  'On Track': { tone: 'blue', icon: Target },
-  'Needs Attention': { tone: 'amber', icon: AlertCircle },
+const BOOTCAMP_TONE = {
+  active: 'emerald',
+  upcoming: 'blue',
+  completed: 'violet',
+  draft: 'amber',
 };
 
-const PROGRESS_TONE = {
-  emerald: 'emerald',
-  green: 'emerald',
-  amber: 'amber',
-  red: 'rose',
-};
-
-export default function MenteeProgressOverview({ menteeProgress }) {
+export default function MenteeProgressOverview({
+  menteeOverview = [],
+  bootcamps = [],
+}) {
   return (
     <GlassCard padding="p-5">
       <SectionHeader
         icon={Users}
-        title="Mentee Progress"
-        subtitle="Track your mentees' learning journey"
+        title="My Mentees & Bootcamps"
+        subtitle="Who and what you're mentoring"
         accent="blue"
         action={
           <ActionButton href="/account/mentor/assigned-members" tone="primary">
@@ -44,67 +43,62 @@ export default function MenteeProgressOverview({ menteeProgress }) {
         }
       />
 
-      {menteeProgress.length === 0 ? (
-        <EmptyState icon={Users} title="No mentees yet" accent="blue" />
+      {menteeOverview.length === 0 && bootcamps.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No mentees or bootcamps yet"
+          description="Assignments made by the admin will appear here."
+          accent="blue"
+        />
       ) : (
-        <div className="space-y-3">
-          {menteeProgress.map((mentee) => {
-            const cfg =
-              STATUS_CONFIG[mentee.status] ?? STATUS_CONFIG['On Track'];
-            const Icon = cfg.icon;
-            const tone = PROGRESS_TONE[mentee.statusColor] ?? 'blue';
-
-            return (
-              <div
-                key={mentee.id}
-                className="grid grid-cols-1 gap-3 rounded-xl border border-white/6 bg-white/2 p-4 transition-all hover:border-white/10 hover:bg-white/4 sm:grid-cols-12 sm:items-center"
-              >
-                {/* Name */}
-                <div className="flex items-center gap-2.5 sm:col-span-3">
-                  <Avatar name={mentee.name} size="sm" />
-                  <div className="min-w-0">
+        <div className="space-y-4">
+          {bootcamps.length > 0 && (
+            <div className="space-y-2">
+              {bootcamps.slice(0, 4).map((b) => (
+                <Link
+                  key={b.id}
+                  href={`/account/mentor/bootcamps/${b.id}`}
+                  className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 p-3 transition-all hover:border-white/10 hover:bg-white/4"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10">
+                    <GraduationCap className="h-4.5 w-4.5 text-violet-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-white">
-                      {mentee.name}
+                      {b.title}
+                    </p>
+                    <p className="text-xs text-gray-500">Bootcamp</p>
+                  </div>
+                  <Pill tone={BOOTCAMP_TONE[b.status] || 'blue'}>
+                    {b.status || 'active'}
+                  </Pill>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-gray-500" />
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {menteeOverview.length > 0 && (
+            <div className="space-y-2">
+              {menteeOverview.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 p-3 transition-all hover:border-white/10 hover:bg-white/4"
+                >
+                  <Avatar name={m.name} src={m.avatarUrl} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {m.name}
                     </p>
                     <p className="truncate text-xs text-gray-500">
-                      {mentee.roadmap}
+                      Mentee since {formatDate(m.since)}
                     </p>
                   </div>
+                  <Pill tone="emerald">{m.status}</Pill>
                 </div>
-
-                {/* Progress bar */}
-                <div className="sm:col-span-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <GradientBar
-                        value={mentee.progress}
-                        tone={tone}
-                        height="h-1.5"
-                      />
-                    </div>
-                    <span className="w-8 text-right text-xs font-bold text-white">
-                      {mentee.progress}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="sm:col-span-3">
-                  <Pill tone={cfg.tone} icon={Icon}>
-                    {mentee.status}
-                  </Pill>
-                </div>
-
-                {/* Meta + action */}
-                <div className="flex items-center justify-between gap-2 sm:col-span-2 sm:justify-end">
-                  <span className="text-xs text-gray-500">
-                    Last: {mentee.lastSession}
-                  </span>
-                  <ActionButton tone="primary">Message</ActionButton>
-                </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
         </div>
       )}
     </GlassCard>

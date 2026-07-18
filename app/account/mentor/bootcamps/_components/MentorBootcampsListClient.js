@@ -19,6 +19,7 @@ import {
   PageShell,
   PageHeader,
   EmptyState,
+  TabBar,
 } from '@/app/account/_components/ui';
 
 const STATUS_TONE = {
@@ -97,7 +98,7 @@ function BootcampCard({ bootcamp, index }) {
               )}
             </div>
 
-            <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-500">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500">
               {bootcamp.total_lessons > 0 && (
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-3 w-3 text-indigo-400/80" />
@@ -151,47 +152,23 @@ export default function MentorBootcampsListClient({ bootcamps }) {
       />
 
       {bootcamps.length > 0 && (
-        <div className="mb-6 flex gap-2 border-b border-white/5 pb-px">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`relative flex items-center px-2 pb-3 text-sm font-semibold transition-all ${
-              activeTab === 'active'
-                ? 'text-violet-400'
-                : 'text-zinc-400 hover:text-zinc-300'
-            }`}
-          >
-            Active Cohorts
-            <span className="ml-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-              {activeBootcamps.length}
-            </span>
-            {activeTab === 'active' && (
-              <motion.div
-                layoutId="list-active-tab-bar"
-                className="absolute right-0 bottom-0 left-0 h-0.5 bg-violet-500"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('archived')}
-            className={`relative flex items-center px-2 pb-3 text-sm font-semibold transition-all ${
-              activeTab === 'archived'
-                ? 'text-violet-400'
-                : 'text-zinc-400 hover:text-zinc-300'
-            }`}
-          >
-            Archived & Inactive
-            <span className="ml-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-              {archivedBootcamps.length}
-            </span>
-            {activeTab === 'archived' && (
-              <motion.div
-                layoutId="list-active-tab-bar"
-                className="absolute right-0 bottom-0 left-0 h-0.5 bg-violet-500"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-          </button>
+        <div className="mb-6">
+          <TabBar
+            value={activeTab}
+            onChange={setActiveTab}
+            tabs={[
+              {
+                value: 'active',
+                label: 'Active Cohorts',
+                count: activeBootcamps.length,
+              },
+              {
+                value: 'archived',
+                label: 'Archived & Inactive',
+                count: archivedBootcamps.length,
+              },
+            ]}
+          />
         </div>
       )}
 

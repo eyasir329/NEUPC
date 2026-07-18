@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useTransition, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Lock,
 } from 'lucide-react';
+import { markNoticesReadAction } from '@/app/_lib/actions/guest-actions';
 import {
   PageShell,
   TabBar,
@@ -32,8 +33,6 @@ import {
   ActionButton,
   Pill,
 } from '@/app/account/_components/ui';
-
-const READ_KEY = 'neupc_guest_read_notices';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -62,112 +61,60 @@ const TYPE_CONFIG = {
 
 const cfg = (t) => TYPE_CONFIG[t] ?? TYPE_CONFIG.general;
 
-function tabFilter(notices, id, readIds, mounted) {
+/** Windowed page list: 1 … (c-1) c (c+1) … N, capped so it never overflows. */
+function pageWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (current > 3) pages.push('…');
+  for (
+    let p = Math.max(2, current - 1);
+    p <= Math.min(total - 1, current + 1);
+    p++
+  )
+    pages.push(p);
+  if (current < total - 2) pages.push('…');
+  pages.push(total);
+  return pages;
+}
+
+function tabFilter(notices, id, readIds) {
   if (id === 'all') return notices;
-  if (id === 'unread')
-    return notices.filter((n) => !mounted || !readIds.has(n.id));
+  if (id === 'unread') return notices.filter((n) => !readIds.has(n.id));
   if (id === 'pinned') return notices.filter((n) => n.is_pinned);
   if (id === 'critical')
     return notices.filter((n) => n.priority === 'critical');
   return notices;
 }
 
-const FALLBACK_NOTICES = [
-  {
-    id: 'fn1',
-    notice_type: 'event',
-    is_pinned: true,
-    priority: null,
-    title: 'Registration open: Web Dev Workshop',
-    content:
-      'Registration is now open until Feb 21. Limited to 40 participants. Visit the Events page to secure your spot.',
-    created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-    users: { full_name: 'NEUPC Team' },
-  },
-  {
-    id: 'fn2',
-    notice_type: 'general',
-    is_pinned: false,
-    priority: null,
-    title: 'New resource added: DP Cheatsheet',
-    content:
-      'A comprehensive dynamic programming reference sheet is now available in the Resources section. Covers knapsack, LCS, interval DP and more.',
-    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
-    users: { full_name: 'Resource Team' },
-  },
-  {
-    id: 'fn3',
-    notice_type: 'deadline',
-    is_pinned: false,
-    priority: null,
-    title: 'NEUPC Monthly Contest #27 starts in 3 days',
-    content:
-      'Starts May 24, 20:00 BDT on Codeforces — 2.5 hours, 6 problems. Make sure to register before the deadline.',
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-    users: { full_name: 'Contest Committee' },
-  },
-  {
-    id: 'fn4',
-    notice_type: 'urgent',
-    is_pinned: false,
-    priority: 'critical',
-    title: 'Room change: Advanced Algorithms Bootcamp',
-    content:
-      'The bootcamp venue has changed from CSE Lab-A to Lab-C (3rd floor). Please update your plans accordingly.',
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    users: { full_name: 'Events Coordinator' },
-  },
-  {
-    id: 'fn5',
-    notice_type: 'general',
-    is_pinned: false,
-    priority: null,
-    title: 'Welcome to NEUPC!',
-    content:
-      'Thank you for joining NEUPC as a guest. Explore our events and resources, and consider applying for full membership to unlock all features.',
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    users: { full_name: 'NEUPC Admin' },
-  },
-];
-
-export default function GuestNotificationsClient({ notices = [] }) {
-  const displayNotices = notices.length > 0 ? notices : FALLBACK_NOTICES;
-  const [readIds, setReadIds] = useState(new Set());
-  const [mounted, setMounted] = useState(false);
+export default function GuestNotificationsClient({
+  notices = [],
+  initialReadIds = [],
+}) {
+  const displayNotices = notices;
+  const [readIds, setReadIds] = useState(() => new Set(initialReadIds));
   const [tab, setTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const prevTabRef = useRef(tab);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(READ_KEY);
-      if (raw) setReadIds(new Set(JSON.parse(raw)));
-    } catch {}
-    setMounted(true);
-  }, []);
-
-  const isRead = (id) => !mounted || readIds.has(id);
-  const unreadCount = mounted
-    ? displayNotices.filter((n) => !readIds.has(n.id)).length
-    : 0;
+  const isRead = (id) => readIds.has(id);
+  const unreadCount = displayNotices.filter((n) => !readIds.has(n.id)).length;
 
   function markRead(id) {
     setReadIds((prev) => {
       const next = new Set(prev);
       next.add(id);
-      try {
-        localStorage.setItem(READ_KEY, JSON.stringify([...next]));
-      } catch {}
       return next;
     });
+    markNoticesReadAction([id]);
   }
 
   function markAllRead() {
-    const next = new Set([...readIds, ...displayNotices.map((n) => n.id)]);
-    setReadIds(next);
-    try {
-      localStorage.setItem(READ_KEY, JSON.stringify([...next]));
-    } catch {}
+    const unreadIds = displayNotices
+      .map((n) => n.id)
+      .filter((id) => !readIds.has(id));
+    if (!unreadIds.length) return;
+    setReadIds((prev) => new Set([...prev, ...unreadIds]));
+    markNoticesReadAction(unreadIds);
   }
 
   const handleTabChange = (newTab) => {
@@ -177,8 +124,8 @@ export default function GuestNotificationsClient({ notices = [] }) {
   };
 
   const filtered = useMemo(
-    () => tabFilter(displayNotices, tab, readIds, mounted),
-    [displayNotices, tab, readIds, mounted]
+    () => tabFilter(displayNotices, tab, readIds),
+    [displayNotices, tab, readIds]
   );
 
   const ITEMS_PER_PAGE = 8;
@@ -206,17 +153,17 @@ export default function GuestNotificationsClient({ notices = [] }) {
   ].filter((t) => t.value === 'all' || t.count > 0);
 
   return (
-    <PageShell className="space-y-6 text-zinc-300 selection:bg-rose-500/30">
+    <PageShell className="space-y-6 text-zinc-300 selection:bg-violet-500/30">
       <div className="flex flex-col gap-6">
         <PageHeader
           icon={Bell}
           title="Inbox"
           subtitle="Stay updated with the latest club announcements and notices."
-          accent="rose"
+          accent="violet"
           meta={
             unreadCount > 0 ? (
-              <span className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs font-bold tracking-wide text-rose-400 uppercase">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+              <span className="flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-bold tracking-wide text-violet-400 uppercase">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
                 {unreadCount} Unread
               </span>
             ) : null
@@ -238,7 +185,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-extrabold tracking-wide text-zinc-400 uppercase transition-colors hover:text-rose-400"
+                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-extrabold tracking-wide text-zinc-400 uppercase transition-colors hover:text-violet-400"
                   >
                     <CheckCheck className="h-4.5 w-4.5" /> Mark all read
                   </button>
@@ -308,7 +255,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
                             'group relative flex items-start gap-4 px-6 py-5 transition-colors duration-200 last:border-b-0',
                             read
                               ? 'bg-zinc-900/30 hover:bg-white/[0.01]'
-                              : 'cursor-pointer bg-rose-500/[0.02] hover:bg-rose-500/[0.04]'
+                              : 'cursor-pointer bg-violet-500/[0.02] hover:bg-violet-500/[0.04]'
                           )}
                         >
                           <AnimatePresence>
@@ -318,7 +265,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
                                 transition={{ duration: 0.18 }}
-                                className="absolute top-1/2 left-4 h-2 w-2 -translate-y-1/2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]"
+                                className="absolute top-1/2 left-4 h-2 w-2 -translate-y-1/2 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.7)]"
                               />
                             )}
                           </AnimatePresence>
@@ -341,7 +288,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
                                   'truncate text-sm leading-snug transition-colors duration-300',
                                   read
                                     ? 'font-bold text-zinc-400'
-                                    : 'font-extrabold text-zinc-100 group-hover:text-rose-400'
+                                    : 'font-extrabold text-zinc-100 group-hover:text-violet-400'
                                 )}
                               >
                                 {notice.title}
@@ -410,22 +357,38 @@ export default function GuestNotificationsClient({ notices = [] }) {
                       >
                         <ChevronLeft className="h-3.5 w-3.5" /> Prev
                       </button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setCurrentPage(i + 1)}
-                            className={cn(
-                              'h-8 w-8 rounded-lg text-xs font-black transition-all',
-                              currentPage === i + 1
-                                ? 'border border-rose-500/30 bg-rose-500/20 text-rose-300'
-                                : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                            )}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
+                      <div className="hidden items-center gap-1 sm:flex">
+                        {pageWindow(currentPage, totalPages).map((p, i) =>
+                          p === '…' ? (
+                            <span
+                              key={`gap-${i}`}
+                              className="px-1 text-xs font-black text-zinc-600"
+                            >
+                              …
+                            </span>
+                          ) : (
+                            <button
+                              key={p}
+                              onClick={() => setCurrentPage(p)}
+                              aria-label={`Page ${p}`}
+                              aria-current={
+                                currentPage === p ? 'page' : undefined
+                              }
+                              className={cn(
+                                'h-8 w-8 rounded-lg text-xs font-black transition-all',
+                                currentPage === p
+                                  ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300'
+                                  : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
+                              )}
+                            >
+                              {p}
+                            </button>
+                          )
+                        )}
                       </div>
+                      <span className="text-xs font-bold text-zinc-500 tabular-nums sm:hidden">
+                        {currentPage} / {totalPages}
+                      </span>
                       <button
                         onClick={() =>
                           setCurrentPage((p) => Math.min(totalPages, p + 1))
@@ -455,7 +418,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
                 className={cn(
                   'flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold shadow-md transition-all',
                   unreadCount > 0
-                    ? 'border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 active:scale-95'
+                    ? 'border border-violet-500/20 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 active:scale-95'
                     : 'cursor-not-allowed border border-white/5 bg-zinc-950/20 text-zinc-600'
                 )}
               >
@@ -471,7 +434,7 @@ export default function GuestNotificationsClient({ notices = [] }) {
               <div className="flex flex-col gap-4 text-xs font-bold text-zinc-400">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-zinc-500">Unread</span>
-                  <span className="rounded-md border border-rose-500/10 bg-rose-500/15 px-2 py-0.5 font-extrabold text-rose-400 tabular-nums">
+                  <span className="rounded-md border border-violet-500/10 bg-violet-500/15 px-2 py-0.5 font-extrabold text-violet-400 tabular-nums">
                     {unreadCount}
                   </span>
                 </div>

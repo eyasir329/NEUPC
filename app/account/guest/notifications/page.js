@@ -6,15 +6,20 @@
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
-import { getActiveNotices } from '@/app/_lib/services/data-service';
+import {
+  getActiveNotices,
+  getUserNoticeReadIds,
+} from '@/app/_lib/services/data-service';
 import GuestNotificationsClient from './_components/GuestNotificationsClient';
 
 export const metadata = { title: 'Notifications | Guest | NEUPC' };
 
 export default async function GuestNotificationsPage() {
-  const [{ user }, allNotices] = await Promise.all([
-    requireRole('guest', { checkIsActive: false }),
+  const { user } = await requireRole('guest', { checkIsActive: false });
+
+  const [allNotices, readIds] = await Promise.all([
     getActiveNotices().catch(() => []),
+    getUserNoticeReadIds(user.id).catch(() => []),
   ]);
 
   const notices = allNotices.filter((n) => {
@@ -24,5 +29,7 @@ export default async function GuestNotificationsPage() {
     );
   });
 
-  return <GuestNotificationsClient notices={notices} userId={user.id} />;
+  return (
+    <GuestNotificationsClient notices={notices} initialReadIds={readIds} />
+  );
 }

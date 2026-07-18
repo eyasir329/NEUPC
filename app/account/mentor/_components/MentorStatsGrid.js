@@ -1,5 +1,6 @@
 /**
- * @file Mentor stats grid component
+ * @file Mentor stats grid component — six live stat cards derived from
+ *   the mentor's DB data.
  * @module MentorStatsGrid
  */
 
@@ -9,9 +10,9 @@ import {
   Users,
   Calendar,
   CheckCircle,
-  Star,
-  TrendingUp,
-  MessageSquare,
+  ClipboardCheck,
+  FileText,
+  GraduationCap,
 } from 'lucide-react';
 import { StatCard } from '@/app/account/_components/ui';
 
@@ -30,6 +31,7 @@ export default function MentorStatsGrid({ stats }) {
       label: 'Upcoming Sessions',
       value: stats.upcomingSessions,
       accent: 'emerald',
+      href: '/account/mentor/sessions',
       sublabel: 'scheduled',
     },
     {
@@ -37,28 +39,32 @@ export default function MentorStatsGrid({ stats }) {
       label: 'Sessions Done',
       value: stats.completedSessions,
       accent: 'violet',
+      href: '/account/mentor/sessions',
       sublabel: 'total completed',
     },
     {
-      icon: Star,
-      label: 'Avg. Rating',
-      value: stats.averageRating,
+      icon: ClipboardCheck,
+      label: 'Pending Reviews',
+      value: stats.pendingReviews,
       accent: 'amber',
-      sublabel: 'out of 5.0',
+      href: '/account/mentor/tasks',
+      sublabel: 'submissions waiting',
     },
     {
-      icon: TrendingUp,
-      label: 'Completion Rate',
-      value: `${stats.completionRate}%`,
+      icon: FileText,
+      label: 'Active Tasks',
+      value: stats.activeTasks,
       accent: 'cyan',
-      sublabel: 'mentee progress',
+      href: '/account/mentor/tasks',
+      sublabel: 'deadline ahead',
     },
     {
-      icon: MessageSquare,
-      label: 'Unread Messages',
-      value: stats.unreadMessages,
+      icon: GraduationCap,
+      label: 'My Bootcamps',
+      value: stats.bootcamps,
       accent: 'pink',
-      sublabel: 'need reply',
+      href: '/account/mentor/bootcamps',
+      sublabel: 'assigned',
     },
   ];
 

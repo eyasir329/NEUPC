@@ -80,7 +80,7 @@ export async function getUserByEmail(email) {
   const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('email', email)
@@ -117,7 +117,7 @@ export async function getUserById(id) {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('users')
     .select(
       `
@@ -244,7 +244,7 @@ export async function getAllUsers() {
   }
 
   try {
-    const { data: users, error: usersError } = await supabase
+    const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
       .select(
         'id, email, full_name, avatar_url, is_online, last_seen, phone, phone_verified, email_verified, status_changed_by, account_status, status_reason, status_changed_at, last_login, created_at'
@@ -381,36 +381,36 @@ export async function getUserStats() {
       locked,
       rejected,
     ] = await Promise.all([
-      supabase.from('users').select('*', { count: 'exact', head: true }),
-      supabase
+      supabaseAdmin.from('users').select('*', { count: 'exact', head: true }),
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'active'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'inActive'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'pending'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'suspended'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'banned'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'blocked'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'locked'),
-      supabase
+      supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('account_status', 'rejected'),
@@ -1071,6 +1071,16 @@ export async function getParticipationRecordsAdmin() {
   return data ?? [];
 }
 
+// Get a user's platform handles (V1 schema: platform + handle columns).
+export async function getUserHandlesBasic(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('user_handles')
+    .select('platform, handle')
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /**
  * Get user's bootcamp enrollments for LMS context dropdown.
  */
@@ -1089,7 +1099,7 @@ export async function getUserBootcampEnrollments(userId) {
 }
 
 export async function searchUsers(query) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('users')
     .select('id, email, full_name, avatar_url, account_status, created_at')
     .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)

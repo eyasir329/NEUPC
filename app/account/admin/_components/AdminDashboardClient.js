@@ -1,11 +1,12 @@
 /**
  * @file Admin dashboard shell — clarity-first layout that mirrors the
- *   member panel hierarchy and visual language.
+ *   member panel hierarchy and visual language. All data is fetched
+ *   server-side and passed in as props.
  *
  * Layout (top → bottom):
  *   1. AdminHeader       — console title + role pills + system health
  *   2. StatsGrid         — 6 hero metrics
- *   3. SystemMetrics     — secondary KPIs (growth, participation, etc.)
+ *   3. SystemMetrics     — secondary KPIs (activity, contacts, contests)
  *   4. Action zone       — 2/3 primary + 1/3 side rail
  *        primary: PendingApprovals · QuickActions
  *        rail:    RecentActivity · SystemNotifications
@@ -26,81 +27,32 @@ import SystemNotifications from './SystemNotifications';
 import ManagementLinks from './ManagementLinks';
 import { PageShell } from '@/app/account/_components/ui';
 
-export default function AdminDashboardClient({ session }) {
-  // Mock stats - replace with real data
-  const stats = {
-    totalUsers: 1248,
-    activeMembers: 856,
-    mentors: 32,
-    upcomingEvents: 8,
-    pendingApprovals: 12,
-    systemHealth: 98,
-  };
-
-  const recentActivities = [
-    {
-      action: 'New user registration: Aisha Rahman',
-      time: '5 min ago',
-      type: 'user',
-      iconName: 'UserCheck',
-    },
-    {
-      action: 'Event approved: Web3 Workshop',
-      time: '15 min ago',
-      type: 'event',
-      iconName: 'CheckCircle',
-    },
-    {
-      action: 'Role updated: John Doe → Mentor',
-      time: '1 hour ago',
-      type: 'role',
-      iconName: 'Shield',
-    },
-    {
-      action: 'System backup completed',
-      time: '2 hours ago',
-      type: 'system',
-      iconName: 'Database',
-    },
-  ];
-
-  const pendingApprovals = [
-    { id: 1, type: 'Member Application', user: 'Sarah Ahmed', date: 'Feb 15' },
-    { id: 2, type: 'Event Request', user: 'John Doe', date: 'Feb 15' },
-    { id: 3, type: 'Mentor Application', user: 'Mike Chen', date: 'Feb 14' },
-  ];
-
-  const systemStats = [
-    { label: 'User Growth', value: '+12.5%', trend: 'up', color: 'green' },
-    { label: 'Event Participation', value: '87%', trend: 'up', color: 'blue' },
-    {
-      label: 'Mentor Response Rate',
-      value: '94%',
-      trend: 'up',
-      color: 'purple',
-    },
-    { label: 'System Uptime', value: '99.9%', trend: 'stable', color: 'cyan' },
-  ];
-
+export default function AdminDashboardClient({
+  stats = {},
+  systemStats = [],
+  pendingApprovals = [],
+  recentActivities = [],
+  notices = [],
+}) {
   const quickActions = [
     {
       title: 'Users',
       iconName: 'Users',
-      count: stats.totalUsers,
+      count: stats.totalUsers ?? 0,
       link: '/account/admin/users',
       color: 'blue',
     },
     {
       title: 'Roles',
       iconName: 'Shield',
-      count: '6 types',
+      count: 'Manage',
       link: '/account/admin/roles',
       color: 'purple',
     },
     {
       title: 'Events',
       iconName: 'Calendar',
-      count: stats.upcomingEvents,
+      count: stats.upcomingEvents ?? 0,
       link: '/account/admin/events',
       color: 'green',
     },
@@ -112,10 +64,10 @@ export default function AdminDashboardClient({ session }) {
       color: 'amber',
     },
     {
-      title: 'Content',
+      title: 'Blogs',
       iconName: 'FileText',
       count: 'Manage',
-      link: '/account/admin/content',
+      link: '/account/admin/blogs',
       color: 'pink',
     },
     {
@@ -144,7 +96,7 @@ export default function AdminDashboardClient({ session }) {
         <div className="flex flex-col gap-8 xl:col-span-4">
           <div className="sticky top-8 flex flex-col gap-8">
             <RecentActivity recentActivities={recentActivities} />
-            <SystemNotifications />
+            <SystemNotifications notices={notices} />
           </div>
         </div>
       </div>

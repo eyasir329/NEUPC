@@ -30,14 +30,12 @@ import {
   Download,
   FolderOpen,
   Code,
-  Compass,
   Mail,
   PenTool,
   BarChart3,
   GraduationCap,
   Video,
   Map,
-  Terminal,
 } from 'lucide-react';
 
 export function getSidebarNavigation(activeRole, stats, session) {
@@ -251,6 +249,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Events',
             icon: Calendar,
             href: '/account/executive/events',
+          },
+          {
+            id: 'registrations',
+            label: 'Registrations',
+            icon: ClipboardCheck,
+            href: '/account/executive/registrations',
           },
           {
             id: 'users',

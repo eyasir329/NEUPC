@@ -15,10 +15,7 @@ import {
   ActionButton,
 } from '@/app/account/_components/ui';
 
-export default function AnalyticsDashboard({
-  weekActivity = [12, 18, 9, 22, 30, 24, 28],
-  growth = 25,
-}) {
+export default function AnalyticsDashboard({ weekActivity = [], growth = 0 }) {
   return (
     <GlassCard>
       <SectionHeader
@@ -38,8 +35,13 @@ export default function AnalyticsDashboard({
       />
 
       <div className="mb-3 flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-white">+{growth}%</span>
-        <span className="text-[11px] text-gray-500">participation YoY</span>
+        <span className="text-2xl font-bold text-white">
+          {growth >= 0 ? '+' : ''}
+          {growth}%
+        </span>
+        <span className="text-[11px] text-gray-500">
+          activity vs previous week
+        </span>
       </div>
       <Sparkline data={weekActivity} tone="violet" height="h-12" />
     </GlassCard>

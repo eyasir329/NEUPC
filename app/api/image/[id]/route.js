@@ -21,8 +21,41 @@ const PROXY_HEADERS = {
   'Access-Control-Allow-Origin': '*',
 };
 
+/**
+ * Hosts the external-URL proxy mode may fetch from. Without this list the
+ * route is an open SSRF proxy (internal services, cloud metadata endpoints).
+ * Matched against the hostname: exact or dot-suffix.
+ */
+const ALLOWED_PROXY_HOSTS = [
+  'googleusercontent.com',
+  'ggpht.com',
+  'drive.google.com',
+  'fbcdn.net',
+];
+
+function isAllowedProxyUrl(rawUrl) {
+  try {
+    const { protocol, hostname } = new URL(rawUrl);
+    if (protocol !== 'https:') return false;
+    return ALLOWED_PROXY_HOSTS.some(
+      (h) => hostname === h || hostname.endsWith(`.${h}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** In-process memory cache: fileId → ArrayBuffer + content-type */
 const memCache = new Map();
+const MEM_CACHE_MAX_ENTRIES = 200;
+
+function memCacheSet(key, value) {
+  if (memCache.size >= MEM_CACHE_MAX_ENTRIES) {
+    // Evict the oldest entry (Map preserves insertion order)
+    memCache.delete(memCache.keys().next().value);
+  }
+  memCache.set(key, value);
+}
 
 function placeholderRedirect() {
   return new Response(null, {
@@ -75,7 +108,7 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url);
     const rawUrl = searchParams.get('url');
 
-    if (!rawUrl || !/^https?:\/\/.+/i.test(rawUrl)) {
+    if (!rawUrl || !isAllowedProxyUrl(rawUrl)) {
       return placeholderRedirect();
     }
 
@@ -88,7 +121,7 @@ export async function GET(request, { params }) {
     try {
       const result = await fetchImage(rawUrl);
       if (result) {
-        memCache.set(cacheKey, result);
+        memCacheSet(cacheKey, result);
         return imageResponse(result.body, result.ct);
       }
       return placeholderRedirect();
@@ -113,7 +146,7 @@ export async function GET(request, { params }) {
     const upstream = `https://lh3.googleusercontent.com/d/${id}`;
     const result = await fetchImage(upstream);
     if (result) {
-      memCache.set(id, result);
+      memCacheSet(id, result);
       return imageResponse(result.body, result.ct);
     }
 
@@ -121,14 +154,14 @@ export async function GET(request, { params }) {
     const altUpstream = `https://drive.google.com/uc?export=view&id=${id}`;
     const altResult = await fetchImage(altUpstream);
     if (altResult) {
-      memCache.set(id, altResult);
+      memCacheSet(id, altResult);
       return imageResponse(altResult.body, altResult.ct);
     }
 
     const fallback = `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
     const result2 = await fetchImage(fallback);
     if (result2) {
-      memCache.set(id, result2);
+      memCacheSet(id, result2);
       return imageResponse(result2.body, result2.ct);
     }
 

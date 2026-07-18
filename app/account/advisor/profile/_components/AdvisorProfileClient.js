@@ -46,7 +46,7 @@ export default function AdvisorProfileClient({ user }) {
       {/* Page Header */}
       <PageHeader
         icon={User}
-        title="Personal Desk"
+        title="Profile"
         subtitle="Manage your advisor profile, check account security settings, and end active sessions."
         accent="indigo"
       />
@@ -180,7 +180,7 @@ function InfoField({ icon: Icon, label, value, locked }) {
         <Icon className="h-3.5 w-3.5 text-gray-600" />
         {label}
         {locked && (
-          <span className="flex shrink-0 items-center gap-1 font-mono text-[9px] font-bold tracking-normal text-gray-600 normal-case">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-bold tracking-normal text-gray-600 normal-case">
             <Lock className="h-2.5 w-2.5" /> (read-only)
           </span>
         )}

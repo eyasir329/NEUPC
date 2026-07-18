@@ -10,11 +10,7 @@
 
 import { motion } from 'framer-motion';
 import { CalendarDays, Dot } from 'lucide-react';
-import {
-  GlassCard,
-  SectionHeader,
-  Pill,
-} from '@/app/account/_components/ui';
+import { GlassCard, SectionHeader, Pill } from '@/app/account/_components/ui';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -43,7 +39,7 @@ export default function WeekAtAGlance({ days }) {
         subtitle="Events, deadlines, decisions due"
         accent="violet"
       />
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
         {safe.map((day, i) => {
           const isToday = i === todayIndex;
           return (

@@ -18,7 +18,6 @@ import {
   CheckCircle,
   TrendingUp,
   TrendingDown,
-  Sliders,
   X,
 } from 'lucide-react';
 import {
@@ -27,7 +26,6 @@ import {
   GlassCard,
   TabBar,
   StatCard,
-  Pill,
   ActionButton,
   EmptyState,
   Avatar,
@@ -168,9 +166,9 @@ export default function AdvisorReportsClient({
       {/* Page Header */}
       <PageHeader
         icon={FileText}
-        title="Oversight Reports"
-        subtitle="Access system operational logs, membership growth rates, and general financial ledgers."
-        accent="emerald"
+        title="Reports"
+        subtitle="Activity logs, membership growth, and financial summaries — exportable as CSV."
+        accent="indigo"
         actions={
           <div className="w-full sm:w-auto">
             <ActionButton tone="primary" icon={Download} onClick={handleExport}>
@@ -193,7 +191,7 @@ export default function AdvisorReportsClient({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search audit logs by executive, transaction type, or specific action..."
-                className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
               />
               {query && (
                 <button
@@ -331,7 +329,7 @@ function LogRow({ log }) {
           <div className="flex flex-wrap items-center gap-2 text-sm text-white">
             <span className="font-bold">{creatorName}</span>
             <span
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black tracking-widest uppercase ${
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-widest uppercase ${
                 log.action === 'create'
                   ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                   : log.action === 'delete'
@@ -390,7 +388,7 @@ function EventSummaryRow({ event }) {
           <p className="text-sm font-black text-white">
             {event.registrationCount ?? 0}
           </p>
-          <p className="mt-0.5 text-[9px] font-bold tracking-wide text-gray-500 uppercase">
+          <p className="mt-0.5 text-[10px] font-bold tracking-wide text-gray-500 uppercase">
             Registered
           </p>
         </div>
@@ -399,14 +397,14 @@ function EventSummaryRow({ event }) {
           <p className="text-sm font-black text-white">
             {event.attendedCount ?? 0}
           </p>
-          <p className="mt-0.5 text-[9px] font-bold tracking-wide text-gray-500 uppercase">
+          <p className="mt-0.5 text-[10px] font-bold tracking-wide text-gray-500 uppercase">
             Attended
           </p>
         </div>
         <div className="h-8 border-l border-white/8" />
         <div>
           <p className="text-sm font-black text-emerald-400">{rate}%</p>
-          <p className="mt-0.5 text-[9px] font-bold tracking-wide text-gray-500 uppercase">
+          <p className="mt-0.5 text-[10px] font-bold tracking-wide text-gray-500 uppercase">
             Rate
           </p>
         </div>

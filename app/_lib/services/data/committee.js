@@ -103,6 +103,20 @@ export async function getCurrentCommittee() {
   );
 }
 
+// Get a user's current committee membership (position info included).
+export async function getCurrentCommitteeMemberByUserId(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('committee_members')
+    .select(
+      'id, term_start, term_end, is_current, bio, position:committee_positions(title, category)'
+    )
+    .eq('user_id', userId)
+    .eq('is_current', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 // Get all committee members with position info and full profiles.
 export async function getAllCommitteeMembers() {
   const { data, error } = await supabaseAdmin

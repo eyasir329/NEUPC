@@ -164,7 +164,7 @@ const {
               const newUser = await getUserByEmail(user.email);
               if (newUser) {
                 const { uploadAvatarFromUrl } =
-                  await import('@/app/_lib/actions/avatar-actions');
+                  await import('@/app/_lib/services/avatar-upload');
                 const driveUrl = await uploadAvatarFromUrl(
                   user.image,
                   newUser.id

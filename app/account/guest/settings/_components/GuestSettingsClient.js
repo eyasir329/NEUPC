@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -20,7 +20,10 @@ import {
   AlertTriangle,
   Clock,
 } from 'lucide-react';
-import { updateGuestInfoAction } from '@/app/_lib/actions/guest-actions';
+import {
+  updateGuestInfoAction,
+  saveGuestNotificationPrefsAction,
+} from '@/app/_lib/actions/guest-actions';
 import { signOutAction } from '@/app/_lib/actions/actions';
 import {
   PageShell,
@@ -32,7 +35,6 @@ import {
   ActionButton,
 } from '@/app/account/_components/ui';
 
-const NOTIF_KEY = 'neupc_guest_notif_prefs';
 const DEFAULT_PREFS = {
   emailNotices: true,
   browserNotices: false,
@@ -55,6 +57,8 @@ function Toggle({ on, onChange, disabled }) {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={on}
       disabled={disabled}
       onClick={() => !disabled && onChange(!on)}
       className={`relative h-6 w-11 shrink-0 rounded-full border transition-all duration-300 ${
@@ -185,24 +189,26 @@ const TABS = [
 export default function GuestSettingsClient({ user }) {
   const [tab, setTab] = useState('account');
   const [editing, setEditing] = useState(false);
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState({
+    ...DEFAULT_PREFS,
+    ...(user.notification_prefs || {}),
+  });
   const [prefsSaved, setPrefsSaved] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(NOTIF_KEY);
-      if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
-    } catch {}
-  }, []);
+  const [prefsError, setPrefsError] = useState('');
 
   function togglePref(key, val) {
     const next = { ...prefs, [key]: val };
     setPrefs(next);
-    try {
-      localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
-    } catch {}
-    setPrefsSaved(true);
-    setTimeout(() => setPrefsSaved(false), 2000);
+    setPrefsError('');
+    saveGuestNotificationPrefsAction(next).then((res) => {
+      if (res?.error) {
+        setPrefsError(res.error);
+        setPrefs(prefs);
+        return;
+      }
+      setPrefsSaved(true);
+      setTimeout(() => setPrefsSaved(false), 2000);
+    });
   }
 
   const verified = user.email_verified || user.is_email_verified;
@@ -362,7 +368,7 @@ export default function GuestSettingsClient({ user }) {
                 accent="violet"
                 action={
                   <span className="text-[10px] font-black tracking-wider text-zinc-600 uppercase">
-                    Stored Locally
+                    Synced to account
                   </span>
                 }
               />
@@ -375,11 +381,16 @@ export default function GuestSettingsClient({ user }) {
                     exit={{ opacity: 0 }}
                     className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs font-bold text-emerald-300 shadow-md"
                   >
-                    <CheckCircle2 className="h-4 w-4" /> System preferences
-                    logged successfully.
+                    <CheckCircle2 className="h-4 w-4" /> Preferences saved to
+                    your account.
                   </motion.div>
                 )}
               </AnimatePresence>
+              {prefsError && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs font-bold text-rose-300 shadow-md">
+                  <AlertTriangle className="h-4 w-4" /> {prefsError}
+                </div>
+              )}
 
               <div className="mt-2 divide-y divide-white/5">
                 <ToggleRow

@@ -7,15 +7,26 @@
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
 import { getMemberProfileByUserId } from '@/app/_lib/services/data-service';
+import { getUserHandlesV2 } from '@/app/_lib/services/problem-solving-v2-helpers';
 import MentorProfileClient from './_components/MentorProfileClient';
 
 export const metadata = { title: 'Profile | Mentor | NEUPC' };
 
 export default async function MentorProfilePage() {
   const { user } = await requireRole('mentor');
-  const memberProfile = await getMemberProfileByUserId(user.id).catch(
-    () => null
-  );
+  const [memberProfile, handles] = await Promise.all([
+    getMemberProfileByUserId(user.id).catch(() => null),
+    getUserHandlesV2(user.id).catch(() => []),
+  ]);
 
-  return <MentorProfileClient user={user} memberProfile={memberProfile} />;
+  const codeforcesHandle =
+    handles.find((h) => h.platform === 'codeforces')?.handle || null;
+
+  return (
+    <MentorProfileClient
+      user={user}
+      memberProfile={memberProfile}
+      codeforcesHandle={codeforcesHandle}
+    />
+  );
 }

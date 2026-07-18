@@ -70,7 +70,7 @@ export default function AdvisorEventsClient({ events: serverEvents }) {
         icon: Calendar,
         title: 'Events',
         subtitle: 'Advisor oversight of club events and registrations',
-        accent: 'blue',
+        accent: 'indigo',
       }}
       tabs={tabs}
       events={allEvents}

@@ -23,8 +23,13 @@ export async function switchRoleAction(role, path) {
     redirect('/login');
   }
 
-  // Just redirect - role will be managed per-route
-  redirect(path);
+  // Only allow same-site relative paths — a client-supplied absolute URL
+  // (or protocol-relative "//host") would make this an open redirect.
+  const safePath =
+    typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')
+      ? path
+      : '/account';
+  redirect(safePath);
 }
 
 export async function setRoleAction(role) {

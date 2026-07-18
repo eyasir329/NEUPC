@@ -28,12 +28,23 @@ import {
   Moon,
   Sun,
   Monitor,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Camera,
+  Upload,
 } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 import { signOutAction } from '@/app/_lib/actions/actions';
 import {
+  uploadAvatarAction,
+  removeAvatarAction,
+} from '@/app/_lib/actions/avatar-actions';
+import {
   ActionButton,
+  Avatar,
   GlassCard,
   SectionHeader,
   Pill,
@@ -48,6 +59,28 @@ import { Settings as SettingsIcon } from 'lucide-react';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
+}
+
+/** Preference persisted to localStorage so it survives reloads. */
+function useStoredPref(key, initial) {
+  const [value, setValue] = useState(initial);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`neupc:settings:${key}`);
+      if (raw != null) setValue(JSON.parse(raw));
+    } catch {
+      /* ignore corrupt values */
+    }
+  }, [key]);
+  const set = (v) => {
+    setValue(v);
+    try {
+      localStorage.setItem(`neupc:settings:${key}`, JSON.stringify(v));
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  return [value, set];
 }
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
@@ -457,11 +490,11 @@ function AvatarUploader({ user }) {
 
 // ─── Section: Notifications ───────────────────────────────────────────────────
 function NotificationsSection() {
-  const [eventReminders, setEventReminders] = useState(true);
-  const [notices, setNotices] = useState(true);
-  const [achievements, setAchievements] = useState(true);
-  const [discussions, setDiscussions] = useState(false);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
+  const [eventReminders, setEventReminders] = useStoredPref('event-reminders', true);
+  const [notices, setNotices] = useStoredPref('notices', true);
+  const [achievements, setAchievements] = useStoredPref('achievements', true);
+  const [discussions, setDiscussions] = useStoredPref('discussions', false);
+  const [weeklyDigest, setWeeklyDigest] = useStoredPref('weekly-digest', true);
 
   return (
     <div className="space-y-6">
@@ -510,7 +543,7 @@ function NotificationsSection() {
           <Info className="mt-0.5 size-3.5 shrink-0 text-gray-500" />
           <p className="text-[11px] leading-relaxed text-gray-500">
             Email delivery is managed at the club level. These preferences are
-            currently saved in your browser session for this visit.
+            saved locally in this browser.
           </p>
         </div>
       </GlassCard>
@@ -520,9 +553,9 @@ function NotificationsSection() {
 
 // ─── Section: Appearance ──────────────────────────────────────────────────────
 function AppearanceSection() {
-  const [theme, setTheme] = useState('dark');
-  const [density, setDensity] = useState('comfortable');
-  const [accent, setAccent] = useState('violet');
+  const [theme, setTheme] = useStoredPref('theme', 'dark');
+  const [density, setDensity] = useStoredPref('density', 'comfortable');
+  const [accent, setAccent] = useStoredPref('accent', 'violet');
 
   const ACCENTS = [
     { value: 'blue', label: 'Blue', color: 'bg-blue-500' },
@@ -585,8 +618,7 @@ function AppearanceSection() {
               ))}
             </div>
             <p className="mt-4 text-[11px] text-gray-500">
-              Appearance settings are stored locally. Full persistence is coming
-              in a future update.
+              Appearance settings are saved locally in this browser.
             </p>
           </div>
         </div>
@@ -726,7 +758,7 @@ function ConnectedSection({ user }) {
                   Connected
                 </Pill>
               ) : (
-                <ActionButton tone="ghost">Connect</ActionButton>
+                <Pill tone="gray">Not linked</Pill>
               )}
             </div>
           ))}

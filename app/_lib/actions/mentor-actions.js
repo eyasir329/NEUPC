@@ -14,6 +14,11 @@ import {
   endMeetConference,
 } from '@/app/_lib/integrations/google-meet';
 import { uploadRecordingToDrive } from '@/app/_lib/integrations/gdrive';
+import {
+  isV2SchemaAvailable,
+  upsertUserHandleV2,
+  deleteUserHandleV2,
+} from '@/app/_lib/services/problem-solving-v2-helpers';
 
 // --- Auth Helper ---
 async function requireMentor() {
@@ -847,6 +852,111 @@ export async function updateMentorshipStatusAction(formData) {
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/assigned-members');
     return { success: 'Mentorship status updated' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// --- Mentor profile (member_profiles: bio, github, skills, handle) ---
+
+export async function updateMentorProfileAction(formData) {
+  try {
+    const mentor = await requireMentor();
+
+    const bio = formData.get('bio')?.trim().slice(0, 1000) || null;
+    const github = formData.get('github')?.trim().slice(0, 100) || null;
+    const codeforces_handle =
+      formData.get('codeforces_handle')?.trim().slice(0, 50) || null;
+    const skills = (formData.get('skills') || '')
+      .split(',')
+      .map((s) => s.trim().slice(0, 50))
+      .filter(Boolean);
+
+    const { error } = await supabase.from('member_profiles').upsert(
+      {
+        user_id: mentor.id,
+        bio,
+        github,
+        skills: skills.length > 0 ? skills : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+
+    if (error) {
+      console.error('updateMentorProfileAction error:', error);
+      return { error: 'Failed to update profile.' };
+    }
+
+    // Codeforces handle lives in user_handles, not member_profiles
+    const useV2 = await isV2SchemaAvailable();
+    if (codeforces_handle) {
+      if (useV2) {
+        await upsertUserHandleV2(mentor.id, 'codeforces', codeforces_handle);
+      } else {
+        await supabase.from('user_handles').upsert(
+          {
+            user_id: mentor.id,
+            platform: 'codeforces',
+            handle: codeforces_handle,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,platform' }
+        );
+      }
+    } else if (useV2) {
+      await deleteUserHandleV2(mentor.id, 'codeforces');
+    } else {
+      await supabase
+        .from('user_handles')
+        .delete()
+        .eq('user_id', mentor.id)
+        .eq('platform', 'codeforces');
+    }
+
+    revalidatePath('/account/mentor/profile');
+    return { success: 'Profile updated successfully' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// --- Notification preferences (users.notification_prefs jsonb) ---
+
+const MENTOR_PREF_KEYS = [
+  'session_reminders',
+  'task_submissions',
+  'mentee_updates',
+  'weekly_digest',
+];
+
+export async function saveMentorNotificationPrefsAction(prefs) {
+  try {
+    const mentor = await requireMentor();
+
+    const clean = {};
+    for (const key of MENTOR_PREF_KEYS) {
+      if (typeof prefs?.[key] === 'boolean') clean[key] = prefs[key];
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        notification_prefs: {
+          ...(mentor.notification_prefs || {}),
+          ...clean,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', mentor.id);
+
+    if (error) {
+      console.error('saveMentorNotificationPrefsAction error:', error);
+      return { error: 'Failed to save preferences.' };
+    }
+
+    revalidatePath('/account/mentor/settings');
+    return { success: 'Notification preferences saved.' };
   } catch (err) {
     return { error: err.message };
   }

@@ -27,7 +27,7 @@ export default async function AdvisorInboxPage() {
   return (
     <InboxClient
       notices={notices}
-      accent="violet"
+      accent="indigo"
       subtitle="Notices and announcements for faculty advisors."
     />
   );

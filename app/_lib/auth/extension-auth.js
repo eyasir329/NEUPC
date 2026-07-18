@@ -50,7 +50,12 @@ export function verifyExtensionToken(token) {
       .update(userId)
       .digest('hex');
 
-    if (hash === expectedHash) {
+    const hashBuf = Buffer.from(hash, 'utf8');
+    const expectedBuf = Buffer.from(expectedHash, 'utf8');
+    if (
+      hashBuf.length === expectedBuf.length &&
+      crypto.timingSafeEqual(hashBuf, expectedBuf)
+    ) {
       return userId;
     }
   } catch (error) {

@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { Settings, Bell, Save } from 'lucide-react';
+import { saveMentorNotificationPrefsAction } from '@/app/_lib/actions/mentor-actions';
 import {
   PageShell,
   PageHeader,
@@ -37,13 +38,19 @@ export default function MentorSettingsClient({ user }) {
     task_submissions: true,
     mentee_updates: true,
     weekly_digest: false,
+    ...(user?.notification_prefs || {}),
   });
 
   const handleSaveNotifications = async (e) => {
     e.preventDefault();
     setSavingNotif(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setMessage({ type: 'success', text: 'Notification preferences saved.' });
+    setMessage(null);
+    const res = await saveMentorNotificationPrefsAction(notifSettings);
+    setMessage(
+      res?.error
+        ? { type: 'error', text: res.error }
+        : { type: 'success', text: 'Notification preferences saved.' }
+    );
     setSavingNotif(false);
   };
 
@@ -53,7 +60,7 @@ export default function MentorSettingsClient({ user }) {
         icon={Settings}
         title="Settings"
         subtitle="Configure your mentor account preferences"
-        accent="blue"
+        accent="emerald"
       />
 
       {message && (
@@ -74,9 +81,10 @@ export default function MentorSettingsClient({ user }) {
             {
               label: 'Account Status',
               value: user?.account_status,
-              badge: user?.is_online
-                ? { text: 'Active', tone: 'emerald' }
-                : { text: 'Inactive', tone: 'rose' },
+              badge:
+                user?.account_status === 'active'
+                  ? { text: 'Active', tone: 'emerald' }
+                  : { text: user?.account_status || 'Inactive', tone: 'rose' },
             },
           ].map(({ label, value, note, badge }) => (
             <div

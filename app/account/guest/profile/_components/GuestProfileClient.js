@@ -26,10 +26,12 @@ import {
   Pencil,
   Bell,
   Award,
-  Github,
   Lock,
 } from 'lucide-react';
-import { updateGuestInfoAction } from '@/app/_lib/actions/guest-actions';
+import {
+  updateGuestInfoAction,
+  deleteGuestAccountAction,
+} from '@/app/_lib/actions/guest-actions';
 import {
   uploadAvatarAction,
   removeAvatarAction,
@@ -79,7 +81,26 @@ function profileCompletion(user) {
 
 function DeleteModal({ onClose }) {
   const [confirmed, setConfirmed] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
   useScrollLock();
+
+  async function handleDelete() {
+    setError('');
+    setDeleting(true);
+    try {
+      const result = await deleteGuestAccountAction();
+      if (result?.error) {
+        setError(result.error);
+        setDeleting(false);
+        return;
+      }
+      await signOutAction();
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setDeleting(false);
+    }
+  }
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -126,12 +147,16 @@ function DeleteModal({ onClose }) {
           placeholder="Type DELETE to confirm"
           className="mb-4 w-full rounded-xl border border-white/10 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 shadow-inner transition-all duration-200 outline-none focus:border-rose-500/40 focus:bg-zinc-900"
         />
+        {error && (
+          <p className="mb-3 text-xs font-bold text-rose-400">{error}</p>
+        )}
         <div className="flex gap-3">
           <button
-            disabled={confirmed !== 'DELETE'}
+            disabled={confirmed !== 'DELETE' || deleting}
+            onClick={handleDelete}
             className="flex-1 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-bold tracking-wider text-rose-300 uppercase shadow-md transition-all hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-30"
           >
-            Confirm Delete
+            {deleting ? 'Deleting…' : 'Confirm Delete'}
           </button>
           <button
             onClick={onClose}
@@ -540,7 +565,7 @@ export default function GuestProfileClient({ user, stats }) {
               label="Sign-in provider"
               value={
                 <span className="flex items-center gap-1.5 font-bold">
-                  <Github className="h-4 w-4 text-zinc-400" /> Managed Google
+                  <Shield className="h-4 w-4 text-zinc-400" /> Managed Google
                   OAuth
                 </span>
               }

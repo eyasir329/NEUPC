@@ -81,7 +81,7 @@ export function EnrollModal({ bootcamps, onClose, onSuccess }) {
           initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
-          className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 text-zinc-300 shadow-2xl backdrop-blur-xl"
+          className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 text-zinc-300 shadow-2xl backdrop-blur-xl"
         >
           <div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-violet-500/8 blur-[80px]" />
 
@@ -98,7 +98,7 @@ export function EnrollModal({ bootcamps, onClose, onSuccess }) {
             </button>
           </div>
 
-          <div className="relative z-10 space-y-4 p-5">
+          <div className="relative z-10 min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             {/* Bootcamp select */}
             <div>
               <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-zinc-500 uppercase">

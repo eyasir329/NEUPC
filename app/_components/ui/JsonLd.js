@@ -10,6 +10,12 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://neupc.vercel.app';
 
+// Escape "<" so user-supplied strings (titles, descriptions) can never close
+// the <script> tag and inject markup (JSON-LD renders in a script context).
+function jsonLdString(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
+}
+
 /**
  * Organization schema for the club (enhanced with EducationalOrganization)
  */
@@ -50,7 +56,7 @@ export function OrganizationJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -74,7 +80,7 @@ export function WebsiteJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -121,7 +127,7 @@ export function EventJsonLd({ event }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -158,7 +164,7 @@ export function ArticleJsonLd({ article }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -183,7 +189,7 @@ export function BreadcrumbJsonLd({ items }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -210,7 +216,7 @@ export function FAQJsonLd({ faqs }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -239,7 +245,7 @@ export function CollectionPageJsonLd({ name, description, url }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -271,7 +277,7 @@ export function ImageGalleryJsonLd({ images }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -296,7 +302,7 @@ export function AboutPageJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -321,7 +327,7 @@ export function ContactPageJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }
@@ -346,7 +352,7 @@ export function CourseJsonLd({ name, description, provider, url }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
     />
   );
 }

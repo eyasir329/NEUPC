@@ -6,15 +6,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Bell, Save, Shield, User, Sparkles } from 'lucide-react';
+import { Settings, Bell, Save, User } from 'lucide-react';
 import {
   PageShell,
   PageHeader,
   GlassCard,
   SectionHeader,
-  Pill,
 } from '@/app/account/_components/ui';
 import toast from 'react-hot-toast';
+import { execSaveNotificationPrefsAction } from '@/app/_lib/actions/executive-actions';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -36,22 +36,27 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+const DEFAULT_PREFS = {
+  event_registrations: true,
+  membership_applications: true,
+  budget_requests: true,
+  system_alerts: false,
+};
+
 export default function ExecutiveSettingsClient({ user }) {
   const [savingNotif, setSavingNotif] = useState(false);
 
   const [notifSettings, setNotifSettings] = useState({
-    event_registrations: true,
-    membership_applications: true,
-    budget_requests: true,
-    system_alerts: false,
+    ...DEFAULT_PREFS,
+    ...(user?.notification_prefs || {}),
   });
 
   const handleSaveNotifications = async (e) => {
     e.preventDefault();
     setSavingNotif(true);
-    // Simulate backend save
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success('Executive notification preferences saved successfully.');
+    const res = await execSaveNotificationPrefsAction(notifSettings);
+    if (res?.error) toast.error(res.error);
+    else toast.success('Notification preferences saved.');
     setSavingNotif(false);
   };
 
@@ -61,8 +66,8 @@ export default function ExecutiveSettingsClient({ user }) {
     <PageShell>
       <PageHeader
         icon={Settings}
-        title="Account Preferences"
-        subtitle="Manage your executive permissions, operational toggles, and notification routing."
+        title="Settings"
+        subtitle="Manage your executive account details and notification preferences."
         accent="indigo"
       />
 
@@ -106,7 +111,7 @@ export default function ExecutiveSettingsClient({ user }) {
               )}
               {badge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black tracking-widest uppercase ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-widest uppercase ${
                     badge.tone === 'emerald'
                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                       : 'border-rose-500/20 bg-rose-500/10 text-rose-400'

@@ -225,14 +225,14 @@ export default function MembershipApplicationClient({
     session: prefill.session || prefill.batch || '',
     department: prefill.department || '',
     phone: prefill.phone || '',
-    semester: '',
-    cgpa: '',
+    semester: prefill.semester || '',
+    cgpa: prefill.cgpa != null ? String(prefill.cgpa) : '',
     github: prefill.github || '',
-    linkedin: '',
+    linkedin: prefill.linkedin || '',
     codeforces_handle: prefill.codeforces_handle || '',
-    vjudge_handle: '',
-    atcoder_handle: '',
-    leetcode_handle: '',
+    vjudge_handle: prefill.vjudge_handle || '',
+    atcoder_handle: prefill.atcoder_handle || '',
+    leetcode_handle: prefill.leetcode_handle || '',
     interests: Array.isArray(prefill.interests)
       ? prefill.interests.join(', ')
       : prefill.interests || '',
@@ -438,7 +438,7 @@ export default function MembershipApplicationClient({
           animate={{ opacity: 1, scale: 1 }}
           className="flex items-center gap-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[12.5px] font-semibold text-amber-300 shadow-md"
         >
-          <RefreshCw className="h-4 w-4 shrink-0 animate-spin" />
+          <RefreshCw className="h-4 w-4 shrink-0" />
           {latestApplication?.status === 'pending'
             ? 'Updating your pending application — resubmitting will directly update your queue.'
             : 'Re-applying — we pre-filled your previous submission to save you time.'}
@@ -704,8 +704,7 @@ export default function MembershipApplicationClient({
                     onChange={set('reason')}
                     className={`${errors.reason ? inputErrCls : inputCls} resize-none`}
                   />
-                  <div className="mt-1.5 flex items-center justify-between">
-                    {errors.reason ? <span /> : <span />}
+                  <div className="mt-1.5 flex justify-end">
                     <span
                       className={`font-mono text-[10px] font-bold ${form.reason.length > 750 ? 'text-rose-400' : 'text-zinc-500'}`}
                     >

@@ -10,7 +10,7 @@ import MemberDailyActivityClient from '@/app/account/_components/daily-activity/
 export const metadata = { title: 'Daily Activity | Executive | NEUPC' };
 
 export default async function ExecutiveDailyActivityPage() {
-  const { user } = await requireRole('executive');
+  const { user } = await requireRole(['executive', 'admin']);
 
   return <MemberDailyActivityClient userId={user.id} />;
 }

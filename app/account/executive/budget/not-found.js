@@ -5,7 +5,6 @@
 
 'use client';
 
-import Link from 'next/link';
 import { Home } from 'lucide-react';
 import {
   PageShell,

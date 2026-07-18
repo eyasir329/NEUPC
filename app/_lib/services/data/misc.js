@@ -272,7 +272,7 @@ export async function getPlatformStatistics() {
       try {
         const [userCount, memberCount, eventCount, contestCount] =
           await Promise.all([
-            supabase.from('users').select('*', { count: 'exact', head: true }),
+            supabaseAdmin.from('users').select('*', { count: 'exact', head: true }),
             supabase
               .from('member_profiles')
               .select('*', { count: 'exact', head: true })

@@ -30,6 +30,7 @@ import {
   CheckSquare,
   HelpCircle,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import CodeMirror from '@uiw/react-codemirror';
 import { html } from '@codemirror/lang-html';
@@ -487,7 +488,9 @@ export default function MultiBlockEditor({
           });
           setAiModalConfig(null);
         } else {
-          alert(res.error || 'Failed to parse practice problems with AI.');
+          toast.error(
+            res.error || 'Failed to parse practice problems with AI.'
+          );
         }
       } else if (aiModalConfig.type === 'exam') {
         const res = await generateExamQuestionsAction(
@@ -515,12 +518,12 @@ export default function MultiBlockEditor({
           });
           setAiModalConfig(null);
         } else {
-          alert(res.error || 'Failed to parse exam questions with AI.');
+          toast.error(res.error || 'Failed to parse exam questions with AI.');
         }
       }
     } catch (err) {
       console.error(err);
-      alert('An error occurred during AI parsing.');
+      toast.error('An error occurred during AI parsing.');
     } finally {
       setAiModalConfig((prev) =>
         prev ? { ...prev, generating: false } : null

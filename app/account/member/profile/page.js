@@ -1,13 +1,20 @@
 /**
  * @file Member profile page — displays the authenticated member’s
  *   account information and linked member profile data (student ID,
- *   session, department, competitive handles).
+ *   session, department, competitive handles), plus live
+ *   problem-solving statistics, activity heatmap, contest history,
+ *   achievements and certificates — all read from the database.
  * @module MemberProfilePage
  * @access member
  */
 
 import { requireRole } from '@/app/_lib/auth/auth-guard';
-import { supabaseAdmin } from '@/app/_lib/integrations/supabase';
+import {
+  getMemberAchievements,
+  getUserCertificates,
+  getUserContestParticipations,
+  getMemberProfileData,
+} from '@/app/_lib/services/data-service';
 import MemberProfileClient from './_components/MemberProfileClient';
 
 export const metadata = { title: 'Profile | Member | NEUPC' };
@@ -15,39 +22,47 @@ export const metadata = { title: 'Profile | Member | NEUPC' };
 export default async function MemberProfilePage() {
   const { user } = await requireRole('member');
 
-  const [memberProfile, { data: userHandles }] = await Promise.all([
-    supabaseAdmin
-      .from('member_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    supabaseAdmin
-      .from('user_handles')
-      .select('handle, platform:platform_id(code)')
-      .eq('user_id', user.id),
-  ]);
+  const [profileData, memberAchievements, certificates, contestParticipations] =
+    await Promise.all([
+      getMemberProfileData(user.id).catch(() => ({
+        memberProfile: null,
+        handles: [],
+        userStats: null,
+        dailyActivity: [],
+      })),
+      getMemberAchievements(user.id).catch(() => []),
+      getUserCertificates(user.id).catch(() => []),
+      getUserContestParticipations(user.id).catch(() => []),
+    ]);
 
-  const memberProfileData = memberProfile?.data ?? null;
+  const { memberProfile, handles, userStats, dailyActivity } = profileData;
 
   const handlesMap = {};
-  (userHandles || []).forEach((h) => {
+  (handles || []).forEach((h) => {
     if (h.platform?.code) handlesMap[`${h.platform.code}_handle`] = h.handle;
   });
 
-  const enrichedProfile = memberProfileData
+  const enrichedProfile = memberProfile
     ? {
-        ...memberProfileData,
+        ...memberProfile,
         session:
-          memberProfileData.session ??
-          memberProfileData.academic_session ??
-          null,
+          memberProfile.session ?? memberProfile.academic_session ?? null,
         academic_session:
-          memberProfileData.academic_session ??
-          memberProfileData.session ??
-          null,
+          memberProfile.academic_session ?? memberProfile.session ?? null,
         ...handlesMap,
       }
     : null;
 
-  return <MemberProfileClient user={user} memberProfile={enrichedProfile} />;
+  return (
+    <MemberProfileClient
+      user={user}
+      memberProfile={enrichedProfile}
+      handles={handles || []}
+      userStats={userStats}
+      dailyActivity={dailyActivity || []}
+      memberAchievements={memberAchievements || []}
+      certificates={certificates || []}
+      contestParticipations={contestParticipations || []}
+    />
+  );
 }

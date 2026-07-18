@@ -5,6 +5,7 @@
 
 export * from './data/achievements';
 export * from './data/activity';
+export * from './data/advisor-notes';
 export * from './data/applications';
 export * from './data/blogs';
 export * from './data/budget';
@@ -16,7 +17,10 @@ export * from './data/discussions';
 export * from './data/events';
 export * from './data/gallery';
 export * from './data/members';
+export * from './data/member-dashboard';
+export * from './data/member-profile';
 export * from './data/member-todos';
+export * from './data/mentor-dashboard';
 export * from './data/mentorship';
 export * from './data/misc';
 export * from './data/notices';

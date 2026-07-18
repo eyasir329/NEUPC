@@ -28,7 +28,6 @@ import {
   PageHeader,
   GlassCard,
   StatCard,
-  Pill,
   EmptyState,
   TabBar,
   Avatar,
@@ -103,9 +102,9 @@ export default function AdvisorBudgetClient({
       {/* Page Header */}
       <PageHeader
         icon={Wallet}
-        title="Club Ledger"
-        subtitle="Manage financial transactions, review income sheets, and approve executive expenses."
-        accent="emerald"
+        title="Budget"
+        subtitle="Review income and expense entries and approve executive transactions."
+        accent="indigo"
       />
 
       {/* Financial Metrics Cards */}
@@ -146,7 +145,7 @@ export default function AdvisorBudgetClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by transaction description or associated event title…"
-            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+            className="w-full rounded-xl border border-white/8 bg-white/3 py-2.5 pr-4 pl-11 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
           />
           {query && (
             <button
@@ -225,7 +224,7 @@ export default function AdvisorBudgetClient({
                     >
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                             income
                               ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                               : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -277,7 +276,7 @@ export default function AdvisorBudgetClient({
                         <div className="flex items-center justify-end gap-3">
                           {isPendingRow ? (
                             <>
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 font-sans text-[9px] font-bold tracking-wider text-amber-400 uppercase">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 font-sans text-[10px] font-bold tracking-wider text-amber-400 uppercase">
                                 <Clock className="h-2.5 w-2.5" /> Pending
                               </span>
                               <button
@@ -288,7 +287,7 @@ export default function AdvisorBudgetClient({
                               </button>
                             </>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-sans text-[9px] font-bold tracking-wider text-emerald-400 uppercase">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-sans text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
                               <CheckCircle className="h-2.5 w-2.5" /> Approved
                             </span>
                           )}
@@ -316,7 +315,7 @@ export default function AdvisorBudgetClient({
                   <div>
                     <div className="flex items-center justify-between">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
+                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                           income
                             ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                             : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
@@ -366,7 +365,7 @@ export default function AdvisorBudgetClient({
                     onClick={(ev) => ev.stopPropagation()}
                   >
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-wider uppercase ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                         isPendingCard
                           ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
                           : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
@@ -442,7 +441,7 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
             <div className="absolute top-0 right-0 -z-10 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
 
             <div className="border-b border-dashed border-white/10 pb-4 text-center">
-              <span className="mb-1 block text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
+              <span className="mb-1 block text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
                 Financial Transaction Ledger
               </span>
               <span className="text-2xl font-black text-white">
@@ -450,7 +449,7 @@ function ReviewModal({ entry, onClose, onApprove, submitting }) {
               </span>
               <div className="mt-2.5">
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-wider uppercase ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                     isIncome
                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                       : 'border-rose-500/20 bg-rose-500/10 text-rose-400'

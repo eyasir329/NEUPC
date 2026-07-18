@@ -15,7 +15,8 @@ import {
   MEDIA_ALLOWED_MIME,
   slugify,
 } from '@/app/_lib/resources/constants';
-import { parseResourceFormData, parseTags } from '@/app/_lib/resources/resource-schemas';
+import { parseResourceFormData } from '@/app/_lib/resources/resource-schemas';
+import { upsertTags } from '@/app/_lib/services/resource-tags';
 import {
   normalizeEmbed,
   sanitizeRichHtml,
@@ -97,47 +98,6 @@ async function uploadFile(file, folder = 'files') {
 
   const { data } = supabaseAdmin.storage.from('resources').getPublicUrl(path);
   return data?.publicUrl || null;
-}
-
-export async function upsertTags(resourceId, rawTags = []) {
-  const tags = parseTags(rawTags);
-
-  await supabaseAdmin
-    .from('resource_tag_map')
-    .delete()
-    .eq('resource_id', resourceId);
-
-  if (!tags.length) return;
-
-  const prepared = tags.map((name) => ({
-    name,
-    slug: slugify(name) || name.toLowerCase(),
-  }));
-
-  const { error: tagInsertError } = await supabaseAdmin
-    .from('resource_tags')
-    .upsert(prepared, { onConflict: 'slug' });
-
-  if (tagInsertError) throw new Error(tagInsertError.message);
-
-  const { data: dbTags, error: tagsFetchError } = await supabaseAdmin
-    .from('resource_tags')
-    .select('id,slug')
-    .in(
-      'slug',
-      prepared.map((t) => t.slug)
-    );
-
-  if (tagsFetchError) throw new Error(tagsFetchError.message);
-
-  if (!dbTags?.length) return;
-
-  const maps = dbTags.map((t) => ({ resource_id: resourceId, tag_id: t.id }));
-  const { error: mapError } = await supabaseAdmin
-    .from('resource_tag_map')
-    .upsert(maps, { onConflict: 'resource_id,tag_id' });
-
-  if (mapError) throw new Error(mapError.message);
 }
 
 async function resolveCategoryName(categoryId) {

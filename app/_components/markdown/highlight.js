@@ -177,15 +177,23 @@ export function createMarkdownRenderer() {
   renderer.codespan = ({ text }) =>
     `<code class="md-inline-code">${escapeHtml(text)}</code>`;
 
+  // Only allow safe URL schemes; blocks javascript:/data: and attribute
+  // breakout via quotes in the URL.
+  function safeUrl(href) {
+    const url = String(href || '').trim();
+    if (/^(https?:|mailto:|tel:|\/|#|\.)/i.test(url)) return escapeHtml(url);
+    return '#';
+  }
+
   renderer.link = function ({ href, title, tokens }) {
     const text = this.parser.parseInline(tokens);
-    return `<a href="${href}" class="md-a"${
+    return `<a href="${safeUrl(href)}" class="md-a"${
       title ? ` title="${escapeHtml(title)}"` : ''
     } target="_blank" rel="noopener">${text}</a>`;
   };
 
   renderer.image = ({ href, text, title }) =>
-    `<img src="${href}" alt="${escapeHtml(text || '')}"${
+    `<img src="${safeUrl(href)}" alt="${escapeHtml(text || '')}"${
       title ? ` title="${escapeHtml(title)}"` : ''
     } class="md-img" loading="lazy">`;
 

@@ -32,16 +32,12 @@ export default async function GuestProfilePage() {
     );
   }).length;
 
-  const hasData =
-    registrations.length > 0 || certificates.length > 0 || noticeCount > 0;
-  const stats = hasData
-    ? {
-        eventsRegistered: registrations.length,
-        eventsAttended: registrations.filter((r) => r.attended).length,
-        certificates: certificates.length,
-        notices: noticeCount,
-      }
-    : { eventsRegistered: 5, eventsAttended: 3, certificates: 0, notices: 5 };
+  const stats = {
+    eventsRegistered: registrations.length,
+    eventsAttended: registrations.filter((r) => r.attended).length,
+    certificates: certificates.length,
+    notices: noticeCount,
+  };
 
   return <GuestProfileClient user={user} stats={stats} />;
 }

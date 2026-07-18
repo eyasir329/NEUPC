@@ -13,7 +13,7 @@ export const metadata = { title: 'Inbox | Executive | NEUPC' };
 
 export default async function ExecutiveInboxPage() {
   const [, allNotices] = await Promise.all([
-    requireRole('executive'),
+    requireRole(['executive', 'admin']),
     getActiveNotices().catch(() => []),
   ]);
 
