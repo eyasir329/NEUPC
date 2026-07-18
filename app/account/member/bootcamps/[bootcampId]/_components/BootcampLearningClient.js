@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, ArrowLeft, ChevronLeft, Loader2, Menu, Play, Trophy } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ChevronLeft, Loader2, Menu, PanelLeftOpen, Play, Trophy } from 'lucide-react';
 import { checkEnrollment, getLesson, getLessonContent, markLessonComplete, markLessonIncomplete, recordLearningActivity, saveLessonNotes, touchLessonAccess } from '@/app/_lib/actions/bootcamp-actions';
 import { CurriculumRail } from './CurriculumRail';
 import { LessonPanel, LessonSkeleton } from './LessonPanel';
@@ -31,6 +31,14 @@ export default function BootcampLearningClient({
   const [loading, startLoading] = useTransition();
   const [loadError, setLoadError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Desktop curriculum sidebar collapse state (persisted)
+  const [curriculumCollapsed, setCurriculumCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('bootcamp-curriculum-collapsed') === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('bootcamp-curriculum-collapsed', String(curriculumCollapsed));
+  }, [curriculumCollapsed]);
   const [completing, startCompleting] = useTransition();
   const isArchived = bootcamp?.status === 'archived';
 
@@ -551,20 +559,33 @@ export default function BootcampLearningClient({
         className="flex min-h-0 flex-1 overflow-hidden"
         style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
       >
-        {/* Desktop sidebar */}
-        <aside className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-zinc-900 lg:flex xl:w-[360px]">
-          <CurriculumRail
-            bootcamp={bootcamp}
-            lessonProgress={lessonProgress}
-            activeLessonId={activeLessonId}
-            resumeLesson={activeLessonId ? null : resumeLesson}
-            onSelect={selectLesson}
-            onPrefetch={prefetchLesson}
-            totalLessons={totalLessons}
-            completedCount={completedCount}
-            progressPercent={progressPercent}
-          />
-        </aside>
+        {/* Desktop sidebar — collapsible */}
+        {curriculumCollapsed ? (
+          <aside className="hidden h-full w-[48px] shrink-0 flex-col items-center border-r border-white/10 bg-zinc-900 transition-all duration-300 lg:flex">
+            <button
+              onClick={() => setCurriculumCollapsed(false)}
+              className="mt-4 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/[0.08] hover:text-emerald-400"
+              title="Expand curriculum"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </button>
+          </aside>
+        ) : (
+          <aside className="hidden h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-zinc-900 transition-all duration-300 lg:flex xl:w-[360px]">
+            <CurriculumRail
+              bootcamp={bootcamp}
+              lessonProgress={lessonProgress}
+              activeLessonId={activeLessonId}
+              resumeLesson={activeLessonId ? null : resumeLesson}
+              onSelect={selectLesson}
+              onPrefetch={prefetchLesson}
+              totalLessons={totalLessons}
+              completedCount={completedCount}
+              progressPercent={progressPercent}
+              onCollapse={() => setCurriculumCollapsed(true)}
+            />
+          </aside>
+        )}
 
         {/* Main content area */}
         <main

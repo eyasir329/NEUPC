@@ -7,7 +7,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, CheckCircle2, CheckSquare, ChevronDown, FileText, HelpCircle, Lock, Play, Search, Video, X } from 'lucide-react';
+import { BookOpen, CheckCircle2, CheckSquare, ChevronDown, FileText, HelpCircle, Lock, PanelLeftClose, Play, Search, Video, X } from 'lucide-react';
 import { formatDurationSecs } from './learning-shared';
 
 const LessonRow = memo(function LessonRow({
@@ -317,6 +317,7 @@ function CurriculumRail({
   completedCount,
   progressPercent,
   onClose,
+  onCollapse,
 }) {
   const [query, setQuery] = useState('');
   const activeRef = useRef(null);
@@ -372,6 +373,15 @@ function CurriculumRail({
             <span className="text-[10px] text-gray-600 tabular-nums">
               {completedCount}/{totalLessons}
             </span>
+            {onCollapse && (
+              <button
+                onClick={onCollapse}
+                className="hidden rounded-md p-1 text-gray-500 transition-colors hover:bg-white/5 hover:text-white lg:flex"
+                title="Collapse curriculum"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            )}
             {onClose && (
               <button
                 onClick={onClose}
